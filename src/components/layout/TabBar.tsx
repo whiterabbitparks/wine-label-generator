@@ -5,10 +5,12 @@ import { useLabelEditor } from '@/lib/store/labelEditorStore';
 export function TabBar() {
   const { state, dispatch } = useLabelEditor();
 
-  const tabs: Array<{ id: 'front' | 'back' | 'bottle'; label: string }> = [
+  const tabs: Array<{ id: 'front' | 'back' | 'bottle' | 'gallery' | 'about'; label: string }> = [
     { id: 'front', label: 'Front Label' },
     { id: 'back', label: 'Back Label' },
     { id: 'bottle', label: 'Bottle & Marketing Images' },
+    { id: 'gallery', label: 'Gallery' },
+    { id: 'about', label: 'About' },
   ];
 
   return (

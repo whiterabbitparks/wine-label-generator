@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 
 export interface EditorState {
-  tab: 'front' | 'back' | 'bottle';
+  tab: 'front' | 'back' | 'bottle' | 'gallery' | 'about';
   visionText: string;
   sketchFile: File | null;
   orientation: 'h' | 'v';
@@ -69,7 +69,7 @@ const initialState: EditorState = {
 };
 
 export type EditorAction =
-  | { type: 'SET_TAB'; payload: EditorState['tab'] }
+  | { type: 'SET_TAB'; payload: 'front' | 'back' | 'bottle' | 'gallery' | 'about' }
   | { type: 'SET_VISION'; payload: string }
   | { type: 'SET_SKETCH_FILE'; payload: File | null }
   | { type: 'SET_ORIENTATION'; payload: 'h' | 'v' }
