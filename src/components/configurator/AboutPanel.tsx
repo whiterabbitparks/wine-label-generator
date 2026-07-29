@@ -1,13 +1,8 @@
 'use client';
 
-export function AboutPanel() {
-  const team = [
-    { name: 'Emma Chen', role: 'Designer', bio: 'Visual design & art direction' },
-    { name: 'Alex Rivera', role: 'Developer', bio: 'Full-stack development & API' },
-    { name: 'Jordan Lee', role: 'Product', bio: 'Product strategy & UX' },
-    { name: 'Casey Smith', role: 'Operations', bio: 'Customer success & growth' },
-  ];
+import { TEAM_MEMBERS } from '@/lib/team-data';
 
+export function AboutPanel() {
   return (
     <main className="max-w-[1180px] mx-auto px-10 pb-[100px] pt-11">
       <div className="mb-[18px]">
@@ -25,8 +20,8 @@ export function AboutPanel() {
 
       {/* Team Grid */}
       <div className="grid grid-cols-4 gap-8">
-        {team.map((member) => (
-          <div key={member.name} className="flex flex-col items-center text-center gap-2">
+        {TEAM_MEMBERS.map((member) => (
+          <div key={member.id} className="flex flex-col items-center text-center gap-2">
             <div className="w-[120px] h-[120px] rounded-full bg-gradient-to-br from-[#E8E8E6] to-[#D2D2CE] flex items-center justify-center border border-line flex-none">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-11 h-11 text-[#AFAFAB] opacity-70">
                 <circle cx="12" cy="8" r="4" />

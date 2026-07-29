@@ -3,6 +3,7 @@
 import { useRef, useEffect, useState } from 'react';
 import { useLabelEditor } from '@/lib/store/labelEditorStore';
 import { renderStyleOptions } from '@/lib/label-engine';
+import { validateFrontLabelForm } from '@/lib/validation';
 import { PreviewLoader } from './PreviewLoader';
 
 export function FrontPanel() {
@@ -11,6 +12,7 @@ export function FrontPanel() {
   const [labels, setLabels] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [diagramSize, setDiagramSize] = useState({ width: 360, height: 264 });
+  const [validationErrors, setValidationErrors] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
     const baseSize = 180;
@@ -28,6 +30,24 @@ export function FrontPanel() {
   }, [state.orientation, state.widthMM, state.heightMM]);
 
   const handleGenerateLabels = async () => {
+    // Validate form
+    const validation = validateFrontLabelForm({
+      wine: state.wine,
+      producer: state.producer,
+      appellation: state.appellation,
+      vintage: state.vintage,
+    });
+
+    if (!validation.isValid) {
+      const errors: { [key: string]: string } = {};
+      validation.errors.forEach((error) => {
+        errors[error.field] = error.message;
+      });
+      setValidationErrors(errors);
+      return;
+    }
+
+    setValidationErrors({});
     setLoading(true);
     try {
       const wineData = {
@@ -260,14 +280,14 @@ export function FrontPanel() {
       </div>
 
       <div className="mt-8 space-y-4">
-        <FieldInput label="Producer" value={state.producer} onChange={(v) => dispatch({ type: 'SET_FIELD', payload: { field: 'producer', value: v } })} />
-        <FieldInput label="Wine Name" value={state.wine} onChange={(v) => dispatch({ type: 'SET_FIELD', payload: { field: 'wine', value: v } })} />
-        <FieldInput label="Appellation" value={state.appellation} onChange={(v) => dispatch({ type: 'SET_FIELD', payload: { field: 'appellation', value: v } })} />
+        <FieldInput label="Producer" value={state.producer} error={validationErrors.producer} onChange={(v) => dispatch({ type: 'SET_FIELD', payload: { field: 'producer', value: v } })} />
+        <FieldInput label="Wine Name" value={state.wine} error={validationErrors.wine} onChange={(v) => dispatch({ type: 'SET_FIELD', payload: { field: 'wine', value: v } })} />
+        <FieldInput label="Appellation" value={state.appellation} error={validationErrors.appellation} onChange={(v) => dispatch({ type: 'SET_FIELD', payload: { field: 'appellation', value: v } })} />
         <FieldInput label="Classification" value={state.classification} onChange={(v) => dispatch({ type: 'SET_FIELD', payload: { field: 'classification', value: v } })} />
         <FieldInput label="Grape" value={state.grape} onChange={(v) => dispatch({ type: 'SET_FIELD', payload: { field: 'grape', value: v } })} />
         <FieldInput label="Region" value={state.region} onChange={(v) => dispatch({ type: 'SET_FIELD', payload: { field: 'region', value: v } })} />
         <FieldInput label="Country" value={state.country} onChange={(v) => dispatch({ type: 'SET_FIELD', payload: { field: 'country', value: v } })} />
-        <FieldInput label="Vintage" value={state.vintage} onChange={(v) => dispatch({ type: 'SET_FIELD', payload: { field: 'vintage', value: v } })} />
+        <FieldInput label="Vintage" value={state.vintage} error={validationErrors.vintage} onChange={(v) => dispatch({ type: 'SET_FIELD', payload: { field: 'vintage', value: v } })} />
         <FieldInput label="Alcohol %" value={state.alcohol} onChange={(v) => dispatch({ type: 'SET_FIELD', payload: { field: 'alcohol', value: v } })} />
         <FieldInput label="Volume" value={state.volume} onChange={(v) => dispatch({ type: 'SET_FIELD', payload: { field: 'volume', value: v } })} />
       </div>
@@ -312,16 +332,21 @@ export function FrontPanel() {
   );
 }
 
-function FieldInput({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function FieldInput({ label, value, error, onChange }: { label: string; value: string; error?: string; onChange: (v: string) => void }) {
   return (
     <div>
-      <label className="block text-[12px] font-semibold text-ink-soft mb-1.5">{label}</label>
+      <label className={`block text-[12px] font-semibold mb-1.5 ${error ? 'text-wine' : 'text-ink-soft'}`}>{label}</label>
       <input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full px-3 py-2.5 border border-line bg-white text-ink rounded-[2px] font-[Hepta_Slab] text-[13px] h-[38px] box-border focus:outline-2 focus:outline-offset-1 focus:outline-olive-light focus:border-olive"
+        className={`w-full px-3 py-2.5 border rounded-[2px] font-[Hepta_Slab] text-[13px] h-[38px] box-border focus:outline-2 focus:outline-offset-1 ${
+          error
+            ? 'border-wine bg-white/95 text-ink focus:outline-wine'
+            : 'border-line bg-white text-ink focus:outline-olive-light focus:border-olive'
+        }`}
       />
+      {error && <p className="text-[11px] text-wine mt-1">{error}</p>}
     </div>
   );
 }
