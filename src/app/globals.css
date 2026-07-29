@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+:root {
+  /* Brand colors - match tailwind.config.ts */
+  --cream: #F0F0EE;
+  --cream-dark: #E3E3E1;
+  --ink: #1E1E1E;
+  --ink-soft: #5C5C5C;
+  --olive: #79A342;
+  --olive-dark: #5C7E30;
+  --olive-light: #B3CC85;
+  --wine: #6E1423;
+  --line: #DCDCDC;
+  --divider: #C6C6C6;
+  --white: #FFFFFF;
+  --radius: 2px;
+
+  /* Next.js defaults */
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
