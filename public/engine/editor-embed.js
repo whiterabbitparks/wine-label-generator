@@ -1,0 +1,249 @@
+
+/* =============================================================================
+   8K LABELS — Structured label editor, embedded in the configurator (FRONT LABEL).
+   ========================================================================== */
+(function(){
+"use strict";
+const COLORHEX={Red:'#6E1423',White:'#F3ECC9',Orange:'#E58A2A','Rosé':'#E7A6B5'};
+const SWEET=['N/A','Dry','Semi-Dry','Semi-Sweet','Sweet'];
+const COLOUR=['N/A','Red','White','Orange','Rosé'];
+const CATEGORY=['N/A','Wine','Sparkling Wine','Pét-Nat','Fortified Wine','Ice Wine','Dessert Wine'];
+const ATTR_PARTS=[{k:'sweetness',opts:SWEET},{k:'colour',opts:COLOUR},{k:'category',opts:CATEGORY}];   // the "Dry Red Wine" box = three dropdowns, N/A by default
+const isNA=v=>String(v||'').trim().toUpperCase()==='N/A';
+
+/* ONE editable box per label element. `ph` is the reference prompt word shown until the user types
+   over it. This single interactive layout preview IS the whole input surface — there is no separate
+   field list. Values start empty so the boxes show the reference words, exactly like Layout_preview_UI.pdf. */
+const FIELDS={
+  producer:{ph:'E.G. GRAND VIN',value:'',logo:true},
+  wineName:{ph:'E.g. Château Margaux',value:''},
+  appellation:{ph:'E.g. Margaux AOC',value:''},
+  classification:{ph:'E.g. Grand Cru Classé',value:''},
+  vintage:{ph:'E.g. 2018',value:''},
+  grape:{ph:'E.g. Cabernet Sauvignon',value:''},
+  regionCountry:{ph:'E.g. Bordeaux, France',value:''},
+  special:{ph:'E.g. Vieilles Vignes',value:''},
+  attributes:{sel:true,value:{sweetness:'N/A',colour:'N/A',category:'N/A'}},   // three labelled dropdowns, N/A selected on load
+  alcVol:{av:true,value:{alcohol:'',volume:''}}                                // Alc.: [..]  Vol.: [..] ml.
+};
+const ATTR_LBL={sweetness:'Sweetness Level:',colour:'Color:',category:'Type:'};
+// classification & grape are swapped (grape now takes the prominent box under the appellation, classification the small centre box)
+let order=['producer','wineName','appellation','grape','vintage','classification','regionCountry','special','attributes','alcVol'];
+
+/* Fixed replica of Layout_preview_UI.pdf, traced from the PDF vectors:
+   x/y/w/h = fractions of the content box · sz = font size as a fraction of the preview height ·
+   wt = Hepta Slab weight (200 = ExtraLight, 700 = Bold) · a = text alignment. */
+const REF={
+  producer:      {x:0.0300,y:0.0350,w:0.4500,h:0.0730, sz:0.0525, wt:200, a:'center'},   // producer box (left half of the top row)
+  wineName:      {x:0.0377,y:0.3965,w:0.9208,h:0.1204, sz:0.0910, wt:700, a:'center'},
+  appellation:   {x:0.2254,y:0.5214,w:0.5454,h:0.0892, sz:0.0665, wt:700, a:'center'},
+  grape:         {x:0.1230,y:0.6692,w:0.7502,h:0.0777, sz:0.0595, wt:600, a:'center'},   // Hepta Slab Semibold
+  vintage:       {x:0.3853,y:0.7726,w:0.2295,h:0.0662, sz:0.0525, wt:600, a:'center'},   // Hepta Slab Semibold
+  regionCountry: {x:0.0000,y:0.7927,w:0.3589,h:0.0461, sz:0.0350, wt:600, a:'left'},     // Hepta Slab Semibold
+  special:       {x:0.6404,y:0.7927,w:0.3589,h:0.0461, sz:0.0350, wt:600, a:'right'},    // Hepta Slab Semibold
+  classification:{x:0.2926,y:0.8809,w:0.4111,h:0.0414, sz:0.0385, wt:200, a:'center'},   // own centred row (swapped)
+  attributes:    {x:0.0000,y:0.9600,w:0.7018,h:0.0415, sz:0.0210, wt:200, a:'left', grp:1},   // Sweetness/Color/Type labelled row
+  alcVol:        {x:0.7200,y:0.9600,w:0.2800,h:0.0415, sz:0.0210, wt:200, a:'left', grp:1}     // Alc./Vol. labelled row
+};
+const LOGO={x:0.5500,y:0.0350,w:0.4200,h:0.0730};   // upload-logo box: right half of the top row, beside the producer box
+const REF_RATIO=(768.3-54.6)/(618.9-46.8);          // content-box aspect from the reference PDF
+
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function dims(){var w=document.getElementById('le_wmm'),h=document.getElementById('le_hmm');return {W:Math.max(20,w?+w.value||110:110),H:Math.max(20,h?+h.value||80:80)};}
+function stageEl(){return document.getElementById('le_wire');}
+function innerEl(){var s=stageEl();return s?s.querySelector('.le2-inner'):null;}
+
+function ensureContainers(){
+  const host=document.getElementById('labelEditor'); if(!host) return null;
+  if(!document.getElementById('le_wire')){
+    host.innerHTML=
+       '<div class="le-size"><span class="le-sizelab lw">Width</span><input id="le_wmm" type="number" value="110"><span class="le-unit">mm</span>'
+      +'<span class="le-sizelab lh">Height</span><input id="le_hmm" type="number" value="80"><span class="le-unit">mm</span></div>'          // width/height row (top)
+      +'<div class="le-divider le-full"></div>'                                     // grey dashed line, full width across the margin, between size row and label
+      +'<div class="le-warn" id="le_warn" style="display:none">No label details were provided. If you want to generate a blank label, simply click <b>Show Labels</b> again.</div>'
+      +'<div class="le2-wrap"><div class="le2-stage" id="le_wire"></div></div>'     // the single, centred layout-preview interface
+      +'<div class="le-note">This is not the final label design. It is a layout template to help you enter your label details in the correct visual hierarchy. Enter only the information you want printed on your label, and feel free to leave any fields blank. The final label will be generated based on the information you provide, and you can edit or update any of these details after your label has been generated.</div>';
+  }
+  return host;
+}
+/* Responsive layout: horizontal from the reference; vertical re-anchored so the preview follows the
+   real W×H. Header pinned to the top, the two footer rows pinned to the bottom (kept together), and
+   the wine-name / appellation / grape cluster floats just above the footer with the reference gaps —
+   so 2 & 3 stay tight and 4 sits centred above the footer while the top gap absorbs the size change.
+   At 80 mm tall it reproduces the reference exactly. */
+const RH_MM=80;                              // the reference content maps to ~80 mm of label height
+function computeLayout(W,H){
+  W=Math.max(40,+W||110); H=Math.max(30,+H||80);
+  const mm=f=>f*RH_MM, top={}, logoBottom=mm(LOGO.y+LOGO.h);
+  top.producer=mm(REF.producer.y);                                           // header: fixed mm from the top
+  ['vintage','regionCountry','special','classification','attributes','alcVol']
+    .forEach(fid=>{top[fid]=H-(RH_MM-mm(REF[fid].y));});                      // footer: fixed mm from the bottom
+  const footerTop=Math.min(top.vintage,top.regionCountry,top.special);
+  top.grape=footerTop-mm(REF.vintage.y-(REF.grape.y+REF.grape.h))-mm(REF.grape.h);
+  top.appellation=top.grape-mm(REF.grape.y-(REF.appellation.y+REF.appellation.h))-mm(REF.appellation.h);
+  top.wineName=top.appellation-mm(REF.appellation.y-(REF.wineName.y+REF.wineName.h))-mm(REF.wineName.h);
+  const minWine=logoBottom+mm(0.02);
+  if(top.wineName<minWine){const d=minWine-top.wineName;top.wineName+=d;top.appellation+=d;top.grape+=d;}
+  const boxes={}; order.forEach(fid=>{const r=REF[fid];boxes[fid]={x:r.x,w:r.w,a:r.a,wt:r.wt,y:top[fid]/H,h:mm(r.h)/H,sz:mm(r.sz)/H};});
+  return {boxes, logo:{x:LOGO.x,y:mm(LOGO.y)/H,w:LOGO.w,h:mm(LOGO.h)/H}};
+}
+function attrSelectsHTML(){var v=FIELDS.attributes.value;
+  return ATTR_PARTS.map(function(p){return '<span class="le2-lbl">'+ATTR_LBL[p.k]+'</span><select class="le2-sel'+(isNA(v[p.k])?' na':'')+'" data-attr="'+p.k+'">'
+    +p.opts.map(function(o){return '<option'+(o===v[p.k]?' selected':'')+'>'+esc(o)+'</option>';}).join('')+'</select>';}).join('');
+}
+function alcGroupHTML(){var v=FIELDS.alcVol.value;
+  return '<span class="le2-lbl">Alc.:</span><input class="le2-vinp" data-av="alcohol" placeholder="E.g. 12" value="'+esc(v.alcohol)+'">'
+    +'<span class="le2-lbl">Vol.:</span><input class="le2-vinp" data-av="volume" placeholder="E.g. 750" value="'+esc(v.volume)+'"><span class="le2-lbl">ml.</span>';
+}
+function render(){
+  if(!ensureContainers()) return;
+  const st=stageEl(); if(!st) return; const dm=dims();
+  st.style.aspectRatio=(dm.W/dm.H).toFixed(4);                               // preview reshapes to the real label proportions
+  const L=computeLayout(dm.W,dm.H), lg=L.logo, pr=L.boxes.producer;
+  let html='<div class="le2-logo" style="left:'+(lg.x*100)+'%;top:'+(lg.y*100)+'%;width:'+(lg.w*100)+'%;height:'+(lg.h*100).toFixed(3)+'%;">'
+          +'<button type="button" class="le2-upload"><span class="ar">↑</span> Upload logo</button></div>'
+          +'<div class="le2-or" style="left:'+((pr.x+pr.w)*100).toFixed(3)+'%;top:'+(pr.y*100).toFixed(3)+'%;width:'+((lg.x-pr.x-pr.w)*100).toFixed(3)+'%;height:'+(pr.h*100).toFixed(3)+'%;">or</div>';   // between producer and upload-logo
+  order.forEach(function(fid){var r=L.boxes[fid], grp=REF[fid].grp;
+    var inner=(fid==='attributes')?attrSelectsHTML():(fid==='alcVol')?alcGroupHTML()
+      :'<input class="le2-inp" data-zone-fid="'+fid+'" placeholder="'+esc(FIELDS[fid].ph)+'" value="'+esc(FIELDS[fid].value)+'">';
+    html+='<div class="le2-box '+(grp?'grp':'a-'+r.a)+'" data-zfid="'+fid+'" data-sz="'+r.sz.toFixed(5)+'" style="left:'+(r.x*100).toFixed(3)+'%;top:'+(r.y*100).toFixed(3)+'%;width:'+(r.w*100).toFixed(3)+'%;height:'+(r.h*100).toFixed(3)+'%;font-weight:'+r.wt+';">'+inner+'</div>';
+  });
+  st.innerHTML='<div class="le2-inner">'+html+'</div>'; applyFonts();
+}
+function fitBox(box){if(!box)return;const inr=innerEl();const hpx=inr?inr.getBoundingClientRect().height:0;if(!hpx)return;
+  const sz=parseFloat(box.getAttribute('data-sz'))||0.04; let fs=sz*hpx; box.style.fontSize=fs.toFixed(2)+'px';
+  if(box.classList.contains('grp')){                                                       // labelled row (dropdowns): size each select to its widest OPTION so the value never clips
+    var sels=[].slice.call(box.querySelectorAll('.le2-sel'));
+    var cv=fitBox._cv||(fitBox._cv=document.createElement('canvas').getContext('2d'));
+    function sizeSelects(){if(!sels.length)return;var cs=getComputedStyle(sels[0]);
+      cv.font='400 '+cs.fontSize+' '+cs.fontFamily; var pad=parseFloat(cs.paddingLeft)+parseFloat(cs.paddingRight);
+      var mx=0; sels.forEach(function(s){for(var i=0;i<s.options.length;i++){var w=cv.measureText(s.options[i].text).width;if(w>mx)mx=w;}});
+      var wpx=Math.ceil(mx+pad+8); sels.forEach(function(s){s.style.width=wpx+'px';});}  // all three equal, sized to the longest option ("Sparkling Wine")
+    sizeSelects();
+    var g=0; while(box.scrollWidth>box.clientWidth+1 && fs>3 && g<90){fs*=0.94;box.style.fontSize=fs.toFixed(2)+'px';sizeSelects();g++;} return;}
+  const el=box.querySelector('.le2-inp'); if(!el)return; let guard=0;
+  const measuring=!el.value && el.placeholder; if(measuring) el.value=el.placeholder;    // the placeholder is fitted just like typed text (same size)
+  while(el.scrollWidth>el.clientWidth+1 && fs>4 && guard<80){fs*=0.94;box.style.fontSize=fs.toFixed(2)+'px';guard++;}
+  if(measuring) el.value='';}
+function applyFonts(){const st=stageEl();if(!st)return;st.querySelectorAll('.le2-box').forEach(fitBox);
+  const inr=innerEl(),lg=st.querySelector('.le2-logo'),or=st.querySelector('.le2-or'),hpx=inr?inr.getBoundingClientRect().height:0;
+  if(lg&&hpx)lg.style.fontSize=(0.0310*hpx).toFixed(2)+'px';                            // "Upload logo" scales with the preview
+  if(or&&hpx)or.style.fontSize=(0.0310*hpx).toFixed(2)+'px';}                           // "or" scales with the preview
+
+function setValue(fid,val){FIELDS[fid].value=val;var box=document.querySelector('#labelEditor .le2-box[data-zfid="'+fid+'"]');
+  if(box&&val&&val.trim())box.classList.remove('warn');   // filling a flagged box clears its red outline
+  fitBox(box);}
+
+document.addEventListener('input',function(e){const t=e.target;
+  if(t.id==='le_wmm'||t.id==='le_hmm'){render();mirrorSize();return;}   // preview re-lays-out to the new size
+  if(!t.closest||!t.closest('#labelEditor'))return;
+  if(t.matches('.le2-inp[data-zone-fid]'))setValue(t.getAttribute('data-zone-fid'),t.value);
+  else if(t.matches('.le2-vinp[data-av]')){FIELDS.alcVol.value[t.getAttribute('data-av')]=t.value;var bx=t.closest('.le2-box');if(bx&&cv('alcVol'))bx.classList.remove('warn');fitBox(bx);}});
+document.addEventListener('change',function(e){const t=e.target;if(!t.closest||!t.closest('#labelEditor'))return;
+  if(t.matches('.le2-sel[data-attr]')){const k=t.getAttribute('data-attr');FIELDS.attributes.value[k]=t.value;t.classList.toggle('na',isNA(t.value));
+    const box=t.closest('.le2-box'); if(box&&cv('attributes'))box.classList.remove('warn');}});
+window.addEventListener('resize',applyFonts);
+function mirrorSize(){var d=dims();var ow=document.getElementById('widthMM'),oh=document.getElementById('heightMM');if(ow){ow.value=d.W;ow.dispatchEvent(new Event('input',{bubbles:true}));}if(oh){oh.value=d.H;oh.dispatchEvent(new Event('input',{bubbles:true}));}}
+
+/* ---------- preview glue ---------- */
+/* Each box is a single free-text string; parse the combined boxes back into the fields the engine expects. */
+function parseRegion(s){s=String(s||'').trim();var i=s.lastIndexOf(',');if(i<0)return {region:s,country:''};return {region:s.slice(0,i).trim(),country:s.slice(i+1).trim()};}
+function parseAlc(s){s=String(s||'');var am=s.match(/(\d+(?:[.,]\d+)?)\s*%/),vm=s.match(/(\d+(?:[.,]\d+)?)\s*(ml|cl|l)\b/i);
+  return {alcohol:am?am[1]+'%':'',volume:vm?(vm[1]+' '+vm[2].toLowerCase()):''};}
+function detectColour(s){s=String(s||'');for(var k in COLORHEX){if(new RegExp('\\b'+k.replace('é','[eé]')+'\\b','i').test(s))return k;}return '';}
+/* effective box content = the typed value only. The grey "E.g." prompt is a placeholder and never
+   reaches the SVG, so a box the user leaves blank simply doesn't appear on the label. */
+function cv(fid){var f=FIELDS[fid];
+  if(f.sel){var v=f.value;return [v.sweetness,v.colour,v.category].filter(function(x){return x&&!isNA(x);}).join(' ');}
+  if(f.av){var a=f.value;return [a.alcohol,a.volume].filter(function(x){return x&&String(x).trim();}).join(' ');}
+  return (f.value&&f.value.trim())?f.value.trim():'';}
+function emptyFids(){return order.filter(function(fid){return !cv(fid);});}
+function markWarn(list){var st=stageEl();if(!st)return;st.querySelectorAll('.le2-box').forEach(function(b){b.classList.toggle('warn',list.indexOf(b.getAttribute('data-zfid'))>=0);});
+  var w=document.getElementById('le_warn');if(w)w.style.display='';}
+function clearWarn(){var st=stageEl();if(st)st.querySelectorAll('.le2-box.warn').forEach(function(b){b.classList.remove('warn');});
+  var w=document.getElementById('le_warn');if(w)w.style.display='none';}
+function getLabelData(){var rc=parseRegion(cv('regionCountry')),av=FIELDS.alcVol.value,at=FIELDS.attributes.value;
+  var sweet=isNA(at.sweetness)?'':at.sweetness, colour=isNA(at.colour)?'':at.colour, type=isNA(at.category)?'':at.category;
+  return {producer:cv('producer'),wine:cv('wineName'),appellation:cv('appellation'),classification:cv('classification'),
+    grape:cv('grape'),region:rc.region,country:rc.country,special:cv('special'),vintage:cv('vintage'),
+    alcohol:String(av.alcohol||'').trim(),volume:String(av.volume||'').trim(),sweetness:sweet,wineType:type,wineColorName:colour,wineColor:COLORHEX[colour]||'#6E1423'};}
+function currentStyle(){var c=document.querySelector('.style-card.selected');return c?c.dataset.style:'';}
+function dl(svg,name){var b=new Blob([svg],{type:'image/svg+xml'});var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(function(){URL.revokeObjectURL(u);},1000);}
+let baseSeed=0, allOpts=[], selIdx=-1, galIdx=0, warned=false, shown=false;
+function mkRegen(){var rb=document.createElement('button');rb.type='button';rb.className='eng-regen';rb.textContent='Other Layout Options';rb.addEventListener('click',function(){baseSeed+=2;selIdx=-1;paint();});return rb;}
+function ensureExtras(){var reveal=document.getElementById('frontReveal');if(!reveal)return;
+  var oldNote=document.getElementById('engStyleNote');if(oldNote)oldNote.remove();
+  var oldTop=document.getElementById('engRegenTop');if(oldTop)oldTop.remove();
+  // "Other options" replaces the "Front Label Previews" button and sits BEFORE the labels grid
+  // (top of the reveal block, so it appears together with the labels rather than over the loader).
+  var grid=document.getElementById('frontThumbs');
+  if(grid&&!document.getElementById('engRegen')){var rb=mkRegen();rb.id='engRegen';reveal.insertBefore(rb,reveal.firstChild);}
+}
+function galShow(i){var ov=document.getElementById('eng-gallery');if(!ov||!allOpts.length)return;galIdx=(i+allOpts.length)%allOpts.length;
+  ov.querySelector('.eng-gv-stage').innerHTML=allOpts[galIdx].svg;ov.querySelector('.eng-gv-cap').textContent=(allOpts[galIdx].name||('Style '+(galIdx+1)))+' — '+(galIdx+1)+' of '+allOpts.length;
+  if(window.LabelEngine&&window.LabelEngine.ensureFonts)window.LabelEngine.ensureFonts();}
+function closeGallery(){var ov=document.getElementById('eng-gallery');if(ov)ov.style.display='none';}
+function openGallery(idx){var ov=document.getElementById('eng-gallery');
+  if(!ov){ov=document.createElement('div');ov.id='eng-gallery';
+    ov.innerHTML='<div class="eng-gv-back"></div><button class="eng-gv-close" aria-label="Close">×</button><button class="eng-gv-prev" aria-label="Previous">‹</button><div class="eng-gv-stage"></div><button class="eng-gv-next" aria-label="Next">›</button><div class="eng-gv-cap"></div>';
+    document.body.appendChild(ov);
+    ov.querySelector('.eng-gv-back').addEventListener('click',closeGallery);
+    ov.querySelector('.eng-gv-close').addEventListener('click',closeGallery);
+    ov.querySelector('.eng-gv-prev').addEventListener('click',function(e){e.stopPropagation();galShow(galIdx-1);});
+    ov.querySelector('.eng-gv-next').addEventListener('click',function(e){e.stopPropagation();galShow(galIdx+1);});
+    document.addEventListener('keydown',function(e){var g=document.getElementById('eng-gallery');if(!g||g.style.display==='none')return;if(e.key==='Escape')closeGallery();else if(e.key==='ArrowLeft')galShow(galIdx-1);else if(e.key==='ArrowRight')galShow(galIdx+1);});}
+  ov.style.display='flex';galShow(idx);}
+function paint(){if(!window.LabelEngine)return;shown=true;var d=getLabelData();var dm=dims();ensureExtras();
+  // 6 options = 6 distinct STYLES of the same label (Traditional, Contemporary, Flora & Fauna, Premium, Minimalist, Artistic/Punk)
+  allOpts=window.LabelEngine.renderStyleOptions(d,order.slice(),{widthMM:dm.W,heightMM:dm.H,seed:baseSeed});
+  var grid=document.getElementById('frontThumbs');if(!grid)return;
+  grid.style.display='grid';grid.style.gridTemplateColumns='repeat(3,1fr)';grid.style.gap='34px 24px';grid.style.alignItems='start';grid.innerHTML='';
+  allOpts.forEach(function(o,i){
+    var cell=document.createElement('div');cell.className='eng-cell';
+    var box=document.createElement('div');box.className='eng-lbl'+(selIdx===i?' sel':'');box.innerHTML=o.svg;box.title='Click to view larger';
+    box.addEventListener('click',function(){openGallery(i);});
+    var row=document.createElement('div');row.className='eng-selrow';
+    var radio=document.createElement('span');radio.className='eng-radio'+(selIdx===i?' on':'');
+    var lab=document.createElement('span');lab.className='eng-optlab';lab.textContent=(i+1)+'. '+(o.name||('Style '+(i+1)));
+    var dlk=document.createElement('a');dlk.className='eng-dl';dlk.href='#';dlk.textContent='Download SVG';
+    dlk.addEventListener('click',function(ev){ev.preventDefault();ev.stopPropagation();dl(o.svg,(d.wine||'label').replace(/[^a-z0-9]+/gi,'_')+'_'+String(o.name||('style_'+(i+1))).replace(/[^a-z0-9]+/gi,'_')+'.svg');});
+    row.appendChild(radio);row.appendChild(lab);
+    row.addEventListener('click',function(){selIdx=i;paint();});
+    cell.appendChild(box);cell.appendChild(row);cell.appendChild(dlk);grid.appendChild(cell);
+  });
+  // once labels exist, the "Front Label Previews" button is replaced by "Other options" (both sit before the grid)
+  var pv=document.getElementById('frontPreviewBtn');if(pv)pv.style.display='none';
+  var eb=document.getElementById('engRegen');if(eb)eb.style.display='block';
+}
+
+/* ---------- boot ---------- */
+function boot(){
+  if(!ensureContainers())return;
+  var wt=document.querySelector('input[name="wineType"]');var oc=wt?wt.closest('.option-cols'):null;if(oc)oc.style.display='none';
+  var fl=document.getElementById('fieldList');if(fl)fl.style.display='none';
+  var ow=document.getElementById('widthMM'),oh=document.getElementById('heightMM');
+  var lw=document.getElementById('le_wmm'),lh=document.getElementById('le_hmm');
+  if(lw&&ow)lw.value=ow.value||110; if(lh&&oh)lh.value=oh.value||80;
+  render(); mirrorSize();
+  if(window.LabelEngine&&window.LabelEngine.ensureFonts)window.LabelEngine.ensureFonts().then(function(){render();});  // load serifs so preview proportions are accurate
+  var btn=document.getElementById('frontPreviewBtn');
+  if(btn){
+    // Gate (capturing, runs before the loader + paint handlers): the FIRST press with any empty box
+    // warns and flags the blanks red instead of generating; the next press proceeds as normal.
+    btn.addEventListener('click',function(e){
+      // only warn when NOTHING is filled in; if at least one field has content, generate right away
+      var anyFilled=order.some(function(fid){return cv(fid);});
+      if(!anyFilled && !warned){e.stopImmediatePropagation();e.preventDefault();warned=true;
+        var w=document.getElementById('le_warn');if(w)w.style.display='';
+        var st=stageEl();if(st)st.scrollIntoView({behavior:'smooth',block:'center'});return;}
+      clearWarn();
+    },true);
+    btn.addEventListener('click',function(){setTimeout(function(){if(window.LabelEngine){window.LabelEngine.ensureFonts().then(function(){baseSeed=0;selIdx=-1;paint();});}},50);});
+  }
+}
+// expose data + repaint so the image-generation module can read wine details and refresh shown labels
+window.EightKEditor={getData:getLabelData,repaint:function(){if(shown&&window.LabelEngine){window.LabelEngine.ensureFonts().then(function(){paint();});}}};
+document.addEventListener('8kRepaint',function(){window.EightKEditor.repaint();});
+if(document.readyState!=='loading')boot();else document.addEventListener('DOMContentLoaded',boot);
+})();
+

@@ -1,0 +1,984 @@
+body  "               "
+  header.topbar  "  "
+    div#logoHome.logo  "  "
+      div.mark  "8K"
+      div.word  "8K LABELS"
+    nav.topnav  "   "
+      a  "About Us"
+      a  "Gallery"
+      a  "Contact"
+  section#sharedHero.hero  "    "
+    img.hero-photo
+    div.hero-scrim
+    div.video-overlay  "  "
+      button.video-play-btn  " "
+        svg
+          path
+      div.video-controls  "  "
+        div.video-progress
+          div.video-progress-fill
+        span.video-time  "0:00 / 0:12"
+    div.hero-inner  "   "
+      div#heroEyebrow.eyebrow  "Step 1"
+      h1#heroHeadline  "Your Front Label, Your Story."
+      p#heroSubtext  "Tell us your vision and label details — we'll generate six print-ready front lab"
+  nav.tabbar  "   "
+    button.tab-btn.active  "Front Label"
+    button.tab-btn  "Back Label"
+    button.tab-btn  "Bottle & Marketing Images"
+  main  "         "
+    div#panel-front.panel.active  "            "
+      div.section-head
+        h2  "Your Vision"
+          span.info  "?"
+      textarea#visionText
+      div#visionCount.word-count  "0 / 300 words"
+      div.upload-row  "  "
+        button.upload-btn  " Upload a sketch or a reference photo"
+          svg
+            path
+        input#sketchFile  [HIDDEN]
+      div#imgGen
+        div.ig-head  "Label Artwork"
+        p.ig-sub  "We’ll create your label illustration from the story above (and your reference im"
+        div#ig_ref.ig-ref  [HIDDEN]  "✓ Your reference image is attached and will guide the artwork."
+        div.ig-actions
+          button#ig_go.ig-btn  "Generate artwork"
+          button#ig_clear.ig-link  [HIDDEN]  "Remove artwork"
+        div#ig_preview.ig-preview  [HIDDEN]
+          div.ig-thumb
+            img#ig_img
+          div.ig-note  "This artwork now appears on your image-based label styles. Press to see them (or"
+            b  "Show Labels"
+      div  [HIDDEN]  " "
+        div.section-head
+          h2  "Label Orientation & Size"
+            span.info  "?"
+        div.label-diagram-wrap  "   "
+          div.size-controls  "  "
+            div.orientation-toggle  "  "
+              label.opt-row  "Horizontal"
+                input.dot-input
+              label.opt-row  "Vertical"
+                input.dot-input
+            div.size-inputs  "   "
+              input#widthMM
+              span  "mm"
+              span  "×"
+              input#heightMM
+              span  "mm"
+          div.diagram-box  "   "
+            div#dimTop.diagram-dim-top  "110mm"
+            div#dimSide.diagram-dim-side  "80mm"
+            div#diagramRect.diagram-rect  " "
+              svg
+                line
+          div
+        hr.grey-divider
+      div.section-head
+        h2  "FRONT LABEL"
+          span.info  "?"
+      div#labelEditor
+        div.le-size
+          span.le-sizelab.lw  "Width"
+          input#le_wmm
+          span.le-unit  "mm"
+          span.le-sizelab.lh  "Height"
+          input#le_hmm
+          span.le-unit  "mm"
+        div.le-divider.le-full
+        div#le_warn.le-warn  [HIDDEN]  "No label details were provided. If you want to generate a blank label, simply cl"
+          b  "Show Labels"
+        div.le2-wrap
+          div#le_wire.le2-stage
+            div.le2-inner
+              div.le2-logo
+                button.le2-upload  "Upload logo"
+                  span.ar  "↑"
+              div.le2-or  "or"
+              div.le2-box.a-center
+                input.le2-inp
+              div.le2-box.a-center
+                input.le2-inp
+              div.le2-box.a-center
+                input.le2-inp
+              div.le2-box.a-center
+                input.le2-inp
+              div.le2-box.a-center
+                input.le2-inp
+              div.le2-box.a-center
+                input.le2-inp
+              div.le2-box.a-left
+                input.le2-inp
+              div.le2-box.a-right
+                input.le2-inp
+              div.le2-box.grp
+                span.le2-lbl  "Sweetness Level:"
+                select.le2-sel.na
+                  option  "N/A"
+                  option  "Dry"
+                  option  "Semi-Dry"
+                  option  "Semi-Sweet"
+                  option  "Sweet"
+                span.le2-lbl  "Color:"
+                select.le2-sel.na
+                  option  "N/A"
+                  option  "Red"
+                  option  "White"
+                  option  "Orange"
+                  option  "Rosé"
+                span.le2-lbl  "Type:"
+                select.le2-sel.na
+                  option  "N/A"
+                  option  "Wine"
+                  option  "Sparkling Wine"
+                  option  "Pét-Nat"
+                  option  "Fortified Wine"
+                  option  "Ice Wine"
+                  option  "Dessert Wine"
+              div.le2-box.grp
+                span.le2-lbl  "Alc.:"
+                input.le2-vinp
+                span.le2-lbl  "Vol.:"
+                input.le2-vinp
+                span.le2-lbl  "ml."
+        div.le-note  "This is not the final label design. It is a layout template to help you enter yo"
+      div.option-cols  [HIDDEN]  "   "
+        div.opt-group  "      "
+          h4  "Wine Type"
+          label.opt-row  "Still Wine"
+            input.dot-input
+          label.opt-row  "Sparkling Wine"
+            input.dot-input
+          label.opt-row  "Pét-Nat"
+            input.dot-input
+          label.opt-row  "Fortified Wine"
+            input.dot-input
+          label.opt-row  "Ice Wine"
+            input.dot-input
+        div.opt-group  "     "
+          h4  "Wine Color"
+          label.opt-row  "Red"
+            input.dot-input
+          label.opt-row  "White"
+            input.dot-input
+          label.opt-row  "Orange"
+            input.dot-input
+          label.opt-row  "Rosé"
+            input.dot-input
+        div.opt-group  "      "
+          h4  "Sweetness Level"
+          label.opt-row  "Dry"
+            input.dot-input
+          label.opt-row  "Semi-Dry"
+            input.dot-input
+          label.opt-row  "Sweet"
+            input.dot-input
+          label.opt-row  "Semi-Sweet"
+            input.dot-input
+          label.opt-row  "Dessert Wine"
+            input.dot-input
+      div#fieldList.field-list  [HIDDEN]
+        div.field-row  "   "
+          label.field-row-label  "Priority"
+          label.field-row-label  "Brand Logo"
+            span.info-inline  "?"
+          select
+            option  "1"
+            option  "2"
+            option  "3"
+            option  "4"
+            option  "5"
+            option  "6"
+            option  "7"
+            option  "8"
+            option  "9"
+            option  "10"
+            option  "11"
+          button.upload-btn-wide  " Upload Logo"
+            svg
+              path
+        div.field-row  "   "
+          label.field-row-label
+          label.field-row-label  "Producer / Estate Name"
+          select
+            option  "1"
+            option  "2"
+            option  "3"
+            option  "4"
+            option  "5"
+            option  "6"
+            option  "7"
+            option  "8"
+            option  "9"
+            option  "10"
+            option  "11"
+          input
+        div.field-row  "   "
+          label.field-row-label
+          label.field-row-label  "Wine Name / Cuvée"
+          select
+            option  "1"
+            option  "2"
+            option  "3"
+            option  "4"
+            option  "5"
+            option  "6"
+            option  "7"
+            option  "8"
+            option  "9"
+            option  "10"
+            option  "11"
+          input
+        div.field-row  "   "
+          label.field-row-label
+          label.field-row-label  "Appellation / PDO / AVA"
+          select
+            option  "1"
+            option  "2"
+            option  "3"
+            option  "4"
+            option  "5"
+            option  "6"
+            option  "7"
+            option  "8"
+            option  "9"
+            option  "10"
+            option  "11"
+          input
+        div.field-row  "   "
+          label.field-row-label
+          label.field-row-label  "Classification"
+          select
+            option  "1"
+            option  "2"
+            option  "3"
+            option  "4"
+            option  "5"
+            option  "6"
+            option  "7"
+            option  "8"
+            option  "9"
+            option  "10"
+            option  "11"
+          input
+        div.field-row  "   "
+          label.field-row-label
+          label.field-row-label  "Grape Variety"
+          select
+            option  "1"
+            option  "2"
+            option  "3"
+            option  "4"
+            option  "5"
+            option  "6"
+            option  "7"
+            option  "8"
+            option  "9"
+            option  "10"
+            option  "11"
+          input
+        div.field-row  "   "
+          label.field-row-label
+          label.field-row-label  "Region"
+          select
+            option  "1"
+            option  "2"
+            option  "3"
+            option  "4"
+            option  "5"
+            option  "6"
+            option  "7"
+            option  "8"
+            option  "9"
+            option  "10"
+            option  "11"
+          input
+        div.field-row  "   "
+          label.field-row-label
+          label.field-row-label  "Special Designation"
+          select
+            option  "1"
+            option  "2"
+            option  "3"
+            option  "4"
+            option  "5"
+            option  "6"
+            option  "7"
+            option  "8"
+            option  "9"
+            option  "10"
+            option  "11"
+          input
+        div.field-row  "   "
+          label.field-row-label
+          label.field-row-label  "Vintage"
+          select
+            option  "1"
+            option  "2"
+            option  "3"
+            option  "4"
+            option  "5"
+            option  "6"
+            option  "7"
+            option  "8"
+            option  "9"
+            option  "10"
+            option  "11"
+          input
+        div.field-row  "   "
+          label.field-row-label
+          label.field-row-label  "Country"
+          select
+            option  "1"
+            option  "2"
+            option  "3"
+            option  "4"
+            option  "5"
+            option  "6"
+            option  "7"
+            option  "8"
+            option  "9"
+            option  "10"
+            option  "11"
+          input
+        div.field-row-pair  "  "
+          select.field-row-pair-num-select
+            option  "1"
+            option  "2"
+            option  "3"
+            option  "4"
+            option  "5"
+            option  "6"
+            option  "7"
+            option  "8"
+            option  "9"
+            option  "10"
+            option  "11"
+          div.field-row-pair-col  "  "
+            label.field-row-label  "Alcohol"
+            input
+          div.field-row-pair-col  "  "
+            label.field-row-label  "Bottle Volume"
+            input
+      button#frontPreviewBtn.preview-btn  "Show Labels"
+      div#frontLoader.preview-loader  [HIDDEN]  "  "
+        svg  "      "
+          ellipse
+          path
+          rect
+          ellipse
+          clippath#frontLiquidClip  " "
+            path
+          g  " "
+            rect.liquid-rect
+        div.loader-label  "Preparing your preview…"
+      div#frontReveal.reveal-block  [HIDDEN]  "  "
+        div#frontThumbs.thumb-grid
+          div.thumb.selected
+            label.opt-row  "Option #1"
+              input.dot-input
+            div.thumb-box
+              img
+          div.thumb
+            label.opt-row  "Option #2"
+              input.dot-input
+            div.thumb-box
+              img
+          div.thumb
+            label.opt-row  "Option #3"
+              input.dot-input
+            div.thumb-box
+              img
+          div.thumb
+            label.opt-row  "Option #4"
+              input.dot-input
+            div.thumb-box
+              img
+        div.pricing  "    "
+          div.price-row.required  "   "
+            input.dot-input
+            label  "Selected Front Label Print File (PDF)"
+            span.amt  "$ 129"
+          div.price-row  "   "
+            input.dot-input
+            label  "Edit with a Human Designer"
+            span.amt  "$ 99"
+          div.subtotal-row
+            span.label  "Subtotal"
+            span.amt  "$"
+              span#subtotalFront  "228"
+          button.pay-btn  "Proceed to Payment"
+    div#panel-back.panel  [HIDDEN]  "          "
+      div.section-head
+        h2  "Back Label Details"
+          span.info  "?"
+      div.back-detail-grid  "      "
+        div.form-field.field-wine-desc  "   "
+          label  "Wine Description"
+          textarea#descText
+          div#descCount.word-count  "0 / 300 words"
+        div.form-field.field-importer
+          label  "Importer (if listed)"
+          input
+        div.form-field.field-bottling
+          label  "Bottling Date"
+          input
+        div.form-field.field-lot
+          label  "LOT Number"
+          input
+        div.form-field.field-producer
+          label  "Producer Company"
+          input
+        div.form-field.field-webpage
+          label  "Web Page"
+          input
+      div.two-col  "  "
+        div  "    "
+          button.upload-btn  " Upload Barcode"
+            svg
+              path
+          input#barcodeFile  [HIDDEN]
+          p.file-hint  "If you don't have a barcode, we'll provide an official GTIN barcode and integrat"
+          label.opt-row  "Add GTIN barcode"
+            input#gtinCheck.dot-input
+            span.info-inline  "?"
+        div  "    "
+          button.upload-btn  " Upload QR Code"
+            svg
+              path
+          input#qrFile  [HIDDEN]
+          p.file-hint  "If you don't have a QR code, we'll generate one and link it to a dedicated page "
+            a  "(See example)"
+          label.opt-row  "Generate QR Code & Product Ingredients page"
+            input#qrCheck.dot-input
+            span.info-inline  "?"
+      hr.grey-divider
+      div.section-head
+        h2  "Export Compliance"
+          span.info  "?"
+      div#countryGrid.country-grid  "              "
+        label.country-row  "European Union"
+          input.dot-input
+          span.flag  "🇪🇺"
+        label.country-row  "Australia"
+          input.dot-input
+          span.flag  "🇦🇺"
+        label.country-row  "South Korea"
+          input.dot-input
+          span.flag  "🇰🇷"
+        label.country-row  "Israel"
+          input.dot-input
+          span.flag  "🇮🇱"
+        label.country-row  "United States"
+          input.dot-input
+          span.flag  "🇺🇸"
+        label.country-row  "New Zealand"
+          input.dot-input
+          span.flag  "🇳🇿"
+        label.country-row  "Brazil"
+          input.dot-input
+          span.flag  "🇧🇷"
+        label.country-row  "Georgia"
+          input.dot-input
+          span.flag  "🇬🇪"
+        label.country-row  "United Kingdom"
+          input.dot-input
+          span.flag  "🇬🇧"
+        label.country-row  "China"
+          input.dot-input
+          span.flag  "🇨🇳"
+        label.country-row  "Mexico"
+          input.dot-input
+          span.flag  "🇲🇽"
+        label.country-row  "Canada"
+          input.dot-input
+          span.flag  "🇨🇦"
+        label.country-row  "Japan"
+          input.dot-input
+          span.flag  "🇯🇵"
+        label.country-row  "Arabic Markets"
+          input.dot-input
+          span.flag  "🕋"
+      hr.grey-divider
+      button#backPreviewBtn.preview-btn  "Back Label Preview"
+      div#backLoader.preview-loader  [HIDDEN]  "  "
+        svg  "      "
+          ellipse
+          path
+          rect
+          ellipse
+          clippath#backLiquidClip  " "
+            path
+          g  " "
+            rect.liquid-rect
+        div.loader-label  "Preparing your preview…"
+      div#backReveal.reveal-block  [HIDDEN]  "  "
+        div  " "
+          div#backThumbWrap.thumb.selected  "  "
+            label.opt-row  "Option #1"
+              input.dot-input
+            div#backThumbBox.thumb-box  " "
+              img
+        div.pricing  "       "
+          div.price-row.required
+            input.dot-input
+            label  "Back Label Print File (PDF)"
+            span.amt  "$ 129"
+          div.price-row
+            input#gtinPriceCheck.dot-input
+            label  "GTIN Barcode"
+            span.amt  "$ 99"
+          div.price-row
+            input#qrPriceCheck.dot-input
+            label  "QR & Product Page"
+            span.amt  "$ 99"
+          div.price-row
+            input#complianceCheck.dot-input
+            label  "Export Compliance"
+            span.amt  "$ 19"
+          div.price-row
+            input.dot-input
+            label  "Edit with a Human Designer"
+            span.amt  "$ 19"
+          div.subtotal-row
+            span.label  "Subtotal"
+            span.amt  "$"
+              span#subtotalBack  "228"
+          button.pay-btn  "Proceed to Payment"
+    div#panel-bottle.panel  [HIDDEN]  "        "
+      div.section-head
+        h2  "Label"
+          span.info  "?"
+      div.upload-row  "     "
+        button#importSessionBtn.upload-btn  " Import from this session"
+          svg
+            path
+        button.upload-btn  " Upload Front Label"
+          svg
+            path
+        input#frontLabelFile  [HIDDEN]
+        button.upload-btn  " Upload Back Label"
+          svg
+            path
+        input#backLabelFile  [HIDDEN]
+      div.section-head
+        h2  "Bottle"
+          span.info  "?"
+      div.option-cols.cols-5  "     "
+        div.opt-group  "     "
+          h4  "Wine Color"
+          label.opt-row  "Red"
+            input.dot-input
+          label.opt-row  "White"
+            input.dot-input
+          label.opt-row  "Orange"
+            input.dot-input
+          label.opt-row  "Rosé"
+            input.dot-input
+        div.opt-group  "       "
+          h4  "Bottle Type"
+          label.opt-row  "Bordeaux"
+            input.dot-input
+          label.opt-row  "Bordeaux Prestige"
+            input.dot-input
+          label.opt-row  "Burgundy"
+            input.dot-input
+          label.opt-row  "Sparkling"
+            input.dot-input
+          label.opt-row  "Alsace / Rhine"
+            input.dot-input
+          label.opt-row  "Ice Wine"
+            input.dot-input
+        div.opt-group  "    "
+          h4  "Bottle Color"
+          label.opt-row  "Olive Green"
+            input.dot-input
+          label.opt-row  "Transparent"
+            input.dot-input
+          label.opt-row  "Amber"
+            input.dot-input
+        div.opt-group  "      "
+          h4  "Closure Type"
+          label.opt-row  "Cork"
+            input.dot-input
+          label.opt-row  "Screw Cap"
+            input.dot-input
+          label.opt-row  "Wax Seal"
+            input.dot-input
+          label.opt-row  "Crown Cap"
+            input.dot-input
+          label.opt-row  "Sparkling"
+            input.dot-input
+        div.opt-group  "  "
+          h4  "Closure Color"
+          div#swatchGrid.swatch-grid
+            div.swatch
+            div.swatch.selected
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+            div.swatch
+      hr.grey-divider
+      button#bottlePreviewBtn.preview-btn  "Preview Bottle & Marketing Images"
+        span.info-inline  "?"
+      div#bottleLoader.preview-loader  [HIDDEN]  "  "
+        svg  "      "
+          ellipse
+          path
+          rect
+          ellipse
+          clippath#bottleLiquidClip  " "
+            path
+          g  " "
+            rect.liquid-rect
+        div.loader-label  "Preparing your preview…"
+      div#bottleReveal.reveal-block  [HIDDEN]  "       "
+        div.bottle-stage  " "
+          img#bottleMainImg.bottle-photo-img
+        div.asset-select-row  " "
+          label.opt-row  "Download high resolution transparent PNG"
+            input#bottleImgSelect.dot-input
+        div.section-head
+          h2  "Marketing Assets"
+            span.info  "?"
+        div.bottle-stage  " "
+          img#marketingAssetImg.bottle-photo-img
+        div.asset-select-row  " "
+          label.opt-row  "Download high resolution 4 product images"
+            input#marketingImgSelect.dot-input
+        div.section-head
+          h2  "Marketing Add-ons"
+            span.info  "?"
+        div.pricing  "      "
+          div.price-row.required
+            input#bottleMockupCheck.dot-input
+            label  "Bottle Mockup (transparent PNG, front & back view)"
+            span.amt  "$ 129"
+          div.price-row
+            input#marketingImagesCheck.dot-input
+            label  "Marketing Images (4 product images for web/social)"
+            span.amt  "$ 99"
+          div.price-row
+            input.dot-input
+            label  "Marketing Video (10-second product video)"
+            span.amt  "$ 99"
+          div.price-row
+            input.dot-input
+            label  "Edit with a Human Designer"
+            span.amt  "$ 19"
+          div.subtotal-row
+            span.label  "Subtotal"
+            span.amt  "$"
+              span#subtotalBottle  "228"
+          button.pay-btn  "Proceed to Payment"
+    div#panel-gallery.panel  [HIDDEN]  "    "
+      div.section-head
+        h2  "Gallery"
+      p.brief-intro  "Browse label designs by style, or take a look at our marketing work and client s"
+      div#galleryFilters.gallery-filters
+        button.gallery-filter-btn.active  "All"
+        button.gallery-filter-btn  "Traditional / Heritage"
+        button.gallery-filter-btn  "Contemporary"
+        button.gallery-filter-btn  "Flora & Fauna"
+        button.gallery-filter-btn  "Premium"
+        button.gallery-filter-btn  "Minimalist"
+        button.gallery-filter-btn  "Artistic / Punk"
+        button.gallery-filter-btn  "Marketing Images"
+        button.gallery-filter-btn  "Our Clients"
+      div#galleryGrid.gallery-grid
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Flora & Fauna"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Marketing Images"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Premium"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Traditional / Heritage"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Traditional / Heritage"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Flora & Fauna"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Premium"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Marketing Images"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Contemporary"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Flora & Fauna"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Contemporary"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Minimalist"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Traditional / Heritage"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Flora & Fauna"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Premium"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Marketing Images"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Flora & Fauna"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Premium"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Marketing Images"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Marketing Images"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Contemporary"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Artistic / Punk"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Artistic / Punk"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Traditional / Heritage"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Artistic / Punk"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Premium"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Marketing Images"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Traditional / Heritage"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Marketing Images"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Minimalist"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Artistic / Punk"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Minimalist"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Minimalist"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Contemporary"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Minimalist"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Traditional / Heritage"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Contemporary"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Contemporary"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Minimalist"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Marketing Images"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Flora & Fauna"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Artistic / Punk"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Premium"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Artistic / Punk"
+    div#panel-about.panel  [HIDDEN]  "   "
+      div.section-head
+        h2  "About Us"
+          span.info  "?"
+      p.brief-intro  "The people behind 8K Labels."
+      div#aboutGrid.about-grid
+        div.about-card  "    "
+          div.about-avatar  " "
+            svg
+              circle
+              path
+          div.about-name  "Founder Name"
+          div.about-role  "Co-Founder & Creative Director"
+          p.about-bio  "Placeholder bio text describing background, experience, and role at 8K Labels."
+          a.about-link  "Personal Site"
+        div.about-card  "    "
+          div.about-avatar  " "
+            svg
+              circle
+              path
+          div.about-name  "Founder Name"
+          div.about-role  "Co-Founder & Head of Production"
+          p.about-bio  "Placeholder bio text describing background, experience, and role at 8K Labels."
+          a.about-link  "Personal Site"
+        div.about-card  "    "
+          div.about-avatar  " "
+            svg
+              circle
+              path
+          div.about-name  "Founder Name"
+          div.about-role  "Co-Founder & Operations"
+          p.about-bio  "Placeholder bio text describing background, experience, and role at 8K Labels."
+          a.about-link  "Personal Site"
+        div.about-card  "    "
+          div.about-avatar  " "
+            svg
+              circle
+              path
+          div.about-name  "Founder Name"
+          div.about-role  "Co-Founder & Client Relations"
+          p.about-bio  "Placeholder bio text describing background, experience, and role at 8K Labels."
+          a.about-link  "Personal Site"
+  div#lightboxOverlay.lightbox-overlay  [HIDDEN]  "    "
+    button#lightboxClose.lightbox-close  "×"
+    button#lightboxPrev.lightbox-nav.lightbox-prev  "‹"
+    div.lightbox-content  "   "
+      div#lightboxPlaceholder.lightbox-placeholder  " "
+        svg
+          rect
+          circle
+          path
+      div#lightboxCaption.lightbox-caption
+      div#lightboxCounter.lightbox-counter
+    button#lightboxNext.lightbox-nav.lightbox-next  "›"
+  footer  "  "
+    div  "© 8K Labels — a demo interface built from your uploaded mockup"
+    div
+      a  "About Us"
+      a  "Gallery"
+      a  "Contact"
+  div#chatPanel.chat-panel  [HIDDEN]  "   "
+    div.chat-header  "  "
+      div  "  "
+        div.chat-header-title  "8K Labels Support"
+        div.chat-header-sub  "Usually replies in a few minutes"
+      button#chatClose.chat-close  "×"
+    div#chatMessages.chat-messages  " "
+      div.chat-msg.chat-msg-bot  "Hi! \uD83D\uDC4B How can we help with your label today?"
+    div.chat-input-row  "  "
+      input#chatInput
+      button#chatSend.chat-send-btn  " "
+        svg
+          path
+  button#chatFab.chat-fab  "  "
+    svg.chat-fab-chat-icon
+      path
+    svg.chat-fab-close-icon  [HIDDEN]
+      path
+  div#toast.toast  "Demo checkout — this button doesn't process real payments."

@@ -43,7 +43,9 @@
       "Bash(git commit -m 'Step 2: Font viability spike - all 30 Google Fonts available and working *)",
       "Bash(git commit -m 'Step 3a: Begin label engine port - create TypeScript structure *)",
       "Bash(git commit -m 'Step 3b: Implement interim working label engine *)",
-      "Bash(git commit -m 'Document migration progress in project memory files *)"
+      "Bash(git commit -m 'Document migration progress in project memory files *)",
+      "Bash(curl -s http://localhost:3000)",
+      "Bash(pkill -f \"next dev\")"
     ]
   }
 }

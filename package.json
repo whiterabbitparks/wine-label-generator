@@ -1,31 +1,29 @@
 {
-  "name": "wine-label-generator-next",
+  "name": "wine-label-generator",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "pretest:verify": "node tests/build-engine-umd.mjs",
-    "verify": "npm run pretest:verify && node tests/verify.ts"
+    "capture:original": "node tests/parity/capture-original.mjs",
+    "capture:ported": "node tests/parity/capture-original.mjs http://localhost:3200 tests/parity/ported",
+    "compare:screens": "node tests/parity/compare-screens.mjs",
+    "golden:extract": "node tests/parity/extract-golden.mjs",
+    "golden:check": "node tests/parity/check-golden.mjs"
   },
   "dependencies": {
-    "next": "16.2.12",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "openai": "^4.52.7"
+    "next": "^15.4.5",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.12",
-    "tailwindcss": "^4",
-    "typescript": "^5",
-    "playwright": "^1.44.0",
-    "esbuild": "^0.23.0"
+    "pixelmatch": "^7.2.0",
+    "playwright": "^1.54.0",
+    "pngjs": "^7.0.0",
+    "typescript": "^5"
   }
 }

@@ -1,0 +1,17 @@
+{
+  "name": "8k-labels",
+  "version": "1.0.0",
+  "description": "Traditional / Heritage SVG wine-label engine + configurator",
+  "private": true,
+  "scripts": {
+    "build": "node build.js",
+    "verify": "node tests/verify.js",
+    "postinstall": "node -e \"console.log('Run: npm run build  then open dist/configurator.html')\""
+  },
+  "devDependencies": {
+    "playwright": "^1.44.0"
+  },
+  "engines": {
+    "node": ">=16"
+  }
+}

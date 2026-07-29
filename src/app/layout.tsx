@@ -1,20 +1,25 @@
 import type { Metadata } from "next";
-import { fontClassNames } from "@/lib/fonts";
 import "./globals.css";
+import "./configurator.css";
 
 export const metadata: Metadata = {
-  title: "Wine Label Generator",
-  description: "Generate stunning wine labels in 6 distinct design styles with AI-powered artwork",
+  title: "8K Labels — Design Your Wine Label",
+  description:
+    "Tell us your vision and label details — we'll generate six print-ready front label styles to choose from.",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${fontClassNames} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-cream text-ink">{children}</body>
+    <html lang="en">
+      <head>
+        {/* exactly what the original page's <head> loads */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Hepta+Slab:wght@200;300;400;500;600;700;800&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body>{children}</body>
     </html>
   );
 }

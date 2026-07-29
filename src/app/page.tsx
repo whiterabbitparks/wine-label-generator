@@ -1,54 +1,47 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { LabelEditorProvider, useLabelEditor } from '@/lib/store/labelEditorStore';
-import { TopBar } from '@/components/layout/TopBar';
-import { Hero } from '@/components/layout/Hero';
-import { TabBar } from '@/components/layout/TabBar';
-import { FrontPanel } from '@/components/configurator/FrontPanel';
-import { BackPanel } from '@/components/configurator/BackPanel';
-import { BottlePanel } from '@/components/configurator/BottlePanel';
-import { GalleryPanel } from '@/components/configurator/GalleryPanel';
-import { AboutPanel } from '@/components/configurator/AboutPanel';
-import { Footer } from '@/components/layout/Footer';
-import { ChatWidget } from '@/components/chat/ChatWidget';
-import { ToastNotification, type Toast } from '@/components/toast/ToastNotification';
+/* The configurator, transplanted VERBATIM from 8k-labels-package/dist/configurator.html.
+   The static body HTML and the five behavior scripts are byte-identical to the
+   original build (extracted by tests/parity/extract-shell.mjs — rerun that after
+   `node build.js` in the package to resync). React only hosts them; it renders
+   the HTML once and never touches the subtree again, so the original scripts own
+   the DOM exactly as they do in the single-file version. */
+import { useEffect, useRef } from "react";
+import { loadScriptsSequentially } from "@/lib/load-scripts";
+import shellBodyHtml from "./shell-body";
+import shellScripts from "./shell-scripts.json";
 
-function ConfiguratorContent() {
-  const { state } = useLabelEditor();
+export default function Configurator() {
+  const booted = useRef(false);
 
-  return (
-    <>
-      <TopBar />
-      <Hero />
-      <TabBar />
-      {state.tab === 'front' && <FrontPanel />}
-      {state.tab === 'back' && <BackPanel />}
-      {state.tab === 'bottle' && <BottlePanel />}
-      {state.tab === 'gallery' && <GalleryPanel />}
-      {state.tab === 'about' && <AboutPanel />}
-      <Footer />
-    </>
-  );
-}
-
-export default function Home() {
-  const [toasts, setToasts] = useState<Toast[]>([]);
-
-  const addToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
-    const id = Date.now().toString();
-    setToasts((prev) => [...prev, { id, message, type }]);
-  };
-
-  const removeToast = (id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
+  useEffect(() => {
+    if (booted.current) return; // survive StrictMode double-invoke in dev
+    booted.current = true;
+    loadScriptsSequentially(shellScripts)
+      .then(() => {
+        // The ONE integration point the original exposes (CONTINUE-HERE.md §6):
+        // replace the offline placeholder provider with a call to our backend.
+        // The API key stays server-side; the client only ever sees the image.
+        const gen = (window as unknown as { EightKImageGen?: { provider: unknown } }).EightKImageGen;
+        if (!gen) return;
+        gen.provider = async (job: unknown) => {
+          const r = await fetch("/api/generate-label-image", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(job),
+          });
+          const body = await r.json().catch(() => ({}));
+          if (!r.ok) throw new Error(body.error || `generation failed (${r.status})`);
+          return body.imageDataUrl;
+        };
+      })
+      .catch((e) => console.error(e));
+  }, []);
 
   return (
-    <LabelEditorProvider>
-      <ConfiguratorContent />
-      <ChatWidget />
-      <ToastNotification toasts={toasts} onRemove={removeToast} />
-    </LabelEditorProvider>
+    <div
+      suppressHydrationWarning
+      dangerouslySetInnerHTML={{ __html: shellBodyHtml }}
+    />
   );
 }
