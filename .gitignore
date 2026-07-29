@@ -40,3 +40,6 @@ tests/parity/imagegen-e2e.png
 
 # One-off exports
 docs/DESIGN.pdf
+
+# Server-side runtime data (art direction config, sessions)
+data/

@@ -22,8 +22,17 @@ export default function Configurator() {
         // The ONE integration point the original exposes (CONTINUE-HERE.md §6):
         // replace the offline placeholder provider with a call to our backend.
         // The API key stays server-side; the client only ever sees the image.
-        const gen = (window as unknown as { EightKImageGen?: { provider: unknown } }).EightKImageGen;
+        const gen = (
+          window as unknown as {
+            EightKImageGen?: { provider: unknown; setConfig?: (c: unknown) => void };
+          }
+        ).EightKImageGen;
         if (!gen) return;
+        // apply the server-persisted Art Direction config (edited at /admin)
+        fetch("/api/admin/config")
+          .then((r) => r.json())
+          .then((cfg) => gen.setConfig?.(cfg))
+          .catch(() => {});
         gen.provider = async (job: unknown) => {
           const r = await fetch("/api/generate-label-image", {
             method: "POST",
