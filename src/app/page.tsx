@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { LabelEditorProvider, useLabelEditor } from '@/lib/store/labelEditorStore';
 import { TopBar } from '@/components/layout/TopBar';
 import { Hero } from '@/components/layout/Hero';
@@ -10,6 +11,8 @@ import { BottlePanel } from '@/components/configurator/BottlePanel';
 import { GalleryPanel } from '@/components/configurator/GalleryPanel';
 import { AboutPanel } from '@/components/configurator/AboutPanel';
 import { Footer } from '@/components/layout/Footer';
+import { ChatWidget } from '@/components/chat/ChatWidget';
+import { ToastNotification, type Toast } from '@/components/toast/ToastNotification';
 
 function ConfiguratorContent() {
   const { state } = useLabelEditor();
@@ -30,9 +33,22 @@ function ConfiguratorContent() {
 }
 
 export default function Home() {
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
+  const addToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    const id = Date.now().toString();
+    setToasts((prev) => [...prev, { id, message, type }]);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
   return (
     <LabelEditorProvider>
       <ConfiguratorContent />
+      <ChatWidget />
+      <ToastNotification toasts={toasts} onRemove={removeToast} />
     </LabelEditorProvider>
   );
 }
