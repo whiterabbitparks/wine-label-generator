@@ -37,3 +37,6 @@ tests/parity/ported/
 tests/parity/diff/
 tests/parity/failures/
 tests/parity/imagegen-e2e.png
+
+# One-off exports
+docs/DESIGN.pdf

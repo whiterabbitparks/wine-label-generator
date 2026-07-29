@@ -10,8 +10,7 @@
     "capture:ported": "node tests/parity/capture-original.mjs http://localhost:3200 tests/parity/ported",
     "compare:screens": "node tests/parity/compare-screens.mjs",
     "golden:extract": "node tests/parity/extract-golden.mjs",
-    "golden:check": "node tests/parity/check-golden.mjs",
-    "docs:pdf": "node tests/parity/export-design-pdf.mjs"
+    "golden:check": "node tests/parity/check-golden.mjs"
   },
   "dependencies": {
     "next": "^15.4.5",
@@ -22,7 +21,6 @@
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "marked": "^18.0.7",
     "pixelmatch": "^7.2.0",
     "playwright": "^1.54.0",
     "pngjs": "^7.0.0",
