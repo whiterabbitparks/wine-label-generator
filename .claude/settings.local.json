@@ -38,7 +38,9 @@
       "Bash(npm install *)",
       "Bash(npm --version)",
       "Bash(npm run *)",
-      "Bash(git commit -m 'Step 1: Scaffold Next.js app with TypeScript, Tailwind, App Router *)"
+      "Bash(git commit -m 'Step 1: Scaffold Next.js app with TypeScript, Tailwind, App Router *)",
+      "Bash(npx tsc *)",
+      "Bash(git commit -m 'Step 2: Font viability spike - all 30 Google Fonts available and working *)"
     ]
   }
 }
