@@ -1,7 +1,6 @@
-import fs from "node:fs";
-import path from "node:path";
+import { getDb } from "@/lib/db";
 
-/* Server-side persistence for the Art Direction config.
+/* Art Direction config, persisted in the `settings` collection (single doc).
    The shape and defaults MIRROR 8k-labels-package/src/image-gen.js (ART,
    NEGATIVE_DEFAULT, TEMPLATE_DEFAULT, PRESETS keys) — keep them in sync if the
    package source changes. */
@@ -23,21 +22,24 @@ export const DEFAULT_CONFIG: ArtDirectionConfig = {
   template: "{medium}. Subject: {subject}. {context}{composition}. Mood: {mood}.{reference}{rules}",
 };
 
-const FILE = path.join(process.cwd(), "data", "art-direction.json");
+const DOC_ID = "art-direction";
 
-export function loadConfig(): ArtDirectionConfig {
-  try {
-    const raw = JSON.parse(fs.readFileSync(FILE, "utf8"));
-    return sanitize(raw);
-  } catch {
-    return { ...DEFAULT_CONFIG };
-  }
+export async function loadConfig(): Promise<ArtDirectionConfig> {
+  const db = await getDb();
+  const doc = await db.collection("settings").findOne({ _id: DOC_ID } as never);
+  return doc ? sanitize(doc) : { ...DEFAULT_CONFIG };
 }
 
-export function saveConfig(input: unknown): ArtDirectionConfig {
+export async function saveConfig(input: unknown): Promise<ArtDirectionConfig> {
   const cfg = sanitize(input);
-  fs.mkdirSync(path.dirname(FILE), { recursive: true });
-  fs.writeFileSync(FILE, JSON.stringify(cfg, null, 2));
+  const db = await getDb();
+  await db
+    .collection("settings")
+    .updateOne(
+      { _id: DOC_ID } as never,
+      { $set: { ...cfg, updatedAt: new Date() } },
+      { upsert: true }
+    );
   return cfg;
 }
 

@@ -4,7 +4,7 @@ import { destroySession, SESSION_COOKIE } from "@/lib/admin/session";
 
 export async function POST() {
   const jar = await cookies();
-  destroySession(jar.get(SESSION_COOKIE)?.value);
+  await destroySession(jar.get(SESSION_COOKIE)?.value);
   jar.delete(SESSION_COOKIE);
   return NextResponse.json({ ok: true });
 }

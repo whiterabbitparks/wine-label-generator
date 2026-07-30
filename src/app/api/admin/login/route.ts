@@ -9,10 +9,10 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "invalid JSON body" }, { status: 400 });
   }
-  if (!checkCredentials(body.username, body.password)) {
+  if (!(await checkCredentials(body.username, body.password))) {
     return NextResponse.json({ error: "invalid username or password" }, { status: 401 });
   }
-  const token = createSession();
+  const token = await createSession();
   const jar = await cookies();
   jar.set(SESSION_COOKIE, token, {
     httpOnly: true,

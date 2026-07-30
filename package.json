@@ -13,6 +13,8 @@
     "golden:check": "node tests/parity/check-golden.mjs"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "mongodb": "^7.5.0",
     "next": "^15.4.5",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"

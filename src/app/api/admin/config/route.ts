@@ -1,13 +1,18 @@
 import { NextResponse } from "next/server";
 import { requestIsAuthenticated } from "@/lib/admin/session";
-import { loadConfig, saveConfig } from "@/lib/admin/config-store";
+import { loadConfig, saveConfig, DEFAULT_CONFIG } from "@/lib/admin/config-store";
 
 /* GET is public: the client configurator loads the active art direction on
-   init (the assembled prompt is visible client-side anyway).
+   init (the assembled prompt is visible client-side anyway). Falls back to
+   defaults if the DB is unreachable so the configurator never breaks.
    POST requires an authenticated admin session. */
 
 export async function GET() {
-  return NextResponse.json(loadConfig());
+  try {
+    return NextResponse.json(await loadConfig());
+  } catch {
+    return NextResponse.json(DEFAULT_CONFIG);
+  }
 }
 
 export async function POST(req: Request) {
@@ -20,5 +25,12 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "invalid JSON body" }, { status: 400 });
   }
-  return NextResponse.json(saveConfig(body));
+  try {
+    return NextResponse.json(await saveConfig(body));
+  } catch (e) {
+    return NextResponse.json(
+      { error: "failed to save: " + (e instanceof Error ? e.message : String(e)) },
+      { status: 503 }
+    );
+  }
 }

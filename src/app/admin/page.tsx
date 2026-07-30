@@ -81,6 +81,12 @@ export default function AdminPage() {
   const [status, setStatus] = useState("");
   const [testImg, setTestImg] = useState("");
   const [testing, setTesting] = useState(false);
+  const [gens, setGens] = useState<GenerationRow[]>([]);
+
+  const loadGenerations = useCallback(async () => {
+    const r = await fetch("/api/admin/generations");
+    if (r.ok) setGens((await r.json()).generations || []);
+  }, []);
 
   const loadConfig = useCallback(async () => {
     const cfg = await fetch("/api/admin/config").then((r) => r.json());
@@ -93,9 +99,9 @@ export default function AdminPage() {
       .then((r) => r.json())
       .then(async (m) => {
         setAuthed(m.authenticated);
-        if (m.authenticated) await loadConfig();
+        if (m.authenticated) await Promise.all([loadConfig(), loadGenerations()]);
       });
-  }, [loadConfig]);
+  }, [loadConfig, loadGenerations]);
 
   async function login(e: React.FormEvent) {
     e.preventDefault();
@@ -110,7 +116,7 @@ export default function AdminPage() {
       return;
     }
     setAuthed(true);
-    await loadConfig();
+    await Promise.all([loadConfig(), loadGenerations()]);
   }
 
   async function logout() {
@@ -161,6 +167,7 @@ export default function AdminPage() {
       if (!r.ok) throw new Error(body.error || String(r.status));
       setTestImg(body.imageDataUrl);
       setStatus(`test image generated (provider: ${body.provider})`);
+      loadGenerations();
     } catch (e) {
       setStatus("test generate failed: " + (e instanceof Error ? e.message : String(e)));
     }
@@ -266,9 +273,57 @@ export default function AdminPage() {
             <img src={testImg} alt="test generation" style={{ width: "100%", borderRadius: 6 }} />
           </div>
         )}
+
+        <div style={S.card}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <label style={{ ...S.label, margin: 0 }}>Recent generations (last 20)</label>
+            <button style={S.btnGhost} onClick={loadGenerations}>Refresh</button>
+          </div>
+          {gens.length === 0 ? (
+            <p style={{ color: "#6b6a60" }}>No generations logged yet.</p>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginTop: 10 }}>
+                <thead>
+                  <tr>
+                    {["When", "Provider", "Preset", "OK", "Time", "Vision / prompt"].map((h) => (
+                      <th key={h} style={S.th}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {gens.map((g, i) => (
+                    <tr key={i}>
+                      <td style={S.td}>{new Date(g.createdAt).toLocaleString()}</td>
+                      <td style={S.td}>{g.provider}</td>
+                      <td style={S.td}>{g.preset || "—"}</td>
+                      <td style={{ ...S.td, color: g.ok ? "#4a5a2e" : "#a33" }}>{g.ok ? "✓" : "✗"}</td>
+                      <td style={S.td}>{(g.durationMs / 1000).toFixed(1)}s</td>
+                      <td style={{ ...S.td, maxWidth: 340 }}>
+                        {g.vision || g.prompt.slice(0, 120)}
+                        {g.error && <div style={{ color: "#a33" }}>{g.error}</div>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </main>
   );
+}
+
+interface GenerationRow {
+  createdAt: string;
+  provider: string;
+  ok: boolean;
+  durationMs: number;
+  prompt: string;
+  vision: string;
+  preset: string;
+  error?: string;
 }
 
 const styles: Record<string, React.CSSProperties> = {
@@ -280,4 +335,6 @@ const styles: Record<string, React.CSSProperties> = {
   btn: { font: "inherit", fontWeight: 700, background: "#5a6b3b", color: "#fff", border: "none", borderRadius: 6, padding: "10px 22px", cursor: "pointer" },
   btnGhost: { font: "inherit", background: "transparent", color: "#5a6b3b", border: "1px solid #5a6b3b", borderRadius: 6, padding: "10px 18px", cursor: "pointer" },
   mono: { font: "12px/1.5 Menlo, Consolas, monospace", background: "#f4f3ee", border: "1px solid #e2e1da", borderRadius: 6, padding: 12, whiteSpace: "pre-wrap", wordBreak: "break-word" },
+  th: { textAlign: "left", borderBottom: "2px solid #ddd", padding: "6px 8px", fontSize: 11, textTransform: "uppercase", color: "#5a5a52" },
+  td: { borderBottom: "1px solid #eee", padding: "6px 8px", verticalAlign: "top" },
 };
