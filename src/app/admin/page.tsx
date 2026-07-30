@@ -286,7 +286,7 @@ export default function AdminPage() {
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, marginTop: 10 }}>
                 <thead>
                   <tr>
-                    {["When", "Provider", "Preset", "OK", "Time", "Vision / prompt"].map((h) => (
+                    {["When", "Provider", "Preset", "OK", "Time", "Image", "Vision / prompt"].map((h) => (
                       <th key={h} style={S.th}>{h}</th>
                     ))}
                   </tr>
@@ -299,6 +299,15 @@ export default function AdminPage() {
                       <td style={S.td}>{g.preset || "—"}</td>
                       <td style={{ ...S.td, color: g.ok ? "#4a5a2e" : "#a33" }}>{g.ok ? "✓" : "✗"}</td>
                       <td style={S.td}>{(g.durationMs / 1000).toFixed(1)}s</td>
+                      <td style={S.td}>
+                        {g.imageUrl ? (
+                          <a href={g.imageUrl} target="_blank" rel="noreferrer" style={{ color: "#5a6b3b" }}>
+                            view
+                          </a>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                       <td style={{ ...S.td, maxWidth: 340 }}>
                         {g.vision || g.prompt.slice(0, 120)}
                         {g.error && <div style={{ color: "#a33" }}>{g.error}</div>}
@@ -324,6 +333,7 @@ interface GenerationRow {
   vision: string;
   preset: string;
   error?: string;
+  imageUrl?: string;
 }
 
 const styles: Record<string, React.CSSProperties> = {

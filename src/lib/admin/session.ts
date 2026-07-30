@@ -8,8 +8,8 @@ import { getDb } from "@/lib/db";
    - `sessions`: { token, expiresAt } with a TTL index — Mongo deletes expired
      sessions itself, and logins now survive server restarts.
    The user store is seeded with John/Doe on first use.
-   TODO before real deployment: replace the seeded credentials with proper
-   user management. */
+   TODO(auth): replace the seeded John/Doe credentials with proper user
+   management (registration/invite flow, password change) before deployment. */
 
 const SEED_USER = "John";
 const SEED_PASS = "Doe";

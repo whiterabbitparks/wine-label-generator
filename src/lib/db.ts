@@ -16,7 +16,13 @@ function getClientPromise(): Promise<MongoClient> {
     const uri = process.env.MONGODB_URI;
     if (!uri) throw new Error("MONGODB_URI is not set (put it in .env.local)");
     const client = new MongoClient(uri, { serverSelectionTimeoutMS: 8000 });
-    globalThis.__mongoClientPromise = client.connect();
+    // if the connect fails, clear the cache so the NEXT request retries instead
+    // of reusing a rejected promise until the process restarts
+    globalThis.__mongoClientPromise = client.connect().catch((e) => {
+      globalThis.__mongoClientPromise = undefined;
+      client.close().catch(() => {});
+      throw e;
+    });
   }
   return globalThis.__mongoClientPromise;
 }

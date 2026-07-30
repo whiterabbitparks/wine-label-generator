@@ -18,13 +18,24 @@ export interface GenerationRecord {
   size: { w: number; h: number } | null;
   error?: string;
   imageBytes?: number;
+  /** where the stored copy lives (local: /api/images/<name>; s3 later) */
+  imageUrl?: string;
+  storage?: "local" | "s3";
 }
 
 let indexReady: Promise<unknown> | undefined;
 
 export async function logGeneration(
   job: GenerationJob,
-  meta: { provider: string; ok: boolean; durationMs: number; error?: string; imageBytes?: number }
+  meta: {
+    provider: string;
+    ok: boolean;
+    durationMs: number;
+    error?: string;
+    imageBytes?: number;
+    imageUrl?: string;
+    storage?: "local" | "s3";
+  }
 ): Promise<void> {
   const db = await getDb();
   const col = db.collection<GenerationRecord>("generations");
@@ -42,6 +53,7 @@ export async function logGeneration(
     size: job.size ? { w: job.size.w, h: job.size.h } : null,
     ...(meta.error ? { error: meta.error.slice(0, 500) } : {}),
     ...(meta.imageBytes ? { imageBytes: meta.imageBytes } : {}),
+    ...(meta.imageUrl ? { imageUrl: meta.imageUrl, storage: meta.storage } : {}),
   });
 }
 

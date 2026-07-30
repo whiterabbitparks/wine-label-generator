@@ -10,7 +10,8 @@
     "capture:ported": "node tests/parity/capture-original.mjs http://localhost:3200 tests/parity/ported",
     "compare:screens": "node tests/parity/compare-screens.mjs",
     "golden:extract": "node tests/parity/extract-golden.mjs",
-    "golden:check": "node tests/parity/check-golden.mjs"
+    "golden:check": "node tests/parity/check-golden.mjs",
+    "todos": "grep -rn --include='*.ts' --include='*.tsx' --include='*.mjs' -E 'TODO\\([a-z0-9-]+\\)' src tests || echo 'no scoped TODOs found'"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
