@@ -170,7 +170,17 @@ function getLabelData(){var rc=parseRegion(cv('regionCountry')),av=FIELDS.alcVol
 function currentStyle(){var c=document.querySelector('.style-card.selected');return c?c.dataset.style:'';}
 function dl(svg,name){var b=new Blob([svg],{type:'image/svg+xml'});var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(function(){URL.revokeObjectURL(u);},1000);}
 let baseSeed=0, allOpts=[], selIdx=-1, galIdx=0, warned=false, shown=false;
-function mkRegen(){var rb=document.createElement('button');rb.type='button';rb.className='eng-regen';rb.textContent='Other Layout Options';rb.addEventListener('click',function(){baseSeed+=2;selIdx=-1;paint();});return rb;}
+/* Ensure the story's artwork exists before painting labels. Regenerates only when
+   the story/reference/art-direction changed (EightKImageGen.generateIfNeeded);
+   the button shows progress while the model runs. Fails soft: labels still paint. */
+function withArtwork(btn,go){var gen=window.EightKImageGen;
+  if(!gen||!gen.generateIfNeeded){go();return;}
+  var vt=document.getElementById('visionText'), pending=!!(vt&&vt.value.trim());
+  var old=btn?btn.textContent:'';
+  if(pending&&btn){btn.disabled=true;btn.textContent='Generating artwork…';}
+  gen.generateIfNeeded().catch(function(e){alert('Image generation failed: '+(e&&e.message||e));})
+    .then(function(){if(pending&&btn){btn.disabled=false;btn.textContent=old;}go();});}
+function mkRegen(){var rb=document.createElement('button');rb.type='button';rb.className='eng-regen';rb.textContent='Other Layout Options';rb.addEventListener('click',function(){var b=this;withArtwork(b,function(){baseSeed+=2;selIdx=-1;paint();});});return rb;}
 function ensureExtras(){var reveal=document.getElementById('frontReveal');if(!reveal)return;
   var oldNote=document.getElementById('engStyleNote');if(oldNote)oldNote.remove();
   var oldTop=document.getElementById('engRegenTop');if(oldTop)oldTop.remove();
@@ -238,7 +248,7 @@ function boot(){
         var st=stageEl();if(st)st.scrollIntoView({behavior:'smooth',block:'center'});return;}
       clearWarn();
     },true);
-    btn.addEventListener('click',function(){setTimeout(function(){if(window.LabelEngine){window.LabelEngine.ensureFonts().then(function(){baseSeed=0;selIdx=-1;paint();});}},50);});
+    btn.addEventListener('click',function(){var b=this;setTimeout(function(){withArtwork(b,function(){if(window.LabelEngine){window.LabelEngine.ensureFonts().then(function(){baseSeed=0;selIdx=-1;paint();});}});},50);});
   }
 }
 // expose data + repaint so the image-generation module can read wine details and refresh shown labels

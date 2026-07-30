@@ -113,9 +113,20 @@ const EightKImageGen={
   getConfig:function(){return {preset:ART.preset,extra:ART.extra,negative:ART.negative,template:ART.template};},
   setConfig:function(c){c=c||{};['preset','extra','negative','template'].forEach(function(k){if(c[k]!=null)ART[k]=c[k];});},
   provider:function(job){return Promise.resolve(placeholderImage(job));},   // ← replace with a real model call
-  setImage:function(url){window.__LABEL_IMG__=url||null;document.dispatchEvent(new Event('8kRepaint'));},
-  clearImage:function(){window.__LABEL_IMG__=null;document.dispatchEvent(new Event('8kRepaint'));},
-  generate:function(){var job=buildJob();return Promise.resolve(EightKImageGen.provider(job)).then(function(url){if(url)EightKImageGen.setImage(url);return url;});},
+  setImage:function(url){window.__LABEL_IMG__=url||null;
+    // keep the "Your Vision" preview in sync however generation was triggered (button or auto)
+    var img=document.getElementById('ig_img');if(img&&url){img.src=url;var p=document.getElementById('ig_preview');if(p)p.classList.add('on');var c=document.getElementById('ig_clear');if(c)c.style.display='';}
+    document.dispatchEvent(new Event('8kRepaint'));},
+  clearImage:function(){window.__LABEL_IMG__=null;EightKImageGen._lastSig=null;document.dispatchEvent(new Event('8kRepaint'));},
+  _lastSig:null,
+  _sig:function(){return JSON.stringify([visionText(),window.__LABEL_REF__||null,ART.preset,ART.extra,ART.negative,ART.template]);},
+  generate:function(){var sig=EightKImageGen._sig();var job=buildJob();return Promise.resolve(EightKImageGen.provider(job)).then(function(url){if(url){EightKImageGen.setImage(url);EightKImageGen._lastSig=sig;}return url;});},
+  // Auto-generation used by "Show Labels": only calls the model when the story,
+  // reference or art direction actually changed since the last generation —
+  // reseeds and repeat presses reuse the existing artwork at zero cost.
+  generateIfNeeded:function(){if(!visionText())return Promise.resolve(null);
+    if(window.__LABEL_IMG__&&EightKImageGen._lastSig===EightKImageGen._sig())return Promise.resolve(window.__LABEL_IMG__);
+    return EightKImageGen.generate();},
   openAdmin:function(){buildAdmin(true);}
 };
 window.EightKImageGen=EightKImageGen;
