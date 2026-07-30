@@ -540,7 +540,7 @@ const S: Record<string, React.CSSProperties> = {
   page: { minHeight: "100vh", background: "#f0f0ee", padding: "32px 20px", fontFamily: "'Hepta Slab', Georgia, serif", color: "#1e1e1e" },
   h1: { fontSize: 26, fontWeight: 700 },
   tabbar: { display: "flex", gap: 4, borderBottom: "2px solid #d8d7cf", marginTop: 10 },
-  tab: { font: "inherit", fontSize: 13, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", background: "transparent", border: "none", borderBottom: "3px solid transparent", padding: "10px 18px", cursor: "pointer", color: "#8a887e", marginBottom: -2 },
+  tab: { font: "inherit", fontSize: 13, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", background: "transparent", border: "none", borderBottomWidth: 3, borderBottomStyle: "solid", borderBottomColor: "transparent", padding: "10px 18px", cursor: "pointer", color: "#8a887e", marginBottom: -2 },
   tabActive: { color: "#3f4d2a", borderBottomColor: "#5a6b3b" },
   card: { background: "#fff", border: "1px solid #ddd", borderRadius: 10, padding: 22, marginTop: 18 },
   label: { display: "block", fontSize: 12, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", color: "#5a5a52", margin: "14px 0 6px" },
