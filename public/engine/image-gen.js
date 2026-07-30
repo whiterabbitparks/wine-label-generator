@@ -74,8 +74,8 @@ function subjectFrom(vision,d){
   if(d.grape) return d.grape+' vines on the vine';
   return 'a classic vineyard landscape at golden hour';
 }
-function buildPrompt(){
-  var P=PRESETS[ART.preset]||PRESETS.engraving, d=data(), subj=subjectFrom(visionText(),d);
+function buildPrompt(presetKey){
+  var P=PRESETS[presetKey||ART.preset]||PRESETS.engraving, d=data(), subj=subjectFrom(visionText(),d);
   var ctx=[]; if(d.wineColorName) ctx.push(String(d.wineColorName).toLowerCase()+' wine');
   var loc=[d.region,d.country].filter(Boolean).join(', '); if(loc) ctx.push('from '+loc);
   if(d.grape) ctx.push('grape: '+d.grape);
@@ -87,9 +87,9 @@ function buildPrompt(){
     .replace('{composition}',P.composition).replace('{mood}',P.mood)
     .replace('{reference}',reference).replace('{rules}',rules).replace(/\s+/g,' ').trim();
 }
-function buildJob(){var d=data();
-  return {prompt:buildPrompt(),negative:ART.negative,reference:window.__LABEL_REF__||null,
-    size:{w:1024,h:640},art:{preset:ART.preset,extra:ART.extra,negative:ART.negative,template:ART.template},
+function buildJob(presetKey){var d=data();
+  return {prompt:buildPrompt(presetKey),negative:ART.negative,reference:window.__LABEL_REF__||null,
+    size:{w:1024,h:640},art:{preset:presetKey||ART.preset,extra:ART.extra,negative:ART.negative,template:ART.template},
     data:d,vision:visionText()};}
 
 /* ---- placeholder provider (renders the prompt so the flow is testable) ---- */
@@ -108,6 +108,16 @@ function placeholderImage(job){var subj=subjectFrom(job.vision,job.data),W=1000,
     +'</svg>';
   return 'data:image/svg+xml;utf8,'+encodeURIComponent(svg);}
 
+/* Variant picker (one thumbnail per art-direction preset). Clicking a variant
+   makes it THE label artwork and pins the change-signature so "Show Labels"
+   won't overwrite the choice. */
+function addVariant(wrap,k,url,sig){var d=document.createElement('div');d.className='ig-var';d.setAttribute('data-k',k);
+  d.innerHTML='<img alt="'+esc(PRESETS[k].label)+'"><div class="cap">'+esc(PRESETS[k].label)+'</div>';
+  d.querySelector('img').src=url;
+  d.addEventListener('click',function(){EightKImageGen.setImage(url);EightKImageGen._lastSig=sig;markSel(wrap,k);});
+  wrap.appendChild(d);}
+function markSel(wrap,k){if(!wrap)return;[].forEach.call(wrap.querySelectorAll('.ig-var'),function(el){el.classList.toggle('sel',el.getAttribute('data-k')===k);});}
+
 const EightKImageGen={
   PRESETS:PRESETS, ART:ART, buildPrompt:buildPrompt, buildJob:buildJob,
   getConfig:function(){return {preset:ART.preset,extra:ART.extra,negative:ART.negative,template:ART.template};},
@@ -117,10 +127,31 @@ const EightKImageGen={
     // keep the "Your Vision" preview in sync however generation was triggered (button or auto)
     var img=document.getElementById('ig_img');if(img&&url){img.src=url;var p=document.getElementById('ig_preview');if(p)p.classList.add('on');var c=document.getElementById('ig_clear');if(c)c.style.display='';}
     document.dispatchEvent(new Event('8kRepaint'));},
-  clearImage:function(){window.__LABEL_IMG__=null;EightKImageGen._lastSig=null;document.dispatchEvent(new Event('8kRepaint'));},
+  clearImage:function(){window.__LABEL_IMG__=null;EightKImageGen._lastSig=null;
+    var w=document.getElementById('ig_variants');if(w){w.innerHTML='';w.classList.remove('on');}
+    document.dispatchEvent(new Event('8kRepaint'));},
   _lastSig:null,
   _sig:function(){return JSON.stringify([visionText(),window.__LABEL_REF__||null,ART.preset,ART.extra,ART.negative,ART.template]);},
   generate:function(){var sig=EightKImageGen._sig();var job=buildJob();return Promise.resolve(EightKImageGen.provider(job)).then(function(url){if(url){EightKImageGen.setImage(url);EightKImageGen._lastSig=sig;}return url;});},
+  // "Generate artwork" button: one artwork per art-direction preset, in parallel.
+  // Thumbnails appear as they finish; the active preset's result is auto-selected
+  // (falling back to the first success), and the client can click any variant.
+  generateAll:function(){var sig=EightKImageGen._sig();var keys=Object.keys(PRESETS);
+    var wrap=document.getElementById('ig_variants');if(wrap){wrap.innerHTML='';wrap.classList.add('on');}
+    var results={};
+    return Promise.all(keys.map(function(k){
+      return Promise.resolve(EightKImageGen.provider(buildJob(k))).then(function(url){
+        results[k]=url||null;
+        if(wrap&&url)addVariant(wrap,k,url,sig);
+        if(url&&k===ART.preset){EightKImageGen.setImage(url);EightKImageGen._lastSig=sig;markSel(wrap,k);}
+        return url;
+      }).catch(function(e){results[k]=null;console.error('artwork variant "'+k+'" failed:',e&&e.message||e);return null;});
+    })).then(function(){
+      if(!window.__LABEL_IMG__){var first=null;keys.forEach(function(k){if(!first&&results[k])first=k;});
+        if(first){EightKImageGen.setImage(results[first]);EightKImageGen._lastSig=sig;markSel(wrap,first);}}
+      var okCount=keys.filter(function(k){return results[k];}).length;
+      if(!okCount)throw new Error('all artwork variants failed');
+      return results;});},
   // Auto-generation used by "Show Labels": only calls the model when the story,
   // reference or art direction actually changed since the last generation —
   // reseeds and repeat presses reuse the existing artwork at zero cost.
@@ -141,6 +172,12 @@ function clientCSS(){if(document.getElementById('imggen-css'))return;var s=docum
    '#imgGen .ig-btn:hover{background:var(--olive-dark,#55632e)}#imgGen .ig-btn[disabled]{opacity:.6;cursor:default}',
    '#imgGen .ig-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap}',
    '#imgGen .ig-link{color:#4a5a24;text-decoration:underline;cursor:pointer;font-size:12px;background:none;border:none;padding:0}',
+   '#imgGen .ig-variants{display:none;flex-wrap:wrap;gap:12px;margin:14px 0 4px}#imgGen .ig-variants.on{display:flex}',
+   '#imgGen .ig-var{width:150px;cursor:pointer;border:2px solid transparent;border-radius:4px;padding:4px;transition:border-color .15s}',
+   '#imgGen .ig-var:hover{border-color:#cfd6b8}#imgGen .ig-var.sel{border-color:var(--olive,#6b7a3a)}',
+   '#imgGen .ig-var img{width:100%;display:block;border:1px solid #e2ded2;border-radius:2px}',
+   '#imgGen .ig-var .cap{font-size:11px;text-align:center;margin-top:5px;color:#6b6a60;letter-spacing:.03em}',
+   '#imgGen .ig-var.sel .cap{color:var(--olive,#6b7a3a);font-weight:700}',
    '#imgGen .ig-preview{margin-top:16px;display:none;gap:16px;align-items:flex-start}#imgGen .ig-preview.on{display:flex}',
    '#imgGen .ig-thumb{width:220px;height:140px;border:1px solid #cfc8ba;background:#f3ecda;flex:0 0 auto;overflow:hidden}',
    '#imgGen .ig-thumb img{width:100%;height:100%;object-fit:cover;display:block}',
@@ -154,6 +191,7 @@ function clientHTML(){
    +'<div class="ig-ref" id="ig_ref">✓ Your reference image is attached and will guide the artwork.</div>'
    +'<div class="ig-actions"><button type="button" class="ig-btn" id="ig_go">Generate artwork</button>'
      +'<button type="button" class="ig-link" id="ig_clear" style="display:none">Remove artwork</button></div>'
+   +'<div class="ig-variants" id="ig_variants"></div>'
    +'<div class="ig-preview" id="ig_preview"><div class="ig-thumb"><img id="ig_img" alt=""></div>'
      +'<div class="ig-note">This artwork now appears on your image-based label styles. Press <b>Show Labels</b> to see them (or it updates live if labels are already shown).</div></div>';
 }
@@ -166,9 +204,8 @@ function bootClient(){var vt=document.getElementById('visionText');if(!vt)return
   if(sk)sk.addEventListener('change',function(){var f=this.files&&this.files[0];if(!f)return;var rd=new FileReader();
     rd.onload=function(){window.__LABEL_REF__=rd.result;var r=document.getElementById('ig_ref');if(r)r.classList.add('on');};rd.readAsDataURL(f);});
   document.getElementById('ig_clear').addEventListener('click',function(){EightKImageGen.clearImage();document.getElementById('ig_preview').classList.remove('on');this.style.display='none';});
-  document.getElementById('ig_go').addEventListener('click',function(){var btn=this;btn.disabled=true;var old=btn.textContent;btn.textContent='Generating…';
-    EightKImageGen.generate().then(function(url){if(url){var img=document.getElementById('ig_img');if(img)img.src=url;
-      document.getElementById('ig_preview').classList.add('on');document.getElementById('ig_clear').style.display='';}})
+  document.getElementById('ig_go').addEventListener('click',function(){var btn=this;btn.disabled=true;var old=btn.textContent;btn.textContent='Generating 5 artwork styles…';
+    EightKImageGen.generateAll()
       .catch(function(e){alert('Image generation failed: '+(e&&e.message||e));}).then(function(){btn.disabled=false;btn.textContent=old;});});
   return true;
 }

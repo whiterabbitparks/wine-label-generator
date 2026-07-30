@@ -22,6 +22,17 @@ if (!img.startsWith('data:image/svg+xml;base64,')) throw new Error('unexpected i
 await page.waitForSelector('#ig_preview.on', { timeout: 10000 });
 console.log('preview panel shown ✓');
 
+// one variant per art-direction preset, clicking one selects it as THE artwork
+await page.waitForFunction(() => document.querySelectorAll('#ig_variants .ig-var').length === 5, null, { timeout: 30000 });
+console.log('5 art-direction variants rendered ✓');
+const secondSrc = await page.evaluate(() => document.querySelectorAll('#ig_variants .ig-var img')[1].src);
+await page.locator('#ig_variants .ig-var').nth(1).click();
+const selected = await page.evaluate(() => window.__LABEL_IMG__);
+if (selected !== secondSrc) throw new Error('clicking a variant did not select it as the label artwork');
+const selMarked = await page.evaluate(() => document.querySelectorAll('#ig_variants .ig-var')[1].classList.contains('sel'));
+if (!selMarked) throw new Error('selected variant not visually marked');
+console.log('variant click selects artwork + marks selection ✓');
+
 // determinism: same vision → same image; changed vision → different image
 const again = await page.evaluate(() => window.EightKImageGen.generate());
 if (again !== img) throw new Error('mock not deterministic for same vision');
