@@ -500,7 +500,7 @@ function UsersTab({ onSessionLost }: { onSessionLost: () => void }) {
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
           <input
             style={{ ...S.input, width: 220 }}
-            placeholder="username"
+            placeholder="username or email"
             value={newUser}
             onChange={(e) => setNewUser(e.target.value)}
           />
@@ -524,7 +524,7 @@ function UsersTab({ onSessionLost }: { onSessionLost: () => void }) {
           </button>
         </div>
         <p style={{ color: "#6b6a60", fontSize: 12, marginBottom: 0 }}>
-          Username: 3–40 chars (letters, digits, . _ -). Password: at least 4 characters.
+          Username: a handle (letters, digits, . _ % + -) or an email address. Password: at least 4 characters.
           New admins can sign in immediately.
         </p>
       </div>

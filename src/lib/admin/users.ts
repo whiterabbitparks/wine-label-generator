@@ -17,7 +17,8 @@ export class UserError extends Error {
 }
 
 function validUsername(u: unknown): u is string {
-  return typeof u === "string" && /^[a-zA-Z0-9._-]{3,40}$/.test(u);
+  // plain handle or an email address
+  return typeof u === "string" && /^[a-zA-Z0-9._%+-]{3,64}(@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})?$/.test(u) && u.length <= 100;
 }
 function validPassword(p: unknown): p is string {
   return typeof p === "string" && p.length >= 4 && p.length <= 200;
@@ -35,7 +36,7 @@ export async function listUsers(): Promise<AdminUserInfo[]> {
 
 export async function createUser(username: unknown, password: unknown): Promise<AdminUserInfo> {
   if (!validUsername(username))
-    throw new UserError("username must be 3-40 chars: letters, digits, . _ -", 400);
+    throw new UserError("username must be a handle (3-64 chars: letters, digits, . _ % + -) or an email address", 400);
   if (!validPassword(password)) throw new UserError("password must be at least 4 characters", 400);
   const db = await getDb();
   const doc = { username, passwordHash: await bcrypt.hash(password, 10), createdAt: new Date() };
