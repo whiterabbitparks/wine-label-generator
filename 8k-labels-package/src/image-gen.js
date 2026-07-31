@@ -91,6 +91,20 @@ function buildJob(presetKey){var d=data();
     size:{w:1024,h:640},art:{preset:presetKey||ART.preset,extra:ART.extra,negative:ART.negative,template:ART.template},
     data:d,vision:visionText()};}
 
+/* ---- per-style generation (one artwork per label style) ---- */
+const STYLE_KEYS=['traditional','contemporary','flora','premium','minimalist','artistic'];
+const STYLE_NAMES={traditional:'Traditional',contemporary:'Contemporary',flora:'Flora & Fauna',
+  premium:'Premium',minimalist:'Minimalist',artistic:'Artistic / Punk'};
+/* The BRIEF is the raw input only — vision text, reference, wine facts, seed.
+   Prompt assembly (style recipes, sub-styles, focus rules, house rules) lives
+   on the server; the client never sees or sends a prompt for the style set. */
+function buildBrief(){return {vision:visionText(),reference:window.__LABEL_REF__||null,data:data(),seed:EightKImageGen.seed||0};}
+/* offline fallback set provider: one placeholder per style so the package
+   still works standalone (no server). */
+function placeholderSet(brief){var map={};var job=buildJob();
+  STYLE_KEYS.forEach(function(k){map[k]={url:placeholderImage(job),subStyle:'placeholder',subStyleLabel:'offline preview'};});
+  return Promise.resolve(map);}
+
 /* ---- placeholder provider (renders the prompt so the flow is testable) ---- */
 function vineRows(W,H){var s='',cxs=[0.18,0.34,0.5,0.66,0.82];for(var i=0;i<cxs.length;i++){var x=cxs[i]*W;s+='<path d="M '+(W*0.5).toFixed(0)+' '+(H*0.52).toFixed(0)+' L '+x.toFixed(0)+' '+(H*0.86).toFixed(0)+'"/>';}
   for(var r=1;r<=3;r++){var y=H*(0.6+r*0.09);s+='<path d="M '+(W*0.12).toFixed(0)+' '+y.toFixed(0)+' Q '+(W*0.5).toFixed(0)+' '+(y-H*0.03).toFixed(0)+' '+(W*0.88).toFixed(0)+' '+y.toFixed(0)+'"/>';}return s;}
@@ -107,56 +121,58 @@ function placeholderImage(job){var subj=subjectFrom(job.vision,job.data),W=1000,
     +'</svg>';
   return 'data:image/svg+xml;utf8,'+encodeURIComponent(svg);}
 
-/* Variant picker (one thumbnail per art-direction preset). Clicking a variant
-   makes it THE label artwork and pins the change-signature so "Show Labels"
-   won't overwrite the choice. */
-function addVariant(wrap,k,url,sig){var d=document.createElement('div');d.className='ig-var';d.setAttribute('data-k',k);
-  d.innerHTML='<img alt="'+esc(PRESETS[k].label)+'"><div class="cap">'+esc(PRESETS[k].label)+'</div>';
-  d.querySelector('img').src=url;
-  d.addEventListener('click',function(){EightKImageGen.setImage(url);EightKImageGen._lastSig=sig;markSel(wrap,k);});
+/* Style-set thumbnails: one per label style. Not a picker — every style owns
+   its artwork and shows it in its own layout; the row is a preview of the set. */
+function addStyleThumb(wrap,k,entry){var d=document.createElement('div');d.className='ig-var';d.setAttribute('data-k',k);
+  d.innerHTML='<img alt="'+esc(STYLE_NAMES[k]||k)+'"><div class="cap">'+esc(STYLE_NAMES[k]||k)
+    +(entry.subStyleLabel?('<br>'+esc(entry.subStyleLabel)):'')+'</div>';
+  d.querySelector('img').src=entry.url;
   wrap.appendChild(d);}
-function markSel(wrap,k){if(!wrap)return;[].forEach.call(wrap.querySelectorAll('.ig-var'),function(el){el.classList.toggle('sel',el.getAttribute('data-k')===k);});}
 
 const EightKImageGen={
-  PRESETS:PRESETS, ART:ART, buildPrompt:buildPrompt, buildJob:buildJob,
+  PRESETS:PRESETS, ART:ART, STYLE_KEYS:STYLE_KEYS, STYLE_NAMES:STYLE_NAMES,
+  buildPrompt:buildPrompt, buildJob:buildJob, buildBrief:buildBrief,
+  seed:0,                                                    // drives sub-style + layout variety; re-roll for new combinations
   getConfig:function(){return {preset:ART.preset,extra:ART.extra,negative:ART.negative,template:ART.template};},
   setConfig:function(c){c=c||{};['preset','extra','negative','template'].forEach(function(k){if(c[k]!=null)ART[k]=c[k];});},
-  provider:function(job){return Promise.resolve(placeholderImage(job));},   // ← replace with a real model call
+  provider:function(job){return Promise.resolve(placeholderImage(job));},   // single-image hook (admin Test generate)
+  setProvider:placeholderSet,                                // set hook: brief → {styleKey:{url,subStyle,subStyleLabel}}
   setImage:function(url){window.__LABEL_IMG__=url||null;
     // keep the "Your Vision" preview in sync however generation was triggered (button or auto)
     var img=document.getElementById('ig_img');if(img&&url){img.src=url;var p=document.getElementById('ig_preview');if(p)p.classList.add('on');var c=document.getElementById('ig_clear');if(c)c.style.display='';}
     document.dispatchEvent(new Event('8kRepaint'));},
-  clearImage:function(){window.__LABEL_IMG__=null;EightKImageGen._lastSig=null;
+  /* the style set: every style gets its own artwork. __LABEL_IMGS__ is the
+     per-style map the engine reads; __LABEL_IMG__ stays as the traditional
+     entry for backwards compatibility (single-image hooks, admin test). */
+  setImages:function(map){map=map||{};var urls={};
+    STYLE_KEYS.forEach(function(k){var e=map[k];if(e&&e.url)urls[k]=e.url;});
+    window.__LABEL_IMGS__=urls;
+    var main=urls.traditional||null;
+    if(!main)STYLE_KEYS.some(function(k){if(urls[k]){main=urls[k];return true;}return false;});
+    EightKImageGen.setImage(main);},
+  clearImage:function(){window.__LABEL_IMG__=null;window.__LABEL_IMGS__=null;EightKImageGen._lastSig=null;
     var w=document.getElementById('ig_variants');if(w){w.innerHTML='';w.classList.remove('on');}
     document.dispatchEvent(new Event('8kRepaint'));},
   _lastSig:null,
-  _sig:function(){return JSON.stringify([visionText(),window.__LABEL_REF__||null,ART.preset,ART.extra,ART.negative,ART.template]);},
+  _sig:function(){var d=data();return JSON.stringify([visionText(),window.__LABEL_REF__||null,EightKImageGen.seed||0,
+    d.region,d.country,d.grape,d.wineColorName]);},
   generate:function(){var sig=EightKImageGen._sig();var job=buildJob();return Promise.resolve(EightKImageGen.provider(job)).then(function(url){if(url){EightKImageGen.setImage(url);EightKImageGen._lastSig=sig;}return url;});},
-  // "Generate artwork" button: one artwork per art-direction preset, in parallel.
-  // Thumbnails appear as they finish; the active preset's result is auto-selected
-  // (falling back to the first success), and the client can click any variant.
-  generateAll:function(){var sig=EightKImageGen._sig();var keys=Object.keys(PRESETS);
+  // "Generate artwork" (and Show Labels): ONE artwork per label style, all six
+  // in a single server round-trip (the server fans out and caches). Thumbnails
+  // preview the set; each artwork appears inside its own style's layout.
+  generateSet:function(){var sig=EightKImageGen._sig();var brief=buildBrief();
     var wrap=document.getElementById('ig_variants');if(wrap){wrap.innerHTML='';wrap.classList.add('on');}
-    var results={};
-    return Promise.all(keys.map(function(k){
-      return Promise.resolve(EightKImageGen.provider(buildJob(k))).then(function(url){
-        results[k]=url||null;
-        if(wrap&&url)addVariant(wrap,k,url,sig);
-        if(url&&k===ART.preset){EightKImageGen.setImage(url);EightKImageGen._lastSig=sig;markSel(wrap,k);}
-        return url;
-      }).catch(function(e){results[k]=null;console.error('artwork variant "'+k+'" failed:',e&&e.message||e);return null;});
-    })).then(function(){
-      if(!window.__LABEL_IMG__){var first=null;keys.forEach(function(k){if(!first&&results[k])first=k;});
-        if(first){EightKImageGen.setImage(results[first]);EightKImageGen._lastSig=sig;markSel(wrap,first);}}
-      var okCount=keys.filter(function(k){return results[k];}).length;
-      if(!okCount)throw new Error('all artwork variants failed');
-      return results;});},
-  // Auto-generation used by "Show Labels": only calls the model when the story,
-  // reference or art direction actually changed since the last generation —
-  // reseeds and repeat presses reuse the existing artwork at zero cost.
-  generateIfNeeded:function(){if(!visionText())return Promise.resolve(null);
-    if(window.__LABEL_IMG__&&EightKImageGen._lastSig===EightKImageGen._sig())return Promise.resolve(window.__LABEL_IMG__);
-    return EightKImageGen.generate();},
+    return Promise.resolve(EightKImageGen.setProvider(brief)).then(function(map){
+      if(!map||!Object.keys(map).length)throw new Error('no artwork was generated');
+      EightKImageGen.setImages(map);EightKImageGen._lastSig=sig;
+      if(wrap)STYLE_KEYS.forEach(function(k){if(map[k]&&map[k].url)addStyleThumb(wrap,k,map[k]);});
+      return map;});},
+  // Auto-generation used by "Show Labels": re-generates only when the brief
+  // (story, reference, seed or wine facts) changed since the last run. An empty
+  // story is fine — the server falls back to the wine facts for the subject.
+  generateIfNeeded:function(){
+    if(window.__LABEL_IMGS__&&EightKImageGen._lastSig===EightKImageGen._sig())return Promise.resolve(window.__LABEL_IMGS__);
+    return EightKImageGen.generateSet();},
   openAdmin:function(){buildAdmin(true);}
 };
 window.EightKImageGen=EightKImageGen;
@@ -185,8 +201,9 @@ function clientCSS(){if(document.getElementById('imggen-css'))return;var s=docum
   ].join('');document.head.appendChild(s);}
 function clientHTML(){
   return '<div class="ig-head">Label Artwork</div>'
-   +'<p class="ig-sub">We’ll create your label illustration from the story above'
-     +' (and your reference image, if you added one). You can regenerate as many times as you like.</p>'
+   +'<p class="ig-sub">We’ll create one artwork for each of the six label styles from the story above'
+     +' (and your reference image, if you added one — or from your wine’s details if you leave the story empty).'
+     +' You can regenerate as many times as you like.</p>'
    +'<div class="ig-ref" id="ig_ref">✓ Your reference image is attached and will guide the artwork.</div>'
    +'<div class="ig-actions"><button type="button" class="ig-btn" id="ig_go">Generate artwork</button>'
      +'<button type="button" class="ig-link" id="ig_clear" style="display:none">Remove artwork</button></div>'
@@ -203,8 +220,8 @@ function bootClient(){var vt=document.getElementById('visionText');if(!vt)return
   if(sk)sk.addEventListener('change',function(){var f=this.files&&this.files[0];if(!f)return;var rd=new FileReader();
     rd.onload=function(){window.__LABEL_REF__=rd.result;var r=document.getElementById('ig_ref');if(r)r.classList.add('on');};rd.readAsDataURL(f);});
   document.getElementById('ig_clear').addEventListener('click',function(){EightKImageGen.clearImage();document.getElementById('ig_preview').classList.remove('on');this.style.display='none';});
-  document.getElementById('ig_go').addEventListener('click',function(){var btn=this;btn.disabled=true;var old=btn.textContent;btn.textContent='Generating 5 artwork styles…';
-    EightKImageGen.generateAll()
+  document.getElementById('ig_go').addEventListener('click',function(){var btn=this;btn.disabled=true;var old=btn.textContent;btn.textContent='Generating 6 style artworks…';
+    EightKImageGen.generateSet()
       .catch(function(e){alert('Image generation failed: '+(e&&e.message||e));}).then(function(){btn.disabled=false;btn.textContent=old;});});
   return true;
 }

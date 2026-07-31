@@ -1,58 +1,82 @@
 /* E2E: the client "Generate artwork" flow against the backend mock provider.
-   Types a vision, clicks #ig_go, verifies the preview + label slot update, then
-   Show Labels and confirms the Traditional option embeds the generated image. */
+   Types a vision, clicks #ig_go, verifies the per-style set arrives (one
+   artwork per label style), the preview updates, and the Traditional label
+   option embeds the traditional artwork.
+   Run against a server with IMAGE_PROVIDER=mock (default: http://localhost:3200). */
 import { chromium } from 'playwright';
 
 const BASE = process.argv[2] || 'http://localhost:3200';
+const fail = (msg) => { console.error('FAIL:', msg); process.exit(1); };
 
 const browser = await chromium.launch({ channel: 'chrome' });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 page.on('pageerror', (e) => console.log('PAGE ERROR:', e.message));
 
+let setCalls = 0;
+page.on('request', (r) => { if (r.url().includes('/api/generate-label-set')) setCalls++; });
+
 await page.goto(BASE);
 await page.waitForSelector('#ig_go', { timeout: 30000 });
+await page.waitForFunction(() => window.EightKImageGen && window.EightKImageGen.wired, null, { timeout: 30000 });
 await page.fill('#visionText', 'A vineyard beneath the Caucasus Mountains at golden hour');
 await page.click('#ig_go');
 
-// provider round-trip: __LABEL_IMG__ set + preview visible
-await page.waitForFunction(() => !!window.__LABEL_IMG__, null, { timeout: 30000 });
-const img = await page.evaluate(() => window.__LABEL_IMG__);
-console.log('label image set:', img.slice(0, 40) + '…', `(${img.length} bytes)`);
-if (!img.startsWith('data:image/svg+xml;base64,')) throw new Error('unexpected image format from mock provider');
+// set round-trip: one artwork per style, all six present and distinct
+await page.waitForFunction(
+  () => window.__LABEL_IMGS__ && Object.keys(window.__LABEL_IMGS__).length === 6,
+  null, { timeout: 60000 }
+);
+if (setCalls !== 1) fail(`expected 1 set call, saw ${setCalls}`);
+const imgs = await page.evaluate(() => window.__LABEL_IMGS__);
+const keys = Object.keys(imgs).sort();
+const want = ['artistic', 'contemporary', 'flora', 'minimalist', 'premium', 'traditional'];
+if (JSON.stringify(keys) !== JSON.stringify(want)) fail(`style keys mismatch: ${keys}`);
+for (const [k, v] of Object.entries(imgs))
+  if (!v.startsWith('data:image/')) fail(`style ${k} image is not a data URL`);
+if (new Set(Object.values(imgs)).size !== 6) fail('styles did not get distinct artworks');
+console.log('6 distinct per-style artworks generated ✓');
+
+// __LABEL_IMG__ (legacy single slot) mirrors the traditional artwork
+const main = await page.evaluate(() => window.__LABEL_IMG__);
+if (main !== imgs.traditional) fail('__LABEL_IMG__ is not the traditional artwork');
 await page.waitForSelector('#ig_preview.on', { timeout: 10000 });
-console.log('preview panel shown ✓');
+console.log('preview panel shows traditional artwork ✓');
 
-// one variant per art-direction preset, clicking one selects it as THE artwork
-await page.waitForFunction(() => document.querySelectorAll('#ig_variants .ig-var').length === 5, null, { timeout: 30000 });
-console.log('5 art-direction variants rendered ✓');
-const secondSrc = await page.evaluate(() => document.querySelectorAll('#ig_variants .ig-var img')[1].src);
-await page.locator('#ig_variants .ig-var').nth(1).click();
-const selected = await page.evaluate(() => window.__LABEL_IMG__);
-if (selected !== secondSrc) throw new Error('clicking a variant did not select it as the label artwork');
-const selMarked = await page.evaluate(() => document.querySelectorAll('#ig_variants .ig-var')[1].classList.contains('sel'));
-if (!selMarked) throw new Error('selected variant not visually marked');
-console.log('variant click selects artwork + marks selection ✓');
+// one thumbnail per style, captioned with the style name
+const thumbs = await page.evaluate(() =>
+  [...document.querySelectorAll('#ig_variants .ig-var .cap')].map((c) => c.textContent)
+);
+if (thumbs.length !== 6) fail(`expected 6 style thumbnails, saw ${thumbs.length}`);
+if (!thumbs.some((t) => t.includes('Traditional'))) fail('thumbnails missing style names');
+console.log('6 style thumbnails with captions ✓');
 
-// determinism: same vision → same image; changed vision → different image
-const again = await page.evaluate(() => window.EightKImageGen.generate());
-if (again !== img) throw new Error('mock not deterministic for same vision');
-console.log('same vision → identical image ✓');
-await page.fill('#visionText', 'A drunken unicorn raising a toast');
-const changed = await page.evaluate(() => window.EightKImageGen.generate());
-if (changed === img) throw new Error('mock did not vary with vision');
-console.log('changed vision → different image ✓');
+// determinism / cache: same brief again → images unchanged
+await page.click('#ig_go');
+await page.waitForFunction(() => !document.querySelector('#ig_go[disabled]'), null, { timeout: 60000 });
+const again = await page.evaluate(() => window.__LABEL_IMGS__);
+if (JSON.stringify(again) !== JSON.stringify(imgs)) fail('same brief did not reuse the same artworks');
+console.log('same brief → identical set (mock deterministic) ✓');
 
-// the generated image must flow into the Traditional label option
+// the traditional artwork must flow into the label options
 await page.fill('input.le2-inp[data-zone-fid="wineName"]', 'Château Test');
 await page.click('#frontPreviewBtn');
 await page.waitForSelector('#frontThumbs svg', { timeout: 30000 });
 await page.waitForTimeout(1000);
 const usesGenerated = await page.evaluate(() => {
   const svgs = [...document.querySelectorAll('#frontThumbs svg')];
-  return svgs.some((s) => s.innerHTML.includes(window.__LABEL_IMG__.slice(0, 200)));
+  const frag = window.__LABEL_IMGS__.traditional.slice(0, 200);
+  return svgs.some((s) => s.innerHTML.includes(frag));
 });
-if (!usesGenerated) throw new Error('generated image not embedded in any label option');
-console.log('generated image embedded in label options ✓');
+if (!usesGenerated) fail('traditional artwork not embedded in the label options');
+console.log('traditional artwork embedded in label options ✓');
+
+// multiply blend applied to the embedded artwork
+const blended = await page.evaluate(() => {
+  const svgs = [...document.querySelectorAll('#frontThumbs svg')];
+  return svgs.some((s) => s.innerHTML.includes('mix-blend-mode:multiply'));
+});
+if (!blended) fail('embedded artwork missing multiply blend');
+console.log('multiply blend on embedded artwork ✓');
 
 await page.screenshot({ path: 'tests/parity/imagegen-e2e.png', fullPage: false });
 console.log('\nIMAGE GEN E2E: PASS');

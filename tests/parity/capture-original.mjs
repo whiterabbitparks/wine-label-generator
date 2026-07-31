@@ -43,6 +43,10 @@ async function settle(page) {
 const browser = await chromium.launch({ channel: 'chrome' });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
 page.on('pageerror', (e) => console.log('PAGE ERROR:', e.message));
+// parity mode: both sides (dist file AND ported app) must use the package's
+// offline placeholder artwork — server-generated images are environment-
+// dependent and would make post-generation states incomparable
+await page.addInitScript(() => { window.__PARITY_OFFLINE__ = true; });
 
 console.log('opening', ORIGINAL);
 await page.goto(ORIGINAL);

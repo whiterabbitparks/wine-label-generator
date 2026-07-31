@@ -582,9 +582,13 @@ function lcImageSVG(box,map,fscale,bg,clipId,scale){
   // big images overflow the box (and often the label) vertically — nudge the centre UP by a share of that
   // overflow so more of the extra image bleeds off the TOP edge, leaving cleaner space for the lower text.
   const rx=bx+bw/2-rw/2, ry=by+bh/2-rh/2 - Math.max(0,rh-bh)*CL_UPSHIFT;
-  // live image source: a generated image (window.__LABEL_IMG__) overrides the vineyard placeholder when present
-  const imgSrc=(typeof window!=='undefined'&&window.__LABEL_IMG__)?window.__LABEL_IMG__:CL_IMG_DATA;
-  const blend=(typeof window!=='undefined'&&window.__LABEL_IMG__)?'':' style="mix-blend-mode:multiply"';   // generated art keeps its own tones
+  // live image source: the per-style generated set (window.__LABEL_IMGS__) wins,
+  // then the shared single image (window.__LABEL_IMG__), then the vineyard placeholder.
+  // lcRender is the Traditional style's engine, so it reads the traditional slot;
+  // the other styles' slots are consumed as their layouts gain image areas.
+  const genImg=(typeof window!=='undefined')?((window.__LABEL_IMGS__&&window.__LABEL_IMGS__.traditional)||window.__LABEL_IMG__||null):null;
+  const imgSrc=genImg||CL_IMG_DATA;
+  const blend=' style="mix-blend-mode:multiply"';   // multiply always — matches the print treatment (Adobe-style Multiply)
   if(!imgSrc) return `<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" fill="#BEC0C2" clip-path="url(#${clipId})"/>`;
   return `<image x="${rx.toFixed(1)}" y="${ry.toFixed(1)}" width="${rw.toFixed(1)}" height="${rh.toFixed(1)}" preserveAspectRatio="xMidYMid meet" clip-path="url(#${clipId})" xlink:href="${imgSrc}" href="${imgSrc}"${blend}/>`;
 }

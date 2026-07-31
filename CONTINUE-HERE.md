@@ -89,21 +89,40 @@ re-invoking `ensureFonts()` each poll — see `src/app/engine-test/page.tsx`.
 
 ---
 
-## 5. Image generation (current state)
+## 5. Image generation (per-style set architecture)
 
-- Client flow (unchanged from original): story + optional sketch → **Generate
-  artwork** (`#ig_go`) → `EightKImageGen.buildJob()` → provider → image slots
-  into the label (`window.__LABEL_IMG__`, `8kRepaint`).
-- Provider now POSTs to `/api/generate-label-image`; response
-  `{ imageDataUrl, provider }`.
-- **mock** (active): deterministic engraving-style SVG from the job — same
-  vision → same image, different vision → different scene; watermarked
-  "MOCK ARTWORK". Free, offline.
-- **openai** (written, **untested** — no key yet): `IMAGE_PROVIDER=openai` +
-  `OPENAI_API_KEY` in `.env.local`. Generations endpoint, or edits when
-  `job.reference` present; model default `gpt-image-2`
-  (`OPENAI_IMAGE_MODEL` overrides). Verify the model name on first real run.
-- Admin art-direction drawer: `/?admin=1` (or `#art-direction`).
+**The server is the creative brain.** The client sends only the raw BRIEF
+(`{vision, reference, data, seed}` — `EightKImageGen.buildBrief()`); prompt
+assembly happens server-side, one prompt per label style:
+
+- **Style Catalog** (`src/lib/styles/catalog.ts`): one entry per engine style
+  (traditional/contemporary/flora/premium/minimalist/artistic), each with
+  **sub-styles** (art-direction recipes; picked per-generation from the seed),
+  a **focus-area spec** (`guidance` baked into prompts; `clearZone` fractions
+  for a future subject-detection v2) and an image **treatment** (multiply).
+  Defaults are placeholders pending the owner's style reference PDFs; a Mongo
+  `settings/style-catalog` doc overrides them when present.
+- **Orchestrator** `POST /api/generate-label-set` (brief in → 6 style-matched
+  images out, parallel, 429-retry, complete sets cached in-memory by brief
+  signature). Partial failure returns the styles that succeeded + `errors`.
+- Client: `generateSet()` / `generateIfNeeded()` (Show Labels — runs even with
+  an EMPTY story; the server falls back to the wine facts for the subject) →
+  `window.__LABEL_IMGS__` (per-style map) + `window.__LABEL_IMG__` (traditional,
+  legacy single slot) → `8kRepaint`. Only the Traditional layout embeds an
+  image today; the other five styles' slots activate as their layouts gain
+  image areas (awaiting the owner's layout rules).
+- Images render with `mix-blend-mode:multiply` ALWAYS (matches print
+  treatment). Print colour decision: SVG stays RGB; a CMYK **PDF export step**
+  is the planned print deliverable (not built yet).
+- **openai** provider: VERIFIED live 2026-07-31 (model `gpt-image-2` valid).
+  OpenAI caps ~5 images/min → the set fan-out relies on the retry in
+  `src/lib/image-provider/index.ts`. **mock** stays free/offline/deterministic.
+- Legacy single-image `POST /api/generate-label-image` remains for the admin
+  drawer's Test generate.
+- Parity captures force the package's offline placeholder on BOTH sides via
+  `window.__PARITY_OFFLINE__` (set in `capture-original.mjs`, honoured in
+  `page.tsx`) — server-generated art is environment-dependent and must not
+  reach the pixel-compare.
 
 ---
 
@@ -115,12 +134,19 @@ backend in mock mode with e2e coverage; old port + tracked `.next/` removed.
 Milestone commit `4da0504`.
 
 NEXT (in rough priority):
-1. Test/harden the real OpenAI path when a key exists; add rate limiting to
-   the generation route before any public deploy.
-2. Persist the Art Direction config server-side (it resets on reload); load on init.
-3. Real auth for the admin drawer (replace `?admin=1`).
-4. Deferred by user: mobile/responsive parity (capture scripts are
-   1440px-only), logo placement rules (box 2), per-style image treatments.
+1. Owner delivers style reference PDFs + layout rules → replace the placeholder
+   sub-styles in `src/lib/styles/catalog.ts` and build image slots + layout
+   variants for the 5 non-Traditional styles (incl. per-layout focus/clear-zone
+   values).
+2. Focus-area v2: subject-detection pass after generation, position the image
+   so the subject sits in the layout's clear zone.
+3. CMYK PDF export step (SVG master stays RGB) for the print deliverable.
+4. Rate-limit `/api/generate-label-set` (TODO(security)) before any public
+   deploy — one request = 6 paid model calls.
+5. Admin: catalog editing UI (sub-styles per style), seed/shuffle control in
+   the client, persist the set cache in Mongo for multi-instance deploys.
+6. Deferred by user: mobile/responsive parity (capture scripts are
+   1440px-only), logo placement rules (box 2).
 
 ## 7. Engine internals reference
 

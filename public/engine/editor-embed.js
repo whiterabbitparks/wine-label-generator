@@ -175,7 +175,9 @@ let baseSeed=0, allOpts=[], selIdx=-1, galIdx=0, warned=false, shown=false;
    the button shows progress while the model runs. Fails soft: labels still paint. */
 function withArtwork(btn,go){var gen=window.EightKImageGen;
   if(!gen||!gen.generateIfNeeded){go();return;}
-  var vt=document.getElementById('visionText'), pending=!!(vt&&vt.value.trim());
+  // artwork is always ensured now (empty story → server builds the subject from
+  // the wine facts); an unchanged brief resolves instantly from the cache
+  var pending=true;
   var old=btn?btn.textContent:'';
   if(pending&&btn){btn.disabled=true;btn.textContent='Generating artwork…';}
   gen.generateIfNeeded().catch(function(e){alert('Image generation failed: '+(e&&e.message||e));})

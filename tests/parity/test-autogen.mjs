@@ -1,7 +1,8 @@
-/* E2E for auto-generation on Show Labels:
-   1. typing a story + Show Labels -> exactly ONE generation call, artwork in labels
-   2. "Other Layout Options" (reseed) -> NO extra call (signature unchanged)
-   3. changing the story + reseed -> exactly one MORE call
+/* E2E for auto-generation on Show Labels (per-style set flow):
+   1. NO story, one field + Show Labels -> one set call (server builds the
+      subject from the wine facts), 6 artworks, traditional embedded
+   2. "Other Layout Options" (reseed) -> NO extra call (brief unchanged)
+   3. adding a story + reseed -> exactly one MORE call, artwork changes
    Run against a server with IMAGE_PROVIDER=mock (default: http://localhost:3200). */
 import { chromium } from 'playwright';
 
@@ -12,44 +13,47 @@ const browser = await chromium.launch({ channel: 'chrome' });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 page.on('pageerror', (e) => console.log('PAGE ERROR:', e.message));
 
-let genCalls = 0;
-page.on('request', (r) => { if (r.url().includes('/api/generate-label-image')) genCalls++; });
+let setCalls = 0;
+page.on('request', (r) => { if (r.url().includes('/api/generate-label-set')) setCalls++; });
 
 await page.goto(BASE);
 await page.evaluate(() => document.fonts.ready);
-await page.waitForFunction(() => !!(window.EightKImageGen && window.EightKImageGen.generateIfNeeded), null, { timeout: 30000 });
-await page.waitForTimeout(800);
+await page.waitForFunction(() => window.EightKImageGen && window.EightKImageGen.wired, null, { timeout: 30000 });
+await page.waitForTimeout(500);
 
-// story + one field, then Show Labels — artwork should generate automatically
-await page.fill('#visionText', 'A vineyard beneath the Caucasus Mountains');
+// no story — just a wine name, then Show Labels. The artwork must still
+// auto-generate (subject falls back to the wine facts server-side).
 await page.fill('input.le2-inp[data-zone-fid="wineName"]', 'Château Test');
 await page.click('#frontPreviewBtn');
 await page.waitForSelector('#frontThumbs svg', { timeout: 60000 });
 await page.waitForTimeout(800);
 
-if (genCalls !== 1) fail(`expected 1 generation call after Show Labels, saw ${genCalls}`);
-const img = await page.evaluate(() => window.__LABEL_IMG__ || '');
-if (!img.startsWith('data:image/')) fail('__LABEL_IMG__ not set by auto-generation');
+if (setCalls !== 1) fail(`expected 1 set call after Show Labels, saw ${setCalls}`);
+const imgs = await page.evaluate(() => window.__LABEL_IMGS__ || {});
+if (Object.keys(imgs).length !== 6) fail(`expected 6 per-style artworks, saw ${Object.keys(imgs).length}`);
 const embedded = await page.evaluate(() => {
-  const svg = document.querySelector('#frontThumbs svg');
-  return svg ? svg.innerHTML.includes('<image') : false;
+  const svgs = [...document.querySelectorAll('#frontThumbs svg')];
+  const frag = (window.__LABEL_IMGS__.traditional || '').slice(0, 200);
+  return frag && svgs.some((s) => s.innerHTML.includes(frag));
 });
-if (!embedded) fail('generated artwork not embedded in the first label option');
-console.log('auto-generate on Show Labels: 1 call, artwork embedded ✓');
+if (!embedded) fail('traditional artwork not embedded in the label options');
+console.log('auto-generate without a story: 1 set call, 6 artworks, embedded ✓');
 
-// reseed with the same story — must NOT regenerate
+// reseed with an unchanged brief — must NOT regenerate
 await page.click('#engRegen');
 await page.waitForTimeout(1200);
-if (genCalls !== 1) fail(`reseed should not regenerate (calls: ${genCalls})`);
-console.log('reseed reuses artwork (no extra call) ✓');
+if (setCalls !== 1) fail(`reseed should not regenerate (calls: ${setCalls})`);
+console.log('reseed reuses the artwork set (no extra call) ✓');
 
-// changed story + reseed — must regenerate exactly once
+// add a story + reseed — must regenerate exactly once, with new artwork
 await page.fill('#visionText', 'A drunken unicorn raising a toast');
 await page.click('#engRegen');
-await page.waitForTimeout(2000);
-if (genCalls !== 2) fail(`changed story should regenerate once (calls: ${genCalls})`);
-const img2 = await page.evaluate(() => window.__LABEL_IMG__ || '');
-if (img2 === img) fail('artwork did not change for a new story');
+await page.waitForFunction((prev) => {
+  const t = (window.__LABEL_IMGS__ || {}).traditional;
+  return t && t !== prev;
+}, imgs.traditional, { timeout: 60000 });
+await page.waitForTimeout(500);
+if (setCalls !== 2) fail(`changed story should regenerate once (calls: ${setCalls})`);
 console.log('changed story regenerates once, artwork updated ✓');
 
 console.log('\nAUTO-GEN E2E: PASS');
