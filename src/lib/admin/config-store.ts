@@ -18,7 +18,7 @@ export const DEFAULT_CONFIG: ArtDirectionConfig = {
   preset: "engraving",
   extra: "",
   negative:
-    "no text, no words, no letters, no numbers, no logos, no watermark, no signature, no border or frame, not a photograph, no modern objects, no brand names, low quality, blurry, distorted",
+    "no text, no words, no letters, no numbers, no logos, no watermark, no signature, no border or frame, not a photograph, no modern objects, no brand names, low quality, blurry, distorted, no coloured background, no dark background, no textured background, no paper texture, no gradient background, no vignette",
   template: "{medium}. Subject: {subject}. {context}{composition}. Mood: {mood}.{reference}{rules}",
 };
 

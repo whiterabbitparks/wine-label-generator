@@ -63,7 +63,7 @@ export const DEFAULT_CATALOG: StyleDef[] = [
           "a fine, detailed vintage engraving and etching illustration with cross-hatching and delicate line work",
         composition:
           "a single centred subject with clean negative space around it, designed as a wine-label illustration, no lettering and no border",
-        mood: "elegant, heritage, timeless; monochrome ink on cream paper",
+        mood: "elegant, heritage, timeless; monochrome ink on pure white",
       },
       {
         key: "pencil",
@@ -72,7 +72,7 @@ export const DEFAULT_CATALOG: StyleDef[] = [
           "a classical graphite pencil drawing with soft shading, precise contours and subtle paper grain",
         composition:
           "a single centred subject with generous negative space, drawn as a wine-label illustration, no lettering and no border",
-        mood: "quiet, refined, hand-made; warm grey graphite on cream paper",
+        mood: "quiet, refined, hand-made; warm grey graphite on pure white",
       },
       {
         key: "woodcut",
@@ -81,7 +81,7 @@ export const DEFAULT_CATALOG: StyleDef[] = [
           "a traditional woodcut print illustration with bold carved lines and honest, rustic texture",
         composition:
           "a strong centred subject with simple negative space, cut as a wine-label illustration, no lettering and no border",
-        mood: "earthy, rooted, timeless; single dark ink on cream paper",
+        mood: "earthy, rooted, timeless; single dark ink on pure white",
       },
     ],
     focus: {
@@ -159,7 +159,7 @@ export const DEFAULT_CATALOG: StyleDef[] = [
           "a detailed ink study of an animal in a naturalist field-guide style with fine hatching",
         composition:
           "a single centred animal subject surrounded by sparse botanical sprigs and calm negative space, no lettering and no border",
-        mood: "curious, noble, naturalist; single ink on warm paper",
+        mood: "curious, noble, naturalist; single ink on pure white",
       },
     ],
     focus: {
@@ -180,7 +180,7 @@ export const DEFAULT_CATALOG: StyleDef[] = [
           "an ultra-fine copperplate etching illustration with hair-thin lines and jewel-like precision",
         composition:
           "a small, exquisitely detailed centred emblem-like subject surrounded by wide empty space, no lettering and no border",
-        mood: "luxurious, restrained, precise; single dark ink on ivory",
+        mood: "luxurious, restrained, precise; single dark ink on pure white",
       },
       {
         key: "charcoal",
@@ -189,7 +189,7 @@ export const DEFAULT_CATALOG: StyleDef[] = [
           "a rich tonal charcoal drawing with deep velvety darks and soft gradations",
         composition:
           "a dignified centred subject emerging from shadow with wide quiet margins, no lettering and no border",
-        mood: "deep, quiet, expensive; near-black on warm ivory",
+        mood: "deep, quiet, expensive; near-black on pure white",
       },
     ],
     focus: {
@@ -249,7 +249,7 @@ export const DEFAULT_CATALOG: StyleDef[] = [
           "an expressive gestural brush-and-ink painting with fast, confident strokes and splatter",
         composition:
           "a dynamic subject caught mid-motion, with one side of the canvas left as raw open texture, no lettering and no border",
-        mood: "visceral, free, artistic; ink on rough paper",
+        mood: "visceral, free, artistic; ink on pure white",
       },
       {
         key: "screenprint",

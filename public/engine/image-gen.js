@@ -55,7 +55,7 @@ const PRESETS={
     composition:'a strong centred composition with confident shapes, no lettering',
     mood:'expressive, contemporary and punchy'}
 };
-const NEGATIVE_DEFAULT='no text, no words, no letters, no numbers, no logos, no watermark, no signature, no border or frame, not a photograph, no modern objects, no brand names, low quality, blurry, distorted';
+const NEGATIVE_DEFAULT='no text, no words, no letters, no numbers, no logos, no watermark, no signature, no border or frame, not a photograph, no modern objects, no brand names, low quality, blurry, distorted, no coloured background, no dark background, no textured background, no paper texture, no gradient background, no vignette';
 const TEMPLATE_DEFAULT='{medium}. Subject: {subject}. {context}{composition}. Mood: {mood}.{reference}{rules}';
 
 /* ---- ART DIRECTION (creator-controlled; the exact object your backend stores) ---- */

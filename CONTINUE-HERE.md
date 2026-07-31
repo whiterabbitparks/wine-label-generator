@@ -114,6 +114,12 @@ assembly happens server-side, one prompt per label style:
 - Images render with `mix-blend-mode:multiply` ALWAYS (matches print
   treatment). Print colour decision: SVG stays RGB; a CMYK **PDF export step**
   is the planned print deliverable (not built yet).
+- **House rule (owner, 2026-07-31): artwork is ALWAYS on a clean solid pure-
+  white background** — enforced server-side in `src/lib/styles/prompt.ts`
+  (`WHITE_BG`, appended to every prompt, deliberately outside the admin-
+  editable template) + background negatives in the default negative prompt.
+  With multiply, the white vanishes on the label. The mock provider renders
+  on white accordingly.
 - **openai** provider: VERIFIED live 2026-07-31 (model `gpt-image-2` valid).
   OpenAI caps ~5 images/min → the set fan-out relies on the retry in
   `src/lib/image-provider/index.ts`. **mock** stays free/offline/deterministic.

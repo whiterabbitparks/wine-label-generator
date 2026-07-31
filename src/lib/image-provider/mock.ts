@@ -24,7 +24,9 @@ export async function generateMockImage(job: GenerationJob): Promise<string> {
   const seed = hash(job.prompt || job.vision || "8k-labels");
   const pick = <T,>(arr: T[], salt: number) => arr[(seed + salt) % arr.length];
 
-  const paper = pick(["#f3ecda", "#f1ede1", "#efe6d0", "#f4f0e4"], 1);
+  // house rule: artwork is always on a clean solid WHITE background (the
+  // multiply blend then makes the white vanish on the label)
+  const paper = "#ffffff";
   const ink = pick(["#4a4234", "#3f3a2f", "#514735"], 2);
   const subject = (job.vision || "").trim().slice(0, 90) || "Vineyard beneath the mountains";
 
@@ -45,10 +47,7 @@ export async function generateMockImage(job: GenerationJob): Promise<string> {
 
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">` +
-    `<defs><pattern id="hh" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(35)">` +
-    `<line x1="0" y1="0" x2="0" y2="9" stroke="${ink}" stroke-width="1" opacity="0.16"/></pattern></defs>` +
     `<rect width="${W}" height="${H}" fill="${paper}"/>` +
-    `<rect width="${W}" height="${H}" fill="url(#hh)"/>` +
     `<circle cx="${(W * sunX).toFixed(0)}" cy="${(H * 0.22).toFixed(0)}" r="${(H * 0.09).toFixed(0)}" fill="none" stroke="${ink}" stroke-width="3" opacity="0.7"/>` +
     `<path d="M 0 ${(H * h1).toFixed(0)} Q ${(W * 0.3).toFixed(0)} ${(H * (h1 - 0.14)).toFixed(0)} ${(W * 0.62).toFixed(0)} ${(H * h1).toFixed(0)} T ${W} ${(H * (h1 - 0.04)).toFixed(0)}" fill="none" stroke="${ink}" stroke-width="3" opacity="0.75"/>` +
     `<path d="M 0 ${(H * h2).toFixed(0)} Q ${(W * 0.45).toFixed(0)} ${(H * (h2 - 0.1)).toFixed(0)} ${W} ${(H * h2).toFixed(0)}" fill="none" stroke="${ink}" stroke-width="2.5" opacity="0.6"/>` +

@@ -26,6 +26,14 @@ export interface LabelBrief {
 const TEMPLATE_DEFAULT =
   "{medium}. Subject: {subject}. {context}{composition}. Mood: {mood}.{focus}{reference}{rules}";
 
+/* Non-negotiable house rule (owner decision 2026-07-31): artwork is ALWAYS
+   isolated on a clean solid pure-white background. With the multiply blend the
+   white vanishes on the label, so the illustration sits directly on the label
+   stock. Appended to every prompt server-side — deliberately NOT part of the
+   admin-editable template, so it cannot be accidentally removed. */
+const WHITE_BG =
+  " The artwork is isolated on a clean, solid, pure white background — no background colour, no paper texture, no gradients, no vignette, no cast shadows.";
+
 function subjectFrom(vision: string, d: Record<string, string>): string {
   const v = (vision || "").trim();
   if (v) return v;
@@ -69,6 +77,7 @@ export function buildStylePrompt(
     .replace("{focus}", focus)
     .replace("{reference}", reference)
     .replace("{rules}", rules)
+    .concat(WHITE_BG)
     .replace(/\s+/g, " ")
     .trim();
 }
