@@ -155,8 +155,12 @@ const EightKImageGen={
     var w=document.getElementById('ig_variants');if(w){w.innerHTML='';w.classList.remove('on');}
     document.dispatchEvent(new Event('8kRepaint'));},
   _lastSig:null,
-  _sig:function(){var d=data();return JSON.stringify([visionText(),window.__LABEL_REF__||null,EightKImageGen.seed||0,
-    d.region,d.country,d.grape,d.wineColorName]);},
+  /* Regeneration is triggered ONLY by the creative inputs — story, reference
+     sketch, seed. Label-detail edits (name, region, grape, …) re-render the
+     layouts with the EXISTING artwork and never cost a generation (owner rule
+     2026-08-01). Wine facts still flavour the prompt when a generation does
+     happen (empty story → subject falls back to them). */
+  _sig:function(){return JSON.stringify([visionText(),window.__LABEL_REF__||null,EightKImageGen.seed||0]);},
   generate:function(){var sig=EightKImageGen._sig();var job=buildJob();return Promise.resolve(EightKImageGen.provider(job)).then(function(url){if(url){EightKImageGen.setImage(url);EightKImageGen._lastSig=sig;}return url;});},
   // "Generate artwork" (and Show Labels): ONE artwork per label style, all six
   // in a single server round-trip (the server fans out and caches). Thumbnails
