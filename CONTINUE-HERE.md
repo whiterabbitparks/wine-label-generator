@@ -132,6 +132,14 @@ assembly happens server-side, one prompt per label style:
 
 ---
 
+## 5b. TEMPORARY testing conveniences (revert before launch)
+
+- **DEMO_FILL** in `8k-labels-package/src/editor-embed.js`: empty label boxes
+  fall back to their "E.g." reference texts in the rendered SVGs so testing
+  needs no typing. Owner-requested 2026-07-31, explicitly temporary —
+  **revert by setting `DEMO_FILL=false`** (then rebuild + extract + re-run
+  gates). The empty-box warning and grey placeholders are unaffected.
+
 ## 6. What's DONE / what's NEXT
 
 DONE: verbatim transplant with proven parity (engine 144/144 byte-identical;

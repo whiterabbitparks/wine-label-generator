@@ -156,31 +156,40 @@ function cv(fid){var f=FIELDS[fid];
   if(f.sel){var v=f.value;return [v.sweetness,v.colour,v.category].filter(function(x){return x&&!isNA(x);}).join(' ');}
   if(f.av){var a=f.value;return [a.alcohol,a.volume].filter(function(x){return x&&String(x).trim();}).join(' ');}
   return (f.value&&f.value.trim())?f.value.trim():'';}
+/* TEMP — DEMO FILL (owner request 2026-07-31, for testing only): when a box is
+   left empty, the generated SVGs use its "E.g." reference text (prefix stripped)
+   so labels can be previewed without typing everything in each session.
+   REVERT by setting DEMO_FILL=false. Deliberately scoped to getLabelData only:
+   the empty-box warning, red flags and the grey placeholders are untouched. */
+var DEMO_FILL=true;
+function demoPh(fid){var f=FIELDS[fid];return f&&f.ph?String(f.ph).replace(/^E\.?G\.?\s*/i,''):'';}
+function dcv(fid){var v=cv(fid);return (v||!DEMO_FILL)?v:demoPh(fid);}
+function demoAv(v,fb){v=String(v||'').trim();return v||(DEMO_FILL?fb:'');}
 function emptyFids(){return order.filter(function(fid){return !cv(fid);});}
 function markWarn(list){var st=stageEl();if(!st)return;st.querySelectorAll('.le2-box').forEach(function(b){b.classList.toggle('warn',list.indexOf(b.getAttribute('data-zfid'))>=0);});
   var w=document.getElementById('le_warn');if(w)w.style.display='';}
 function clearWarn(){var st=stageEl();if(st)st.querySelectorAll('.le2-box.warn').forEach(function(b){b.classList.remove('warn');});
   var w=document.getElementById('le_warn');if(w)w.style.display='none';}
-function getLabelData(){var rc=parseRegion(cv('regionCountry')),av=FIELDS.alcVol.value,at=FIELDS.attributes.value;
+function getLabelData(){var rc=parseRegion(dcv('regionCountry')),av=FIELDS.alcVol.value,at=FIELDS.attributes.value;
   var sweet=isNA(at.sweetness)?'':at.sweetness, colour=isNA(at.colour)?'':at.colour, type=isNA(at.category)?'':at.category;
-  return {producer:cv('producer'),wine:cv('wineName'),appellation:cv('appellation'),classification:cv('classification'),
-    grape:cv('grape'),region:rc.region,country:rc.country,special:cv('special'),vintage:cv('vintage'),
-    alcohol:String(av.alcohol||'').trim(),volume:String(av.volume||'').trim(),sweetness:sweet,wineType:type,wineColorName:colour,wineColor:COLORHEX[colour]||'#6E1423'};}
+  return {producer:dcv('producer'),wine:dcv('wineName'),appellation:dcv('appellation'),classification:dcv('classification'),
+    grape:dcv('grape'),region:rc.region,country:rc.country,special:dcv('special'),vintage:dcv('vintage'),
+    alcohol:demoAv(av.alcohol,'12%'),volume:demoAv(av.volume,'750 ml'),sweetness:sweet,wineType:type,wineColorName:colour,wineColor:COLORHEX[colour]||'#6E1423'};}
 function currentStyle(){var c=document.querySelector('.style-card.selected');return c?c.dataset.style:'';}
 function dl(svg,name){var b=new Blob([svg],{type:'image/svg+xml'});var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(function(){URL.revokeObjectURL(u);},1000);}
 let baseSeed=0, allOpts=[], selIdx=-1, galIdx=0, warned=false, shown=false;
-/* Ensure the story's artwork exists before painting labels. Regenerates only when
-   the story/reference/art-direction changed (EightKImageGen.generateIfNeeded);
-   the button shows progress while the model runs. Fails soft: labels still paint. */
+/* Kick off artwork generation and paint labels IMMEDIATELY — real image models
+   take ~20s+, so the layouts render right away (placeholder/previous artwork)
+   and the generated set swaps in via the 8kRepaint that setImages dispatches.
+   The button shows progress until the set lands. Fails soft: labels stay up. */
 function withArtwork(btn,go){var gen=window.EightKImageGen;
   if(!gen||!gen.generateIfNeeded){go();return;}
-  // artwork is always ensured now (empty story → server builds the subject from
-  // the wine facts); an unchanged brief resolves instantly from the cache
-  var pending=true;
+  var pending=!gen.needsGeneration||gen.needsGeneration();
   var old=btn?btn.textContent:'';
   if(pending&&btn){btn.disabled=true;btn.textContent='Generating artwork…';}
+  go();
   gen.generateIfNeeded().catch(function(e){alert('Image generation failed: '+(e&&e.message||e));})
-    .then(function(){if(pending&&btn){btn.disabled=false;btn.textContent=old;}go();});}
+    .then(function(){if(pending&&btn){btn.disabled=false;btn.textContent=old;}});}
 function mkRegen(){var rb=document.createElement('button');rb.type='button';rb.className='eng-regen';rb.textContent='Other Layout Options';rb.addEventListener('click',function(){var b=this;withArtwork(b,function(){baseSeed+=2;selIdx=-1;paint();});});return rb;}
 function ensureExtras(){var reveal=document.getElementById('frontReveal');if(!reveal)return;
   var oldNote=document.getElementById('engStyleNote');if(oldNote)oldNote.remove();
@@ -249,7 +258,11 @@ function boot(){
         var st=stageEl();if(st)st.scrollIntoView({behavior:'smooth',block:'center'});return;}
       clearWarn();
     },true);
-    btn.addEventListener('click',function(){var b=this;setTimeout(function(){withArtwork(b,function(){if(window.LabelEngine){window.LabelEngine.ensureFonts().then(function(){baseSeed=0;selIdx=-1;paint();});}});},50);});
+    btn.addEventListener('click',function(){var b=this;
+      // the prototype page pre-loads #frontThumbs with 4 static demo images —
+      // clear them so the reveal never flashes the old grid before paint()
+      var g=document.getElementById('frontThumbs');if(g&&!shown)g.innerHTML='';
+      setTimeout(function(){withArtwork(b,function(){if(window.LabelEngine){window.LabelEngine.ensureFonts().then(function(){baseSeed=0;selIdx=-1;paint();});}});},50);});
   }
 }
 // expose data + repaint so the image-generation module can read wine details and refresh shown labels

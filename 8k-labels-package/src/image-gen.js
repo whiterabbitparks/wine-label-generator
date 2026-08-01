@@ -170,8 +170,9 @@ const EightKImageGen={
   // Auto-generation used by "Show Labels": re-generates only when the brief
   // (story, reference, seed or wine facts) changed since the last run. An empty
   // story is fine — the server falls back to the wine facts for the subject.
+  needsGeneration:function(){return !(window.__LABEL_IMGS__&&EightKImageGen._lastSig===EightKImageGen._sig());},
   generateIfNeeded:function(){
-    if(window.__LABEL_IMGS__&&EightKImageGen._lastSig===EightKImageGen._sig())return Promise.resolve(window.__LABEL_IMGS__);
+    if(!EightKImageGen.needsGeneration())return Promise.resolve(window.__LABEL_IMGS__);
     return EightKImageGen.generateSet();},
   openAdmin:function(){buildAdmin(true);}
 };
