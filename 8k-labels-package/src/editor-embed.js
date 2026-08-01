@@ -178,19 +178,23 @@ function getLabelData(){var rc=parseRegion(dcv('regionCountry')),av=FIELDS.alcVo
 function currentStyle(){var c=document.querySelector('.style-card.selected');return c?c.dataset.style:'';}
 function dl(svg,name){var b=new Blob([svg],{type:'image/svg+xml'});var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(function(){URL.revokeObjectURL(u);},1000);}
 let baseSeed=0, allOpts=[], selIdx=-1, galIdx=0, warned=false, shown=false;
-/* Kick off artwork generation and paint labels IMMEDIATELY — real image models
-   take ~20s+, so the layouts render right away (placeholder/previous artwork)
-   and the generated set swaps in via the 8kRepaint that setImages dispatches.
-   The button shows progress until the set lands. Fails soft: labels stay up. */
+/* Generate the artwork set, then paint. While the set is generating, the
+   Show Labels glass loader (Loader.pdf) fills in sync with REAL progress —
+   one increment per completed style artwork — and the labels reveal only
+   when everything is ready. On the regen button (no loader) the button text
+   shows progress instead. Fails soft: loader is dismissed, labels still paint. */
 function withArtwork(btn,go){var gen=window.EightKImageGen;
   if(!gen||!gen.generateIfNeeded){go();return;}
   var pending=!gen.needsGeneration||gen.needsGeneration();
   var old=btn?btn.textContent:'';
   if(pending&&btn){btn.disabled=true;btn.textContent='Generating artwork…';}
-  go();
-  gen.generateIfNeeded().catch(function(e){alert('Image generation failed: '+(e&&e.message||e));})
-    .then(function(){if(pending&&btn){btn.disabled=false;btn.textContent=old;}});}
-function mkRegen(){var rb=document.createElement('button');rb.type='button';rb.className='eng-regen';rb.textContent='Other Layout Options';rb.addEventListener('click',function(){var b=this;withArtwork(b,function(){baseSeed+=2;selIdx=-1;paint();});});return rb;}
+  var prog=function(p){if(window.__frontLoaderProgress)window.__frontLoaderProgress(p);};
+  if(!pending)prog(1);
+  gen.generateIfNeeded(prog).catch(function(e){
+      if(window.__frontLoaderFail)window.__frontLoaderFail();
+      alert('Image generation failed: '+(e&&e.message||e));})
+    .then(function(){if(pending&&btn){btn.disabled=false;btn.textContent=old;}go();});}
+function mkRegen(){var rb=document.createElement('button');rb.type='button';rb.className='eng-regen';rb.textContent='Layout alternatives';rb.addEventListener('click',function(){var b=this;withArtwork(b,function(){baseSeed+=2;selIdx=-1;paint();});});return rb;}
 function ensureExtras(){var reveal=document.getElementById('frontReveal');if(!reveal)return;
   var oldNote=document.getElementById('engStyleNote');if(oldNote)oldNote.remove();
   var oldTop=document.getElementById('engRegenTop');if(oldTop)oldTop.remove();
@@ -262,7 +266,8 @@ function boot(){
       // the prototype page pre-loads #frontThumbs with 4 static demo images —
       // clear them so the reveal never flashes the old grid before paint()
       var g=document.getElementById('frontThumbs');if(g&&!shown)g.innerHTML='';
-      setTimeout(function(){withArtwork(b,function(){if(window.LabelEngine){window.LabelEngine.ensureFonts().then(function(){baseSeed=0;selIdx=-1;paint();});}});},50);});
+      setTimeout(function(){withArtwork(b,function(){if(window.LabelEngine){window.LabelEngine.ensureFonts().then(function(){baseSeed=0;selIdx=-1;paint();
+        if(window.__frontLoaderDone)window.__frontLoaderDone();});}});},50);});
   }
 }
 // expose data + repaint so the image-generation module can read wine details and refresh shown labels

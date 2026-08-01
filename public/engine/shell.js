@@ -458,37 +458,69 @@ function animateLiquidRise(rectEl, duration, onDone){
   }
   requestAnimationFrame(frame);
 }
-function wirePreviewLoader(btnId, loaderId, revealId){
+function wirePreviewLoader(btnId, loaderId, revealId, manual){
   const btn=document.getElementById(btnId);
   const loader=document.getElementById(loaderId);
   const reveal=document.getElementById(revealId);
   const liquidRect=loader.querySelector('.liquid-rect');
+  const wineRect=loader.querySelector('.wine-rect');
   let running=false;
+  function finish(){
+    loader.style.transition='opacity .4s';
+    loader.style.opacity='0';
+    setTimeout(()=>{
+      loader.style.display='none';
+      loader.style.transition='';
+      loader.style.opacity='1';
+      reveal.style.display='block';
+      reveal.classList.add('shown');
+      running=false;
+    },400);
+  }
   btn.addEventListener('click',()=>{
     if(running) return;
     running=true;
     btn.style.display='none';
     reveal.classList.remove('shown');
     reveal.style.display='none';
-    liquidRect.setAttribute('y',251);
-    liquidRect.setAttribute('height',0);
+    if(liquidRect){liquidRect.setAttribute('y',251);liquidRect.setAttribute('height',0);}
+    if(wineRect){curP=0;targetP=0;wineRect.setAttribute('y',266.6);wineRect.setAttribute('height',0);}
     loader.style.display='flex';
     loader.style.opacity='1';
-    animateLiquidRise(liquidRect,2000,()=>{
-      loader.style.transition='opacity .4s';
-      loader.style.opacity='0';
-      setTimeout(()=>{
-        loader.style.display='none';
-        loader.style.transition='';
-        loader.style.opacity='1';
-        reveal.style.display='block';
-        reveal.classList.add('shown');
-        running=false;
-      },400);
-    });
+    if(!manual) animateLiquidRise(liquidRect,2000,finish);
   });
+  if(!manual) return;
+  /* Manual mode (front): the wine level IS the artwork-generation progress.
+     The glass geometry comes from Loader.pdf — full (progress 1) matches the
+     PDF's own wine level, about two thirds up the bowl, never the rim. */
+  const WINE_BOTTOM=266.6, WINE_RISE=80.9;   // svg units: bowl bottom -> the PDF wine surface
+  let curP=0, targetP=0, raf=null;
+  function renderWine(){
+    curP+=(targetP-curP)*0.10;
+    if(Math.abs(targetP-curP)<0.002) curP=targetP;
+    const h=Math.max(0,curP)*WINE_RISE;
+    wineRect.setAttribute('y',(WINE_BOTTOM-h).toFixed(2));
+    wineRect.setAttribute('height',(h+3).toFixed(2));
+    raf=(curP!==targetP)?requestAnimationFrame(renderWine):null;
+  }
+  window.__frontLoaderProgress=function(p){
+    if(!running) return;
+    targetP=Math.max(targetP,Math.min(1,p||0));
+    if(!raf) raf=requestAnimationFrame(renderWine);
+  };
+  window.__frontLoaderDone=function(){
+    if(!running) return;
+    targetP=1;curP=1;renderWine();
+    finish();
+  };
+  window.__frontLoaderFail=function(){
+    if(!running) return;
+    loader.style.display='none';
+    btn.style.display='';
+    running=false;
+  };
 }
-wirePreviewLoader('frontPreviewBtn','frontLoader','frontReveal');
+wirePreviewLoader('frontPreviewBtn','frontLoader','frontReveal', true);
 wirePreviewLoader('backPreviewBtn','backLoader','backReveal');
 wirePreviewLoader('bottlePreviewBtn','bottleLoader','bottleReveal');
 

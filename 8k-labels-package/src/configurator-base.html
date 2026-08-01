@@ -78,7 +78,7 @@
     display:flex;align-items:flex-end;
   }
   .hero-photo{
-    position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 30%;
+    position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 62%;
     transform:scale(1.35);will-change:transform;
   }
   .hero-scrim{
@@ -118,6 +118,7 @@
 
   /* ---------- Simplified video-player overlay on cover images ---------- */
   .video-overlay{position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;pointer-events:none;}
+  .video-play-btn{display:none !important;}
   .video-play-btn{
     pointer-events:auto;
     width:60px;height:60px;border-radius:50%;
@@ -716,20 +717,15 @@
     <button class="preview-btn" id="frontPreviewBtn">Show Labels</button>
 
     <div class="preview-loader" id="frontLoader">
-      <svg viewBox="0 0 200 380" width="66" height="125">
-        <ellipse cx="100" cy="38" rx="44" ry="11" fill="none" stroke="#79A342" stroke-width="9"/>
-        <path d="M56 42 C40 90 34 150 34 195 C34 232 55 260 100 266 C145 260 166 232 166 195 C166 150 160 90 144 42"
-              fill="none" stroke="#79A342" stroke-width="10" stroke-linecap="round"/>
-        <rect x="94" y="266" width="12" height="64" fill="#79A342"/>
-        <ellipse cx="100" cy="340" rx="48" ry="11" fill="none" stroke="#79A342" stroke-width="9"/>
-        <clipPath id="frontLiquidClip">
-          <path d="M68 80 C56 115 50 160 50 195 C50 222 66 246 100 251 C134 246 150 222 150 195 C150 160 144 115 132 80 Z"/>
-        </clipPath>
-        <g clip-path="url(#frontLiquidClip)">
-          <rect class="liquid-rect" x="40" y="251" width="120" height="0" fill="#B4772E"/>
+      <svg viewBox="0 0 595.276 609.089" width="340" aria-label="Designing your label">
+        <clipPath id="frontWineClip"><rect class="wine-rect" x="230" y="266.6" width="140" height="0"/></clipPath>
+        <path fill="#BA141A" clip-path="url(#frontWineClip)" d="M352.397 185.696 C353.872 199.478 353.325 211.872 350.76 222.63 C346.838 239.075 336.88 251.431 321.163 259.355 C311.285 264.336 301.979 266.038 298.571 266.527 C296.674 266.308 286.165 264.888 274.916 259.216 C259.199 251.292 249.241 238.936 245.319 222.491 C242.762 211.769 242.21 199.422 243.667 185.696 Z"/>
+        <g fill="none" stroke="#231F20" stroke-width="7.426">
+          <path d="M254.813 401.491 L297.631 401.491 L297.631 276.2 C297.631 276.2 246.711 271.948 235.438 224.682 C222.211 169.219 254.078 108.466 254.078 108.466 L341.155 108.635 C341.155 108.635 373.068 169.358 359.84 224.821 C348.568 272.087 297.648 276.339 297.648 276.339"/>
+          <path d="M297.8 276.2 L297.8 401.491 L340.618 401.491"/>
         </g>
+        <text x="76.996" y="498.608" font-family="'Hepta Slab',serif" font-weight="200" font-size="37.532" fill="#000000">Designing your label&#8230;</text>
       </svg>
-      <div class="loader-label">Preparing your preview&hellip;</div>
     </div>
 
     <div class="reveal-block" id="frontReveal">
@@ -1487,37 +1483,69 @@ function animateLiquidRise(rectEl, duration, onDone){
   }
   requestAnimationFrame(frame);
 }
-function wirePreviewLoader(btnId, loaderId, revealId){
+function wirePreviewLoader(btnId, loaderId, revealId, manual){
   const btn=document.getElementById(btnId);
   const loader=document.getElementById(loaderId);
   const reveal=document.getElementById(revealId);
   const liquidRect=loader.querySelector('.liquid-rect');
+  const wineRect=loader.querySelector('.wine-rect');
   let running=false;
+  function finish(){
+    loader.style.transition='opacity .4s';
+    loader.style.opacity='0';
+    setTimeout(()=>{
+      loader.style.display='none';
+      loader.style.transition='';
+      loader.style.opacity='1';
+      reveal.style.display='block';
+      reveal.classList.add('shown');
+      running=false;
+    },400);
+  }
   btn.addEventListener('click',()=>{
     if(running) return;
     running=true;
     btn.style.display='none';
     reveal.classList.remove('shown');
     reveal.style.display='none';
-    liquidRect.setAttribute('y',251);
-    liquidRect.setAttribute('height',0);
+    if(liquidRect){liquidRect.setAttribute('y',251);liquidRect.setAttribute('height',0);}
+    if(wineRect){curP=0;targetP=0;wineRect.setAttribute('y',266.6);wineRect.setAttribute('height',0);}
     loader.style.display='flex';
     loader.style.opacity='1';
-    animateLiquidRise(liquidRect,2000,()=>{
-      loader.style.transition='opacity .4s';
-      loader.style.opacity='0';
-      setTimeout(()=>{
-        loader.style.display='none';
-        loader.style.transition='';
-        loader.style.opacity='1';
-        reveal.style.display='block';
-        reveal.classList.add('shown');
-        running=false;
-      },400);
-    });
+    if(!manual) animateLiquidRise(liquidRect,2000,finish);
   });
+  if(!manual) return;
+  /* Manual mode (front): the wine level IS the artwork-generation progress.
+     The glass geometry comes from Loader.pdf — full (progress 1) matches the
+     PDF's own wine level, about two thirds up the bowl, never the rim. */
+  const WINE_BOTTOM=266.6, WINE_RISE=80.9;   // svg units: bowl bottom -> the PDF wine surface
+  let curP=0, targetP=0, raf=null;
+  function renderWine(){
+    curP+=(targetP-curP)*0.10;
+    if(Math.abs(targetP-curP)<0.002) curP=targetP;
+    const h=Math.max(0,curP)*WINE_RISE;
+    wineRect.setAttribute('y',(WINE_BOTTOM-h).toFixed(2));
+    wineRect.setAttribute('height',(h+3).toFixed(2));
+    raf=(curP!==targetP)?requestAnimationFrame(renderWine):null;
+  }
+  window.__frontLoaderProgress=function(p){
+    if(!running) return;
+    targetP=Math.max(targetP,Math.min(1,p||0));
+    if(!raf) raf=requestAnimationFrame(renderWine);
+  };
+  window.__frontLoaderDone=function(){
+    if(!running) return;
+    targetP=1;curP=1;renderWine();
+    finish();
+  };
+  window.__frontLoaderFail=function(){
+    if(!running) return;
+    loader.style.display='none';
+    btn.style.display='';
+    running=false;
+  };
 }
-wirePreviewLoader('frontPreviewBtn','frontLoader','frontReveal');
+wirePreviewLoader('frontPreviewBtn','frontLoader','frontReveal', true);
 wirePreviewLoader('backPreviewBtn','backLoader','backReveal');
 wirePreviewLoader('bottlePreviewBtn','bottleLoader','bottleReveal');
 

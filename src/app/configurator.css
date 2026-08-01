@@ -70,7 +70,7 @@
     display:flex;align-items:flex-end;
   }
   .hero-photo{
-    position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 30%;
+    position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 62%;
     transform:scale(1.35);will-change:transform;
   }
   .hero-scrim{
@@ -110,6 +110,7 @@
 
   /* ---------- Simplified video-player overlay on cover images ---------- */
   .video-overlay{position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;pointer-events:none;}
+  .video-play-btn{display:none !important;}
   .video-play-btn{
     pointer-events:auto;
     width:60px;height:60px;border-radius:50%;

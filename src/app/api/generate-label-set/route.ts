@@ -96,71 +96,91 @@ export async function POST(req: Request) {
   const key = createHash("sha256")
     .update(JSON.stringify([brief, catalog, art, provider]))
     .digest("hex");
+
+  // Response is an NDJSON stream: one {type:"progress"} line per completed
+  // style (drives the client's wine-glass loader with REAL progress), then a
+  // single {type:"result"} line with the full set — or {type:"error"} if every
+  // style failed (the HTTP status is already committed by then).
+  const enc = new TextEncoder();
+  const NDJSON = { "Content-Type": "application/x-ndjson; charset=utf-8", "Cache-Control": "no-store" };
+
   const hit = cache().get(key);
-  if (hit) return NextResponse.json({ ...hit, cached: true });
+  if (hit) {
+    const body =
+      JSON.stringify({ type: "progress", done: 6, total: 6 }) + "\n" +
+      JSON.stringify({ type: "result", ...hit, cached: true }) + "\n";
+    return new Response(enc.encode(body), { headers: NDJSON });
+  }
 
-  const images: Record<string, SetEntry> = {};
-  const errors: Record<string, string> = {};
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (o: unknown) => controller.enqueue(enc.encode(JSON.stringify(o) + "\n"));
+      const images: Record<string, SetEntry> = {};
+      const errors: Record<string, string> = {};
+      let completed = 0;
 
-  await Promise.all(
-    catalog.map(async (style, i) => {
-      const sub = pickSubStyle(style, brief.seed || 0, i);
-      const job = buildStyleJob(style, sub, brief, art);
-      const started = Date.now();
-      try {
-        const imageDataUrl = await generateImageWithRetry(job);
+      await Promise.all(
+        catalog.map(async (style, i) => {
+          const sub = pickSubStyle(style, brief.seed || 0, i);
+          const job = buildStyleJob(style, sub, brief, art);
+          const started = Date.now();
+          try {
+            const imageDataUrl = await generateImageWithRetry(job);
 
-        let stored = null;
-        try {
-          stored = await getImageStorage().save(
-            imageDataUrl,
-            `${Date.now()}-${style.key}-${randomUUID().slice(0, 8)}`
-          );
-        } catch (e) {
-          console.error("image storage failed:", e instanceof Error ? e.message : e);
+            let stored = null;
+            try {
+              stored = await getImageStorage().save(
+                imageDataUrl,
+                `${Date.now()}-${style.key}-${randomUUID().slice(0, 8)}`
+              );
+            } catch (e) {
+              console.error("image storage failed:", e instanceof Error ? e.message : e);
+            }
+            images[style.key] = {
+              url: imageDataUrl,
+              imageUrl: stored?.url ?? null,
+              subStyle: sub.key,
+              subStyleLabel: sub.label,
+            };
+            logGeneration(job, {
+              provider,
+              ok: true,
+              durationMs: Date.now() - started,
+              imageBytes: stored?.bytes ?? Math.round(imageDataUrl.length * 0.75),
+              imageUrl: stored?.url,
+              storage: stored?.storage,
+            }).catch(() => {});
+          } catch (e) {
+            const message = e instanceof Error ? e.message : String(e);
+            console.error(`generate-label-set [${style.key}] failed:`, message);
+            errors[style.key] = message;
+            logGeneration(job, {
+              provider,
+              ok: false,
+              durationMs: Date.now() - started,
+              error: message,
+            }).catch(() => {});
+          }
+          completed++;
+          send({ type: "progress", done: completed, total: catalog.length, style: style.key });
+        })
+      );
+
+      if (!Object.keys(images).length) {
+        send({ type: "error", error: "all style generations failed", errors });
+      } else {
+        const result: SetResult = { seed: brief.seed || 0, provider, images, errors };
+        // only complete sets are cacheable — caching a partial set would pin
+        // the missing styles as permanently absent for this brief
+        if (!Object.keys(errors).length) {
+          const c = cache();
+          c.set(key, result);
+          if (c.size > CACHE_MAX) c.delete(c.keys().next().value as string);
         }
-        images[style.key] = {
-          url: imageDataUrl,
-          imageUrl: stored?.url ?? null,
-          subStyle: sub.key,
-          subStyleLabel: sub.label,
-        };
-        logGeneration(job, {
-          provider,
-          ok: true,
-          durationMs: Date.now() - started,
-          imageBytes: stored?.bytes ?? Math.round(imageDataUrl.length * 0.75),
-          imageUrl: stored?.url,
-          storage: stored?.storage,
-        }).catch(() => {});
-      } catch (e) {
-        const message = e instanceof Error ? e.message : String(e);
-        console.error(`generate-label-set [${style.key}] failed:`, message);
-        errors[style.key] = message;
-        logGeneration(job, {
-          provider,
-          ok: false,
-          durationMs: Date.now() - started,
-          error: message,
-        }).catch(() => {});
+        send({ type: "result", ...result });
       }
-    })
-  );
-
-  if (!Object.keys(images).length) {
-    return NextResponse.json(
-      { error: "all style generations failed", errors },
-      { status: 502 }
-    );
-  }
-
-  const result: SetResult = { seed: brief.seed || 0, provider, images, errors };
-  // only complete sets are cacheable — caching a partial set would pin the
-  // missing styles as permanently absent for this brief
-  if (!Object.keys(errors).length) {
-    const c = cache();
-    c.set(key, result);
-    if (c.size > CACHE_MAX) c.delete(c.keys().next().value as string);
-  }
-  return NextResponse.json(result);
+      controller.close();
+    },
+  });
+  return new Response(stream, { headers: NDJSON });
 }

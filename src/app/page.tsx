@@ -58,15 +58,49 @@ export default function Configurator() {
         };
         // style-set hook: raw brief in, one artwork per label style out.
         // Prompt assembly happens server-side (style catalog + art direction).
-        gen.setProvider = async (brief: unknown) => {
+        // The response is an NDJSON stream: progress lines (one per completed
+        // style — drives the wine-glass loader) followed by the result line.
+        gen.setProvider = async (brief: unknown, onProgress?: (p: number) => void) => {
           const r = await fetch("/api/generate-label-set", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(brief),
           });
-          const body = await r.json().catch(() => ({}));
-          if (!r.ok) throw new Error(body.error || `generation failed (${r.status})`);
-          return body.images;
+          if (!r.ok) {
+            const body = await r.json().catch(() => ({}));
+            throw new Error(
+              (body as { error?: string }).error || `generation failed (${r.status})`
+            );
+          }
+          if (!r.body) throw new Error("no response stream");
+          const reader = r.body.getReader();
+          const dec = new TextDecoder();
+          let buf = "";
+          let result: { images?: unknown; error?: string } | null = null;
+          for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buf += dec.decode(value, { stream: true });
+            let nl;
+            while ((nl = buf.indexOf("\n")) >= 0) {
+              const line = buf.slice(0, nl).trim();
+              buf = buf.slice(nl + 1);
+              if (!line) continue;
+              const msg = JSON.parse(line) as {
+                type: string;
+                done?: number;
+                total?: number;
+                error?: string;
+                images?: unknown;
+              };
+              if (msg.type === "progress" && onProgress && msg.total)
+                onProgress((msg.done || 0) / msg.total);
+              else if (msg.type === "result") result = msg;
+              else if (msg.type === "error") throw new Error(msg.error || "generation failed");
+            }
+          }
+          if (!result) throw new Error("generation stream ended unexpectedly");
+          return result.images;
         };
         gen.wired = true; // e2e tests wait for this before driving the UI
       })

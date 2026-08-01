@@ -101,9 +101,10 @@ const STYLE_NAMES={traditional:'Traditional',contemporary:'Contemporary',flora:'
    on the server; the client never sees or sends a prompt for the style set. */
 function buildBrief(){return {vision:visionText(),reference:window.__LABEL_REF__||null,data:data(),seed:EightKImageGen.seed||0};}
 /* offline fallback set provider: one placeholder per style so the package
-   still works standalone (no server). */
-function placeholderSet(brief){var map={};var job=buildJob();
+   still works standalone (no server). Reports full progress immediately. */
+function placeholderSet(brief,onProgress){var map={};var job=buildJob();
   STYLE_KEYS.forEach(function(k){map[k]={url:placeholderImage(job),subStyle:'placeholder',subStyleLabel:'offline preview'};});
+  if(onProgress)onProgress(1);
   return Promise.resolve(map);}
 
 /* ---- placeholder provider (renders the prompt so the flow is testable) ---- */
@@ -161,9 +162,9 @@ const EightKImageGen={
   // "Generate artwork" (and Show Labels): ONE artwork per label style, all six
   // in a single server round-trip (the server fans out and caches). Thumbnails
   // preview the set; each artwork appears inside its own style's layout.
-  generateSet:function(){var sig=EightKImageGen._sig();var brief=buildBrief();
+  generateSet:function(onProgress){var sig=EightKImageGen._sig();var brief=buildBrief();
     var wrap=document.getElementById('ig_variants');if(wrap){wrap.innerHTML='';wrap.classList.add('on');}
-    return Promise.resolve(EightKImageGen.setProvider(brief)).then(function(map){
+    return Promise.resolve(EightKImageGen.setProvider(brief,onProgress)).then(function(map){
       if(!map||!Object.keys(map).length)throw new Error('no artwork was generated');
       EightKImageGen.setImages(map);EightKImageGen._lastSig=sig;
       if(wrap)STYLE_KEYS.forEach(function(k){if(map[k]&&map[k].url)addStyleThumb(wrap,k,map[k]);});
@@ -172,9 +173,9 @@ const EightKImageGen={
   // (story, reference, seed or wine facts) changed since the last run. An empty
   // story is fine — the server falls back to the wine facts for the subject.
   needsGeneration:function(){return !(window.__LABEL_IMGS__&&EightKImageGen._lastSig===EightKImageGen._sig());},
-  generateIfNeeded:function(){
-    if(!EightKImageGen.needsGeneration())return Promise.resolve(window.__LABEL_IMGS__);
-    return EightKImageGen.generateSet();},
+  generateIfNeeded:function(onProgress){
+    if(!EightKImageGen.needsGeneration()){if(onProgress)onProgress(1);return Promise.resolve(window.__LABEL_IMGS__);}
+    return EightKImageGen.generateSet(onProgress);},
   openAdmin:function(){buildAdmin(true);}
 };
 window.EightKImageGen=EightKImageGen;
