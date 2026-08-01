@@ -155,8 +155,13 @@ Milestone commit `4da0504`.
 NEXT (in rough priority):
 1. Owner delivers style reference PDFs + layout rules → replace the placeholder
    sub-styles in `src/lib/styles/catalog.ts` and build image slots + layout
-   variants for the 5 non-Traditional styles (incl. per-layout focus/clear-zone
-   values).
+   variants for the remaining styles (incl. per-layout focus/clear-zone values).
+   DONE for **Contemporary** (2026-08-01): six fixed compositions transplanted
+   from `Contemporary.pdf` (owner's Layout Styles folder) — exact positions/
+   sizes/colours (red #D71920, ink #231F20, grey #6D6E71), Bebas Neue header +
+   Archivo standing in for Helvetica, incl. the rotated variant and the
+   knockout-white header over artwork (comp 2). Still pending: Traditional
+   refresh?, Flora, Premium, Minimalist, Artistic.
 2. Focus-area v2: subject-detection pass after generation, position the image
    so the subject sits in the layout's clear zone.
 3. CMYK PDF export step (SVG master stays RGB) for the print deliverable.

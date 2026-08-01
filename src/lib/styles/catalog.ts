@@ -125,8 +125,8 @@ export const DEFAULT_CATALOG: StyleDef[] = [
     ],
     focus: {
       guidance:
-        "Place the main subject off-centre so a large flat, low-detail colour field remains on one side; that quiet field is where text will sit and may overlap it freely.",
-      clearZone: [0.0, 0.05, 0.55, 0.9],
+        "Compose the subject within a wide horizontal band; keep the top edge of the image quiet and low-detail (a name may overprint it in white) and leave the lower part of the scene calm so nothing important is lost where the band crops.",
+      clearZone: [0.04, 0.55, 0.92, 0.45],
     },
     treatment: MULTIPLY,
   },
