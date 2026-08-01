@@ -484,7 +484,7 @@ function wirePreviewLoader(btnId, loaderId, revealId, manual){
     reveal.classList.remove('shown');
     reveal.style.display='none';
     if(liquidRect){liquidRect.setAttribute('y',251);liquidRect.setAttribute('height',0);}
-    if(wineRect){curP=0;targetP=0;wineRect.setAttribute('y',266.6);wineRect.setAttribute('height',0);}
+    if(wineRect){curP=0;targetP=WINE_FLOOR;wineRect.setAttribute('y',266.6);wineRect.setAttribute('height',0);if(!raf)raf=requestAnimationFrame(renderWine);}
     loader.style.display='flex';
     loader.style.opacity='1';
     if(!manual) animateLiquidRise(liquidRect,2000,finish);
@@ -494,6 +494,7 @@ function wirePreviewLoader(btnId, loaderId, revealId, manual){
      The glass geometry comes from Loader.pdf — full (progress 1) matches the
      PDF's own wine level, about two thirds up the bowl, never the rim. */
   const WINE_BOTTOM=266.6, WINE_RISE=80.9;   // svg units: bowl bottom -> the PDF wine surface
+  const WINE_FLOOR=0.22;                       // starting pour, shown before the first progress event
   let curP=0, targetP=0, raf=null;
   function renderWine(){
     curP+=(targetP-curP)*0.10;
@@ -505,7 +506,7 @@ function wirePreviewLoader(btnId, loaderId, revealId, manual){
   }
   window.__frontLoaderProgress=function(p){
     if(!running) return;
-    targetP=Math.max(targetP,Math.min(1,p||0));
+    targetP=Math.max(targetP,WINE_FLOOR+Math.min(1,p||0)*(1-WINE_FLOOR));
     if(!raf) raf=requestAnimationFrame(renderWine);
   };
   window.__frontLoaderDone=function(){
