@@ -108,9 +108,14 @@ assembly happens server-side, one prompt per label style:
 - Client: `generateSet()` / `generateIfNeeded()` (Show Labels — runs even with
   an EMPTY story; the server falls back to the wine facts for the subject) →
   `window.__LABEL_IMGS__` (per-style map) + `window.__LABEL_IMG__` (traditional,
-  legacy single slot) → `8kRepaint`. Only the Traditional layout embeds an
-  image today; the other five styles' slots activate as their layouts gain
-  image areas (awaiting the owner's layout rules).
+  legacy single slot) → `8kRepaint`. **There is no client-facing artwork UI**
+  (the "Label Artwork" panel was removed 2026-07-31): generation is invisible
+  and each artwork appears inside its own style's label. ALL SIX styles embed
+  their style's image — Traditional via the heritage engine, the other five via
+  `sImage()` in label-engine.js with **provisional v1 positions** (contemporary
+  right field / flora centred block / premium emblem / minimalist mark /
+  artistic full-bleed poster, light plate on dark variants) to be refined by
+  the owner's style layout rules.
 - Images render with `mix-blend-mode:multiply` ALWAYS (matches print
   treatment). Print colour decision: SVG stays RGB; a CMYK **PDF export step**
   is the planned print deliverable (not built yet).

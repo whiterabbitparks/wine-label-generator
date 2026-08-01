@@ -178,52 +178,15 @@ const EightKImageGen={
 };
 window.EightKImageGen=EightKImageGen;
 
-/* ======================= CLIENT panel (story only) ======================= */
-function clientCSS(){if(document.getElementById('imggen-css'))return;var s=document.createElement('style');s.id='imggen-css';
-  s.textContent=[
-   '#imgGen{margin:22px 0 4px}',
-   '#imgGen .ig-head{font-family:\'Hepta Slab\',serif;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#2c2c2c;margin:0 0 4px}',
-   '#imgGen .ig-sub{font-size:12.5px;color:#8a8178;margin:0 0 14px;line-height:1.5}',
-   '#imgGen .ig-btn{background:var(--olive,#6b7a3a);color:#fff;border:none;padding:12px 22px;font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;border-radius:var(--radius,3px)}',
-   '#imgGen .ig-btn:hover{background:var(--olive-dark,#55632e)}#imgGen .ig-btn[disabled]{opacity:.6;cursor:default}',
-   '#imgGen .ig-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap}',
-   '#imgGen .ig-link{color:#4a5a24;text-decoration:underline;cursor:pointer;font-size:12px;background:none;border:none;padding:0}',
-   '#imgGen .ig-variants{display:none;flex-wrap:wrap;gap:12px;margin:14px 0 4px}#imgGen .ig-variants.on{display:flex}',
-   '#imgGen .ig-var{width:150px;cursor:pointer;border:2px solid transparent;border-radius:4px;padding:4px;transition:border-color .15s}',
-   '#imgGen .ig-var:hover{border-color:#cfd6b8}#imgGen .ig-var.sel{border-color:var(--olive,#6b7a3a)}',
-   '#imgGen .ig-var img{width:100%;display:block;border:1px solid #e2ded2;border-radius:2px}',
-   '#imgGen .ig-var .cap{font-size:11px;text-align:center;margin-top:5px;color:#6b6a60;letter-spacing:.03em}',
-   '#imgGen .ig-var.sel .cap{color:var(--olive,#6b7a3a);font-weight:700}',
-   '#imgGen .ig-preview{margin-top:16px;display:none;gap:16px;align-items:flex-start}#imgGen .ig-preview.on{display:flex}',
-   '#imgGen .ig-thumb{width:220px;height:140px;border:1px solid #cfc8ba;background:#f3ecda;flex:0 0 auto;overflow:hidden}',
-   '#imgGen .ig-thumb img{width:100%;height:100%;object-fit:cover;display:block}',
-   '#imgGen .ig-note{font-size:12px;color:#8a8178;line-height:1.5;max-width:340px}',
-   '#imgGen .ig-ref{font-size:12px;color:#6b7a3a;margin:2px 0 12px;display:none}#imgGen .ig-ref.on{display:block}'
-  ].join('');document.head.appendChild(s);}
-function clientHTML(){
-  return '<div class="ig-head">Label Artwork</div>'
-   +'<p class="ig-sub">We’ll create one artwork for each of the six label styles from the story above'
-     +' (and your reference image, if you added one — or from your wine’s details if you leave the story empty).'
-     +' You can regenerate as many times as you like.</p>'
-   +'<div class="ig-ref" id="ig_ref">✓ Your reference image is attached and will guide the artwork.</div>'
-   +'<div class="ig-actions"><button type="button" class="ig-btn" id="ig_go">Generate artwork</button>'
-     +'<button type="button" class="ig-link" id="ig_clear" style="display:none">Remove artwork</button></div>'
-   +'<div class="ig-variants" id="ig_variants"></div>'
-   +'<div class="ig-preview" id="ig_preview"><div class="ig-thumb"><img id="ig_img" alt=""></div>'
-     +'<div class="ig-note">This artwork now appears on your image-based label styles. Press <b>Show Labels</b> to see them (or it updates live if labels are already shown).</div></div>';
-}
-function bootClient(){var vt=document.getElementById('visionText');if(!vt)return false;if(document.getElementById('imgGen'))return true;
-  clientCSS();
-  var anchor=document.getElementById('sketchFile');anchor=anchor?anchor.closest('.upload-row'):null;if(!anchor)anchor=document.getElementById('visionCount')||vt;
-  var panel=document.createElement('div');panel.id='imgGen';panel.innerHTML=clientHTML();
-  anchor.parentNode.insertBefore(panel,anchor.nextSibling);
-  var sk=document.getElementById('sketchFile');
-  if(sk)sk.addEventListener('change',function(){var f=this.files&&this.files[0];if(!f)return;var rd=new FileReader();
-    rd.onload=function(){window.__LABEL_REF__=rd.result;var r=document.getElementById('ig_ref');if(r)r.classList.add('on');};rd.readAsDataURL(f);});
-  document.getElementById('ig_clear').addEventListener('click',function(){EightKImageGen.clearImage();document.getElementById('ig_preview').classList.remove('on');this.style.display='none';});
-  document.getElementById('ig_go').addEventListener('click',function(){var btn=this;btn.disabled=true;var old=btn.textContent;btn.textContent='Generating 6 style artworks…';
-    EightKImageGen.generateSet()
-      .catch(function(e){alert('Image generation failed: '+(e&&e.message||e));}).then(function(){btn.disabled=false;btn.textContent=old;});});
+/* ======================= CLIENT wiring (no panel) =======================
+   The "Label Artwork" panel was removed (owner decision 2026-07-31): artwork
+   generation is invisible to the winemaker — Show Labels generates the six
+   style artworks automatically and they appear inside the labels themselves.
+   The only client-side wiring left is the sketch upload → reference image. */
+function bootClient(){var sk=document.getElementById('sketchFile');if(!sk)return false;
+  if(sk._igWired)return true; sk._igWired=true;
+  sk.addEventListener('change',function(){var f=this.files&&this.files[0];if(!f)return;var rd=new FileReader();
+    rd.onload=function(){window.__LABEL_REF__=rd.result;};rd.readAsDataURL(f);});
   return true;
 }
 

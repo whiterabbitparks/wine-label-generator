@@ -863,6 +863,23 @@ function sSprig(x0,y0,scale,color,acc,dir){dir=dir||1;const HH=scale*30,topx=x0+
     s+=sLeaf(sx,sy,scale*9,scale*3.1,dir*(-45)-i*6,color)+sLeaf(sx,sy,scale*9,scale*3.1,dir*135+i*6,color);}
   s+=`<circle cx="${topx.toFixed(1)}" cy="${topy.toFixed(1)}" r="${(scale*2.1).toFixed(1)}" fill="${acc}"/>`;return s;}
 
+/* v1 per-style artwork embed (positions are provisional until the owner's
+   style layout rules arrive). Draws the style's generated image from
+   window.__LABEL_IMGS__ in a fixed region, ALWAYS with multiply blend (house
+   rule) — on dark label variants a light plate is drawn under the image so
+   the multiplied artwork stays visible. Returns '' when no artwork exists,
+   keeping pre-generation output (and the golden corpus) byte-identical. */
+let __simgN=0;
+function sImage(styleKey,x,y,w,h,mode,plate){
+  const m=(typeof window!=='undefined'&&window.__LABEL_IMGS__)||null;
+  const src=m&&m[styleKey]; if(!src) return '';
+  const id='simg'+(++__simgN);
+  let s=`<clipPath id="${id}"><rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}"/></clipPath>`;
+  if(plate) s+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" fill="${plate}"/>`;
+  s+=`<image x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" preserveAspectRatio="xMidYMid ${mode==='cover'?'slice':'meet'}" clip-path="url(#${id})" xlink:href="${src}" href="${src}" style="mix-blend-mode:multiply"/>`;
+  return s;
+}
+
 /* ---- 1) TRADITIONAL / HERITAGE — reuse the heritage engine ---- */
 function styleTraditional(d,order,seed,twMM,thMM){
   const pools=['C1','C2','C7','C8','C5','C3'], comp=lcById(pools[seed%pools.length]);   // image compositions only (small + large image)
@@ -878,6 +895,7 @@ function styleContemporary(f,W,H,seed,twMM,thMM){
   const ink='#1a1a19',sub='#6c6960',ac=f.accent,bg=(seed%3===2)?'#efece6':'#f6f5f2';
   const variant=seed%2;                                   // 0 left accent bar · 1 plain (accent rule only)
   let body='';
+  body+=sImage('contemporary',W*0.52,SM,W*0.48-SM,H-2*SM,'cover');   // right field; text overlaps via multiply
   const tL=(variant===0)?Lx+U(9):Lx, tW=Rx-tL;
   if(variant===0) body+=`<rect x="${Lx.toFixed(1)}" y="${SM.toFixed(1)}" width="${U(3.4).toFixed(1)}" height="${(H-2*SM).toFixed(1)}" fill="${ac}"/>`;
   // header: producer (left) + big vintage (right)
@@ -909,6 +927,7 @@ function styleFlora(f,W,H,seed,twMM,thMM){
   const cx=W/2,cW=W-2*SM,fsc=Math.max(1,Math.min(W/1000,H/800)),U=p=>p*PT_U*fsc;
   const bg=(seed%2)?'#efe8d6':'#f2eddf',ink='#33341f',sub='#6a6a4c',leaf='#5f6b39',ac=f.accent;
   const sc=fsc*1.0; let body='';
+  body+=sImage('flora',W*0.22,H*0.13,W*0.56,H*0.30,'contain');   // centred botanical block above the name
   // top ornament: symmetric sprig pair
   const oy=SM+U(10);
   body+=sSprig(cx-U(1.5),oy,sc,leaf,ac,-1)+sSprig(cx+U(1.5),oy,sc,leaf,ac,1);
@@ -944,6 +963,7 @@ function stylePremium(f,W,H,seed,twMM,thMM){
   const id='g'+(++__sid); const gold=`url(#${id})`;
   const defs=`<linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e2c988"/><stop offset="0.5" stop-color="#b58f4c"/><stop offset="1" stop-color="#8c6a32"/></linearGradient>`;
   let body='';
+  body+=sImage('premium',W*0.30,H*0.15,W*0.40,H*0.28,'contain',dark?'#f4efe3':null);   // emblem block; plate keeps multiply visible on the dark variant
   // thin gold double frame inside the margin
   const fx=Lx+U(3),fy=SM+U(3),fw=W-2*fx,fh=H-2*fy;
   body+=`<rect x="${fx.toFixed(1)}" y="${fy.toFixed(1)}" width="${fw.toFixed(1)}" height="${fh.toFixed(1)}" fill="none" stroke="${gold}" stroke-width="${U(1.1).toFixed(2)}"/>`
@@ -980,6 +1000,7 @@ function styleMinimal(f,W,H,seed,twMM,thMM){
   const bg='#fbfbf9',ink='#1c1c1b',sub='#8a877f',ac=f.accent;
   const left=(seed%2===0), ax=left?'l':'c', X=left?Lx:cx, mW=left?cW:cW*0.9;
   let body='';
+  body+=sImage('minimalist',W*0.33,H*0.10,W*0.34,H*0.24,'contain');   // small centred mark above the hero
   body+=sBlock(f.producer,{x:X,top:SM+U(2),maxW:mW,size:U(8.5),min:U(7),f:SF.jost,w:400,fill:sub,a:ax,tr:0.3,caps:true}).svg;
   // hero sits a bit above centre
   let y=H*0.40;
@@ -1009,6 +1030,9 @@ function styleArtistic(f,W,H,seed,twMM,thMM){
   const ink=dark?'#f4efe3':'#171512', ac=f.accent, mark=dark?ac:'#171512';
   const rot=(seed%2===0)?-4:3.5;
   let body='';
+  // artwork: full-bleed poster on light variants; torn-poster block with a light plate on dark
+  body+=dark?sImage('artistic',W*0.18,H*0.16,W*0.64,H*0.34,'contain','#f3efe6')
+            :sImage('artistic',-SBLEED,-SBLEED,W+2*SBLEED,H+2*SBLEED,'cover');
   // producer — marker, angled, top-left
   body+=`<g transform="rotate(${(rot*0.6).toFixed(1)} ${Lx.toFixed(1)} ${(SM+U(6)).toFixed(1)})">`
       +sBlock(f.producer,{x:Lx,top:SM,maxW:cW*0.8,size:U(15),min:U(10),f:SF.caveat,w:700,fill:ac,a:'l'}).svg+`</g>`;
