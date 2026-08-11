@@ -466,6 +466,7 @@ function wirePreviewLoader(btnId, loaderId, revealId, manual){
   const wineRect=loader.querySelector('.wine-rect');
   let running=false;
   function finish(){
+    stopFacts();
     loader.style.transition='opacity .4s';
     loader.style.opacity='0';
     setTimeout(()=>{
@@ -475,8 +476,29 @@ function wirePreviewLoader(btnId, loaderId, revealId, manual){
       reveal.style.display='block';
       reveal.classList.add('shown');
       running=false;
+      reveal.scrollIntoView({behavior:'smooth',block:'start'});
     },400);
   }
+  /* wine-history facts (Georgia — the birthplace of wine) shown while generating */
+  const FACTS=[
+    "Georgia is the cradle of wine: 8,000-year-old traces of winemaking found in clay vessels south of Tbilisi are the oldest known anywhere on Earth.",
+    "The Georgian qvevri method — fermenting wine in egg-shaped clay vessels buried in the earth — is inscribed by UNESCO as Intangible Cultural Heritage of Humanity.",
+    "Georgia grows more than 500 native grape varieties — nearly a sixth of all the wine grapes on the planet.",
+    "Many linguists trace the word \u2018wine\u2019 itself — vino, vin, Wein — back to the Georgian \u2018ghvino\u2019.",
+    "Amber wine was born in Georgia millennia ago: white grapes fermented on their skins in qvevri gain the body and tannin of a red.",
+    "Saperavi, Georgia\u2019s flagship grape, is one of the few in the world with red flesh as well as red skin — its wines can age for half a century.",
+    "In old Georgian families a qvevri of wine was buried when a child was born — and opened on the day of their wedding.",
+    "St. Nino, who brought Christianity to Georgia in the 4th century, carried a cross bound from living grapevine.",
+    "A Georgian supra feast is led by the tamada, the toastmaster — and no toast is drunk without wine raised to ancestors, family and guests.",
+    "Georgian vineyards survived even Soviet times in family yards: nearly every village house still presses its own wine each autumn."
+  ];
+  let factTimer=null, factIdx=0;
+  const factEl=document.getElementById('frontFact');
+  function showFact(i){if(!factEl)return;factEl.classList.add('off');
+    setTimeout(()=>{factEl.textContent=FACTS[i%FACTS.length];factEl.classList.remove('off');},500);}
+  function startFacts(){if(!factEl)return;factEl.textContent=FACTS[factIdx%FACTS.length];factEl.classList.remove('off');
+    factTimer=setInterval(()=>{factIdx++;showFact(factIdx);},7000);}
+  function stopFacts(){if(factTimer){clearInterval(factTimer);factTimer=null;}factIdx++;}
   btn.addEventListener('click',()=>{
     if(running) return;
     running=true;
@@ -487,6 +509,11 @@ function wirePreviewLoader(btnId, loaderId, revealId, manual){
     if(wineRect){curP=0;targetP=WINE_FLOOR;wineRect.setAttribute('y',266.6);wineRect.setAttribute('height',0);if(!raf)raf=requestAnimationFrame(renderWine);}
     loader.style.display='flex';
     loader.style.opacity='1';
+    if(manual){
+      // bring the labels area into view, glass centred where the labels will appear
+      setTimeout(()=>loader.scrollIntoView({behavior:'smooth',block:'center'}),80);
+      startFacts();
+    }
     if(!manual) animateLiquidRise(liquidRect,2000,finish);
   });
   if(!manual) return;
