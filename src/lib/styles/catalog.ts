@@ -86,8 +86,8 @@ export const DEFAULT_CATALOG: StyleDef[] = [
     ],
     focus: {
       guidance:
-        "Keep the main subject fully inside the central band of the image; the top and bottom edges must stay quiet, with only sky, ground or neutral texture that text can safely overlap.",
-      clearZone: [0.1, 0.62, 0.8, 0.33],
+        "Compose the main subject fully inside a central horizontal band or oval in the upper half of the image; toward every edge the scene must dissolve into quiet, expendable surroundings (sky, mist, ground) that can fade away without losing anything important.",
+      clearZone: [0.05, 0.6, 0.9, 0.38],
     },
     treatment: MULTIPLY,
   },
@@ -224,7 +224,7 @@ export const DEFAULT_CATALOG: StyleDef[] = [
     ],
     focus: {
       guidance:
-        "The mark must occupy only the central third of the image; everything else is empty background that text may cover.",
+        "One small, self-contained subject centred in the frame — it must sit entirely within the central third; the rest of the image stays essentially empty so the edges can fade to nothing.",
       clearZone: [0.05, 0.05, 0.9, 0.9],
     },
     treatment: MULTIPLY,

@@ -156,12 +156,16 @@ NEXT (in rough priority):
 1. Owner delivers style reference PDFs + layout rules → replace the placeholder
    sub-styles in `src/lib/styles/catalog.ts` and build image slots + layout
    variants for the remaining styles (incl. per-layout focus/clear-zone values).
-   DONE for **Contemporary** (2026-08-01): six fixed compositions transplanted
-   from `Contemporary.pdf` (owner's Layout Styles folder) — exact positions/
-   sizes/colours (red #D71920, ink #231F20, grey #6D6E71), Bebas Neue header +
-   Archivo standing in for Helvetica, incl. the rotated variant and the
-   knockout-white header over artwork (comp 2). Still pending: Traditional
-   refresh?, Flora, Premium, Minimalist, Artistic.
+   DONE (2026-08-11) for **Traditional** (9 comps), **Contemporary v2**
+   (5 comps) and **Minimalist** (6 comps) — transplanted from the owner's
+   `Layout Styles/*.pdf` with exact geometry, plus the owner's FOCAL/FADE
+   image-zone spec: solid black = focal area (subject must live there),
+   gradient = fade area (expendable content only). Zones render via
+   `sImageZone()` (linear/radial dissolve masks, multiply). Fonts: Tinos for
+   Times, EB Garamond native, Barlow/Barlow Condensed for DIN, Archivo
+   300/400 for Helvetica/Light; arched producer via `sArcText` (textPath).
+   Reseed cycles comps via Math.floor(seed/2)%N. Still pending: Flora,
+   Premium, Artistic (awaiting owner PDFs; they keep provisional v1 slots).
 2. Focus-area v2: subject-detection pass after generation, position the image
    so the subject sits in the layout's clear zone.
 3. CMYK PDF export step (SVG master stays RGB) for the print deliverable.

@@ -13,7 +13,7 @@
 (function(){
 "use strict";
 
-const FONTS_URL="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@400;500&family=Ballet&family=Baskervville+SC&family=Cinzel:wght@500;600&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Cutive+Mono&family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400&family=Estonia&family=Felipa&family=Girassol&family=Great+Vibes&family=Italianno&family=Manufacturing+Consent&family=Marcellus&family=Mate+SC&family=MonteCarlo&family=Montagu+Slab:wght@500;600&family=Mrs+Saint+Delafield&family=Nixie+One&family=Pinyon+Script&family=Playfair+Display:wght@600;700&family=Prata&family=Tinos:ital,wght@0,400;0,700;1,400&family=Jost:wght@300;400;500;600&family=Archivo:wght@400;500;600;700;800&family=Anton&family=Bebas+Neue&family=Caveat:wght@500;600;700&family=Fraunces:ital,wght@0,400;0,500;0,600;0,700;1,500&display=swap";
+const FONTS_URL="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@400;500&family=Ballet&family=Baskervville+SC&family=Cinzel:wght@500;600&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Cutive+Mono&family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400&family=Estonia&family=Felipa&family=Girassol&family=Great+Vibes&family=Italianno&family=Manufacturing+Consent&family=Marcellus&family=Mate+SC&family=MonteCarlo&family=Montagu+Slab:wght@500;600&family=Mrs+Saint+Delafield&family=Nixie+One&family=Pinyon+Script&family=Playfair+Display:wght@600;700&family=Prata&family=Tinos:ital,wght@0,400;0,700;1,400&family=Jost:wght@300;400;500;600&family=Archivo:wght@300;400;500;600;700;800&family=Barlow+Condensed:wght@600;700&family=Barlow:wght@600;700&family=Anton&family=Bebas+Neue&family=Caveat:wght@500;600;700&family=Fraunces:ital,wght@0,400;0,500;0,600;0,700;1,500&display=swap";
 const F={cormorant:"'Cormorant Garamond', serif",ebg:"'EB Garamond', serif",playfair:"'Playfair Display', serif",cinzel:"'Cinzel', serif",pinyon:"'Pinyon Script', cursive",marcellus:"'Marcellus', serif",prata:"'Prata', serif",
   ballet:"'Ballet', cursive",mrsSaint:"'Mrs Saint Delafield', cursive",greatVibes:"'Great Vibes', cursive",monteCarlo:"'MonteCarlo', cursive",estonia:"'Estonia', cursive",felipa:"'Felipa', cursive",italianno:"'Italianno', cursive",
   manufacturing:"'Manufacturing Consent', serif",cutiveMono:"'Cutive Mono', monospace",montaguSlab:"'Montagu Slab', serif",girassol:"'Girassol', serif",nixieOne:"'Nixie One', serif",alegreyaSC:"'Alegreya SC', serif",mateSC:"'Mate SC', serif",baskervvilleSC:"'Baskervville SC', serif",
@@ -266,8 +266,8 @@ async function ensureFonts(){
     "400 40px 'Nixie One'","500 40px 'Alegreya SC'","400 40px 'Mate SC'","400 40px 'Baskervville SC'",
     "400 40px 'Tinos'","700 40px 'Tinos'",
     "300 40px 'Jost'","400 40px 'Jost'","500 40px 'Jost'","600 40px 'Jost'",
-    "400 40px 'Archivo'","500 40px 'Archivo'","600 40px 'Archivo'","700 40px 'Archivo'","800 40px 'Archivo'",
-    "400 40px 'Anton'","400 40px 'Bebas Neue'","500 40px 'Caveat'","600 40px 'Caveat'","700 40px 'Caveat'",
+    "300 40px 'Archivo'","400 40px 'Archivo'","500 40px 'Archivo'","600 40px 'Archivo'","700 40px 'Archivo'","800 40px 'Archivo'",
+    "400 40px 'Anton'","400 40px 'Bebas Neue'","600 40px 'Barlow Condensed'","700 40px 'Barlow Condensed'","600 40px 'Barlow'","700 40px 'Barlow'","500 40px 'Caveat'","600 40px 'Caveat'","700 40px 'Caveat'",
     "400 40px 'Fraunces'","500 40px 'Fraunces'","600 40px 'Fraunces'","700 40px 'Fraunces'","italic 500 40px 'Fraunces'"];
   try{await Promise.all(specs.map(s=>document.fonts.load(s)));await document.fonts.ready;}catch(e){}
 }
@@ -824,6 +824,7 @@ function previewLayout(d,order,Wmm,Hmm){
    ========================================================================== */
 const SM=50, SBLEED=20;                                     // 5 mm safe margin, 2 mm bleed (units)
 const SF={jost:"'Jost',sans-serif",archivo:"'Archivo',sans-serif",anton:"'Anton',sans-serif",
+  barlow:"'Barlow',sans-serif",barlowc:"'Barlow Condensed',sans-serif",
   bebas:"'Bebas Neue',sans-serif",caveat:"'Caveat',cursive",fraunces:"'Fraunces',serif",
   cormorant:F.cormorant,cinzel:F.cinzel,ebg:F.ebg,marcellus:F.marcellus,playfair:F.playfair};
 let __sid=0;
@@ -844,7 +845,8 @@ function sBlock(str,o){if(!str)return {svg:'',bottom:o.top,size:0,nlines:0};
   const fit=wrapFit(s0,o.maxW,o.size,o.min||o.size,maxLines,o.f,o.w||400,!!o.ital,trAbs);
   const sz=fit.size, lh=(o.lh||1.16)*sz, anchor=o.a==='l'?'start':o.a==='r'?'end':'middle', base=o.top+sz*0.80;
   const ls=trAbs?` letter-spacing="${trAbs.toFixed(2)}"`:'', it=o.ital?' font-style="italic"':'';
-  let svg=''; fit.lines.forEach((l,i)=>{svg+=`<text x="${o.x.toFixed(1)}" y="${(base+i*lh).toFixed(1)}" font-family="${o.f}" font-weight="${o.w||400}" font-size="${sz.toFixed(1)}" text-anchor="${anchor}" fill="${o.fill||'#111'}"${ls}${it}>${esc(l)}</text>`;});
+  const halo=o.halo?` stroke="#ffffff" stroke-width="${(sz*0.14).toFixed(1)}" stroke-linejoin="round" style="paint-order:stroke"`:'';
+  let svg=''; fit.lines.forEach((l,i)=>{svg+=`<text x="${o.x.toFixed(1)}" y="${(base+i*lh).toFixed(1)}" font-family="${o.f}" font-weight="${o.w||400}" font-size="${sz.toFixed(1)}" text-anchor="${anchor}" fill="${o.fill||'#111'}"${ls}${it}${halo}>${esc(l)}</text>`;});
   return {svg,bottom:o.top+(fit.lines.length-1)*lh+sz,size:sz,nlines:fit.lines.length};}
 /* stack single-line detail items UP from a bottom baseline (centred/left/right). */
 function stackUp(items,x,botY,gap,a,maxW){let y=botY,svg='';
@@ -880,99 +882,219 @@ function sImage(styleKey,x,y,w,h,mode,plate){
   return s;
 }
 
-/* ---- 1) TRADITIONAL / HERITAGE — reuse the heritage engine ---- */
-function styleTraditional(d,order,seed,twMM,thMM){
-  const pools=['C1','C2','C7','C8','C5','C3'], comp=lcById(pools[seed%pools.length]);   // image compositions only (small + large image)
-  const serifs=['garamond','marcellus','baskervvilleSC','playfair','cinzel','montaguSlab'];
-  return lcRender(d,order,comp,{scheme:serifs[seed%serifs.length],bg:LC_BGS[seed%LC_BGS.length],
-    arch:(seed%2===0),frameStyle:['cham','square','cham50','square50'][seed%4],
-    imgScale:(comp.group===2?1.2:1),footVariant:seed%3,estateScale:[1.2,1.1,1.28,1.0][seed%4]},twMM,thMM);
+/* Arched text along a circular path (textPath keeps output deterministic). */
+function sArcText(str,cx,topBaseY,R,o){
+  if(!str)return '';
+  const id='arcp'+(++__simgN);
+  const cyc=topBaseY+R, span=1.9;
+  const x1=cx-R*Math.sin(span/2), y1=cyc-R*Math.cos(span/2);
+  const x2=cx+R*Math.sin(span/2);
+  const ls=o.tr?` letter-spacing="${(o.size*o.tr).toFixed(2)}"`:'';
+  return `<defs><path id="${id}" d="M ${x1.toFixed(1)} ${y1.toFixed(1)} A ${R.toFixed(1)} ${R.toFixed(1)} 0 0 1 ${x2.toFixed(1)} ${y1.toFixed(1)}"/></defs>`
+    +`<text font-family="${o.f}" font-weight="${o.w||400}" font-size="${o.size.toFixed(1)}" fill="${o.fill}"${ls}>`
+    +`<textPath href="#${id}" startOffset="50%" text-anchor="middle">${esc(o.caps?up(str):str)}</textPath></text>`;
+}
+/* Image zone per the owner's focal/fade spec (Layout Styles PDFs):
+   solid black = FOCAL area (the subject lives here, full opacity);
+   gradient = FADE area (image continues but dissolves; only expendable
+   content). z={focal:[x0,y0,x1,y1] fractions, fade:[...], shape:'band'|
+   'rounded'|'ellipse'}. Returns '' when the style has no artwork, keeping
+   pre-generation output byte-identical. */
+function sImageZone(styleKey,z,W,H){
+  const m=(typeof window!=='undefined'&&window.__LABEL_IMGS__)||null;
+  const src=m&&m[styleKey]; if(!src||!z||!z.focal) return '';
+  const id=++__simgN;
+  const fx=z.fade[0]*W, fy=z.fade[1]*H, fw=(z.fade[2]-z.fade[0])*W, fh=(z.fade[3]-z.fade[1])*H;
+  let grad;
+  if(z.shape==='ellipse'){
+    const cx=(z.focal[0]+z.focal[2])/2*W, cy=(z.focal[1]+z.focal[3])/2*H;
+    const r1=Math.max(fw,fh)/2, r0=Math.max((z.focal[2]-z.focal[0])*W,(z.focal[3]-z.focal[1])*H)/2;
+    grad=`<radialGradient id="mg${id}" gradientUnits="userSpaceOnUse" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r1.toFixed(1)}">`
+      +`<stop offset="${Math.min(0.98,r0/r1*0.92).toFixed(3)}" stop-color="#fff"/><stop offset="1" stop-color="#000"/></radialGradient>`;
+  }else{
+    const f1=Math.max(0,(z.focal[1]-z.fade[1])/(z.fade[3]-z.fade[1]));
+    const f2=Math.min(1,(z.focal[3]-z.fade[1])/(z.fade[3]-z.fade[1]));
+    grad=`<linearGradient id="mg${id}" gradientUnits="userSpaceOnUse" x1="0" y1="${fy.toFixed(1)}" x2="0" y2="${(fy+fh).toFixed(1)}">`
+      +`<stop offset="0" stop-color="${f1>0.02?'#000':'#fff'}"/><stop offset="${f1.toFixed(3)}" stop-color="#fff"/>`
+      +`<stop offset="${f2.toFixed(3)}" stop-color="#fff"/><stop offset="1" stop-color="${f2<0.98?'#000':'#fff'}"/></linearGradient>`;
+  }
+  const rx=z.shape==='rounded'?(0.035*W).toFixed(1):0;
+  return `<defs>${grad}<mask id="mk${id}"><rect x="${fx.toFixed(1)}" y="${fy.toFixed(1)}" width="${fw.toFixed(1)}" height="${fh.toFixed(1)}"${rx?` rx="${rx}"`:''} fill="url(#mg${id})"/></mask></defs>`
+    +`<image x="${fx.toFixed(1)}" y="${fy.toFixed(1)}" width="${fw.toFixed(1)}" height="${fh.toFixed(1)}" preserveAspectRatio="xMidYMid slice" mask="url(#mk${id})" xlink:href="${src}" href="${src}" style="mix-blend-mode:multiply"/>`;
 }
 
-/* ---- 2) CONTEMPORARY — clean grotesque, asymmetric, accent bar, big vintage ---- */
-function styleContemporary(f,W,H,seed,twMM,thMM){
-  /* Six fixed compositions transplanted from the owner's Contemporary.pdf
-     (ref artboard 311.811x226.772pt = 110x80mm; positions/sizes/colours are
-     the PDF's own, scaled to the label). Fonts: Bebas Neue header (as in the
-     PDF) + Archivo as the Google stand-in for the PDF's Helvetica family.
-     Only these compositions are used for this style (owner rule 2026-08-01). */
-  const sx=W/311.811, sy=H/226.772;
-  const RED='#D71920', INK='#231F20', GRAY='#6D6E71';
-  const X=px=>px*sx, TOP=(bl,sz)=>(226.772-bl)*sy-0.80*sz;   // PDF baseline -> sBlock top
-  const Lx=X(13.45), Rx=X(298.28), cx=W/2, colX=X(198.9);
-  const HB={f:SF.bebas,w:400}, AB={f:SF.archivo,w:700}, AR={f:SF.archivo,w:400};
-  const szHd=15.99*sy, szHero=21.13*sy, szHero4=15*sy, szApp=11.99*sy, szB=10*sy, szBot=10.01*sy, szAlc=8.5*sy;
-  const reg=[f.region,f.special].filter(Boolean).join(' \u00b7 ');
-  const alc=f.alc?('Alc by Vol.: '+f.alc.replace(/\s{2,}/g,' / ')):'';
-  // reseed steps baseSeed by 2 — divide it out so all six compositions cycle
-  const variant=Math.floor(seed/2)%6;
-  const hasImg=(typeof window!=='undefined'&&window.__LABEL_IMGS__&&window.__LABEL_IMGS__.contemporary);
+/* ---- 1) TRADITIONAL — nine fixed compositions transplanted from the
+   owner's Traditional.pdf (ref artboard 294.803x238.11pt = 104x84mm).
+   Serif system: hero in Tinos 700 (stand-in for the PDF's Times New Roman
+   Bold) in brand red with a white halo, details in EB Garamond; the
+   producer arches over the artwork on four compositions. Image zones per
+   the focal/fade spec; two compositions (4 & 6) are text-only. ---- */
+function styleTraditional(d,order,seed,twMM,thMM){
+  const f=sFields(d), W=twMM*10, H=thMM*10;
+  const sx=W/294.803, sy=H/238.11;
+  const RED='#D71920', INK='#231F20';
+  const X=px=>px*sx, TOP=(bl,sz)=>(238.11-bl)*sy-0.80*sz;
+  const cx=W/2, Lx=X(19.84), Rx=W-X(19.84);
+  const EG={f:SF.ebg,w:400}, EGB={f:SF.ebg,w:700}, TB={f:SF.tinos,w:700};
+  const szHero=20*sy, szApp=16*sy, szCls=14*sy, szRow=10*sy, szV=13*sy, szB=9*sy, szAlc=7*sy;
+  const alc=f.alc?('Alc.: '+f.alc.replace(/\s{2,}/g,' / ')+'.'):'';
+  const desc=(f.descriptor||'').replace(/,/g,'');
+  const variant=Math.floor(seed/2)%9;
   let body='';
-  function header(col){let s='';
-    s+=sBlock(f.producer,{x:Lx,top:TOP(201.32,szHd),maxW:W*0.5,size:szHd,min:szHd*0.7,fill:col,a:'l',caps:true,...HB}).svg;
-    s+=sBlock(f.vintage,{x:Rx,top:TOP(201.42,szHd),maxW:W*0.25,size:szHd,min:szHd*0.7,fill:col,a:'r',...HB}).svg;
-    return s;}
-  function bottomRow(col,ital){let s='';
-    s+=sBlock(reg,{x:Lx,top:TOP(14.16,szBot),maxW:X(160),size:szBot,min:szBot*0.7,fill:col,a:'l',...AR}).svg;
-    s+=sBlock(alc,{x:Rx,top:TOP(14.16,szAlc),maxW:X(97),size:szAlc,min:szAlc*0.7,fill:col,a:'r',ital:ital,...AR}).svg;
-    return s;}
+  // shared lower block (classification / special·vintage·region / descriptor·grape·alc)
+  function lower(clsY,r1Y,r2Y){let b='';
+    b+=sBlock(f.classification,{x:cx,top:TOP(clsY,szCls),maxW:W*0.72,size:szCls,min:szCls*0.7,fill:INK,a:'c',...EG}).svg;
+    b+=sBlock(f.special,{x:Lx,top:TOP(r1Y,szRow),maxW:W*0.26,size:szRow,min:szRow*0.7,fill:INK,a:'l',...EG}).svg;
+    b+=sBlock(f.vintage,{x:cx,top:TOP(r1Y-1,szV),maxW:W*0.2,size:szV,min:szV*0.7,fill:INK,a:'c',...EG}).svg;
+    b+=sBlock(f.region,{x:Rx,top:TOP(r1Y,szRow),maxW:W*0.3,size:szRow,min:szRow*0.7,fill:INK,a:'r',...EG}).svg;
+    b+=sBlock(desc,{x:Lx,top:TOP(r2Y,szB),maxW:W*0.22,size:szB,min:szB*0.7,fill:INK,a:'l',...EG}).svg;
+    b+=sBlock(f.grape,{x:cx,top:TOP(r2Y,szB),maxW:W*0.42,size:szB,min:szB*0.7,fill:INK,a:'c',...EGB}).svg;
+    b+=sBlock(alc,{x:Rx,top:TOP(r2Y,szAlc),maxW:W*0.24,size:szAlc,min:szAlc*0.7,fill:INK,a:'r',...EG}).svg;
+    return b;}
+  function hero1(bl){return sBlock(f.wine,{x:cx,top:TOP(bl,szHero),maxW:W*0.82,size:szHero,min:szHero*0.55,fill:RED,a:'c',caps:true,halo:true,tr:0.06,...TB}).svg;}
+  function app(bl,col){return sBlock(f.appellation,{x:cx,top:TOP(bl,szApp),maxW:W*0.6,size:szApp,min:szApp*0.7,fill:col||INK,a:'c',halo:true,...EGB}).svg;}
+  function prodStraight(bl,sz){return sBlock(f.producer,{x:cx,top:TOP(bl,sz),maxW:W*0.7,size:sz,min:sz*0.7,fill:INK,a:'c',caps:true,tr:0.15,halo:true,...EG}).svg;}
+  function prodArch(topBl){return sArcText(f.producer,cx,TOP(topBl,12*sy)+0.8*12*sy,140*sy,{f:SF.ebg,w:400,size:12*sy,fill:INK,tr:0.2,caps:true});}
+  function frame(){const o=X(7),i=X(10.5);
+    return `<rect x="${o.toFixed(1)}" y="${(7*sy).toFixed(1)}" width="${(W-2*o).toFixed(1)}" height="${(H-14*sy).toFixed(1)}" fill="none" stroke="${INK}" stroke-width="${(1.6*sy).toFixed(2)}"/>`
+      +`<rect x="${i.toFixed(1)}" y="${(10.5*sy).toFixed(1)}" width="${(W-2*i).toFixed(1)}" height="${(H-21*sy).toFixed(1)}" fill="none" stroke="${INK}" stroke-width="${(0.6*sy).toFixed(2)}"/>`;}
+  function rule(bl){return `<rect x="${X(16).toFixed(1)}" y="${((238.11-bl)*sy).toFixed(1)}" width="${(W-2*X(16)).toFixed(1)}" height="${Math.max(1,0.5*sy).toFixed(1)}" fill="${INK}"/>`;}
+  // caps mid-lines used by the framed comps
+  function capsLine(txt,bl,sz,col){return sBlock(txt,{x:cx,top:TOP(bl,sz),maxW:W*0.78,size:sz,min:sz*0.7,fill:col,a:'c',caps:true,tr:0.06,...EG}).svg;}
 
-  if(variant===0){                       // PDF p1 — left-aligned stack, artwork band above
-    body+=sImage('contemporary',X(13.45),H*0.135,X(284.8),H*0.36,'cover');
-    body+=header(RED);
-    body+=sBlock(f.wine,{x:Lx,top:TOP(87.96,szHero),maxW:X(284),size:szHero,min:szHero*0.55,lines:1,fill:INK,a:'l',caps:true,lh:1.04,...AB}).svg;
-    body+=sBlock(f.appellation,{x:Lx,top:TOP(71.0,szApp),maxW:X(200),size:szApp,min:szApp*0.7,fill:INK,a:'l',...AB}).svg;
-    body+=sBlock(f.grape,{x:Lx,top:TOP(47.01,szB),maxW:X(180),size:szB,min:szB*0.7,fill:GRAY,a:'l',...AR}).svg;
-    body+=sBlock(f.classification,{x:Lx,top:TOP(34.62,szB),maxW:X(180),size:szB,min:szB*0.7,fill:GRAY,a:'l',...AR}).svg;
-    body+=bottomRow(GRAY,false);
-  }else if(variant===1){                 // PDF p2 — centred stack, artwork on top, knockout-white header over it
-    body+=sImage('contemporary',X(13.45),H*0.05,X(284.8),H*0.50,'cover');
-    if(f.producer||f.vintage) body+=header(hasImg?'#ffffff':RED);
-    body+=sBlock(f.wine,{x:cx,top:TOP(78.49,szHero),maxW:X(284),size:szHero,min:szHero*0.55,lines:1,fill:INK,a:'c',caps:true,lh:1.04,...AB}).svg;
-    body+=sBlock(f.appellation,{x:cx,top:TOP(61.0,szApp),maxW:X(220),size:szApp,min:szApp*0.7,fill:INK,a:'c',...AB}).svg;
-    body+=sBlock(f.grape,{x:cx,top:TOP(43.01,szB),maxW:X(200),size:szB,min:szB*0.7,fill:INK,a:'c',...AR}).svg;
-    body+=sBlock(f.classification,{x:cx,top:TOP(30.62,szB),maxW:X(200),size:szB,min:szB*0.7,fill:INK,a:'c',...AR}).svg;
-    body+=bottomRow(INK,true);
-  }else if(variant===2){                 // PDF p3 — right-aligned stack, artwork band above
-    body+=sImage('contemporary',X(13.45),H*0.135,X(284.8),H*0.36,'cover');
-    body+=header(RED);
-    body+=sBlock(f.wine,{x:Rx,top:TOP(84.49,szHero),maxW:X(284),size:szHero,min:szHero*0.55,lines:1,fill:INK,a:'r',caps:true,lh:1.04,...AB}).svg;
-    body+=sBlock(f.appellation,{x:Rx,top:TOP(67.0,szApp),maxW:X(200),size:szApp,min:szApp*0.7,fill:INK,a:'r',...AB}).svg;
-    body+=sBlock(f.grape,{x:Rx,top:TOP(47.01,szB),maxW:X(180),size:szB,min:szB*0.7,fill:GRAY,a:'r',...AR}).svg;
-    body+=sBlock(f.classification,{x:Rx,top:TOP(34.62,szB),maxW:X(180),size:szB,min:szB*0.7,fill:GRAY,a:'r',...AR}).svg;
-    body+=bottomRow(GRAY,false);
-  }else if(variant===3){                 // PDF p4 — two columns low, artwork wide above
-    body+=sImage('contemporary',X(13.45),H*0.135,X(284.8),H*0.52,'cover');
-    body+=header(RED);
-    body+=sBlock(f.wine,{x:Lx,top:TOP(47.5,szHero4),maxW:X(155),size:szHero4,min:szHero4*0.6,lines:1,fill:INK,a:'l',caps:true,lh:1.04,...AB}).svg;
-    body+=sBlock(f.appellation,{x:Lx,top:TOP(31.54,szApp),maxW:X(155),size:szApp,min:szApp*0.7,fill:INK,a:'l',...AB}).svg;
-    body+=sBlock(f.grape,{x:Rx,top:TOP(47.5,szB),maxW:X(100),size:szB,min:szB*0.7,fill:GRAY,a:'r',...AB}).svg;
-    body+=sBlock(f.classification,{x:Rx,top:TOP(31.54,szB),maxW:X(100),size:szB,min:szB*0.7,fill:GRAY,a:'r',...AR}).svg;
-    body+=bottomRow(GRAY,true);
-  }else if(variant===4){                 // PDF p5 — two columns, right column indented text block
-    body+=sImage('contemporary',X(13.45),H*0.135,X(284.8),H*0.50,'cover');
-    body+=header(RED);
-    body+=sBlock(f.wine,{x:Lx,top:TOP(51.88,szHero4),maxW:X(155),size:szHero4,min:szHero4*0.6,lines:1,fill:INK,a:'l',caps:true,lh:1.04,...AB}).svg;
-    body+=sBlock(f.grape,{x:Lx,top:TOP(28.74,12*sy),maxW:X(150),size:12*sy,min:9*sy,fill:GRAY,a:'l',...AB}).svg;
-    body+=sBlock(f.region,{x:Lx,top:TOP(14.34,12*sy),maxW:X(150),size:12*sy,min:9*sy,fill:GRAY,a:'l',...AR}).svg;
-    body+=sBlock(f.appellation,{x:colX,top:TOP(51.88,12*sy),maxW:X(100),size:12*sy,min:9*sy,fill:INK,a:'l',...AB}).svg;
-    body+=sBlock(f.classification,{x:colX,top:TOP(36.46,szB),maxW:X(100),size:szB,min:szB*0.7,fill:GRAY,a:'l',ital:true,...AR}).svg;
-    body+=sBlock(f.special,{x:colX,top:TOP(24.45,szBot),maxW:X(100),size:szBot,min:szBot*0.7,fill:GRAY,a:'l',ital:true,...AR}).svg;
-    body+=sBlock(alc,{x:colX,top:TOP(14.25,szAlc),maxW:X(100),size:szAlc,min:szAlc*0.7,fill:GRAY,a:'l',ital:true,...AR}).svg;
-  }else{                                 // PDF p6 — rotated: red header up the left edge, text column up the right
-    body+=sImage('contemporary',X(45),SM,X(160),H-2*SM,'cover');
-    const rot=(txt,txPt,tyPt,o)=>{if(!txt)return '';
-      const gx=X(txPt), gy=(226.772-tyPt)*sy, run=gy-SM;
-      const b=sBlock(txt,Object.assign({x:0,top:-0.80*o.size,maxW:run,a:'l'},o));
-      return '<g transform="translate('+gx.toFixed(1)+' '+gy.toFixed(1)+') rotate(-90)">'+b.svg+'</g>';};
-    body+=rot(f.producer,25.38,13.68,{size:szHd,min:szHd*0.7,fill:RED,caps:true,...HB});
-    body+=rot(f.vintage,25.39,187.27,{size:szHd,min:szHd*0.7,fill:RED,...HB});
-    body+=rot(f.wine,229.52,14.13,{size:11.57*sy,min:8*sy,fill:INK,caps:true,...AB});
-    body+=rot(f.appellation,243.68,14.20,{size:9.65*sy,min:7*sy,fill:INK,...AB});
-    body+=rot(f.grape,261.31,13.72,{size:9*sy,min:7*sy,fill:GRAY,...AB});
-    body+=rot(f.region,272.11,13.72,{size:9*sy,min:7*sy,fill:GRAY,...AR});
-    body+=rot([f.classification,f.special].filter(Boolean).join(' / '),289.08,14.61,{size:szB,min:szB*0.7,fill:GRAY,ital:true,...AR});
-    body+=rot(alc,297.48,14.61,{size:7*sy,min:5.5*sy,fill:GRAY,ital:true,...AR});
+  if(variant===0){        // p1 — rounded band, straight producer
+    body+=sImageZone('traditional',{focal:[0.113,0.185,0.887,0.482],fade:[0.011,0.018,0.989,0.586],shape:'rounded'},W,H);
+    body+=prodStraight(200.83,17.01*sy);
+    body+=hero1(99.29)+app(81.77);
+    body+=lower(46.10,31.46,19.45);
+  }else if(variant===1){  // p2 — ellipse, straight producer
+    body+=sImageZone('traditional',{focal:[0.182,0.203,0.818,0.541],fade:[0.069,0.104,0.931,0.649],shape:'ellipse'},W,H);
+    body+=prodStraight(200.83,17.01*sy);
+    body+=hero1(84.29)+app(66.77);
+    body+=lower(46.10,31.46,19.45);
+  }else if(variant===2){  // p3 — framed, arched producer, vintage on top, rounded zone
+    body+=frame();
+    body+=sImageZone('traditional',{focal:[0.196,0.203,0.804,0.495],fade:[0.06,0.05,0.94,0.60],shape:'rounded'},W,H);
+    body+=sBlock(f.vintage,{x:cx,top:TOP(208.06,szV),maxW:W*0.2,size:szV,min:szV*0.7,fill:INK,a:'c',...EG}).svg;
+    body+=prodArch(192.5);
+    body+=hero1(99.29)+app(81.77);
+    body+=sBlock(f.classification,{x:cx,top:TOP(59.99,szCls),maxW:W*0.72,size:szCls,min:szCls*0.7,fill:INK,a:'c',...EG}).svg;
+    body+=capsLine(f.grape,44.97,szRow,RED);
+    body+=capsLine([f.region,f.special].filter(Boolean).join(' / '),30.61,szB,INK);
+    body+=rule(25.5);
+    body+=capsLine([desc,alc].filter(Boolean).join(' / '),13.49,szB,INK);
+  }else if(variant===3){  // p4 — framed, arched producer, giant two-line hero, no zone
+    body+=frame();
+    body+=prodArch(200.3);
+    body+=sBlock(f.wine,{x:cx,top:TOP(156.23,39.98*sy),maxW:W*0.76,size:39.98*sy,min:20*sy,lines:2,lh:0.981,fill:RED,a:'c',caps:true,tr:0.02,...TB}).svg;
+    body+=app(97.20,RED);
+    body+=sBlock(f.vintage,{x:cx,top:TOP(77.33,szV),maxW:W*0.2,size:szV,min:szV*0.7,fill:INK,a:'c',...EG}).svg;
+    body+=sBlock(f.classification,{x:cx,top:TOP(60.31,szCls),maxW:W*0.72,size:szCls,min:szCls*0.7,fill:INK,a:'c',...EG}).svg;
+    body+=capsLine(f.grape,45.29,szRow,RED);
+    body+=capsLine([f.region,f.special].filter(Boolean).join(' / '),30.94,szB,INK);
+    body+=rule(24.5);
+    body+=capsLine([desc,alc].filter(Boolean).join(' / '),12.49,szB,INK);
+  }else if(variant===4){  // p5 — full band, hero over the artwork top
+    body+=sImageZone('traditional',{focal:[0,0.248,1,0.671],fade:[0,0.023,1,0.761],shape:'band'},W,H);
+    body+=prodStraight(206.79,14.66*sy);
+    body+=hero1(185.04);
+    body+=app(60.50);
+    body+=lower(46.10,31.46,19.45);
+  }else if(variant===5){  // p6 — arched producer, giant two-line hero, red appellation, no zone
+    body+=prodArch(193.3);
+    body+=sBlock(f.wine,{x:cx,top:TOP(134.92,39.98*sy),maxW:W*0.76,size:39.98*sy,min:20*sy,lines:2,lh:0.981,fill:RED,a:'c',caps:true,tr:0.02,...TB}).svg;
+    body+=app(64.66,RED);
+    body+=lower(46.10,31.46,19.45);
+  }else if(variant===6){  // p7 — ellipse, arched producer
+    body+=sImageZone('traditional',{focal:[0.156,0.189,0.844,0.554],fade:[0.087,0.122,0.913,0.649],shape:'ellipse'},W,H);
+    body+=prodArch(200.3);
+    body+=hero1(84.29)+app(66.77);
+    body+=lower(46.10,31.46,19.45);
+  }else if(variant===7){  // p8 — full band, straight producer
+    body+=sImageZone('traditional',{focal:[0,0.212,1,0.554],fade:[0,0.023,1,0.68],shape:'band'},W,H);
+    body+=prodStraight(200.83,17.01*sy);
+    body+=hero1(77.29)+app(59.77);
+    body+=lower(44.10,31.46,19.45);
+  }else{                  // p9 — deep band, hero over the artwork top
+    body+=sImageZone('traditional',{focal:[0,0.261,1,0.667],fade:[0,0.162,1,0.761],shape:'band'},W,H);
+    body+=prodStraight(206.79,14.66*sy);
+    body+=hero1(185.04);
+    body+=app(60.50);
+    body+=lower(46.10,31.46,19.45);
+  }
+  return sWrap(W,H,twMM,thMM,'#ffffff',body);
+}
+
+function styleContemporary(f,W,H,seed,twMM,thMM){
+  /* Five fixed compositions from the owner's revised Contemporary.pdf
+     (2026-08-11; ref artboard 311.811x226.772pt = 110x80mm) with the
+     focal/fade artwork zones. Type: DIN Condensed Bold -> Barlow Condensed
+     700, DIN Alternate Bold -> Barlow 700, Helvetica -> Archivo (Google
+     stand-ins). Colours: ink #231F20, grey #6D6E71. */
+  const sx=W/311.811, sy=H/226.772;
+  const INK='#231F20', GRAY='#6D6E71';
+  const X=px=>px*sx, TOP=(bl,sz)=>(226.772-bl)*sy-0.80*sz;
+  const Lx=X(13.51), Rx=X(298.3), cx=W/2;
+  const DC={f:SF.barlowc,w:700}, DA={f:SF.barlow,w:700}, AR={f:SF.archivo,w:400};
+  const szHd=15.99*sy, szHero=20*sy, szB=10*sy, szAlc=7*sy;
+  const alc=f.alc?('Alc. '+f.alc.replace(/\s{2,}/g,' Vol. / ')+'.'):'';
+  const reg=[f.region,f.special].filter(Boolean).join(' / ');
+  const desc=(f.descriptor||'').replace(/,/g,'');
+  const variant=Math.floor(seed/2)%5;
+  let body='';
+  if(variant===0){        // p1 — band zone, all-condensed left/right columns
+    body+=sImageZone('contemporary',{focal:[0,0.125,1,0.625],fade:[0,0,1,0.715],shape:'band'},W,H);
+    body+=sBlock(f.producer,{x:Lx,top:TOP(201.32,szHd),maxW:W*0.5,size:szHd,min:szHd*0.7,fill:INK,a:'l',caps:true,...DC}).svg;
+    body+=sBlock(f.vintage,{x:Rx,top:TOP(201.42,szHd),maxW:W*0.25,size:szHd,min:szHd*0.7,fill:INK,a:'r',...DC}).svg;
+    body+=sBlock(f.wine,{x:Lx,top:TOP(64.78,szHero),maxW:W*0.68,size:szHero,min:szHero*0.55,fill:INK,a:'l',caps:true,...DC}).svg;
+    body+=sBlock(f.appellation,{x:Rx,top:TOP(64.78,12*sy),maxW:W*0.26,size:12*sy,min:9*sy,fill:INK,a:'r',caps:true,...DC}).svg;
+    body+=sBlock(f.grape,{x:Lx,top:TOP(44.38,szB),maxW:W*0.42,size:szB,min:szB*0.7,fill:GRAY,a:'l',caps:true,...DC}).svg;
+    body+=sBlock(f.classification,{x:Lx,top:TOP(32.38,szB),maxW:W*0.42,size:szB,min:szB*0.7,fill:GRAY,a:'l',caps:true,...DC}).svg;
+    body+=sBlock(reg,{x:Lx,top:TOP(14.78,szB),maxW:W*0.52,size:szB,min:szB*0.7,fill:INK,a:'l',...DC}).svg;
+    body+=sBlock(desc,{x:Rx,top:TOP(29.22,szB),maxW:W*0.28,size:szB,min:szB*0.7,fill:GRAY,a:'r',...DC}).svg;
+    body+=sBlock(alc,{x:Rx,top:TOP(15.22,szAlc),maxW:W*0.3,size:szAlc,min:szAlc*0.7,fill:GRAY,a:'r',...DC}).svg;
+  }else if(variant===1){  // p2 — band zone, centred stack (Barlow + Archivo)
+    body+=sImageZone('contemporary',{focal:[0,0.125,1,0.51],fade:[0,0,1,0.675],shape:'band'},W,H);
+    body+=sBlock(f.producer,{x:cx,top:TOP(203.32,12*sy),maxW:W*0.4,size:12*sy,min:9*sy,fill:INK,a:'c',caps:true,...DC}).svg;
+    body+=sBlock(f.vintage,{x:Rx,top:TOP(203.42,12*sy),maxW:W*0.2,size:12*sy,min:9*sy,fill:INK,a:'r',...DC}).svg;
+    body+=sBlock(f.wine,{x:cx,top:TOP(93.42,16*sy),maxW:W*0.8,size:16*sy,min:11*sy,fill:INK,a:'c',caps:true,...DA}).svg;
+    body+=sBlock(f.appellation,{x:cx,top:TOP(76.63,12*sy),maxW:W*0.6,size:12*sy,min:9*sy,fill:INK,a:'c',...DA}).svg;
+    body+=sBlock(f.grape,{x:cx,top:TOP(56.22,szB),maxW:W*0.6,size:szB,min:szB*0.7,fill:GRAY,a:'c',...AR}).svg;
+    body+=sBlock(f.classification,{x:cx,top:TOP(44.22,szB),maxW:W*0.6,size:szB,min:szB*0.7,fill:GRAY,a:'c',...AR}).svg;
+    body+=sBlock(desc,{x:cx,top:TOP(28.63,8*sy),maxW:W*0.4,size:8*sy,min:6*sy,fill:GRAY,a:'c',ital:true,...AR}).svg;
+    body+=sBlock([reg,alc].filter(Boolean).join(' / '),{x:cx,top:TOP(14.22,szAlc),maxW:W*0.8,size:szAlc,min:szAlc*0.7,fill:GRAY,a:'c',...AR}).svg;
+  }else if(variant===2){  // p3 — zone bleeding off the top, left column, vintage bottom-right
+    body+=sImageZone('contemporary',{focal:[0,0,1,0.465],fade:[0,0,1,0.55],shape:'band'},W,H);
+    body+=sBlock(f.wine,{x:X(14.17),top:TOP(102.12,szHero),maxW:W*0.68,size:szHero,min:szHero*0.55,fill:INK,a:'l',caps:true,...DC}).svg;
+    body+=sBlock(f.producer,{x:Rx,top:TOP(102.12,szHd),maxW:W*0.26,size:szHd,min:szHd*0.7,fill:INK,a:'r',caps:true,...DC}).svg;
+    body+=sBlock(f.appellation,{x:X(14.17),top:TOP(87.72,12*sy),maxW:W*0.5,size:12*sy,min:9*sy,fill:INK,a:'l',caps:true,...DC}).svg;
+    body+=sBlock(f.grape,{x:X(14.17),top:TOP(69.32,szB),maxW:W*0.5,size:szB,min:szB*0.7,fill:GRAY,a:'l',...AR}).svg;
+    body+=sBlock(f.classification,{x:X(14.17),top:TOP(57.32,szB),maxW:W*0.5,size:szB,min:szB*0.7,fill:GRAY,a:'l',...AR}).svg;
+    body+=sBlock(reg,{x:X(14.17),top:TOP(41.72,9*sy),maxW:W*0.62,size:9*sy,min:7*sy,fill:INK,a:'l',caps:true,...DC}).svg;
+    body+=sBlock(desc,{x:X(14.17),top:TOP(30.92,9*sy),maxW:W*0.4,size:9*sy,min:7*sy,fill:GRAY,a:'l',caps:true,...DC}).svg;
+    body+=sBlock(alc.replace(' Vol.',' Vol'),{x:X(14.17),top:TOP(14.52,szAlc),maxW:W*0.35,size:szAlc,min:szAlc*0.7,fill:GRAY,a:'l',...AR}).svg;
+    body+=sBlock(f.vintage,{x:Rx,top:TOP(14.16,szHd),maxW:W*0.2,size:szHd,min:szHd*0.7,fill:INK,a:'r',...DC}).svg;
+  }else if(variant===3){  // p4 — band zone, left column with mixed families
+    body+=sImageZone('contemporary',{focal:[0,0.125,1,0.47],fade:[0,0,1,0.66],shape:'band'},W,H);
+    body+=sBlock(f.producer,{x:X(14.17),top:TOP(201.32,szHd),maxW:W*0.5,size:szHd,min:szHd*0.7,fill:INK,a:'l',caps:true,...DC}).svg;
+    body+=sBlock(f.vintage,{x:Rx,top:TOP(201.42,szHd),maxW:W*0.25,size:szHd,min:szHd*0.7,fill:INK,a:'r',...DC}).svg;
+    body+=sBlock(f.wine,{x:X(14.17),top:TOP(97.65,szHero),maxW:W*0.68,size:szHero,min:szHero*0.55,fill:INK,a:'l',caps:true,...DC}).svg;
+    body+=sBlock(f.appellation,{x:X(14.17),top:TOP(80.85,12*sy),maxW:W*0.5,size:12*sy,min:9*sy,fill:INK,a:'l',...DA}).svg;
+    body+=sBlock(f.grape,{x:X(14.17),top:TOP(60.45,szB),maxW:W*0.55,size:szB,min:szB*0.7,fill:GRAY,a:'l',...AR}).svg;
+    body+=sBlock(f.classification,{x:X(14.17),top:TOP(48.45,szB),maxW:W*0.55,size:szB,min:szB*0.7,fill:GRAY,a:'l',...AR}).svg;
+    body+=sBlock(desc,{x:X(14.17),top:TOP(30.45,szB),maxW:W*0.4,size:szB,min:szB*0.7,fill:GRAY,a:'l',...AR}).svg;
+    body+=sBlock([reg,alc].filter(Boolean).join(' / '),{x:X(14.17),top:TOP(16.04,szAlc),maxW:W*0.8,size:szAlc,min:szAlc*0.7,fill:GRAY,a:'l',...AR}).svg;
+  }else{                  // p5 — zone off the top, two columns, vintage bottom-left
+    body+=sImageZone('contemporary',{focal:[0,0,1,0.555],fade:[0,0,1,0.66],shape:'band'},W,H);
+    body+=sBlock(f.wine,{x:X(14.17),top:TOP(78.12,szHero),maxW:W*0.66,size:szHero,min:szHero*0.55,fill:INK,a:'l',caps:true,...DC}).svg;
+    body+=sBlock(f.producer,{x:Rx,top:TOP(78.00,szHd),maxW:W*0.26,size:szHd,min:szHd*0.7,fill:INK,a:'r',caps:true,...DC}).svg;
+    body+=sBlock(f.appellation,{x:X(14.17),top:TOP(63.72,12*sy),maxW:W*0.5,size:12*sy,min:9*sy,fill:INK,a:'l',caps:true,...DC}).svg;
+    body+=sBlock(reg,{x:X(14.17),top:TOP(45.72,9*sy),maxW:W*0.6,size:9*sy,min:7*sy,fill:INK,a:'l',caps:true,...DC}).svg;
+    body+=sBlock(desc,{x:X(14.17),top:TOP(34.92,9*sy),maxW:W*0.4,size:9*sy,min:7*sy,fill:GRAY,a:'l',caps:true,...DC}).svg;
+    body+=sBlock(f.grape,{x:Rx,top:TOP(46.81,szB),maxW:W*0.32,size:szB,min:szB*0.7,fill:GRAY,a:'r',...AR}).svg;
+    body+=sBlock(f.classification,{x:Rx,top:TOP(34.81,szB),maxW:W*0.32,size:szB,min:szB*0.7,fill:GRAY,a:'r',...AR}).svg;
+    body+=sBlock(f.vintage,{x:X(14.17),top:TOP(14.93,szHd),maxW:W*0.25,size:szHd,min:szHd*0.7,fill:INK,a:'l',...DC}).svg;
+    body+=sBlock(alc,{x:Rx,top:TOP(14.41,szAlc),maxW:W*0.32,size:szAlc,min:szAlc*0.7,fill:GRAY,a:'r',...AR}).svg;
   }
   return sWrap(W,H,twMM,thMM,'#ffffff',body);
 }
@@ -1050,32 +1172,42 @@ function stylePremium(f,W,H,seed,twMM,thMM){
 }
 
 /* ---- 5) MINIMALIST — sparse type, one hairline, generous whitespace ---- */
+/* ---- 5) MINIMALIST — six fixed compositions from Minimalist.pdf
+   (ref artboard 311.811x226.772pt). Helvetica/Helvetica-Light -> Archivo
+   400/300; ink #231F20 hero, grey #8A8780 details; letterspaced caps;
+   band and circle artwork zones, one text-only composition. ---- */
 function styleMinimal(f,W,H,seed,twMM,thMM){
-  const Lx=SM,Rx=W-SM,cx=W/2,cW=W-2*SM,fsc=Math.max(1,Math.min(W/1000,H/800)),U=p=>p*PT_U*fsc;
-  const bg='#fbfbf9',ink='#1c1c1b',sub='#8a877f',ac=f.accent;
-  const left=(seed%2===0), ax=left?'l':'c', X=left?Lx:cx, mW=left?cW:cW*0.9;
+  const sx=W/311.811, sy=H/226.772;
+  const INK='#231F20', GRAY='#8A8780';
+  const X=px=>px*sx, TOP=(bl,sz)=>(226.772-bl)*sy-0.80*sz;
+  const cx=W/2;
+  const L3={f:SF.archivo,w:300}, R4={f:SF.archivo,w:400};
+  const szHero=20.68*sy, szApp=10.49*sy, szP=8.5*sy, szF=7*sy;
+  const line1=[f.grape,f.classification,f.region].filter(Boolean).join(' / ');
+  const line2=[f.special,f.vintage,f.alc?('Alc.: '+f.alc.replace(/\s{2,}/g,' / ')+'.'):''].filter(Boolean).join(' / ');
+  const variant=Math.floor(seed/2)%6;
+  const left=(variant===0||variant===3);
+  const ax=left?'l':'c', Xa=left?X(14.17):cx;
   let body='';
-  body+=sImage('minimalist',W*0.33,H*0.10,W*0.34,H*0.24,'contain');   // small centred mark above the hero
-  body+=sBlock(f.producer,{x:X,top:SM+U(2),maxW:mW,size:U(8.5),min:U(7),f:SF.jost,w:400,fill:sub,a:ax,tr:0.3,caps:true}).svg;
-  // hero sits a bit above centre
-  let y=H*0.40;
-  const wn=sBlock(f.wine,{x:X,top:y,maxW:mW,size:Math.max(U(19),0.10*H),min:U(13),lines:2,f:SF.jost,w:400,fill:ink,a:ax,tr:0.02,lh:1.08});
-  body+=wn.svg; y=wn.bottom+U(5);
-  body+=`<rect x="${(left?Lx:cx-U(12)).toFixed(1)}" y="${y.toFixed(1)}" width="${U(24).toFixed(1)}" height="${Math.max(1.4,U(0.8)).toFixed(1)}" fill="${ac}"/>`; y+=U(7);
-  const ap=sBlock(f.appellation,{x:X,top:y,maxW:mW,size:U(10.5),min:U(8),lines:1,f:SF.jost,w:300,fill:sub,a:ax,tr:0.04});
-  body+=ap.svg;
-  // footer: single tiny tracked baseline (left group / right alc), or centred stack
-  const yF=H-SM-U(8);
-  if(left){
-    const line=[f.grape,f.vintage,f.region].filter(Boolean).join('   /   ');
-    body+=sBlock(line,{x:Lx,top:yF,maxW:cW*0.72,size:U(8),min:U(7),f:SF.jost,w:400,fill:sub,a:'l',tr:0.08}).svg;
-    body+=sBlock(f.alc,{x:Rx,top:yF,maxW:cW*0.26,size:U(8),min:U(7),f:SF.jost,w:400,fill:sub,a:'r',tr:0.04}).svg;
-  } else {
-    const items=[{str:[f.grape,f.region].filter(Boolean).join('   /   '),size:U(9),f:SF.jost,w:400,fill:sub,tr:0.06,maxW:cW*0.9},
-      {str:[f.vintage,f.descriptor,f.alc].filter(Boolean).join('   ·   '),size:U(8),f:SF.jost,w:300,fill:sub,tr:0.08,maxW:cW*0.9}];
-    body+=stackUp(items,cx,H-SM,U(3),'c',cW*0.9).svg;
-  }
-  return sWrap(W,H,twMM,thMM,bg,body);
+  const zones=[
+    {focal:[0,0.18,1,0.375],fade:[0,0.065,1,0.535],shape:'band'},
+    {focal:[0.371,0.225,0.629,0.575],fade:[0.32,0.15,0.68,0.645],shape:'ellipse'},
+    null,
+    {focal:[0,0.245,1,0.55],fade:[0,0.18,1,0.615],shape:'band'},
+    {focal:[0.411,0.275,0.589,0.525],fade:[0.342,0.18,0.658,0.615],shape:'ellipse'},
+    {focal:[0.411,0.315,0.589,0.565],fade:[0.342,0.22,0.658,0.655],shape:'ellipse'}];
+  if(zones[variant]) body+=sImageZone('minimalist',zones[variant],W,H);
+  // producer: straight letterspaced caps, or arched over the circle (comps 3 & 6)
+  if(variant===2)      body+=sArcText(f.producer,cx,TOP(199,szP)+0.8*szP,160*sy,{f:SF.archivo,w:300,size:szP,fill:GRAY,tr:0.42,caps:true});
+  else if(variant===5) body+=sArcText(f.producer,cx,TOP(192.6,szP)+0.8*szP,160*sy,{f:SF.archivo,w:300,size:szP,fill:GRAY,tr:0.42,caps:true});
+  else body+=sBlock(f.producer,{x:Xa,top:TOP(205.81,szP),maxW:W*0.5,size:szP,min:szP*0.7,fill:GRAY,a:ax,caps:true,tr:0.42,...L3}).svg;
+  const heroY={0:106.80,1:56.22,2:105.66,3:51.24,4:51.24,5:51.24}[variant];
+  const appY={0:90.22,1:39.64,2:89.08,3:36.65,4:36.65,5:36.65}[variant];
+  body+=sBlock(f.wine,{x:Xa,top:TOP(heroY,szHero),maxW:W*0.9,size:szHero,min:szHero*0.5,fill:INK,a:ax,caps:true,tr:0.26,...L3}).svg;
+  body+=sBlock(f.appellation,{x:Xa,top:TOP(appY,szApp),maxW:W*0.6,size:szApp,min:szApp*0.7,fill:GRAY,a:ax,...R4}).svg;
+  body+=sBlock(line1,{x:Xa,top:TOP(22.76,szF),maxW:W*0.75,size:szF,min:szF*0.75,fill:GRAY,a:ax,...R4}).svg;
+  body+=sBlock(line2,{x:Xa,top:TOP(14.36,szF),maxW:W*0.75,size:szF,min:szF*0.75,fill:GRAY,a:ax,...R4}).svg;
+  return sWrap(W,H,twMM,thMM,'#ffffff',body);
 }
 
 /* ---- 6) ARTISTIC / PUNK — oversized condensed name, marker accents, ink scrawl ---- */
