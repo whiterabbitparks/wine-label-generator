@@ -145,6 +145,28 @@ assembly happens server-side, one prompt per label style:
   **revert by setting `DEMO_FILL=false`** (then rebuild + extract + re-run
   gates). The empty-box warning and grey placeholders are unaffected.
 
+## 5c. Reference-driven design rules (branch Labels_By_Reference_Test)
+
+Derived 2026-08-11 from the owner's `Layout Styles/References/` (211 images,
+6 styles). PDF geometry, sizes and hierarchy stay authoritative; references
+drive colour, ink and image direction. Owner rules: NO layout element may
+overlap another at any label size; artwork variety comes from ink/ground
+colours as much as subjects.
+
+- **Palettes rotate per press** (modulus differs from the composition count,
+  so pairs keep changing): Traditional papers ivory/cream/straw with accent
+  inks brand-red/oxblood/sepia/slate-blue; Contemporary grounds white/cream/
+  coral/blush/sage; Minimalist ink/warm/cobalt/coral hero schemes; Flora leaf
+  inks green/vermilion/terracotta/forest; Premium ivory/white/charcoal;
+  Artistic riso grounds cream/tomato/blush/near-black.
+- **Type**: Artistic hand = Permanent Marker (new font); other families per
+  the PDFs (Tinos, EB Garamond, Barlow/Barlow Condensed, Archivo 300-800).
+- **Image sub-styles** rewritten in `src/lib/styles/catalog.ts` to mirror the
+  reference boards — 25 recipes incl. single-ink engravings in sepia/oxblood/
+  slate, Matisse cut-outs, gradient horizons, red/black woodcut animals,
+  gold-line crests, naive wine-drinker line art, riso posters. White-background
+  rule unchanged.
+
 ## 6. What's DONE / what's NEXT
 
 DONE: verbatim transplant with proven parity (engine 144/144 byte-identical;

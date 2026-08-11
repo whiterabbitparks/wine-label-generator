@@ -55,33 +55,54 @@ export const DEFAULT_CATALOG: StyleDef[] = [
   {
     key: "traditional",
     name: "Traditional",
+    // Reference set (2026-08-11): classic French labels — single-ink engravings
+    // of estates, vineyards and trees on cream papers; the ink itself varies
+    // (sepia, black, oxblood, slate blue) which is where colour variety lives.
     subStyles: [
       {
-        key: "engraving",
-        label: "Vintage engraving",
+        key: "chateau-engraving",
+        label: "Château engraving",
         medium:
-          "a fine, detailed vintage engraving and etching illustration with cross-hatching and delicate line work",
+          "a classical copperplate engraving of a wine estate with its vineyard, extremely fine parallel hatching and stipple, in a single deep sepia-brown ink",
         composition:
-          "a single centred subject with clean negative space around it, designed as a wine-label illustration, no lettering and no border",
-        mood: "elegant, heritage, timeless; monochrome ink on pure white",
+          "the estate centred like on a vintage Bordeaux label, wide sky above and vine rows in the foreground, no lettering and no border",
+        mood: "heritage, established, dignified; one ink colour only on pure white",
       },
       {
-        key: "pencil",
-        label: "Pencil drawing",
+        key: "vineyard-etching",
+        label: "Vineyard panorama etching",
         medium:
-          "a classical graphite pencil drawing with soft shading, precise contours and subtle paper grain",
+          "a panoramic etching of rolling vineyard hills with distant mountains, delicate line work and cross-hatching, in a single black ink",
         composition:
-          "a single centred subject with generous negative space, drawn as a wine-label illustration, no lettering and no border",
-        mood: "quiet, refined, hand-made; warm grey graphite on pure white",
+          "a wide horizontal landscape band, horizon in the upper third, vine rows leading the eye, no lettering and no border",
+        mood: "timeless, calm, expansive; one ink colour only on pure white",
       },
       {
-        key: "woodcut",
-        label: "Woodcut print",
+        key: "oxblood-tree",
+        label: "Oxblood tree engraving",
         medium:
-          "a traditional woodcut print illustration with bold carved lines and honest, rustic texture",
+          "a majestic old vine or lone tree rendered as a detailed engraving in a single oxblood red ink, every branch and leaf hatched by hand",
         composition:
-          "a strong centred subject with simple negative space, cut as a wine-label illustration, no lettering and no border",
-        mood: "earthy, rooted, timeless; single dark ink on pure white",
+          "one grand centred tree filling the frame like a monument, bare ground beneath, no lettering and no border",
+        mood: "rooted, proud, monumental; one deep red ink only on pure white",
+      },
+      {
+        key: "slate-village",
+        label: "Slate-blue village etching",
+        medium:
+          "an old-world village or church among vineyards etched in a single slate-blue ink, fine steel-engraving lines",
+        composition:
+          "the village centred with vineyard rows around it, airy sky, no lettering and no border",
+        mood: "storied, provincial, serene; one blue-grey ink only on pure white",
+      },
+      {
+        key: "heraldic-crest",
+        label: "Heraldic crest",
+        medium:
+          "an engraved heraldic wine crest with grape clusters, vine leaves, ribbons and scrollwork, in a single black ink with fine hatching",
+        composition:
+          "one ornate symmetrical emblem centred with generous empty margins, no lettering inside the ribbons and no border",
+        mood: "noble, ceremonial, exacting; one ink colour only on pure white",
       },
     ],
     focus: {
@@ -94,33 +115,44 @@ export const DEFAULT_CATALOG: StyleDef[] = [
   {
     key: "contemporary",
     name: "Contemporary",
+    // References: flat saturated colour fields, Matisse-like cut-out shapes,
+    // gradient horizon bands, one giant playful motif; colour IS the design.
     subStyles: [
+      {
+        key: "cutout",
+        label: "Paper cut-out shapes",
+        medium:
+          "a Matisse-style paper cut-out composition of bold organic shapes in flat saturated colours — coral red, teal, mustard, cobalt — with crisp edges",
+        composition:
+          "two or three large overlapping organic shapes centred in a wide band, plenty of breathing room, no lettering and no border",
+        mood: "confident, modern, joyful; flat colour on pure white",
+      },
+      {
+        key: "horizon",
+        label: "Gradient horizon",
+        medium:
+          "a minimal abstract landscape of smooth horizontal colour bands like a sunset over the sea — apricot, rose, deep terracotta, dusk blue — softly graded",
+        composition:
+          "calm horizontal bands with a low sun disc, nothing else, no lettering and no border",
+        mood: "serene, atmospheric, contemporary; soft flat gradients on pure white",
+      },
+      {
+        key: "motif",
+        label: "One giant motif",
+        medium:
+          "one oversized playful flat illustration — a sun, an eye, a grape cluster or a moon — drawn with bold simple shapes in two or three saturated colours",
+        composition:
+          "a single huge centred motif dominating the frame with generous empty space around it, no lettering and no border",
+        mood: "iconic, punchy, friendly; flat colour on pure white",
+      },
       {
         key: "geometric",
         label: "Geometric abstraction",
         medium:
-          "a modern flat geometric illustration built from a few clean shapes and confident colour fields",
+          "a modern flat geometric abstraction of circles, arcs and diagonal fields in a limited bold palette — tomato red, cobalt, cream, forest green",
         composition:
-          "an asymmetric composition weighted to one side, leaving a calm structured area of flat colour, no lettering and no border",
-        mood: "contemporary, architectural, assured; limited fresh palette",
-      },
-      {
-        key: "collage",
-        label: "Narrative collage",
-        medium:
-          "a contemporary narrative paper-collage illustration with torn edges and layered textures",
-        composition:
-          "an off-centre scene with layered depth, leaving one visually quiet region of flat paper, no lettering and no border",
-        mood: "playful, storytelling, modern craft; warm tactile palette",
-      },
-      {
-        key: "duotone",
-        label: "Bold duotone",
-        medium:
-          "a bold two-colour screen-print style illustration with high contrast and visible print grain",
-        composition:
-          "a strong graphic subject placed off-centre with a large flat colour field beside it, no lettering and no border",
-        mood: "punchy, urban, confident; exactly two inks",
+          "an asymmetric arrangement weighted to one side within a wide band, no lettering and no border",
+        mood: "architectural, assured, gallery-like; flat colour on pure white",
       },
     ],
     focus: {
@@ -133,33 +165,44 @@ export const DEFAULT_CATALOG: StyleDef[] = [
   {
     key: "flora",
     name: "Flora & Fauna",
+    // References: bold woodcut animals in red or black ink, naturalist plates,
+    // loose brush creatures — the animal is the label.
     subStyles: [
       {
-        key: "botanical",
-        label: "Botanical line art",
+        key: "woodcut-red",
+        label: "Red woodcut animal",
         medium:
-          "a delicate botanical line-art illustration with thin, even strokes in a herbarium style",
+          "a bold woodcut print of a single animal — bull, ram, boar, hare or rooster — carved with confident rough strokes in a single vermilion red ink",
         composition:
-          "a centred plant, vine or leaf motif with airy negative space, no lettering and no border",
-        mood: "organic, natural and refined",
+          "the animal in profile filling the centre, strong silhouette, coarse carved texture, no lettering and no border",
+        mood: "primal, honest, striking; one red ink only on pure white",
       },
       {
-        key: "watercolour-botanical",
-        label: "Watercolour botanical",
+        key: "woodcut-black",
+        label: "Black linocut animal",
         medium:
-          "a soft watercolour botanical illustration with gentle washes, fine veining and subtle paper texture",
+          "a black linocut print of a single wild animal with rough hand-carved edges and strong negative space",
         composition:
-          "a centred natural motif with light, airy margins, no lettering and no border",
-        mood: "romantic and artisanal, muted natural palette",
+          "one centred animal, bold and graphic, no lettering and no border",
+        mood: "wild, graphic, fearless; one black ink only on pure white",
       },
       {
-        key: "ink-fauna",
-        label: "Ink animal study",
+        key: "naturalist-plate",
+        label: "Naturalist plate",
         medium:
-          "a detailed ink study of an animal in a naturalist field-guide style with fine hatching",
+          "a vintage naturalist field-guide illustration of a bird or plant, delicate watercolour and fine ink outline, muted natural colours",
         composition:
-          "a single centred animal subject surrounded by sparse botanical sprigs and calm negative space, no lettering and no border",
-        mood: "curious, noble, naturalist; single ink on pure white",
+          "the specimen centred like a museum plate with airy margins, no lettering and no border",
+        mood: "curious, scholarly, gentle; soft colour on pure white",
+      },
+      {
+        key: "brush-beast",
+        label: "Brush-ink creature",
+        medium:
+          "a loose expressive brush-and-ink painting of an animal in two colours — black with one warm accent — fast confident strokes",
+        composition:
+          "the creature mid-movement, centred, with splatter kept away from the edges, no lettering and no border",
+        mood: "alive, spontaneous, artisanal; ink on pure white",
       },
     ],
     focus: {
@@ -172,24 +215,44 @@ export const DEFAULT_CATALOG: StyleDef[] = [
   {
     key: "premium",
     name: "Premium",
+    // References: ivory stock, gold foil, engraved crests, giant overlapping
+    // numerals, copper animals — restraint plus one precious material.
     subStyles: [
+      {
+        key: "gold-crest",
+        label: "Gold-line crest",
+        medium:
+          "an exquisite heraldic crest or monogram drawn purely in thin antique-gold lines, jewel-like precision, as if gold-foiled",
+        composition:
+          "one small refined emblem centred with vast empty margins, no lettering and no border",
+        mood: "luxurious, restrained, precise; antique gold line art only on pure white",
+      },
+      {
+        key: "copper-beast",
+        label: "Copper engraved animal",
+        medium:
+          "a noble animal — stag, ram, eagle or lion — engraved in fine lines of warm copper-bronze ink, aristocratic and exact",
+        composition:
+          "the animal small and centred like a seal, wide quiet margins on all sides, no lettering and no border",
+        mood: "stately, heirloom, exact; one copper ink only on pure white",
+      },
       {
         key: "fine-etching",
         label: "Fine-line etching",
         medium:
-          "an ultra-fine copperplate etching illustration with hair-thin lines and jewel-like precision",
+          "an ultra-fine copperplate etching illustration with hair-thin lines and jewel-like precision, single dark ink",
         composition:
           "a small, exquisitely detailed centred emblem-like subject surrounded by wide empty space, no lettering and no border",
         mood: "luxurious, restrained, precise; single dark ink on pure white",
       },
       {
-        key: "charcoal",
-        label: "Charcoal tonal",
+        key: "emboss-tone",
+        label: "Embossed tone-on-tone",
         medium:
-          "a rich tonal charcoal drawing with deep velvety darks and soft gradations",
+          "an emblem drawn in the palest warm-grey lines as if blind-embossed into paper, barely-there tone-on-tone relief",
         composition:
-          "a dignified centred subject emerging from shadow with wide quiet margins, no lettering and no border",
-        mood: "deep, quiet, expensive; near-black on pure white",
+          "one delicate centred emblem with vast white space, no lettering and no border",
+        mood: "whisper-quiet luxury; near-white on pure white",
       },
     ],
     focus: {
@@ -202,24 +265,35 @@ export const DEFAULT_CATALOG: StyleDef[] = [
   {
     key: "minimalist",
     name: "Minimalist",
+    // References: near-empty labels with one small mark — a dot, a blob, a
+    // tiny creature — occasionally in one saturated accent colour.
     subStyles: [
       {
-        key: "single-line",
-        label: "Single-line icon",
+        key: "tiny-mark",
+        label: "One tiny mark",
         medium:
-          "a minimal single-line icon illustration, geometric and made of just a few continuous strokes",
+          "a single small abstract mark — a painted dot, a torn-paper blob or a brush stroke — in one saturated colour: coral red, cobalt blue or black",
         composition:
-          "one simple centred mark with generous negative space, no lettering and no border",
-        mood: "modern, understated and clean",
+          "one small mark alone in a vast empty field, perfectly balanced, no lettering and no border",
+        mood: "quiet, assured, gallery-white; one colour only on pure white",
       },
       {
-        key: "geometric-mark",
-        label: "Geometric mark",
+        key: "micro-line",
+        label: "Micro line icon",
         medium:
-          "a minimal geometric mark built from two or three basic shapes with mathematical balance",
+          "a minimal single-line icon drawn with one thin continuous stroke — a hill, a wave, a leaf or a bottle",
         composition:
-          "one small centred symbol floating in vast empty space, no lettering and no border",
-        mood: "precise, calm, timeless; one or two inks at most",
+          "one tiny centred mark floating in vast white space, no lettering and no border",
+        mood: "precise, calm, effortless; one thin line on pure white",
+      },
+      {
+        key: "little-creature",
+        label: "Little creature",
+        medium:
+          "a very small silhouette of an animal — a bird, hare or deer — in one flat colour, simple and charming",
+        composition:
+          "the tiny creature placed alone with enormous empty space around it, no lettering and no border",
+        mood: "subtle, witty, endearing; one colour only on pure white",
       },
     ],
     focus: {
@@ -232,33 +306,53 @@ export const DEFAULT_CATALOG: StyleDef[] = [
   {
     key: "artistic",
     name: "Artistic / Punk",
+    // References: naive one-line wine drinkers, black linocut figures, riso
+    // posters in tomato/cobalt/green, crayon scribbles, loud hand lettering.
     subStyles: [
       {
-        key: "punk-collage",
-        label: "Punk xerox collage",
+        key: "naive-line",
+        label: "Naive wine drinkers",
         medium:
-          "a raw punk photocopy-collage illustration with ripped paper, high-contrast xerox texture and hand-cut shapes",
+          "a naive continuous-line ink drawing of joyful figures drinking and pouring wine, wobbly childlike lines full of charm, in a single red or blue ink",
         composition:
-          "an energetic off-centre subject with rough edges, leaving one chaotic-but-low-detail zone for overprinting, no lettering and no border",
-        mood: "rebellious, loud, DIY; stark black with one shock colour",
+          "one or two loose figures with glasses and a bottle, off-kilter and alive, generous empty paper around them, no lettering and no border",
+        mood: "playful, human, unpolished; one ink colour on pure white",
       },
       {
-        key: "expressive-brush",
-        label: "Expressive brush",
+        key: "linocut-figure",
+        label: "Black linocut figure",
         medium:
-          "an expressive gestural brush-and-ink painting with fast, confident strokes and splatter",
+          "a bold black linocut of a strange wonderful figure — a person, beast or hybrid — with rough carved edges and heavy ink coverage",
         composition:
-          "a dynamic subject caught mid-motion, with one side of the canvas left as raw open texture, no lettering and no border",
-        mood: "visceral, free, artistic; ink on pure white",
+          "the figure filling the centre with raw carved texture, no lettering and no border",
+        mood: "raw, mythic, fearless; solid black ink on pure white",
+      },
+      {
+        key: "riso-poster",
+        label: "Riso poster",
+        medium:
+          "a risograph-style poster illustration in two or three spot colours — tomato red, cobalt blue, grass green — with grainy overprint texture",
+        composition:
+          "one bold central scene or creature, colours slightly misregistered, no lettering and no border",
+        mood: "loud, printed, underground; flat spot colours on pure white",
+      },
+      {
+        key: "crayon",
+        label: "Crayon scribble",
+        medium:
+          "an expressive crayon and marker drawing, scribbled fast with visible strokes in a few bright colours",
+        composition:
+          "one energetic centred subject drawn like a brilliant child's sketch, no lettering and no border",
+        mood: "free, funny, direct; bright strokes on pure white",
       },
       {
         key: "screenprint",
-        label: "Screen-print poster",
+        label: "Screen-print animal",
         medium:
-          "a bold, high-contrast graphic illustration in a screen-print poster style with a limited palette",
+          "a high-contrast screen-print of an animal in one loud colour with visible print grain and rough registration",
         composition:
-          "a strong centred composition with confident shapes, no lettering and no border",
-        mood: "expressive, contemporary and punchy",
+          "a strong centred animal composition with confident shapes, no lettering and no border",
+        mood: "expressive, contemporary, punchy; one loud ink on pure white",
       },
     ],
     focus: {

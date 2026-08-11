@@ -13,7 +13,7 @@
 (function(){
 "use strict";
 
-const FONTS_URL="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@400;500&family=Ballet&family=Baskervville+SC&family=Cinzel:wght@500;600&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Cutive+Mono&family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400&family=Estonia&family=Felipa&family=Girassol&family=Great+Vibes&family=Italianno&family=Manufacturing+Consent&family=Marcellus&family=Mate+SC&family=MonteCarlo&family=Montagu+Slab:wght@500;600&family=Mrs+Saint+Delafield&family=Nixie+One&family=Pinyon+Script&family=Playfair+Display:wght@600;700&family=Prata&family=Tinos:ital,wght@0,400;0,700;1,400&family=Jost:wght@300;400;500;600&family=Archivo:wght@300;400;500;600;700;800&family=Barlow+Condensed:wght@600;700&family=Barlow:wght@600;700&family=Anton&family=Bebas+Neue&family=Caveat:wght@500;600;700&family=Fraunces:ital,wght@0,400;0,500;0,600;0,700;1,500&display=swap";
+const FONTS_URL="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@400;500&family=Ballet&family=Baskervville+SC&family=Cinzel:wght@500;600&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Cutive+Mono&family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400&family=Estonia&family=Felipa&family=Girassol&family=Great+Vibes&family=Italianno&family=Manufacturing+Consent&family=Marcellus&family=Mate+SC&family=MonteCarlo&family=Montagu+Slab:wght@500;600&family=Mrs+Saint+Delafield&family=Nixie+One&family=Pinyon+Script&family=Playfair+Display:wght@600;700&family=Prata&family=Tinos:ital,wght@0,400;0,700;1,400&family=Jost:wght@300;400;500;600&family=Archivo:wght@300;400;500;600;700;800&family=Barlow+Condensed:wght@600;700&family=Barlow:wght@600;700&family=Permanent+Marker&family=Anton&family=Bebas+Neue&family=Caveat:wght@500;600;700&family=Fraunces:ital,wght@0,400;0,500;0,600;0,700;1,500&display=swap";
 const F={cormorant:"'Cormorant Garamond', serif",ebg:"'EB Garamond', serif",playfair:"'Playfair Display', serif",cinzel:"'Cinzel', serif",pinyon:"'Pinyon Script', cursive",marcellus:"'Marcellus', serif",prata:"'Prata', serif",
   ballet:"'Ballet', cursive",mrsSaint:"'Mrs Saint Delafield', cursive",greatVibes:"'Great Vibes', cursive",monteCarlo:"'MonteCarlo', cursive",estonia:"'Estonia', cursive",felipa:"'Felipa', cursive",italianno:"'Italianno', cursive",
   manufacturing:"'Manufacturing Consent', serif",cutiveMono:"'Cutive Mono', monospace",montaguSlab:"'Montagu Slab', serif",girassol:"'Girassol', serif",nixieOne:"'Nixie One', serif",alegreyaSC:"'Alegreya SC', serif",mateSC:"'Mate SC', serif",baskervvilleSC:"'Baskervville SC', serif",
@@ -267,7 +267,7 @@ async function ensureFonts(){
     "400 40px 'Tinos'","700 40px 'Tinos'",
     "300 40px 'Jost'","400 40px 'Jost'","500 40px 'Jost'","600 40px 'Jost'",
     "300 40px 'Archivo'","400 40px 'Archivo'","500 40px 'Archivo'","600 40px 'Archivo'","700 40px 'Archivo'","800 40px 'Archivo'",
-    "400 40px 'Anton'","400 40px 'Bebas Neue'","600 40px 'Barlow Condensed'","700 40px 'Barlow Condensed'","600 40px 'Barlow'","700 40px 'Barlow'","500 40px 'Caveat'","600 40px 'Caveat'","700 40px 'Caveat'",
+    "400 40px 'Anton'","400 40px 'Bebas Neue'","600 40px 'Barlow Condensed'","700 40px 'Barlow Condensed'","600 40px 'Barlow'","700 40px 'Barlow'","400 40px 'Permanent Marker'","500 40px 'Caveat'","600 40px 'Caveat'","700 40px 'Caveat'",
     "400 40px 'Fraunces'","500 40px 'Fraunces'","600 40px 'Fraunces'","700 40px 'Fraunces'","italic 500 40px 'Fraunces'"];
   try{await Promise.all(specs.map(s=>document.fonts.load(s)));await document.fonts.ready;}catch(e){}
 }
@@ -824,7 +824,7 @@ function previewLayout(d,order,Wmm,Hmm){
    ========================================================================== */
 const SM=50, SBLEED=20;                                     // 5 mm safe margin, 2 mm bleed (units)
 const SF={jost:"'Jost',sans-serif",archivo:"'Archivo',sans-serif",anton:"'Anton',sans-serif",
-  barlow:"'Barlow',sans-serif",barlowc:"'Barlow Condensed',sans-serif",
+  barlow:"'Barlow',sans-serif",barlowc:"'Barlow Condensed',sans-serif",marker:"'Permanent Marker',cursive",
   bebas:"'Bebas Neue',sans-serif",caveat:"'Caveat',cursive",fraunces:"'Fraunces',serif",
   cormorant:F.cormorant,cinzel:F.cinzel,ebg:F.ebg,marcellus:F.marcellus,playfair:F.playfair};
 let __sid=0;
@@ -932,7 +932,12 @@ function sImageZone(styleKey,z,W,H){
 function styleTraditional(d,order,seed,twMM,thMM){
   const f=sFields(d), W=twMM*10, H=thMM*10;
   const sx=W/294.803, sy=H/238.11;
-  const RED='#D71920', INK='#231F20';
+  /* paper + accent-ink pairs from the reference set: white/brand red,
+     ivory/oxblood, cream/sepia, straw/slate-blue. Rotates on a different
+     modulus than the 9 compositions, so pairs vary press to press. */
+  const TPAL=[['#FFFFFF','#D71920'],['#F6F0DE','#8E2430'],['#F2E9D2','#6B4A2F'],['#F4EFE0','#3E5C76']];
+  const [TBG,RED]=TPAL[Math.floor(seed/2)%TPAL.length];
+  const INK='#231F20';
   const X=px=>px*sx, TOP=(bl,sz)=>(238.11-bl)*sy-0.80*sz;
   const cx=W/2, Lx=X(19.84), Rx=W-X(19.84);
   const EG={f:SF.ebg,w:400}, EGB={f:SF.ebg,w:700}, TB={f:SF.tinos,w:700};
@@ -1022,7 +1027,7 @@ function styleTraditional(d,order,seed,twMM,thMM){
     body+=app(60.50);
     body+=lower(46.10,31.46,19.45);
   }
-  return sWrap(W,H,twMM,thMM,'#ffffff',body);
+  return sWrap(W,H,twMM,thMM,TBG,body);
 }
 
 function styleContemporary(f,W,H,seed,twMM,thMM){
@@ -1032,7 +1037,12 @@ function styleContemporary(f,W,H,seed,twMM,thMM){
      700, DIN Alternate Bold -> Barlow 700, Helvetica -> Archivo (Google
      stand-ins). Colours: ink #231F20, grey #6D6E71. */
   const sx=W/311.811, sy=H/226.772;
-  const INK='#231F20', GRAY='#6D6E71';
+  /* reference grounds: colour is the design — white, cream, coral, blush, sage */
+  const CSCH=[{bg:'#FFFFFF',ink:'#231F20',sub:'#6D6E71'},{bg:'#F6F0E2',ink:'#231F20',sub:'#75716A'},
+    {bg:'#E8542F',ink:'#20130E',sub:'#F8EFE3'},{bg:'#F3D3C4',ink:'#232019',sub:'#7C5A4A'},
+    {bg:'#CDD6C2',ink:'#22271F',sub:'#5A6650'}];
+  const SCH=CSCH[Math.floor(seed/2)%CSCH.length];
+  const INK=SCH.ink, GRAY=SCH.sub;
   const X=px=>px*sx, TOP=(bl,sz)=>(226.772-bl)*sy-0.80*sz;
   const Lx=X(13.51), Rx=X(298.3), cx=W/2;
   const DC={f:SF.barlowc,w:700}, DA={f:SF.barlow,w:700}, AR={f:SF.archivo,w:400};
@@ -1096,13 +1106,15 @@ function styleContemporary(f,W,H,seed,twMM,thMM){
     body+=sBlock(f.vintage,{x:X(14.17),top:TOP(14.93,szHd),maxW:W*0.25,size:szHd,min:szHd*0.7,fill:INK,a:'l',...DC}).svg;
     body+=sBlock(alc,{x:Rx,top:TOP(14.41,szAlc),maxW:W*0.32,size:szAlc,min:szAlc*0.7,fill:GRAY,a:'r',...AR}).svg;
   }
-  return sWrap(W,H,twMM,thMM,'#ffffff',body);
+  return sWrap(W,H,twMM,thMM,SCH.bg,body);
 }
 
 /* ---- 3) FLORA & FAUNA — botanical, centred serif, sprigs ---- */
 function styleFlora(f,W,H,seed,twMM,thMM){
   const cx=W/2,cW=W-2*SM,fsc=Math.max(1,Math.min(W/1000,H/800)),U=p=>p*PT_U*fsc;
-  const bg=(seed%2)?'#efe8d6':'#f2eddf',ink='#33341f',sub='#6a6a4c',leaf='#5f6b39',ac=f.accent;
+  const FPAL=[['#EFE8D6','#5F6B39'],['#F2EDDD','#C73A2E'],['#F7F1E1','#B4552D'],['#EFE6CE','#3E5C46']];
+  const [bg,leaf]=FPAL[Math.floor(seed/2)%FPAL.length];
+  const ink='#33341f',sub='#6a6a4c',ac=f.accent;
   const sc=fsc*1.0; let body='';
   body+=sImage('flora',W*0.22,H*0.13,W*0.56,H*0.30,'contain');   // centred botanical block above the name
   // top ornament: symmetric sprig pair
@@ -1135,7 +1147,7 @@ function styleFlora(f,W,H,seed,twMM,thMM){
 /* ---- 4) PREMIUM — refined, gold rules + monogram crest, light or dark ---- */
 function stylePremium(f,W,H,seed,twMM,thMM){
   const cx=W/2,Lx=SM,Rx=W-SM,cW=W-2*SM,fsc=Math.max(1,Math.min(W/1000,H/800)),U=p=>p*PT_U*fsc;
-  const dark=(seed%2===1); const bg=dark?'#20281f':'#f4efe3';
+  const ppi=Math.floor(seed/2)%3, dark=(ppi===2); const bg=dark?'#23211E':(ppi===1?'#FFFFFF':'#F2EDE0');
   const ink=dark?'#f0e6cf':'#2b2a22', sub=dark?'#cbb483':'#736b52';
   const id='g'+(++__sid); const gold=`url(#${id})`;
   const defs=`<linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e2c988"/><stop offset="0.5" stop-color="#b58f4c"/><stop offset="1" stop-color="#8c6a32"/></linearGradient>`;
@@ -1178,7 +1190,12 @@ function stylePremium(f,W,H,seed,twMM,thMM){
    band and circle artwork zones, one text-only composition. ---- */
 function styleMinimal(f,W,H,seed,twMM,thMM){
   const sx=W/311.811, sy=H/226.772;
-  const INK='#231F20', GRAY='#8A8780';
+  /* references: mostly monochrome, but the one mark of colour may be the
+     wine name itself — ink, warm ivory, cobalt or coral schemes */
+  const MSCH=[{bg:'#FBFBF9',ink:'#231F20',sub:'#8A8780'},{bg:'#F4EFE4',ink:'#2A2722',sub:'#8F887B'},
+    {bg:'#FFFFFF',ink:'#2B5BB7',sub:'#7C8797'},{bg:'#FFFFFF',ink:'#C84438',sub:'#8A8780'}];
+  const MS=MSCH[Math.floor(seed/2)%MSCH.length];
+  const INK=MS.ink, GRAY=MS.sub;
   const X=px=>px*sx, TOP=(bl,sz)=>(226.772-bl)*sy-0.80*sz;
   const cx=W/2;
   const L3={f:SF.archivo,w:300}, R4={f:SF.archivo,w:400};
@@ -1207,14 +1224,16 @@ function styleMinimal(f,W,H,seed,twMM,thMM){
   body+=sBlock(f.appellation,{x:Xa,top:TOP(appY,szApp),maxW:W*0.6,size:szApp,min:szApp*0.7,fill:GRAY,a:ax,...R4}).svg;
   body+=sBlock(line1,{x:Xa,top:TOP(22.76,szF),maxW:W*0.75,size:szF,min:szF*0.75,fill:GRAY,a:ax,...R4}).svg;
   body+=sBlock(line2,{x:Xa,top:TOP(14.36,szF),maxW:W*0.75,size:szF,min:szF*0.75,fill:GRAY,a:ax,...R4}).svg;
-  return sWrap(W,H,twMM,thMM,'#ffffff',body);
+  return sWrap(W,H,twMM,thMM,MS.bg,body);
 }
 
 /* ---- 6) ARTISTIC / PUNK — oversized condensed name, marker accents, ink scrawl ---- */
 function styleArtistic(f,W,H,seed,twMM,thMM){
   const Lx=SM,Rx=W-SM,cx=W/2,cW=W-2*SM,fsc=Math.max(1,Math.min(W/1000,H/800)),U=p=>p*PT_U*fsc;
-  const dark=(seed%3===2); const bg=dark?'#161412':(seed%3===1?'#efe7d3':'#f3efe6');
-  const ink=dark?'#f4efe3':'#171512', ac=f.accent, mark=dark?ac:'#171512';
+  const api=Math.floor(seed/2)%4, dark=(api===3), loud=(api===1);
+  const bg=['#F3EFE4','#DA3D1C','#F2BFC9','#161412'][api];
+  const ink=loud?'#F8EFE0':(dark?'#f4efe3':'#171512');
+  const ac=loud?'#171512':f.accent, mark=loud?'#F8EFE0':(dark?f.accent:'#171512');
   const rot=(seed%2===0)?-4:3.5;
   let body='';
   // artwork: full-bleed poster on light variants; torn-poster block with a light plate on dark
@@ -1222,25 +1241,25 @@ function styleArtistic(f,W,H,seed,twMM,thMM){
             :sImage('artistic',-SBLEED,-SBLEED,W+2*SBLEED,H+2*SBLEED,'cover');
   // producer — marker, angled, top-left
   body+=`<g transform="rotate(${(rot*0.6).toFixed(1)} ${Lx.toFixed(1)} ${(SM+U(6)).toFixed(1)})">`
-      +sBlock(f.producer,{x:Lx,top:SM,maxW:cW*0.8,size:U(15),min:U(10),f:SF.caveat,w:700,fill:ac,a:'l'}).svg+`</g>`;
+      +sBlock(f.producer,{x:Lx,top:SM,maxW:cW*0.8,size:U(15),min:U(10),f:SF.marker,w:700,fill:ac,a:'l'}).svg+`</g>`;
   // hero — oversized Anton, slightly rotated about its own centre; sized to leave room for the tilt
   let y=H*0.27;
   const heroBase=Math.max(U(24),0.14*H);
   const wn=sBlock(f.wine,{x:cx,top:y,maxW:cW*0.9,size:heroBase,min:U(16),lines:2,f:SF.anton,w:400,fill:ink,a:'c',tr:0.01,lh:0.94});
   body+=`<g transform="rotate(${rot} ${cx.toFixed(1)} ${((y+wn.bottom)/2).toFixed(1)})">${wn.svg}</g>`;
-  y=wn.bottom+U(3);
+  y=wn.bottom+U(6);   // extra clearance: the rotation tilts glyphs beyond the measured box
   // rough ink underline under the name
   const uy=y; body+=`<path d="M ${(cx-cW*0.34).toFixed(1)} ${uy.toFixed(1)} q ${(cW*0.17).toFixed(1)} ${U(3).toFixed(1)} ${(cW*0.34).toFixed(1)} ${U(0.5).toFixed(1)} q ${(cW*0.17).toFixed(1)} ${(-U(3)).toFixed(1)} ${(cW*0.34).toFixed(1)} ${U(1).toFixed(1)}" fill="none" stroke="${ac}" stroke-width="${U(1.6).toFixed(1)}" stroke-linecap="round"/>`;
-  y+=U(8);
-  const ap=sBlock(f.appellation,{x:cx,top:y,maxW:cW*0.9,size:U(12),min:U(9),lines:1,f:SF.caveat,w:600,fill:ink,a:'c'});
+  y+=U(12);
+  const ap=sBlock(f.appellation,{x:cx,top:y,maxW:cW*0.9,size:U(12),min:U(9),lines:1,f:SF.marker,w:600,fill:ink,a:'c'});
   body+=ap.svg; if(f.appellation) y=ap.bottom+U(1);
   const gr=sBlock(f.grape,{x:cx,top:y,maxW:cW*0.9,size:U(11),min:U(8.5),lines:1,f:SF.archivo,w:600,fill:ink,a:'c',tr:0.02});
   body+=gr.svg;
   // big handwritten vintage bottom-left, alc bottom-right, descriptor centre
-  body+=sBlock(f.vintage,{x:Lx,top:H-SM-U(18),maxW:cW*0.4,size:U(15),min:U(11),f:SF.caveat,w:700,fill:ac,a:'l'}).svg;
+  body+=sBlock(f.vintage,{x:Lx,top:H-SM-U(18),maxW:cW*0.24,size:U(15),min:U(11),f:SF.marker,w:700,fill:ac,a:'l'}).svg;
   body+=sBlock(f.alc,{x:Rx,top:H-SM-U(8),maxW:cW*0.34,size:U(8.5),min:U(7),f:SF.archivo,w:600,fill:ink,a:'r',tr:0.02}).svg;
   body+=sBlock([f.region,f.special,f.classification,f.descriptor].filter(Boolean).join('  ·  '),
-    {x:cx,top:H-SM-U(8),maxW:cW*0.44,size:U(8),min:U(7),f:SF.archivo,w:500,fill:ink,a:'c',tr:0.02}).svg;
+    {x:cx,top:H-SM-U(8),maxW:cW*0.36,size:U(8),min:U(7),f:SF.archivo,w:500,fill:ink,a:'c',tr:0.02}).svg;
   return sWrap(W,H,twMM,thMM,bg,body);
 }
 

@@ -78,37 +78,37 @@
           "style": "traditional",
           "name": "Traditional",
           "desc": "Traditional",
-          "bytes": 2953
+          "bytes": 2977
         },
         {
           "style": "contemporary",
           "name": "Contemporary",
           "desc": "Contemporary",
-          "bytes": 2596
+          "bytes": 2620
         },
         {
           "style": "flora",
           "name": "Flora & Fauna",
           "desc": "Flora & Fauna",
-          "bytes": 4720
+          "bytes": 4744
         },
         {
           "style": "premium",
           "name": "Premium",
           "desc": "Premium",
-          "bytes": 3636
+          "bytes": 3660
         },
         {
           "style": "minimalist",
           "name": "Minimalist",
           "desc": "Minimalist",
-          "bytes": 2007
+          "bytes": 2031
         },
         {
           "style": "artistic",
           "name": "Artistic / Punk",
           "desc": "Artistic / Punk",
-          "bytes": 2513
+          "bytes": 2558
         }
       ]
     },
@@ -122,37 +122,37 @@
           "style": "traditional",
           "name": "Traditional",
           "desc": "Traditional",
-          "bytes": 2953
+          "bytes": 2977
         },
         {
           "style": "contemporary",
           "name": "Contemporary",
           "desc": "Contemporary",
-          "bytes": 2596
+          "bytes": 2620
         },
         {
           "style": "flora",
           "name": "Flora & Fauna",
           "desc": "Flora & Fauna",
-          "bytes": 4720
+          "bytes": 4744
         },
         {
           "style": "premium",
           "name": "Premium",
           "desc": "Premium",
-          "bytes": 3636
+          "bytes": 3660
         },
         {
           "style": "minimalist",
           "name": "Minimalist",
           "desc": "Minimalist",
-          "bytes": 2007
+          "bytes": 2031
         },
         {
           "style": "artistic",
           "name": "Artistic / Punk",
           "desc": "Artistic / Punk",
-          "bytes": 2513
+          "bytes": 2558
         }
       ]
     },
@@ -166,7 +166,51 @@
           "style": "traditional",
           "name": "Traditional",
           "desc": "Traditional",
-          "bytes": 2953
+          "bytes": 2977
+        },
+        {
+          "style": "contemporary",
+          "name": "Contemporary",
+          "desc": "Contemporary",
+          "bytes": 2455
+        },
+        {
+          "style": "flora",
+          "name": "Flora & Fauna",
+          "desc": "Flora & Fauna",
+          "bytes": 4744
+        },
+        {
+          "style": "premium",
+          "name": "Premium",
+          "desc": "Premium",
+          "bytes": 3660
+        },
+        {
+          "style": "minimalist",
+          "name": "Minimalist",
+          "desc": "Minimalist",
+          "bytes": 2041
+        },
+        {
+          "style": "artistic",
+          "name": "Artistic / Punk",
+          "desc": "Artistic / Punk",
+          "bytes": 2558
+        }
+      ]
+    },
+    {
+      "dataset": "full",
+      "widthMM": 110,
+      "heightMM": 80,
+      "seed": 7,
+      "styles": [
+        {
+          "style": "traditional",
+          "name": "Traditional",
+          "desc": "Traditional",
+          "bytes": 3146
         },
         {
           "style": "contemporary",
@@ -178,69 +222,25 @@
           "style": "flora",
           "name": "Flora & Fauna",
           "desc": "Flora & Fauna",
-          "bytes": 4720
+          "bytes": 4744
         },
         {
           "style": "premium",
           "name": "Premium",
           "desc": "Premium",
-          "bytes": 3636
+          "bytes": 3660
         },
         {
           "style": "minimalist",
           "name": "Minimalist",
           "desc": "Minimalist",
-          "bytes": 2017
+          "bytes": 2031
         },
         {
           "style": "artistic",
           "name": "Artistic / Punk",
           "desc": "Artistic / Punk",
-          "bytes": 2513
-        }
-      ]
-    },
-    {
-      "dataset": "full",
-      "widthMM": 110,
-      "heightMM": 80,
-      "seed": 7,
-      "styles": [
-        {
-          "style": "traditional",
-          "name": "Traditional",
-          "desc": "Traditional",
-          "bytes": 3122
-        },
-        {
-          "style": "contemporary",
-          "name": "Contemporary",
-          "desc": "Contemporary",
-          "bytes": 2407
-        },
-        {
-          "style": "flora",
-          "name": "Flora & Fauna",
-          "desc": "Flora & Fauna",
-          "bytes": 4720
-        },
-        {
-          "style": "premium",
-          "name": "Premium",
-          "desc": "Premium",
-          "bytes": 3636
-        },
-        {
-          "style": "minimalist",
-          "name": "Minimalist",
-          "desc": "Minimalist",
-          "bytes": 2007
-        },
-        {
-          "style": "artistic",
-          "name": "Artistic / Punk",
-          "desc": "Artistic / Punk",
-          "bytes": 2513
+          "bytes": 2558
         }
       ]
     },
@@ -254,37 +254,37 @@
           "style": "traditional",
           "name": "Traditional",
           "desc": "Traditional",
-          "bytes": 2957
+          "bytes": 2981
         },
         {
           "style": "contemporary",
           "name": "Contemporary",
           "desc": "Contemporary",
-          "bytes": 2585
+          "bytes": 2609
         },
         {
           "style": "flora",
           "name": "Flora & Fauna",
           "desc": "Flora & Fauna",
-          "bytes": 4857
+          "bytes": 4881
         },
         {
           "style": "premium",
           "name": "Premium",
           "desc": "Premium",
-          "bytes": 3639
+          "bytes": 3663
         },
         {
           "style": "minimalist",
           "name": "Minimalist",
           "desc": "Minimalist",
-          "bytes": 1994
+          "bytes": 2018
         },
         {
           "style": "artistic",
           "name": "Artistic / Punk",
           "desc": "Artistic / Punk",
-          "bytes": 2656
+          "bytes": 2710
         }
       ]
     },
@@ -298,37 +298,37 @@
           "style": "traditional",
           "name": "Traditional",
           "desc": "Traditional",
-          "bytes": 2957
+          "bytes": 2981
         },
         {
           "style": "contemporary",
           "name": "Contemporary",
           "desc": "Contemporary",
-          "bytes": 2585
+          "bytes": 2609
         },
         {
           "style": "flora",
           "name": "Flora & Fauna",
           "desc": "Flora & Fauna",
-          "bytes": 4857
+          "bytes": 4881
         },
         {
           "style": "premium",
           "name": "Premium",
           "desc": "Premium",
-          "bytes": 3639
+          "bytes": 3663
         },
         {
           "style": "minimalist",
           "name": "Minimalist",
           "desc": "Minimalist",
-          "bytes": 1994
+          "bytes": 2018
         },
         {
           "style": "artistic",
           "name": "Artistic / Punk",
           "desc": "Artistic / Punk",
-          "bytes": 2656
+          "bytes": 2710
         }
       ]
     },
@@ -342,7 +342,51 @@
           "style": "traditional",
           "name": "Traditional",
           "desc": "Traditional",
-          "bytes": 2957
+          "bytes": 2981
+        },
+        {
+          "style": "contemporary",
+          "name": "Contemporary",
+          "desc": "Contemporary",
+          "bytes": 2457
+        },
+        {
+          "style": "flora",
+          "name": "Flora & Fauna",
+          "desc": "Flora & Fauna",
+          "bytes": 4881
+        },
+        {
+          "style": "premium",
+          "name": "Premium",
+          "desc": "Premium",
+          "bytes": 3663
+        },
+        {
+          "style": "minimalist",
+          "name": "Minimalist",
+          "desc": "Minimalist",
+          "bytes": 2028
+        },
+        {
+          "style": "artistic",
+          "name": "Artistic / Punk",
+          "desc": "Artistic / Punk",
+          "bytes": 2710
+        }
+      ]
+    },
+    {
+      "dataset": "full",
+      "widthMM": 80,
+      "heightMM": 110,
+      "seed": 7,
+      "styles": [
+        {
+          "style": "traditional",
+          "name": "Traditional",
+          "desc": "Traditional",
+          "bytes": 3143
         },
         {
           "style": "contemporary",
@@ -354,69 +398,25 @@
           "style": "flora",
           "name": "Flora & Fauna",
           "desc": "Flora & Fauna",
-          "bytes": 4857
+          "bytes": 4881
         },
         {
           "style": "premium",
           "name": "Premium",
           "desc": "Premium",
-          "bytes": 3639
+          "bytes": 3663
         },
         {
           "style": "minimalist",
           "name": "Minimalist",
           "desc": "Minimalist",
-          "bytes": 2004
+          "bytes": 2018
         },
         {
           "style": "artistic",
           "name": "Artistic / Punk",
           "desc": "Artistic / Punk",
-          "bytes": 2656
-        }
-      ]
-    },
-    {
-      "dataset": "full",
-      "widthMM": 80,
-      "heightMM": 110,
-      "seed": 7,
-      "styles": [
-        {
-          "style": "traditional",
-          "name": "Traditional",
-          "desc": "Traditional",
-          "bytes": 3119
-        },
-        {
-          "style": "contemporary",
-          "name": "Contemporary",
-          "desc": "Contemporary",
-          "bytes": 2409
-        },
-        {
-          "style": "flora",
-          "name": "Flora & Fauna",
-          "desc": "Flora & Fauna",
-          "bytes": 4857
-        },
-        {
-          "style": "premium",
-          "name": "Premium",
-          "desc": "Premium",
-          "bytes": 3639
-        },
-        {
-          "style": "minimalist",
-          "name": "Minimalist",
-          "desc": "Minimalist",
-          "bytes": 1994
-        },
-        {
-          "style": "artistic",
-          "name": "Artistic / Punk",
-          "desc": "Artistic / Punk",
-          "bytes": 2656
+          "bytes": 2710
         }
       ]
     },
@@ -430,37 +430,37 @@
           "style": "traditional",
           "name": "Traditional",
           "desc": "Traditional",
-          "bytes": 2951
+          "bytes": 2975
         },
         {
           "style": "contemporary",
           "name": "Contemporary",
           "desc": "Contemporary",
-          "bytes": 2592
+          "bytes": 2616
         },
         {
           "style": "flora",
           "name": "Flora & Fauna",
           "desc": "Flora & Fauna",
-          "bytes": 4855
+          "bytes": 4879
         },
         {
           "style": "premium",
           "name": "Premium",
           "desc": "Premium",
-          "bytes": 3636
+          "bytes": 3660
         },
         {
           "style": "minimalist",
           "name": "Minimalist",
           "desc": "Minimalist",
-          "bytes": 2007
+          "bytes": 2031
         },
         {
           "style": "artistic",
           "name": "Artistic / Punk",
           "desc": "Artistic / Punk",
-          "bytes": 2503
+          "bytes": 2557
         }
       ]
     },
@@ -474,37 +474,37 @@
           "style": "traditional",
           "name": "Traditional",
           "desc": "Traditional",
-          "bytes": 2951
+          "bytes": 2975
         },
         {
           "style": "contemporary",
           "name": "Contemporary",
           "desc": "Contemporary",
-          "bytes": 2592
+          "bytes": 2616
         },
         {
           "style": "flora",
           "name": "Flora & Fauna",
           "desc": "Flora & Fauna",
-          "bytes": 4855
+          "bytes": 4879
         },
         {
           "style": "premium",
           "name": "Premium",
           "desc": "Premium",
-          "bytes": 3644
+          "bytes": 3668
         },
         {
           "style": "minimalist",
           "name": "Minimalist",
           "desc": "Minimalist",
-          "bytes": 2007
+          "bytes": 2031
         },
         {
           "style": "artistic",
           "name": "Artistic / Punk",
           "desc": "Artistic / Punk",
-          "bytes": 2503
+          "bytes": 2557
         }
       ]
     },
@@ -518,7 +518,51 @@
           "style": "traditional",
           "name": "Traditional",
           "desc": "Traditional",
-          "bytes": 2951
+          "bytes": 2975
+        },
+        {
+          "style": "contemporary",
+          "name": "Contemporary",
+          "desc": "Contemporary",
+          "bytes": 2454
+        },
+        {
+          "style": "flora",
+          "name": "Flora & Fauna",
+          "desc": "Flora & Fauna",
+          "bytes": 4879
+        },
+        {
+          "style": "premium",
+          "name": "Premium",
+          "desc": "Premium",
+          "bytes": 3668
+        },
+        {
+          "style": "minimalist",
+          "name": "Minimalist",
+          "desc": "Minimalist",
+          "bytes": 2041
+        },
+        {
+          "style": "artistic",
+          "name": "Artistic / Punk",
+          "desc": "Artistic / Punk",
+          "bytes": 2557
+        }
+      ]
+    },
+    {
+      "dataset": "full",
+      "widthMM": 100,
+      "heightMM": 80,
+      "seed": 7,
+      "styles": [
+        {
+          "style": "traditional",
+          "name": "Traditional",
+          "desc": "Traditional",
+          "bytes": 3144
         },
         {
           "style": "contemporary",
@@ -530,69 +574,25 @@
           "style": "flora",
           "name": "Flora & Fauna",
           "desc": "Flora & Fauna",
-          "bytes": 4855
+          "bytes": 4879
         },
         {
           "style": "premium",
           "name": "Premium",
           "desc": "Premium",
-          "bytes": 3644
+          "bytes": 3668
         },
         {
           "style": "minimalist",
           "name": "Minimalist",
           "desc": "Minimalist",
-          "bytes": 2017
+          "bytes": 2031
         },
         {
           "style": "artistic",
           "name": "Artistic / Punk",
           "desc": "Artistic / Punk",
-          "bytes": 2503
-        }
-      ]
-    },
-    {
-      "dataset": "full",
-      "widthMM": 100,
-      "heightMM": 80,
-      "seed": 7,
-      "styles": [
-        {
-          "style": "traditional",
-          "name": "Traditional",
-          "desc": "Traditional",
-          "bytes": 3120
-        },
-        {
-          "style": "contemporary",
-          "name": "Contemporary",
-          "desc": "Contemporary",
-          "bytes": 2406
-        },
-        {
-          "style": "flora",
-          "name": "Flora & Fauna",
-          "desc": "Flora & Fauna",
-          "bytes": 4855
-        },
-        {
-          "style": "premium",
-          "name": "Premium",
-          "desc": "Premium",
-          "bytes": 3644
-        },
-        {
-          "style": "minimalist",
-          "name": "Minimalist",
-          "desc": "Minimalist",
-          "bytes": 2007
-        },
-        {
-          "style": "artistic",
-          "name": "Artistic / Punk",
-          "desc": "Artistic / Punk",
-          "bytes": 2503
+          "bytes": 2557
         }
       ]
     },
@@ -606,37 +606,37 @@
           "style": "traditional",
           "name": "Traditional",
           "desc": "Traditional",
-          "bytes": 2130
+          "bytes": 2154
         },
         {
           "style": "contemporary",
           "name": "Contemporary",
           "desc": "Contemporary",
-          "bytes": 2083
+          "bytes": 2107
         },
         {
           "style": "flora",
           "name": "Flora & Fauna",
           "desc": "Flora & Fauna",
-          "bytes": 4162
+          "bytes": 4186
         },
         {
           "style": "premium",
           "name": "Premium",
           "desc": "Premium",
-          "bytes": 2700
+          "bytes": 2724
         },
         {
           "style": "minimalist",
           "name": "Minimalist",
           "desc": "Minimalist",
-          "bytes": 1639
+          "bytes": 1663
         },
         {
           "style": "artistic",
           "name": "Artistic / Punk",
           "desc": "Artistic / Punk",
-          "bytes": 2199
+          "bytes": 2233
         }
       ]
     },
@@ -650,37 +650,37 @@
           "style": "traditional",
           "name": "Traditional",
           "desc": "Traditional",
-          "bytes": 2130
+          "bytes": 2154
         },
         {
           "style": "contemporary",
           "name": "Contemporary",
           "desc": "Contemporary",
-          "bytes": 2083
+          "bytes": 2107
         },
         {
           "style": "flora",
           "name": "Flora & Fauna",
           "desc": "Flora & Fauna",
-          "bytes": 4162
+          "bytes": 4186
         },
         {
           "style": "premium",
           "name": "Premium",
           "desc": "Premium",
-          "bytes": 2700
+          "bytes": 2724
         },
         {
           "style": "minimalist",
           "name": "Minimalist",
           "desc": "Minimalist",
-          "bytes": 1639
+          "bytes": 1663
         },
         {
           "style": "artistic",
           "name": "Artistic / Punk",
           "desc": "Artistic / Punk",
-          "bytes": 2199
+          "bytes": 2233
         }
       ]
     },
@@ -694,37 +694,37 @@
           "style": "traditional",
           "name": "Traditional",
           "desc": "Traditional",
-          "bytes": 2130
+          "bytes": 2154
         },
         {
           "style": "contemporary",
           "name": "Contemporary",
           "desc": "Contemporary",
-          "bytes": 1931
+          "bytes": 1955
         },
         {
           "style": "flora",
           "name": "Flora & Fauna",
           "desc": "Flora & Fauna",
-          "bytes": 4162
+          "bytes": 4186
         },
         {
           "style": "premium",
           "name": "Premium",
           "desc": "Premium",
-          "bytes": 2700
+          "bytes": 2724
         },
         {
           "style": "minimalist",
           "name": "Minimalist",
           "desc": "Minimalist",
-          "bytes": 1645
+          "bytes": 1669
         },
         {
           "style": "artistic",
           "name": "Artistic / Punk",
           "desc": "Artistic / Punk",
-          "bytes": 2199
+          "bytes": 2233
         }
       ]
     },
@@ -738,37 +738,37 @@
           "style": "traditional",
           "name": "Traditional",
           "desc": "Traditional",
-          "bytes": 2406
+          "bytes": 2430
         },
         {
           "style": "contemporary",
           "name": "Contemporary",
           "desc": "Contemporary",
-          "bytes": 1913
+          "bytes": 1937
         },
         {
           "style": "flora",
           "name": "Flora & Fauna",
           "desc": "Flora & Fauna",
-          "bytes": 4162
+          "bytes": 4186
         },
         {
           "style": "premium",
           "name": "Premium",
           "desc": "Premium",
-          "bytes": 2700
+          "bytes": 2724
         },
         {
           "style": "minimalist",
           "name": "Minimalist",
           "desc": "Minimalist",
-          "bytes": 1639
+          "bytes": 1663
         },
         {
           "style": "artistic",
           "name": "Artistic / Punk",
           "desc": "Artistic / Punk",
-          "bytes": 2199
+          "bytes": 2233
         }
       ]
     },
@@ -782,37 +782,37 @@
           "style": "traditional",
           "name": "Traditional",
           "desc": "Traditional",
-          "bytes": 2132
+          "bytes": 2156
         },
         {
           "style": "contemporary",
           "name": "Contemporary",
           "desc": "Contemporary",
-          "bytes": 2083
+          "bytes": 2107
         },
         {
           "style": "flora",
           "name": "Flora & Fauna",
           "desc": "Flora & Fauna",
-          "bytes": 4299
+          "bytes": 4323
         },
         {
           "style": "premium",
           "name": "Premium",
           "desc": "Premium",
-          "bytes": 2858
+          "bytes": 2882
         },
         {
           "style": "minimalist",
           "name": "Minimalist",
           "desc": "Minimalist",
-          "bytes": 1640
+          "bytes": 1664
         },
         {
           "style": "artistic",
           "name": "Artistic / Punk",
           "desc": "Artistic / Punk",
-          "bytes": 2360
+          "bytes": 2388
         }
       ]
     },
@@ -826,37 +826,37 @@
           "style": "traditional",
           "name": "Traditional",
           "desc": "Traditional",
-          "bytes": 2132
+          "bytes": 2156
         },
         {
           "style": "contemporary",
           "name": "Contemporary",
           "desc": "Contemporary",
-          "bytes": 2083
+          "bytes": 2107
         },
         {
           "style": "flora",
           "name": "Flora & Fauna",
           "desc": "Flora & Fauna",
-          "bytes": 4299
+          "bytes": 4323
         },
         {
           "style": "premium",
           "name": "Premium",
           "desc": "Premium",
-          "bytes": 2858
+          "bytes": 2882
         },
         {
           "style": "minimalist",
           "name": "Minimalist",
           "desc": "Minimalist",
-          "bytes": 1640
+          "bytes": 1664
         },
         {
           "style": "artistic",
           "name": "Artistic / Punk",
           "desc": "Artistic / Punk",
-          "bytes": 2360
+          "bytes": 2388
         }
       ]
     },
@@ -870,37 +870,37 @@
           "style": "traditional",
           "name": "Traditional",
           "desc": "Traditional",
-          "bytes": 2132
+          "bytes": 2156
         },
         {
           "style": "contemporary",
           "name": "Contemporary",
           "desc": "Contemporary",
-          "bytes": 1932
+          "bytes": 1956
         },
         {
           "style": "flora",
           "name": "Flora & Fauna",
           "desc": "Flora & Fauna",
-          "bytes": 4299
+          "bytes": 4323
         },
         {
           "style": "premium",
           "name": "Premium",
           "desc": "Premium",
-          "bytes": 2858
+          "bytes": 2882
         },
         {
           "style": "minimalist",
           "name": "Minimalist",
           "desc": "Minimalist",
-          "bytes": 1646
+          "bytes": 1670
         },
         {
           "style": "artistic",
           "name": "Artistic / Punk",
           "desc": "Artistic / Punk",
-          "bytes": 2360
+          "bytes": 2388
         }
       ]
     },
@@ -914,37 +914,37 @@
           "style": "traditional",
           "name": "Traditional",
           "desc": "Traditional",
-          "bytes": 2407
+          "bytes": 2431
         },
         {
           "style": "contemporary",
           "name": "Contemporary",
           "desc": "Contemporary",
-          "bytes": 1914
+          "bytes": 1938
         },
         {
           "style": "flora",
           "name": "Flora & Fauna",
           "desc": "Flora & Fauna",
-          "bytes": 4299
+          "bytes": 4323
         },
         {
           "style": "premium",
           "name": "Premium",
           "desc": "Premium",
-          "bytes": 2858
+          "bytes": 2882
         },
         {
           "style": "minimalist",
           "name": "Minimalist",
           "desc": "Minimalist",
-          "bytes": 1640
+          "bytes": 1664
         },
         {
           "style": "artistic",
           "name": "Artistic / Punk",
           "desc": "Artistic / Punk",
-          "bytes": 2360
+          "bytes": 2388
         }
       ]
     },
@@ -958,37 +958,37 @@
           "style": "traditional",
           "name": "Traditional",
           "desc": "Traditional",
-          "bytes": 2128
+          "bytes": 2152
         },
         {
           "style": "contemporary",
           "name": "Contemporary",
           "desc": "Contemporary",
-          "bytes": 2080
+          "bytes": 2104
         },
         {
           "style": "flora",
           "name": "Flora & Fauna",
           "desc": "Flora & Fauna",
-          "bytes": 4162
+          "bytes": 4186
         },
         {
           "style": "premium",
           "name": "Premium",
           "desc": "Premium",
-          "bytes": 2700
+          "bytes": 2724
         },
         {
           "style": "minimalist",
           "name": "Minimalist",
           "desc": "Minimalist",
-          "bytes": 1639
+          "bytes": 1663
         },
         {
           "style": "artistic",
           "name": "Artistic / Punk",
           "desc": "Artistic / Punk",
-          "bytes": 2198
+          "bytes": 2232
         }
       ]
     },
@@ -1002,37 +1002,37 @@
           "style": "traditional",
           "name": "Traditional",
           "desc": "Traditional",
-          "bytes": 2128
+          "bytes": 2152
         },
         {
           "style": "contemporary",
           "name": "Contemporary",
           "desc": "Contemporary",
-          "bytes": 2080
+          "bytes": 2104
         },
         {
           "style": "flora",
           "name": "Flora & Fauna",
           "desc": "Flora & Fauna",
-          "bytes": 4162
+          "bytes": 4186
         },
         {
           "style": "premium",
           "name": "Premium",
           "desc": "Premium",
-          "bytes": 2700
+          "bytes": 2724
         },
         {
           "style": "minimalist",
           "name": "Minimalist",
           "desc": "Minimalist",
-          "bytes": 1639
+          "bytes": 1663
         },
         {
           "style": "artistic",
           "name": "Artistic / Punk",
           "desc": "Artistic / Punk",
-          "bytes": 2198
+          "bytes": 2232
         }
       ]
     },
@@ -1046,37 +1046,37 @@
           "style": "traditional",
           "name": "Traditional",
           "desc": "Traditional",
-          "bytes": 2128
+          "bytes": 2152
         },
         {
           "style": "contemporary",
           "name": "Contemporary",
           "desc": "Contemporary",
-          "bytes": 1930
+          "bytes": 1954
         },
         {
           "style": "flora",
           "name": "Flora & Fauna",
           "desc": "Flora & Fauna",
-          "bytes": 4162
+          "bytes": 4186
         },
         {
           "style": "premium",
           "name": "Premium",
           "desc": "Premium",
-          "bytes": 2700
+          "bytes": 2724
         },
         {
           "style": "minimalist",
           "name": "Minimalist",
           "desc": "Minimalist",
-          "bytes": 1645
+          "bytes": 1669
         },
         {
           "style": "artistic",
           "name": "Artistic / Punk",
           "desc": "Artistic / Punk",
-          "bytes": 2198
+          "bytes": 2232
         }
       ]
     },
@@ -1090,37 +1090,37 @@
           "style": "traditional",
           "name": "Traditional",
           "desc": "Traditional",
-          "bytes": 2404
+          "bytes": 2428
         },
         {
           "style": "contemporary",
           "name": "Contemporary",
           "desc": "Contemporary",
-          "bytes": 1912
+          "bytes": 1936
         },
         {
           "style": "flora",
           "name": "Flora & Fauna",
           "desc": "Flora & Fauna",
-          "bytes": 4162
+          "bytes": 4186
         },
         {
           "style": "premium",
           "name": "Premium",
           "desc": "Premium",
-          "bytes": 2700
+          "bytes": 2724
         },
         {
           "style": "minimalist",
           "name": "Minimalist",
           "desc": "Minimalist",
-          "bytes": 1639
+          "bytes": 1663
         },
         {
           "style": "artistic",
           "name": "Artistic / Punk",
           "desc": "Artistic / Punk",
-          "bytes": 2198
+          "bytes": 2232
         }
       ]
     }
