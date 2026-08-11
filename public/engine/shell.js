@@ -497,7 +497,7 @@ function wirePreviewLoader(btnId, loaderId, revealId, manual){
   function showFact(i){if(!factEl)return;factEl.classList.add('off');
     setTimeout(()=>{factEl.textContent=FACTS[i%FACTS.length];factEl.classList.remove('off');},500);}
   function startFacts(){if(!factEl)return;factEl.textContent=FACTS[factIdx%FACTS.length];factEl.classList.remove('off');
-    factTimer=setInterval(()=>{factIdx++;showFact(factIdx);},7000);}
+    factTimer=setInterval(()=>{factIdx++;showFact(factIdx);},12000);}
   function stopFacts(){if(factTimer){clearInterval(factTimer);factTimer=null;}factIdx++;}
   btn.addEventListener('click',()=>{
     if(running) return;
