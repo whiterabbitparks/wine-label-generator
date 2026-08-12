@@ -9,7 +9,20 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "invalid JSON body" }, { status: 400 });
   }
-  if (!(await checkCredentials(body.username, body.password))) {
+  let ok = false;
+  try {
+    ok = await checkCredentials(body.username, body.password);
+  } catch (e) {
+    // DB unreachable/unconfigured must surface as JSON, not a bare 500 —
+    // Safari turns a non-JSON body into "The string did not match the
+    // expected pattern", which hides the real problem.
+    const msg = e instanceof Error ? e.message : String(e);
+    return NextResponse.json(
+      { error: `database not connected: ${msg}` },
+      { status: 503 }
+    );
+  }
+  if (!ok) {
     return NextResponse.json({ error: "invalid username or password" }, { status: 401 });
   }
   const token = await createSession();

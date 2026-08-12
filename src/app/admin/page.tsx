@@ -157,7 +157,11 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
       body: JSON.stringify({ username, password }),
     });
     if (!r.ok) {
-      setError((await r.json()).error || "login failed");
+      const msg = await r
+        .json()
+        .then((b) => b.error)
+        .catch(() => null);
+      setError(msg || `login failed (${r.status})`);
       return;
     }
     onSuccess();
