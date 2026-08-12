@@ -41,9 +41,9 @@ const REF={
   vintage:       {x:0.3853,y:0.7726,w:0.2295,h:0.0662, sz:0.04725, wt:600, a:'center'},   // Hepta Slab Semibold
   regionCountry: {x:0.0000,y:0.7927,w:0.3589,h:0.0461, sz:0.03150, wt:600, a:'left'},     // Hepta Slab Semibold
   special:       {x:0.6404,y:0.7927,w:0.3589,h:0.0461, sz:0.03150, wt:600, a:'right'},    // Hepta Slab Semibold
-  classification:{x:0.2926,y:0.8809,w:0.4111,h:0.0414, sz:0.03465, wt:200, a:'center'},   // own centred row (swapped)
-  attributes:    {x:0.0000,y:0.9130,w:1.0000,h:0.0415, sz:0.0210, wt:200, a:'left', grp:1},   // Sweetness/Color/Type labelled row
-  alcVol:        {x:0.0000,y:0.9560,w:1.0000,h:0.0415, sz:0.0210, wt:200, a:'left', grp:1}     // Alc./Vol. labelled row
+  classification:{x:0.2926,y:0.8500,w:0.4111,h:0.0414, sz:0.03465, wt:200, a:'center'},   // own centred row (swapped)
+  attributes:    {x:0.0000,y:0.9080,w:1.0000,h:0.0415, sz:0.0210, wt:200, a:'left', grp:1},   // Sweetness/Color/Type labelled row
+  alcVol:        {x:0.0000,y:0.9600,w:1.0000,h:0.0415, sz:0.0210, wt:200, a:'left', grp:1}     // Alc./Vol. labelled row
 };
 const LOGO={x:0.5500,y:0.0350,w:0.4200,h:0.0730};   // upload-logo box: right half of the top row, beside the producer box
 const REF_RATIO=(768.3-54.6)/(618.9-46.8);          // content-box aspect from the reference PDF

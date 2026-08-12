@@ -44,7 +44,7 @@ cfg = cfg.replace('>Front Label Information<span', '>FRONT LABEL<span');
 
 // (b) styles: scoped editor + regenerate button + option cells + gallery
 const CSS = '<style>'
- + '.eng-regen{display:block;width:100%;margin:72px 0 0;background:var(--olive);color:var(--white);border:none;padding:16px;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;border-radius:var(--radius);}'
+ + '.eng-regen{display:block;width:100%;margin:56px 0 0;background:var(--olive);color:var(--white);border:none;padding:16px;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;border-radius:var(--radius);}'
  + '.eng-regen:hover{background:var(--olive-dark);}'
  + '#frontThumbs .thumb-box{border:none !important;background:transparent !important;padding:0 !important;}'
  + '#frontThumbs .thumb-box svg{width:100% !important;height:100% !important;display:block;}'
@@ -57,7 +57,7 @@ const CSS = '<style>'
  + '#frontThumbs .eng-radio{width:17px;height:17px;border-radius:50%;border:2px solid rgba(220,40,60,.6);position:relative;flex:0 0 auto;}'
  + '#frontThumbs .eng-radio.on{border-color:var(--olive);}'
  + '#frontThumbs .eng-radio.on::after{content:"";position:absolute;top:3px;left:3px;right:3px;bottom:3px;border-radius:50%;background:var(--olive);}'
- + '#frontThumbs .eng-optlab{font-size:8px;color:var(--ink);font-weight:600;}'
+ + '#frontThumbs .eng-optlab{font-size:10.5px;color:var(--ink);font-weight:600;}'
  + '#frontThumbs .eng-dl{margin-top:7px;color:var(--olive-dark);text-decoration:underline;cursor:pointer;font-size:12px;}'
  + '#eng-gallery{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;}'
  + '#eng-gallery .eng-gv-back{position:absolute;inset:0;background:rgba(24,21,17,.85);}'
@@ -74,7 +74,7 @@ const CSS = '<style>'
  // --- front-preview / other-options buttons share one slot, symmetric to the dashed line ---
  + '#frontPreviewBtn{margin:56px 0 0}'                                                 // extra breathing room between the layout preview and the button
  + '#frontReveal{margin-top:34px}'                                                     // "Other options" (top of reveal) lands in the same slot the button occupied
- + '#frontReveal > .eng-regen{margin:0 0 30px}'
+ + '#frontReveal > .eng-regen{margin:56px 0 0}'
  // --- helper note + dashed dividers + width/height row (all centred) ---
  + '#labelEditor .le-note{max-width:560px;margin:44px auto 0;text-align:center;font-size:12.5px;line-height:1.45;color:#9B968A;font-style:italic}'   // instruction below the label (matched gap)
  + '#labelEditor .le-divider{border-top:1px dashed rgba(220,40,60,.6);max-width:560px;margin:22px auto}'      // grey dashed line between sections
@@ -114,7 +114,7 @@ const CSS = '<style>'
  + '#labelEditor .le2-upload{background:none;border:none;cursor:pointer;color:var(--ink);font-family:inherit;font-weight:200;font-size:inherit;text-decoration:underline;text-underline-offset:2px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;padding:0}'
  + '#labelEditor .le2-upload .ar{text-decoration:none;font-weight:200}'
  + '#labelEditor .le2-or{position:absolute;box-sizing:border-box;display:flex;align-items:center;justify-content:center;color:rgba(220,40,60,.7);font-family:inherit;font-weight:400;z-index:2}'   // "or" between producer & upload-logo
- + '.__theme__{}' + ':root{--cream:#f6f5f2;--cream-dark:#ECE9E1;--ink:#dc283c;--ink-soft:rgba(220,40,60,.78);' + '--olive:#dc283c;--olive-dark:#b81f31;--olive-light:rgba(220,40,60,.5);' + '--line:rgba(220,40,60,.6);--divider:rgba(220,40,60,.6);--white:#f6f5f2;--radius:8px;}' + 'body{background:#f6f5f2;color:var(--ink);}' + 'input,select,textarea{background:#f6f5f2;color:var(--ink);border-color:rgba(220,40,60,.6);border-radius:8px;}' + '::placeholder{color:rgba(220,40,60,.55);opacity:1;}' + '.preview-loader{background:#f6f5f2;}' + '.dash-sep{border-top-color:rgba(220,40,60,.6);}' + '.preview-btn.stale{background:rgba(220,40,60,.35) !important;}' + '.le2-box{border-radius:8px;}' + '.upload-btn,.upload-btn-wide{border-radius:8px;}' + 'footer{background:#1E1E1E;color:#EDEBE6;}footer a{color:#EDEBE6;}' + 'textarea{color:#9B968A;}textarea::placeholder,input::placeholder{color:#9B968A;opacity:.85}' + '.word-count,.brief-intro{color:#9B968A;}' + '#engRegenSep{margin:26px 0 22px;}' + '#backThumbs .thumb-box,#backReveal .thumb-box{border:none;box-shadow:none;background:transparent;}' + '#labelEditor .le2-box.grp[data-zfid=alcVol]{justify-content:space-between;}' + '.le2-avgrp{display:inline-flex;align-items:center;gap:.45em;white-space:nowrap;}'
+ + '.__theme__{}' + ':root{--cream:#f6f5f2;--cream-dark:#ECE9E1;--ink:#dc283c;--ink-soft:rgba(220,40,60,.78);' + '--olive:#dc283c;--olive-dark:#b81f31;--olive-light:rgba(220,40,60,.5);' + '--line:rgba(220,40,60,.6);--divider:rgba(220,40,60,.6);--white:#f6f5f2;--radius:8px;}' + 'body{background:#f6f5f2;color:var(--ink);}' + 'input,select,textarea{background:#f6f5f2;color:var(--ink);border-color:rgba(220,40,60,.6);border-radius:8px;}' + '::placeholder{color:rgba(220,40,60,.55);opacity:1;}' + '.preview-loader{background:#f6f5f2;}' + '.dash-sep{border-top-color:rgba(220,40,60,.6);}' + '.preview-btn.stale{background:rgba(220,40,60,.35) !important;}' + '.le2-box{border-radius:8px;}' + '.upload-btn,.upload-btn-wide{border-radius:8px;}' + 'footer{background:#1E1E1E;color:#EDEBE6;}footer a{color:#EDEBE6;}' + 'textarea{color:#9B968A;}textarea::placeholder,input::placeholder{color:#9B968A;opacity:.85}' + '.word-count,.brief-intro{color:#9B968A;}' + '#engRegenSep{margin:30px 0 0;}' + '#panel-front .pricing{margin-top:23px;}' + '#backThumbs .thumb-box,#backReveal .thumb-box{border:none;box-shadow:none;background:transparent;}' + '#labelEditor .le2-box.grp[data-zfid=alcVol]{justify-content:space-between;}' + '.le2-avgrp{display:inline-flex;align-items:center;gap:.45em;white-space:nowrap;}'
  + '</style>';
 
 const inject = '\n' + CSS + '\n<script>\n' + imgData + '\n</'+'script>\n<script>\n' + engine + '\n</'+'script>\n<script>\n' + editorJs + '\n</'+'script>\n<script>\n' + imgGenJs + '\n</'+'script>\n';
