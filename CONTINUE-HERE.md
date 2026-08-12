@@ -145,7 +145,20 @@ assembly happens server-side, one prompt per label style:
   **revert by setting `DEMO_FILL=false`** (then rebuild + extract + re-run
   gates). The empty-box warning and grey placeholders are unaffected.
 
-## 5c. Reference-driven design rules (branch Labels_By_Reference_Test)
+## 5c. Reference-FIRST layouts (branch Labels_By_Reference_Test)
+
+**2026-08-11 second pass (owner decision): the PDF layout templates are
+RETIRED on this branch.** All six styles' compositions are designed from the
+`Layout Styles/References/` boards. Rules kept: element hierarchy, NO text
+overlap at any size (sFlow gap-tracked stacks + sRow disjoint zones +
+single-line shrink-to-fit heroes), text never covers the artwork's focal
+area (zones placed per composition at design time), Google/free fonts only.
+26 compositions total: Traditional 5, Contemporary 5, Flora 4, Premium 3,
+Minimalist 4 (incl. colour panel), Artistic 4 — each with focal/fade artwork
+zones and per-style palette rotation. The `Layout Styles/*.pdf` era survives
+on branch Popika_test if ever needed.
+
+## 5c-old. Reference-driven design rules (first pass)
 
 Derived 2026-08-11 from the owner's `Layout Styles/References/` (211 images,
 6 styles). PDF geometry, sizes and hierarchy stay authoritative; references
