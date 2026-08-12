@@ -53,7 +53,7 @@
     font-family:'Hepta Slab',serif;font-weight:700;font-size:20px;
     letter-spacing:-1px;
   }
-  .logo .word{font-size:10px;letter-spacing:.18em;font-weight:700;}
+  .logo .word{font-size:11px;letter-spacing:.12em;font-weight:600;text-transform:uppercase;}
   .topnav{display:flex;gap:32px;}
   .topnav a{
     text-decoration:none;color:var(--ink);
@@ -572,6 +572,8 @@
     cursor:pointer;border-radius:var(--radius);
   }
   .pay-btn:hover{background:var(--olive-dark);}
+  .dash-sep{border-top:2px dashed #CFC9BA;margin:26px 0 22px;}
+  .preview-btn.stale{background:#B9B6AC !important;cursor:default;pointer-events:none;}
   .toast{
     position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
     background:var(--ink);color:var(--cream);padding:12px 22px;border-radius:3px;font-size:12.5px;

@@ -834,7 +834,10 @@ function sFields(d){const j=(a,s)=>a.map(x=>String(x==null?'':x).trim()).filter(
     appellation:String(d.appellation||'').trim(),grape:String(d.grape||'').trim(),
     region:j([d.region,d.country],', '),special:String(d.special||'').trim(),
     vintage:String(d.vintage||'').trim(),classification:String(d.classification||'').trim(),
-    descriptor:wineDescriptor(d),alc:j([d.alcohol,d.volume],'   '),accent:lcAccent(d)};}
+    descriptor:wineDescriptor(d),
+    alc:(function(){var n=function(v,def){var m=String(v==null?'':v).match(/(\d+(?:[.,]\d+)?)/);return m?m[1].replace(',','.'):def;};
+      return n(d.alcohol,'12.5')+'% Alc. by Vol. / '+n(d.volume,'750')+' mL';})(),
+    accent:lcAccent(d)};}
 function sWrap(W,H,twMM,thMM,bg,body,defs){
   return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W.toFixed(1)} ${H.toFixed(1)}" width="${twMM}mm" height="${thMM}mm">`
     +`<defs><style><![CDATA[@import url('${FONTS_URL}');]]></style>${defs||''}</defs>`
@@ -965,7 +968,7 @@ function styleTraditional(d,order,seed,twMM,thMM){
   const INK='#26221E', SUB='#5D564C';
   const cx=W/2, cW=W-2*SM;
   const variant=Math.floor(seed/2)%5;
-  const alc=f.alc?('Alc.: '+f.alc.replace(/\s{2,}/g,' / ')+'.'):'';
+  const alc=f.alc;
   const desc=(f.descriptor||'').replace(/,/g,'');
   let body='';
   const EG=SF.ebg, PF=SF.playfair, CI=F.cormorant;
@@ -1040,7 +1043,7 @@ function styleContemporary(f,W,H,seed,twMM,thMM){
   const SCH=CSCH[Math.floor(seed/2)%CSCH.length];
   const INK=SCH.ink, SUB=SCH.sub, cx=W/2, cW=W-2*SM;
   const variant=Math.floor(seed/2)%5;
-  const alc=f.alc?('Alc. '+f.alc.replace(/\s{2,}/g,' Vol. / ')+'.'):'';
+  const alc=f.alc;
   const desc=(f.descriptor||'').replace(/,/g,'');
   const reg=[f.region,f.special].filter(Boolean).join(' / ');
   let body='';
@@ -1103,7 +1106,7 @@ function styleFlora(f,W,H,seed,twMM,thMM){
   const [BG,ACC]=FPAL[Math.floor(seed/2)%FPAL.length];
   const INK='#2B2620', SUB='#6E6555', cx=W/2, cW=W-2*SM;
   const variant=Math.floor(seed/2)%4;
-  const alc=f.alc?('Alc.: '+f.alc.replace(/\s{2,}/g,' / ')+'.'):'';
+  const alc=f.alc;
   const desc=(f.descriptor||'').replace(/,/g,'');
   const reg=[f.region,f.special].filter(Boolean).join(' \u00b7 ');
   let body='';
@@ -1162,7 +1165,7 @@ function stylePremium(f,W,H,seed,twMM,thMM){
   const defs=`<linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#D8BC85"/><stop offset="0.5" stop-color="#B08D57"/><stop offset="1" stop-color="#8C6A32"/></linearGradient>`;
   const cx=W/2, cW=W-2*SM;
   const variant=Math.floor(seed/2)%3;
-  const alc=f.alc?('Alc.: '+f.alc.replace(/\s{2,}/g,' / ')+'.'):'';
+  const alc=f.alc;
   const desc=(f.descriptor||'').replace(/,/g,'');
   const reg=[f.region,f.special].filter(Boolean).join(' \u00b7 ');
   let body='';
@@ -1215,7 +1218,7 @@ function styleMinimal(f,W,H,seed,twMM,thMM){
   const INK=MS.ink, SUB=MS.sub, cx=W/2, cW=W-2*SM;
   const variant=Math.floor(seed/2)%4;
   const line1=[f.grape,f.classification,f.region].filter(Boolean).join(' / ');
-  const line2=[f.special,f.vintage,f.alc?('Alc.: '+f.alc.replace(/\s{2,}/g,' / ')+'.'):''].filter(Boolean).join(' / ');
+  const line2=[f.special,f.vintage,f.alc].filter(Boolean).join(' / ');
   let body='';
   if(variant===0||variant===3){ // centred: tiny mark high, airy stack (dot/blob boards + colour panel)
     if(!MS.panel) body+=sImageZone('minimalist',{focal:[0.44,0.16,0.56,0.36],fade:[0.37,0.10,0.63,0.44],shape:'ellipse'},W,H);
@@ -1258,7 +1261,7 @@ function styleArtistic(f,W,H,seed,twMM,thMM){
   const AC=loud?'#171512':(dark?'#E8542F':'#C22A1C');
   const cx=W/2, cW=W-2*SM;
   const variant=Math.floor(seed/2)%4;
-  const alc=f.alc?('Alc. '+f.alc.replace(/\s{2,}/g,' / ')+'.'):'';
+  const alc=f.alc;
   const desc=(f.descriptor||'').replace(/,/g,'');
   const reg=[f.region,f.special].filter(Boolean).join(' \u00b7 ');
   let body='';

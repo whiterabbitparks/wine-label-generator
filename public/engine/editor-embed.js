@@ -62,7 +62,8 @@ function ensureContainers(){
       +'<div class="le-divider le-full"></div>'                                     // grey dashed line, full width across the margin, between size row and label
       +'<div class="le-warn" id="le_warn" style="display:none">No label details were provided. If you want to generate a blank label, simply click <b>Show Labels</b> again.</div>'
       +'<div class="le2-wrap"><div class="le2-stage" id="le_wire"></div></div>'     // the single, centred layout-preview interface
-      +'<div class="le-note">This is not the final label design. It is a layout template to help you enter your label details in the correct visual hierarchy. Enter only the information you want printed on your label, and feel free to leave any fields blank. The final label will be generated based on the information you provide, and you can edit or update any of these details after your label has been generated.</div>';
+      +'<div class="le-note">This is not the final label design. It is a layout template to help you enter your label details in the correct visual hierarchy. Enter only the information you want printed on your label, and feel free to leave any fields blank. The final label will be generated based on the information you provide, and you can edit or update any of these details after your label has been generated.</div>'
+      +'<div class="dash-sep"></div>';
   }
   return host;
 }
@@ -175,10 +176,11 @@ function getLabelData(){var rc=parseRegion(dcv('regionCountry')),av=FIELDS.alcVo
   var sweet=isNA(at.sweetness)?'':at.sweetness, colour=isNA(at.colour)?'':at.colour, type=isNA(at.category)?'':at.category;
   return {producer:dcv('producer'),wine:dcv('wineName'),appellation:dcv('appellation'),classification:dcv('classification'),
     grape:dcv('grape'),region:rc.region,country:rc.country,special:dcv('special'),vintage:dcv('vintage'),
-    alcohol:demoAv(av.alcohol,'12%'),volume:demoAv(av.volume,'750 ml'),sweetness:sweet,wineType:type,wineColorName:colour,wineColor:COLORHEX[colour]||'#6E1423'};}
+    alcohol:demoAv(av.alcohol,'12.5%'),volume:demoAv(av.volume,'750 mL'),sweetness:sweet,wineType:type,wineColorName:colour,wineColor:COLORHEX[colour]||'#6E1423'};}
 function currentStyle(){var c=document.querySelector('.style-card.selected');return c?c.dataset.style:'';}
 function dl(svg,name){var b=new Blob([svg],{type:'image/svg+xml'});var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(function(){URL.revokeObjectURL(u);},1000);}
 let baseSeed=0, allOpts=[], selIdx=-1, galIdx=0, warned=false, shown=false;
+let altMode=null;   // {styleKey, base} — "See Alternatives": 6 seeds of ONE style
 /* Generate the artwork set, then paint. While the set is generating, the
    Show Labels glass loader (Loader.pdf) fills in sync with REAL progress —
    one increment per completed style artwork — and the labels reveal only
@@ -195,14 +197,18 @@ function withArtwork(btn,go){var gen=window.EightKImageGen;
       if(window.__frontLoaderFail)window.__frontLoaderFail();
       alert('Image generation failed: '+(e&&e.message||e));})
     .then(function(){if(pending&&btn){btn.disabled=false;btn.textContent=old;}go();});}
-function mkRegen(){var rb=document.createElement('button');rb.type='button';rb.className='eng-regen';rb.textContent='Layout alternatives';rb.addEventListener('click',function(){var b=this;withArtwork(b,function(){baseSeed+=2;selIdx=-1;paint();});});return rb;}
+function mkRegen(){var rb=document.createElement('button');rb.type='button';rb.className='eng-regen';rb.textContent='Layout alternatives';rb.addEventListener('click',function(){var b=this;withArtwork(b,function(){altMode=null;baseSeed+=2;selIdx=-1;paint();});});return rb;}
 function ensureExtras(){var reveal=document.getElementById('frontReveal');if(!reveal)return;
   var oldNote=document.getElementById('engStyleNote');if(oldNote)oldNote.remove();
   var oldTop=document.getElementById('engRegenTop');if(oldTop)oldTop.remove();
-  // "Other options" replaces the "Front Label Previews" button and sits BEFORE the labels grid
-  // (top of the reveal block, so it appears together with the labels rather than over the loader).
+  // "Layout alternatives" sits BELOW the labels grid, with a dashed rule under it
   var grid=document.getElementById('frontThumbs');
-  if(grid&&!document.getElementById('engRegen')){var rb=mkRegen();rb.id='engRegen';reveal.insertBefore(rb,reveal.firstChild);}
+  if(grid&&!document.getElementById('engRegen')){
+    var rb=mkRegen();rb.id='engRegen';
+    grid.parentNode.insertBefore(rb,grid.nextSibling);
+    var ds=document.createElement('div');ds.className='dash-sep';ds.id='engRegenSep';
+    rb.parentNode.insertBefore(ds,rb.nextSibling);
+  }
 }
 function galShow(i){var ov=document.getElementById('eng-gallery');if(!ov||!allOpts.length)return;galIdx=(i+allOpts.length)%allOpts.length;
   ov.querySelector('.eng-gv-stage').innerHTML=allOpts[galIdx].svg;ov.querySelector('.eng-gv-cap').textContent=(allOpts[galIdx].name||('Style '+(galIdx+1)))+' — '+(galIdx+1)+' of '+allOpts.length;
@@ -220,7 +226,18 @@ function openGallery(idx){var ov=document.getElementById('eng-gallery');
   ov.style.display='flex';galShow(idx);}
 function paint(){if(!window.LabelEngine)return;shown=true;var d=getLabelData();var dm=dims();ensureExtras();
   // 6 options = 6 distinct STYLES of the same label (Traditional, Contemporary, Flora & Fauna, Premium, Minimalist, Artistic/Punk)
-  allOpts=window.LabelEngine.renderStyleOptions(d,order.slice(),{widthMM:dm.W,heightMM:dm.H,seed:baseSeed});
+  if(altMode){
+    var sidx=window.LabelEngine.STYLE_LIST.findIndex(function(st){return st.key===altMode.styleKey;});
+    if(sidx<0)sidx=0;
+    allOpts=[];
+    for(var kk=0;kk<6;kk++){
+      var oo=window.LabelEngine.renderStyleOptions(d,order.slice(),{widthMM:dm.W,heightMM:dm.H,seed:altMode.base+kk*2})[sidx];
+      oo=Object.assign({},oo); oo.name=(oo.name||'Style')+' \u2014 Alternative '+(kk+1);
+      allOpts.push(oo);
+    }
+  }else{
+    allOpts=window.LabelEngine.renderStyleOptions(d,order.slice(),{widthMM:dm.W,heightMM:dm.H,seed:baseSeed});
+  }
   var grid=document.getElementById('frontThumbs');if(!grid)return;
   grid.style.display='grid';grid.style.gridTemplateColumns='repeat(3,1fr)';grid.style.gap='34px 24px';grid.style.alignItems='start';grid.innerHTML='';
   allOpts.forEach(function(o,i){
@@ -230,14 +247,19 @@ function paint(){if(!window.LabelEngine)return;shown=true;var d=getLabelData();v
     var row=document.createElement('div');row.className='eng-selrow';
     var radio=document.createElement('span');radio.className='eng-radio'+(selIdx===i?' on':'');
     var lab=document.createElement('span');lab.className='eng-optlab';lab.textContent=(i+1)+'. '+(o.name||('Style '+(i+1)));
-    var dlk=document.createElement('a');dlk.className='eng-dl';dlk.href='#';dlk.textContent='Download SVG';
-    dlk.addEventListener('click',function(ev){ev.preventDefault();ev.stopPropagation();dl(o.svg,(d.wine||'label').replace(/[^a-z0-9]+/gi,'_')+'_'+String(o.name||('style_'+(i+1))).replace(/[^a-z0-9]+/gi,'_')+'.svg');});
+    var dlk=null;
+    if(selIdx===i){
+      dlk=document.createElement('a');dlk.className='eng-dl';dlk.href='#';dlk.textContent='See Alternatives';
+      dlk.addEventListener('click',function(ev){ev.preventDefault();ev.stopPropagation();
+        altMode={styleKey:o.style||o.rank,base:(altMode&&altMode.styleKey===(o.style||o.rank))?altMode.base+12:baseSeed+2};
+        selIdx=-1;paint();});
+    }
     row.appendChild(radio);row.appendChild(lab);
     row.addEventListener('click',function(){selIdx=i;paint();});
-    cell.appendChild(box);cell.appendChild(row);cell.appendChild(dlk);grid.appendChild(cell);
+    cell.appendChild(box);cell.appendChild(row);if(dlk)cell.appendChild(dlk);grid.appendChild(cell);
   });
   // once labels exist, the "Front Label Previews" button is replaced by "Other options" (both sit before the grid)
-  var pv=document.getElementById('frontPreviewBtn');if(pv)pv.style.display='none';
+  var pv=document.getElementById('frontPreviewBtn');if(pv)pv.style.display='';   // stays visible; the 'stale' class greys it until new input
   var eb=document.getElementById('engRegen');if(eb)eb.style.display='block';
 }
 
@@ -267,8 +289,20 @@ function boot(){
       // the prototype page pre-loads #frontThumbs with 4 static demo images —
       // clear them so the reveal never flashes the old grid before paint()
       var g=document.getElementById('frontThumbs');if(g&&!shown)g.innerHTML='';
-      setTimeout(function(){withArtwork(b,function(){if(window.LabelEngine){window.LabelEngine.ensureFonts().then(function(){baseSeed=0;selIdx=-1;paint();
+      setTimeout(function(){withArtwork(b,function(){if(window.LabelEngine){window.LabelEngine.ensureFonts().then(function(){altMode=null;baseSeed=0;selIdx=-1;paint();
         if(window.__frontLoaderDone)window.__frontLoaderDone();});}});},50);});
+    // any new input (story, sketch, any label detail) re-arms Show Labels
+    var pf=document.getElementById('panel-front');
+    if(pf&&!pf._freshWired){pf._freshWired=true;
+      ['input','change'].forEach(function(ev){pf.addEventListener(ev,function(){if(window.__frontBtnFresh)window.__frontBtnFresh();},true);});}
+    // Proceed to Payment downloads the SELECTED label's SVG
+    var payBtn=document.querySelector('#panel-front .pay-btn');
+    if(payBtn&&!payBtn._dlWired){payBtn._dlWired=true;
+      payBtn.addEventListener('click',function(){
+        if(shown&&selIdx>=0&&allOpts[selIdx]){
+          var nm=(getLabelData().wine||'label').replace(/[^a-z0-9]+/gi,'_');
+          dl(allOpts[selIdx].svg,nm+'_'+String(allOpts[selIdx].name||'label').replace(/[^a-z0-9]+/gi,'_')+'.svg');
+        }});}
   }
 }
 // expose data + repaint so the image-generation module can read wine details and refresh shown labels

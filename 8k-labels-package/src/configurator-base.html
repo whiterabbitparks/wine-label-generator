@@ -61,7 +61,7 @@
     font-family:'Hepta Slab',serif;font-weight:700;font-size:20px;
     letter-spacing:-1px;
   }
-  .logo .word{font-size:10px;letter-spacing:.18em;font-weight:700;}
+  .logo .word{font-size:11px;letter-spacing:.12em;font-weight:600;text-transform:uppercase;}
   .topnav{display:flex;gap:32px;}
   .topnav a{
     text-decoration:none;color:var(--ink);
@@ -580,6 +580,8 @@
     cursor:pointer;border-radius:var(--radius);
   }
   .pay-btn:hover{background:var(--olive-dark);}
+  .dash-sep{border-top:2px dashed #CFC9BA;margin:26px 0 22px;}
+  .preview-btn.stale{background:#B9B6AC !important;cursor:default;pointer-events:none;}
   .toast{
     position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
     background:var(--ink);color:var(--cream);padding:12px 22px;border-radius:3px;font-size:12.5px;
@@ -745,6 +747,7 @@
     <div class="reveal-block" id="frontReveal">
       <div class="thumb-grid" id="frontThumbs"></div>
 
+      <div class="dash-sep"></div>
       <div class="pricing">
         <div class="price-row required">
           <input class="dot-input" type="checkbox" checked disabled data-price="129">
@@ -1540,8 +1543,9 @@ function wirePreviewLoader(btnId, loaderId, revealId, manual){
   function stopFacts(){if(factTimer){clearInterval(factTimer);factTimer=null;}factIdx++;}
   btn.addEventListener('click',()=>{
     if(running) return;
+    if(manual&&btn.classList.contains('stale')) return;
     running=true;
-    btn.style.display='none';
+    if(manual){btn.classList.add('stale');}else{btn.style.display='none';}
     reveal.classList.remove('shown');
     reveal.style.display='none';
     if(liquidRect){liquidRect.setAttribute('y',251);liquidRect.setAttribute('height',0);}
@@ -1583,9 +1587,11 @@ function wirePreviewLoader(btnId, loaderId, revealId, manual){
   window.__frontLoaderFail=function(){
     if(!running) return;
     loader.style.display='none';
-    btn.style.display='';
+    btn.classList.remove('stale');
     running=false;
   };
+  // any new input in the front panel re-arms the button (green again)
+  window.__frontBtnFresh=function(){btn.classList.remove('stale');};
 }
 wirePreviewLoader('frontPreviewBtn','frontLoader','frontReveal', true);
 wirePreviewLoader('backPreviewBtn','backLoader','backReveal');

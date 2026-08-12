@@ -501,8 +501,9 @@ function wirePreviewLoader(btnId, loaderId, revealId, manual){
   function stopFacts(){if(factTimer){clearInterval(factTimer);factTimer=null;}factIdx++;}
   btn.addEventListener('click',()=>{
     if(running) return;
+    if(manual&&btn.classList.contains('stale')) return;
     running=true;
-    btn.style.display='none';
+    if(manual){btn.classList.add('stale');}else{btn.style.display='none';}
     reveal.classList.remove('shown');
     reveal.style.display='none';
     if(liquidRect){liquidRect.setAttribute('y',251);liquidRect.setAttribute('height',0);}
@@ -544,9 +545,11 @@ function wirePreviewLoader(btnId, loaderId, revealId, manual){
   window.__frontLoaderFail=function(){
     if(!running) return;
     loader.style.display='none';
-    btn.style.display='';
+    btn.classList.remove('stale');
     running=false;
   };
+  // any new input in the front panel re-arms the button (green again)
+  window.__frontBtnFresh=function(){btn.classList.remove('stale');};
 }
 wirePreviewLoader('frontPreviewBtn','frontLoader','frontReveal', true);
 wirePreviewLoader('backPreviewBtn','backLoader','backReveal');
