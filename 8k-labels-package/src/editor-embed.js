@@ -92,8 +92,8 @@ function attrSelectsHTML(){var v=FIELDS.attributes.value;
     +p.opts.map(function(o){return '<option'+(o===v[p.k]?' selected':'')+'>'+esc(o)+'</option>';}).join('')+'</select>';}).join('');
 }
 function alcGroupHTML(){var v=FIELDS.alcVol.value;
-  return '<span class="le2-lbl">Alc.:</span><input class="le2-vinp" data-av="alcohol" placeholder="E.g. 12" value="'+esc(v.alcohol)+'">'
-    +'<span class="le2-lbl">Vol.:</span><input class="le2-vinp" data-av="volume" placeholder="E.g. 750" value="'+esc(v.volume)+'"><span class="le2-lbl">mL</span>';
+  return '<span class="le2-avgrp"><span class="le2-lbl">Alc.:</span><input class="le2-vinp" data-av="alcohol" placeholder="E.g. 12" value="'+esc(v.alcohol)+'"></span>'
+    +'<span class="le2-avgrp"><span class="le2-lbl">Vol.:</span><input class="le2-vinp" data-av="volume" placeholder="E.g. 750" value="'+esc(v.volume)+'"><span class="le2-lbl">mL</span></span>';
 }
 function render(){
   if(!ensureContainers()) return;
