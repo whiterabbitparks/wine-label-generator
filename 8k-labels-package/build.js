@@ -44,7 +44,7 @@ cfg = cfg.replace('>Front Label Information<span', '>FRONT LABEL<span');
 
 // (b) styles: scoped editor + regenerate button + option cells + gallery
 const CSS = '<style>'
- + '.eng-regen{display:block;width:100%;margin:64px 0 0;background:var(--olive);color:var(--white);border:none;padding:16px;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;border-radius:var(--radius);}'
+ + '.eng-regen{display:block;width:100%;margin:128px 0 0;background:var(--olive);color:var(--white);border:none;padding:16px;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;border-radius:var(--radius);}'
  + '.eng-regen:hover{background:var(--olive-dark);}'
  + '#frontThumbs .thumb-box{border:none !important;background:transparent !important;padding:0 !important;}'
  + '#frontThumbs .thumb-box svg{width:100% !important;height:100% !important;display:block;}'

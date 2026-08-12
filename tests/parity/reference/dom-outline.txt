@@ -493,22 +493,21 @@ body  "               "
           span.flag  "🕋"
       hr.grey-divider
       button#backPreviewBtn.preview-btn  "Back Label Preview"
-      div#backLoader.preview-loader  [HIDDEN]  "  "
-        svg  "      "
-          ellipse
+      div#backLoader.preview-loader  [HIDDEN]  " "
+        svg  "    "
+          clippath#backWineClip
+            rect.wine-rect
           path
-          rect
-          ellipse
-          clippath#backLiquidClip  " "
+          g  "  "
             path
-          g  " "
-            rect.liquid-rect
-        div.loader-label  "Preparing your preview…"
+            path
+          text  "Designing your label"
+            tspan.ld-dot  "."
+            tspan.ld-dot  "."
+            tspan.ld-dot  "."
       div#backReveal.reveal-block  [HIDDEN]  "  "
         div  " "
-          div#backThumbWrap.thumb.selected  "  "
-            label.opt-row  "Option #1"
-              input.dot-input
+          div#backThumbWrap.thumb.selected  " "
             div#backThumbBox.thumb-box  " "
               img
         div.pricing  "       "
@@ -653,17 +652,18 @@ body  "               "
       hr.grey-divider
       button#bottlePreviewBtn.preview-btn  "Preview Bottle & Marketing Images"
         span.info-inline  "?"
-      div#bottleLoader.preview-loader  [HIDDEN]  "  "
-        svg  "      "
-          ellipse
+      div#bottleLoader.preview-loader  [HIDDEN]  " "
+        svg  "    "
+          clippath#bottleWineClip
+            rect.wine-rect
           path
-          rect
-          ellipse
-          clippath#bottleLiquidClip  " "
+          g  "  "
             path
-          g  " "
-            rect.liquid-rect
-        div.loader-label  "Preparing your preview…"
+            path
+          text  "Designing your label"
+            tspan.ld-dot  "."
+            tspan.ld-dot  "."
+            tspan.ld-dot  "."
       div#bottleReveal.reveal-block  [HIDDEN]  "       "
         div.bottle-stage  " "
           img#bottleMainImg.bottle-photo-img
@@ -725,63 +725,11 @@ body  "               "
         div.gallery-item
           div.gallery-placeholder
             img
-          div.gallery-caption  "Marketing Images"
+          div.gallery-caption  "Artistic / Punk"
         div.gallery-item
           div.gallery-placeholder
             img
-          div.gallery-caption  "Marketing Images"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Contemporary"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Minimalist"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Minimalist"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Minimalist"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Minimalist"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Flora & Fauna"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Traditional / Heritage"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Premium"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Premium"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Flora & Fauna"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Marketing Images"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Marketing Images"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Minimalist"
+          div.gallery-caption  "Artistic / Punk"
         div.gallery-item
           div.gallery-placeholder
             img
@@ -793,35 +741,15 @@ body  "               "
         div.gallery-item
           div.gallery-placeholder
             img
+          div.gallery-caption  "Flora & Fauna"
+        div.gallery-item
+          div.gallery-placeholder
+            img
           div.gallery-caption  "Marketing Images"
         div.gallery-item
           div.gallery-placeholder
             img
-          div.gallery-caption  "Artistic / Punk"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Premium"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Flora & Fauna"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Contemporary"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Flora & Fauna"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Artistic / Punk"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Artistic / Punk"
+          div.gallery-caption  "Marketing Images"
         div.gallery-item
           div.gallery-placeholder
             img
@@ -841,15 +769,11 @@ body  "               "
         div.gallery-item
           div.gallery-placeholder
             img
-          div.gallery-caption  "Contemporary"
+          div.gallery-caption  "Traditional / Heritage"
         div.gallery-item
           div.gallery-placeholder
             img
           div.gallery-caption  "Flora & Fauna"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Traditional / Heritage"
         div.gallery-item
           div.gallery-placeholder
             img
@@ -857,7 +781,7 @@ body  "               "
         div.gallery-item
           div.gallery-placeholder
             img
-          div.gallery-caption  "Artistic / Punk"
+          div.gallery-caption  "Premium"
         div.gallery-item
           div.gallery-placeholder
             img
@@ -865,15 +789,15 @@ body  "               "
         div.gallery-item
           div.gallery-placeholder
             img
-          div.gallery-caption  "Traditional / Heritage"
-        div.gallery-item
-          div.gallery-placeholder
-            img
           div.gallery-caption  "Premium"
         div.gallery-item
           div.gallery-placeholder
             img
-          div.gallery-caption  "Premium"
+          div.gallery-caption  "Contemporary"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Minimalist"
         div.gallery-item
           div.gallery-placeholder
             img
@@ -881,7 +805,23 @@ body  "               "
         div.gallery-item
           div.gallery-placeholder
             img
-          div.gallery-caption  "Contemporary"
+          div.gallery-caption  "Premium"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Premium"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Traditional / Heritage"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Minimalist"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Artistic / Punk"
         div.gallery-item
           div.gallery-placeholder
             img
@@ -893,7 +833,67 @@ body  "               "
         div.gallery-item
           div.gallery-placeholder
             img
+          div.gallery-caption  "Minimalist"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Artistic / Punk"
+        div.gallery-item
+          div.gallery-placeholder
+            img
           div.gallery-caption  "Contemporary"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Marketing Images"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Contemporary"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Premium"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Minimalist"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Marketing Images"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Flora & Fauna"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Traditional / Heritage"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Flora & Fauna"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Contemporary"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Flora & Fauna"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Minimalist"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Contemporary"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Marketing Images"
     div#panel-about.panel  [HIDDEN]  "   "
       div.section-head
         h2  "About Us"

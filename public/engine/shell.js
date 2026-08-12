@@ -446,6 +446,18 @@ recompute('panel-back','subtotalBack');
 recompute('panel-bottle','subtotalBottle');
 
 // ---------- Preview loader: rising liquid animation, then reveal previews + pricing ----------
+function animateWineRise(rectEl, duration, onDone){
+  const B=266.6, R=80.9, t0=performance.now();
+  function f(t){
+    const p=Math.min(1,(t-t0)/duration);
+    const e=p<0.5 ? 2*p*p : 1-Math.pow(-2*p+2,2)/2;
+    const h=(0.22+0.78*e)*R;
+    rectEl.setAttribute('y',(B-h).toFixed(2));
+    rectEl.setAttribute('height',(h+3).toFixed(2));
+    if(p<1) requestAnimationFrame(f); else if(onDone) onDone();
+  }
+  requestAnimationFrame(f);
+}
 function animateLiquidRise(rectEl, duration, onDone){
   const startY=251, endY=80, startH=0, endH=171;
   const t0=performance.now();
@@ -507,7 +519,7 @@ function wirePreviewLoader(btnId, loaderId, revealId, manual){
     reveal.classList.remove('shown');
     reveal.style.display='none';
     if(liquidRect){liquidRect.setAttribute('y',251);liquidRect.setAttribute('height',0);}
-    if(wineRect){curP=0;targetP=WINE_FLOOR;wineRect.setAttribute('y',266.6);wineRect.setAttribute('height',0);if(!raf)raf=requestAnimationFrame(renderWine);}
+    if(wineRect){wineRect.setAttribute('y',266.6);wineRect.setAttribute('height',0);if(manual){curP=0;targetP=WINE_FLOOR;if(!raf)raf=requestAnimationFrame(renderWine);}}
     loader.style.display='flex';
     loader.style.opacity='1';
     if(manual){
@@ -515,7 +527,7 @@ function wirePreviewLoader(btnId, loaderId, revealId, manual){
       setTimeout(()=>loader.scrollIntoView({behavior:'smooth',block:'center'}),80);
       startFacts();
     }
-    if(!manual) animateLiquidRise(liquidRect,2000,finish);
+    if(!manual){ if(wineRect) animateWineRise(wineRect,2000,finish); else animateLiquidRise(liquidRect,2000,finish); }
   });
   if(!manual) return;
   /* Manual mode (front): the wine level IS the artwork-generation progress.
