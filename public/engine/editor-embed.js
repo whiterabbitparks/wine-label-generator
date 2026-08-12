@@ -35,15 +35,15 @@ let order=['producer','wineName','appellation','grape','vintage','classification
    wt = Hepta Slab weight (200 = ExtraLight, 700 = Bold) · a = text alignment. */
 const REF={
   producer:      {x:0.0300,y:0.0350,w:0.4500,h:0.0730, sz:0.04725, wt:200, a:'center'},   // producer box (left half of the top row)
-  wineName:      {x:0.0377,y:0.3965,w:0.9208,h:0.1204, sz:0.08190, wt:700, a:'center'},
-  appellation:   {x:0.2254,y:0.5214,w:0.5454,h:0.0892, sz:0.05985, wt:700, a:'center'},
+  wineName:      {x:0.0377,y:0.4216,w:0.9208,h:0.1204, sz:0.08190, wt:700, a:'center'},
+  appellation:   {x:0.2254,y:0.5560,w:0.5454,h:0.0892, sz:0.05985, wt:700, a:'center'},
   grape:         {x:0.1230,y:0.6692,w:0.7502,h:0.0777, sz:0.05355, wt:600, a:'center'},   // Hepta Slab Semibold
-  vintage:       {x:0.3853,y:0.7726,w:0.2295,h:0.0662, sz:0.04725, wt:600, a:'center'},   // Hepta Slab Semibold
-  regionCountry: {x:0.0000,y:0.7927,w:0.3589,h:0.0461, sz:0.03150, wt:600, a:'left'},     // Hepta Slab Semibold
-  special:       {x:0.6404,y:0.7927,w:0.3589,h:0.0461, sz:0.03150, wt:600, a:'right'},    // Hepta Slab Semibold
-  classification:{x:0.2926,y:0.8500,w:0.4111,h:0.0414, sz:0.03465, wt:200, a:'center'},   // own centred row (swapped)
-  attributes:    {x:0.0000,y:0.9080,w:1.0000,h:0.0415, sz:0.0210, wt:200, a:'left', grp:1},   // Sweetness/Color/Type labelled row
-  alcVol:        {x:0.0000,y:0.9600,w:1.0000,h:0.0415, sz:0.0210, wt:200, a:'left', grp:1}     // Alc./Vol. labelled row
+  vintage:       {x:0.3853,y:0.7609,w:0.2295,h:0.0662, sz:0.04725, wt:600, a:'center'},   // Hepta Slab Semibold
+  regionCountry: {x:0.0000,y:0.7810,w:0.3589,h:0.0461, sz:0.03150, wt:600, a:'left'},     // Hepta Slab Semibold
+  special:       {x:0.6404,y:0.7810,w:0.3589,h:0.0461, sz:0.03150, wt:600, a:'right'},    // Hepta Slab Semibold
+  classification:{x:0.2926,y:0.8411,w:0.4111,h:0.0414, sz:0.03465, wt:200, a:'center'},   // own centred row (swapped)
+  attributes:    {x:0.0000,y:0.8965,w:1.0000,h:0.0415, sz:0.0210, wt:200, a:'left', grp:1},   // Sweetness/Color/Type labelled row
+  alcVol:        {x:0.0000,y:0.9520,w:1.0000,h:0.0415, sz:0.0210, wt:200, a:'left', grp:1}     // Alc./Vol. labelled row
 };
 const LOGO={x:0.5500,y:0.0350,w:0.4200,h:0.0730};   // upload-logo box: right half of the top row, beside the producer box
 const REF_RATIO=(768.3-54.6)/(618.9-46.8);          // content-box aspect from the reference PDF
