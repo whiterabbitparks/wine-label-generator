@@ -14,6 +14,13 @@ import type { GenerationJob } from "@/lib/image-provider/types";
                 + house rules (admin's global art direction)                 */
 
 /** The raw client payload — everything the winemaker actually provides. */
+export interface ZoneSpec {
+  /** fractions [x0,y0,x1,y1]: where the SUBJECT must live */
+  focal: number[];
+  /** where neutral, expendable content may spread */
+  fade: number[];
+  shape: string;
+}
 export interface LabelBrief {
   vision?: string;
   /** uploaded sketch/photo as a data URL */
@@ -21,6 +28,31 @@ export interface LabelBrief {
   /** wine facts from the label form (producer, grape, region, ...) */
   data?: Record<string, string>;
   seed?: number;
+  /** per-style layout zones chosen BEFORE generation (layout-first flow) */
+  zones?: Record<string, ZoneSpec | null> | null;
+  /** label aspect bucket: landscape | portrait | square */
+  aspect?: string;
+}
+
+/* Turn a zone spec into compositional language: the model paints the subject
+   inside the focal area and lets only expendable surroundings spread outward,
+   dissolving into pure white — the renderer applies no masks. */
+function zoneSentence(z: ZoneSpec, aspect?: string): string {
+  const [x0, y0, x1, y1] = z.focal;
+  const cy = (y0 + y1) / 2, w = x1 - x0, h = y1 - y0, area = w * h;
+  const vert = cy < 0.38 ? "upper" : cy > 0.62 ? "lower" : "central";
+  const horiz = x1 <= 0.5 ? " left" : x0 >= 0.5 ? " right" : "";
+  const size = area > 0.45 ? "large" : area < 0.1 ? "small, emblem-like" : "medium-sized";
+  const shapeWord =
+    z.shape === "band" ? "wide horizontal band" : z.shape === "rounded" ? "soft panel" : "oval area";
+  const frame =
+    aspect === "portrait" ? " The frame is tall." : aspect === "landscape" ? " The frame is wide." : "";
+  return (
+    ` Compose the main subject as a ${size} ${shapeWord} in the ${vert}${horiz} part of the frame;` +
+    ` every important element stays fully inside that area.` +
+    ` Outside it, only quiet, expendable surroundings may continue, growing sparser until the scene` +
+    ` dissolves completely into the pure white background well before the edges.${frame}`
+  );
 }
 
 const TEMPLATE_DEFAULT =
@@ -60,7 +92,12 @@ export function buildStylePrompt(
   if (d.grape) ctx.push(`grape: ${d.grape}`);
   const context = ctx.length ? `Context: ${ctx.join("; ")}. ` : "";
 
-  const focus = style.focus?.guidance ? ` ${style.focus.guidance}` : "";
+  const zone = brief.zones?.[style.key];
+  const focus = zone
+    ? zoneSentence(zone, brief.aspect)
+    : style.focus?.guidance
+      ? ` ${style.focus.guidance}`
+      : "";
   const reference = brief.reference
     ? " Match the composition of the uploaded reference sketch."
     : "";
@@ -101,6 +138,7 @@ export function buildStyleJob(
     prompt: buildStylePrompt(style, sub, brief, art),
     negative: art.negative,
     reference: brief.reference || null,
+    zone: brief.zones?.[style.key] ?? null,
     size: { w: 1024, h: 640 },
     art: { preset: `${style.key}/${sub.key}`, extra: art.extra, negative: art.negative, template: art.template },
     data: brief.data,

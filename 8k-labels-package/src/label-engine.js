@@ -885,6 +885,54 @@ function sImage(styleKey,x,y,w,h,mode,plate){
   return s;
 }
 
+/* Image zones per style/variant — the OWNER'S FOCAL DOCTRINE: `focal` is
+   where the artwork's SUBJECT must live; `fade` is where only neutral,
+   expendable content may spread. This is COMPOSITIONAL data: it is sent to
+   the generation server so the image is PAINTED this way (subject centred
+   in focal, content dissolving into pure white toward the edges) — the
+   renderer no longer fakes it with alpha masks. Variant index = the same
+   Math.floor(seed/2)%N each style uses. null = text-only composition. */
+const STYLE_ZONES={
+  traditional:[
+    {focal:[0.12,0.10,0.88,0.42],fade:[0.03,0.02,0.97,0.50],shape:'band'},
+    {focal:[0.28,0.10,0.72,0.44],fade:[0.18,0.03,0.82,0.54],shape:'ellipse'},
+    null,
+    {focal:[0,0.06,1,0.46],fade:[0,0,1,0.60],shape:'band'},
+    {focal:[0.05,0.14,0.42,0.72],fade:[0.0,0.05,0.5,0.85],shape:'rounded'}],
+  contemporary:[
+    {focal:[0.28,0.06,0.72,0.44],fade:[0.16,0.0,0.84,0.55],shape:'ellipse'},
+    {focal:[0.30,0.08,0.70,0.34],fade:[0.20,0.02,0.80,0.44],shape:'ellipse'},
+    {focal:[0.56,0.12,0.98,0.80],fade:[0.48,0.0,1.0,0.95],shape:'band'},
+    {focal:[0,0.0,1,0.52],fade:[0,0,1,0.62],shape:'band'},
+    {focal:[0,0.05,1,0.42],fade:[0,0,1,0.52],shape:'band'}],
+  flora:[
+    {focal:[0.22,0.06,0.78,0.52],fade:[0.10,0.0,0.90,0.62],shape:'ellipse'},
+    {focal:[0.26,0.08,0.74,0.54],fade:[0.14,0.0,0.86,0.64],shape:'ellipse'},
+    {focal:[0.06,0.10,0.44,0.66],fade:[0.0,0.02,0.52,0.80],shape:'rounded'},
+    {focal:[0.40,0.05,0.60,0.30],fade:[0.32,0.0,0.68,0.38],shape:'ellipse'}],
+  premium:[
+    {focal:[0.40,0.40,0.60,0.60],fade:[0.33,0.34,0.67,0.66],shape:'ellipse'},
+    {focal:[0.42,0.08,0.58,0.28],fade:[0.35,0.02,0.65,0.36],shape:'ellipse'},
+    {focal:[0.41,0.34,0.59,0.54],fade:[0.34,0.30,0.66,0.60],shape:'ellipse'}],
+  minimalist:[
+    {focal:[0.44,0.16,0.56,0.36],fade:[0.37,0.10,0.63,0.44],shape:'ellipse'},
+    {focal:[0.64,0.18,0.86,0.56],fade:[0.55,0.08,0.95,0.68],shape:'rounded'},
+    {focal:[0.45,0.62,0.55,0.78],fade:[0.40,0.56,0.60,0.84],shape:'ellipse'},
+    null],
+  artistic:[
+    {focal:[0.20,0.05,0.80,0.50],fade:[0.06,0.0,0.94,0.60],shape:'ellipse'},
+    {focal:[0.58,0.30,0.94,0.72],fade:[0.48,0.20,1.0,0.84],shape:'ellipse'},
+    {focal:[0.55,0.10,0.95,0.86],fade:[0.45,0.0,1.0,1.0],shape:'band'},
+    {focal:[0.10,0.04,0.90,0.44],fade:[0.0,0.0,1.0,0.55],shape:'band'}]};
+function styleZones(seed){
+  const out={};
+  for(const k in STYLE_ZONES){
+    const arr=STYLE_ZONES[k];
+    out[k]=arr[Math.floor((seed|0)/2)%arr.length]||null;
+  }
+  return out;
+}
+
 /* Arched text along a circular path (textPath keeps output deterministic). */
 function sArcText(str,cx,topBaseY,R,o){
   if(!str)return '';
@@ -897,38 +945,17 @@ function sArcText(str,cx,topBaseY,R,o){
     +`<text font-family="${o.f}" font-weight="${o.w||400}" font-size="${o.size.toFixed(1)}" fill="${o.fill}"${ls}>`
     +`<textPath href="#${id}" startOffset="50%" text-anchor="middle">${esc(o.caps?up(str):str)}</textPath></text>`;
 }
-/* Image zone per the owner's focal/fade spec (Layout Styles PDFs):
-   solid black = FOCAL area (the subject lives here, full opacity);
-   gradient = FADE area (image continues but dissolves; only expendable
-   content). z={focal:[x0,y0,x1,y1] fractions, fade:[...], shape:'band'|
-   'rounded'|'ellipse'}. Returns '' when the style has no artwork, keeping
-   pre-generation output byte-identical. */
+/* Draw the style's artwork inside its zone. NO masks/fades: the artwork is
+   generated with the subject inside `focal` and content dissolving to pure
+   white toward its edges, and multiply makes that white vanish on the label.
+   'meet' (contain) so the renderer can never crop the subject. */
 function sImageZone(styleKey,z,W,H){
   const m=(typeof window!=='undefined'&&window.__LABEL_IMGS__)||null;
-  const src=m&&m[styleKey]; if(!src||!z||!z.focal) return '';
-  const id=++__simgN;
+  const src=m&&m[styleKey]; if(!src||!z||!z.fade) return '';
   const fx=z.fade[0]*W, fy=z.fade[1]*H, fw=(z.fade[2]-z.fade[0])*W, fh=(z.fade[3]-z.fade[1])*H;
-  let grad;
-  if(z.shape==='ellipse'){
-    const cx=(z.focal[0]+z.focal[2])/2*W, cy=(z.focal[1]+z.focal[3])/2*H;
-    const r1=Math.max(fw,fh)/2, r0=Math.max((z.focal[2]-z.focal[0])*W,(z.focal[3]-z.focal[1])*H)/2;
-    grad=`<radialGradient id="mg${id}" gradientUnits="userSpaceOnUse" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${r1.toFixed(1)}">`
-      +`<stop offset="${Math.min(0.98,r0/r1*0.92).toFixed(3)}" stop-color="#fff"/><stop offset="1" stop-color="#000"/></radialGradient>`;
-  }else{
-    const f1=Math.max(0,(z.focal[1]-z.fade[1])/(z.fade[3]-z.fade[1]));
-    const f2=Math.min(1,(z.focal[3]-z.fade[1])/(z.fade[3]-z.fade[1]));
-    grad=`<linearGradient id="mg${id}" gradientUnits="userSpaceOnUse" x1="0" y1="${fy.toFixed(1)}" x2="0" y2="${(fy+fh).toFixed(1)}">`
-      +`<stop offset="0" stop-color="${f1>0.02?'#000':'#fff'}"/><stop offset="${f1.toFixed(3)}" stop-color="#fff"/>`
-      +`<stop offset="${f2.toFixed(3)}" stop-color="#fff"/><stop offset="1" stop-color="${f2<0.98?'#000':'#fff'}"/></linearGradient>`;
-  }
-  const rx=z.shape==='rounded'?(0.035*W).toFixed(1):0;
-  return `<defs>${grad}<mask id="mk${id}"><rect x="${fx.toFixed(1)}" y="${fy.toFixed(1)}" width="${fw.toFixed(1)}" height="${fh.toFixed(1)}"${rx?` rx="${rx}"`:''} fill="url(#mg${id})"/></mask></defs>`
-    +`<image x="${fx.toFixed(1)}" y="${fy.toFixed(1)}" width="${fw.toFixed(1)}" height="${fh.toFixed(1)}" preserveAspectRatio="xMidYMid slice" mask="url(#mk${id})" xlink:href="${src}" href="${src}" style="mix-blend-mode:multiply"/>`;
+  return `<image x="${fx.toFixed(1)}" y="${fy.toFixed(1)}" width="${fw.toFixed(1)}" height="${fh.toFixed(1)}" preserveAspectRatio="xMidYMid meet" xlink:href="${src}" href="${src}" style="mix-blend-mode:multiply"/>`;
 }
 
-/* Flow a list of text items downward with explicit gaps — blocks can never
-   overlap because each starts below the previous one's measured bottom.
-   items: [{str,size,f,w,fill,tr,caps,ital,halo,lines,lh,maxW,gap,pre,post}] */
 function sFlow(items,x,y0,a){
   let svg='', y=y0;
   for(const it of items){
@@ -979,7 +1006,7 @@ function styleTraditional(d,order,seed,twMM,thMM){
              {str:f.region,a:'r',f:EG,w:400,fill:SUB}],W,row2Y,H*0.03);
     return b;}
   if(variant===0){ // engraving band top, centred serif stack below (Château Lafitte board)
-    body+=sImageZone('traditional',{focal:[0.12,0.10,0.88,0.42],fade:[0.03,0.02,0.97,0.50],shape:'band'},W,H);
+    body+=sImageZone('traditional',STYLE_ZONES['traditional'][variant],W,H);
     body+=sFlow([
       {str:f.producer,size:H*0.036,f:EG,w:500,fill:INK,caps:true,tr:0.24,maxW:cW*0.8,gap:H*0.012,pre:H*0.52},
       {str:f.wine,size:H*0.105,f:PF,w:700,fill:ACC,caps:true,maxW:cW*0.94,gap:H*0.012},
@@ -987,7 +1014,7 @@ function styleTraditional(d,order,seed,twMM,thMM){
       {str:f.classification,size:H*0.036,f:EG,w:400,fill:SUB,maxW:cW*0.8,gap:0}],cx,SM,'c').svg;
     body+=bottomRows();
   }else if(variant===1){ // oval vignette + red hero (Pomerol/La Pointe boards)
-    body+=sImageZone('traditional',{focal:[0.28,0.10,0.72,0.44],fade:[0.18,0.03,0.82,0.54],shape:'ellipse'},W,H);
+    body+=sImageZone('traditional',STYLE_ZONES['traditional'][variant],W,H);
     body+=sFlow([
       {str:f.producer,size:H*0.034,f:EG,w:500,fill:SUB,caps:true,tr:0.3,maxW:cW*0.7,gap:H*0.010,pre:H*0.55},
       {str:f.wine,size:H*0.115,f:SF.tinos,w:700,fill:ACC,caps:true,maxW:cW*0.94,gap:H*0.012},
@@ -1008,7 +1035,7 @@ function styleTraditional(d,order,seed,twMM,thMM){
       {str:[f.region,f.special].filter(Boolean).join(' \u00b7 '),size:H*0.03,f:EG,w:400,fill:SUB,maxW:cW*0.7,gap:H*0.012},
       {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.027,f:EG,w:400,fill:SUB,maxW:cW*0.7,gap:0}],cx,SM,'c').svg;
   }else if(variant===3){ // full-bleed engraving upper half, halo hero on the fade (poster boards)
-    body+=sImageZone('traditional',{focal:[0,0.06,1,0.46],fade:[0,0,1,0.60],shape:'band'},W,H);
+    body+=sImageZone('traditional',STYLE_ZONES['traditional'][variant],W,H);
     body+=sFlow([
       {str:f.producer,size:H*0.034,f:EG,w:500,fill:INK,caps:true,tr:0.28,maxW:cW*0.7,halo:true,gap:H*0.010,pre:H*0.50},
       {str:f.wine,size:H*0.12,f:SF.tinos,w:700,fill:ACC,caps:true,halo:true,maxW:cW*0.95,gap:H*0.014},
@@ -1016,7 +1043,7 @@ function styleTraditional(d,order,seed,twMM,thMM){
       {str:f.classification,size:H*0.034,f:EG,w:400,fill:SUB,maxW:cW*0.8,gap:0}],cx,SM,'c').svg;
     body+=bottomRows();
   }else{ // engraved tree left, left-aligned stack right (Rio Mendoza board)
-    body+=sImageZone('traditional',{focal:[0.05,0.14,0.42,0.72],fade:[0.0,0.05,0.5,0.85],shape:'rounded'},W,H);
+    body+=sImageZone('traditional',STYLE_ZONES['traditional'][variant],W,H);
     const Lx2=W*0.52;
     body+=sFlow([
       {str:f.producer,size:H*0.035,f:EG,w:500,fill:SUB,caps:true,tr:0.26,maxW:W*0.42,gap:H*0.018,pre:H*0.10},
@@ -1048,7 +1075,7 @@ function styleContemporary(f,W,H,seed,twMM,thMM){
   let body='';
   const rowY=H-SM-H*0.03;
   if(variant===0){ // motif top, giant grotesque hero below (Gotes / eye-label boards)
-    body+=sImageZone('contemporary',{focal:[0.28,0.06,0.72,0.44],fade:[0.16,0.0,0.84,0.55],shape:'ellipse'},W,H);
+    body+=sImageZone('contemporary',STYLE_ZONES['contemporary'][variant],W,H);
     body+=sFlow([
       {str:f.wine,size:H*0.125,f:SF.archivo,w:800,fill:INK,caps:true,maxW:cW*0.96,gap:H*0.018,pre:H*0.57},
       {str:f.appellation,size:H*0.045,f:SF.jost,w:500,fill:SUB,maxW:cW*0.7,gap:H*0.02},
@@ -1057,7 +1084,7 @@ function styleContemporary(f,W,H,seed,twMM,thMM){
       {str:[reg,desc].filter(Boolean).join(' / '),a:'c',f:SF.jost,w:400,fill:SUB,size:H*0.026},
       {str:[f.vintage,alc].filter(Boolean).join('  \u00b7  '),a:'r',f:SF.jost,w:500,fill:INK}],W,rowY,H*0.03);
   }else if(variant===1){ // giant lowercase serif hero (\u00f1or board), tiny details
-    body+=sImageZone('contemporary',{focal:[0.30,0.08,0.70,0.34],fade:[0.20,0.02,0.80,0.44],shape:'ellipse'},W,H);
+    body+=sImageZone('contemporary',STYLE_ZONES['contemporary'][variant],W,H);
     body+=sFlow([
       {str:f.wine.toLowerCase(),size:H*0.20,f:SF.fraunces,w:600,fill:SCH.acc,maxW:cW*0.96,gap:H*0.012,pre:H*0.44},
       {str:f.appellation,size:H*0.045,f:SF.jost,w:500,fill:INK,maxW:cW*0.7,gap:H*0.018},
@@ -1066,7 +1093,7 @@ function styleContemporary(f,W,H,seed,twMM,thMM){
     body+=sRow([{str:reg,a:'l',f:SF.jost,w:400,fill:SUB},{str:desc,a:'c',f:SF.jost,w:400,fill:SUB},
       {str:alc,a:'r',f:SF.jost,w:400,fill:SUB,size:H*0.025}],W,rowY,H*0.028);
   }else if(variant===2){ // split: image right half, condensed stack left (Chilow\u00e9 board)
-    body+=sImageZone('contemporary',{focal:[0.56,0.12,0.98,0.80],fade:[0.48,0.0,1.0,0.95],shape:'band'},W,H);
+    body+=sImageZone('contemporary',STYLE_ZONES['contemporary'][variant],W,H);
     body+=sFlow([
       {str:f.producer,size:H*0.04,f:SF.barlowc,w:700,fill:SCH.acc,caps:true,tr:0.06,maxW:W*0.4,gap:H*0.03,pre:H*0.06},
       {str:f.wine,size:H*0.10,f:SF.barlowc,w:700,fill:INK,caps:true,lines:2,lh:1.0,maxW:W*0.42,gap:H*0.02},
@@ -1077,7 +1104,7 @@ function styleContemporary(f,W,H,seed,twMM,thMM){
       {str:f.vintage,size:H*0.07,f:SF.barlowc,w:700,fill:SCH.acc,maxW:W*0.3,gap:0}],SM,SM,'l').svg;
     body+=sBlock([desc,alc].filter(Boolean).join(' / '),{x:SM,top:rowY,maxW:W*0.42,size:H*0.026,min:H*0.02,f:SF.jost,w:400,fill:SUB,a:'l'}).svg;
   }else if(variant===3){ // horizon art full-bleed top, clean strip below (sunset-band boards)
-    body+=sImageZone('contemporary',{focal:[0,0.0,1,0.52],fade:[0,0,1,0.62],shape:'band'},W,H);
+    body+=sImageZone('contemporary',STYLE_ZONES['contemporary'][variant],W,H);
     body+=sFlow([
       {str:[f.producer,f.vintage].filter(Boolean).join('   '),size:H*0.036,f:SF.archivo,w:600,fill:INK,caps:true,tr:0.16,maxW:cW*0.8,gap:H*0.014,pre:H*0.64},
       {str:f.wine,size:H*0.10,f:SF.archivo,w:800,fill:INK,caps:true,maxW:cW*0.94,gap:H*0.014},
@@ -1085,7 +1112,7 @@ function styleContemporary(f,W,H,seed,twMM,thMM){
     body+=sRow([{str:f.classification,a:'l',f:SF.jost,w:400,fill:SUB},{str:reg,a:'c',f:SF.jost,w:400,fill:SUB},
       {str:alc,a:'r',f:SF.jost,w:400,fill:SUB,size:H*0.025}],W,rowY,H*0.027);
   }else{ // colour-block: bold band of ground colour bottom, image band top
-    body+=sImageZone('contemporary',{focal:[0,0.05,1,0.42],fade:[0,0,1,0.52],shape:'band'},W,H);
+    body+=sImageZone('contemporary',STYLE_ZONES['contemporary'][variant],W,H);
     body+=`<rect x="0" y="${(H*0.56).toFixed(1)}" width="${W}" height="${(H*0.44).toFixed(1)}" fill="${SCH.acc}"/>`;
     const KN=(SCH.acc==='#F8EFE3')?'#20130E':'#FFF9EF';
     body+=sFlow([
@@ -1111,7 +1138,7 @@ function styleFlora(f,W,H,seed,twMM,thMM){
   let body='';
   const rowY=H-SM-H*0.03;
   if(variant===0){ // big beast centre, caps stack below (Hermit Ram / Natura boards)
-    body+=sImageZone('flora',{focal:[0.22,0.06,0.78,0.52],fade:[0.10,0.0,0.90,0.62],shape:'ellipse'},W,H);
+    body+=sImageZone('flora',STYLE_ZONES['flora'][variant],W,H);
     body+=sFlow([
       {str:f.wine,size:H*0.095,f:SF.fraunces,w:700,fill:INK,caps:true,maxW:cW*0.94,gap:H*0.014,pre:H*0.64},
       {str:[f.appellation,f.vintage].filter(Boolean).join('  \u00b7  '),size:H*0.042,f:SF.archivo,w:500,fill:ACC,caps:true,tr:0.1,maxW:cW*0.8,gap:H*0.016},
@@ -1121,7 +1148,7 @@ function styleFlora(f,W,H,seed,twMM,thMM){
       {str:[desc,alc].filter(Boolean).join(' / '),a:'r',f:SF.jost,w:400,fill:SUB,size:H*0.025}],W,rowY,H*0.03);
   }else if(variant===1){ // diagonal accent band behind the beast (Hermit Ram red diagonal)
     body+=`<path d="M0 ${(H*0.62).toFixed(1)} L ${W} ${(H*0.10).toFixed(1)} L ${W} ${(H*0.62).toFixed(1)} Z" fill="${ACC}" opacity="0.92"/>`;
-    body+=sImageZone('flora',{focal:[0.26,0.08,0.74,0.54],fade:[0.14,0.0,0.86,0.64],shape:'ellipse'},W,H);
+    body+=sImageZone('flora',STYLE_ZONES['flora'][variant],W,H);
     body+=sFlow([
       {str:f.producer,size:H*0.032,f:SF.archivo,w:600,fill:INK,caps:true,tr:0.22,maxW:cW*0.7,gap:H*0.012,pre:H*0.66},
       {str:f.wine,size:H*0.09,f:SF.fraunces,w:700,fill:INK,caps:true,maxW:cW*0.94,gap:H*0.014},
@@ -1130,7 +1157,7 @@ function styleFlora(f,W,H,seed,twMM,thMM){
       {str:reg,a:'c',f:SF.jost,w:400,fill:SUB,size:H*0.026},
       {str:[desc,alc].filter(Boolean).join(' / '),a:'r',f:SF.jost,w:400,fill:SUB,size:H*0.025}],W,rowY,H*0.028);
   }else if(variant===2){ // naturalist plate left, elegant serif right (L'attente board)
-    body+=sImageZone('flora',{focal:[0.06,0.10,0.44,0.66],fade:[0.0,0.02,0.52,0.80],shape:'rounded'},W,H);
+    body+=sImageZone('flora',STYLE_ZONES['flora'][variant],W,H);
     body+=sFlow([
       {str:f.producer,size:H*0.033,f:SF.archivo,w:600,fill:SUB,caps:true,tr:0.22,maxW:W*0.42,gap:H*0.02,pre:H*0.10},
       {str:f.wine,size:H*0.082,f:SF.fraunces,w:600,fill:INK,lines:2,lh:1.05,maxW:W*0.43,gap:H*0.016},
@@ -1141,7 +1168,7 @@ function styleFlora(f,W,H,seed,twMM,thMM){
     body+=sRow([{str:reg,a:'l',f:SF.jost,w:400,fill:SUB},
       {str:[desc,alc].filter(Boolean).join(' / '),a:'r',f:SF.jost,w:400,fill:SUB}],W,rowY,H*0.026);
   }else{ // tiny creature top like a seal, wide airy stack (Decoy / MOR boards)
-    body+=sImageZone('flora',{focal:[0.40,0.05,0.60,0.30],fade:[0.32,0.0,0.68,0.38],shape:'ellipse'},W,H);
+    body+=sImageZone('flora',STYLE_ZONES['flora'][variant],W,H);
     body+=sFlow([
       {str:f.wine,size:H*0.10,f:SF.fraunces,w:700,fill:ACC,caps:true,maxW:cW*0.9,gap:H*0.016,pre:H*0.42},
       {str:f.appellation,size:H*0.045,f:SF.archivo,w:500,fill:INK,caps:true,tr:0.12,maxW:cW*0.7,gap:H*0.02},
@@ -1171,7 +1198,7 @@ function stylePremium(f,W,H,seed,twMM,thMM){
   const rowY=H-SM-H*0.028;
   if(variant===0){ // giant ghosted numerals + gold caps (1780 / 1896 boards)
     body+=sBlock(f.vintage,{x:cx,top:H*0.06,maxW:cW*0.9,size:H*0.30,min:H*0.18,f:SF.cinzel,w:600,fill:gold,a:'c',tr:0.04}).svg;
-    body+=sImageZone('premium',{focal:[0.40,0.40,0.60,0.60],fade:[0.33,0.34,0.67,0.66],shape:'ellipse'},W,H);
+    body+=sImageZone('premium',STYLE_ZONES['premium'][variant],W,H);
     body+=sFlow([
       {str:f.producer,size:H*0.034,f:SF.cinzel,w:500,fill:SUB,caps:true,tr:0.3,maxW:cW*0.7,gap:H*0.018,pre:H*0.64},
       {str:f.wine,size:H*0.078,f:SF.cinzel,w:600,fill:INK,caps:true,tr:0.06,maxW:cW*0.92,gap:H*0.016},
@@ -1180,7 +1207,7 @@ function stylePremium(f,W,H,seed,twMM,thMM){
       {str:reg,a:'c',f:SF.cinzel,w:500,fill:SUB,size:H*0.025},
       {str:[desc,alc].filter(Boolean).join(' / '),a:'r',f:F.ebg,w:400,fill:SUB,size:H*0.024}],W,rowY,H*0.026);
   }else if(variant===1){ // small gold emblem high, wide-tracked caps (Sinegal / Taylor boards)
-    body+=sImageZone('premium',{focal:[0.42,0.08,0.58,0.28],fade:[0.35,0.02,0.65,0.36],shape:'ellipse'},W,H);
+    body+=sImageZone('premium',STYLE_ZONES['premium'][variant],W,H);
     body+=sFlow([
       {str:f.wine,size:H*0.075,f:SF.cinzel,w:600,fill:INK,caps:true,tr:0.16,maxW:cW*0.92,gap:H*0.02,pre:H*0.40},
       {str:f.vintage,size:H*0.042,f:SF.cinzel,w:500,fill:gold,tr:0.2,maxW:cW*0.4,gap:H*0.02},
@@ -1193,7 +1220,7 @@ function stylePremium(f,W,H,seed,twMM,thMM){
   }else{ // hairline rules + centred stack, emblem between rules (Rioja Vega board)
     const ry=H*0.30;
     body+=`<line x1="${(cx-cW*0.30).toFixed(1)}" y1="${ry.toFixed(1)}" x2="${(cx+cW*0.30).toFixed(1)}" y2="${ry.toFixed(1)}" stroke="${gold}" stroke-width="${Math.max(1,H*0.0035).toFixed(1)}"/>`;
-    body+=sImageZone('premium',{focal:[0.41,0.34,0.59,0.54],fade:[0.34,0.30,0.66,0.60],shape:'ellipse'},W,H);
+    body+=sImageZone('premium',STYLE_ZONES['premium'][variant],W,H);
     body+=sFlow([
       {str:f.producer,size:H*0.036,f:SF.cinzel,w:500,fill:SUB,caps:true,tr:0.26,maxW:cW*0.72,gap:H*0.02,pre:H*0.08},
       {str:f.wine,size:H*0.085,f:SF.cinzel,w:600,fill:INK,caps:true,tr:0.05,maxW:cW*0.92,gap:0}],cx,SM,'c').svg;
@@ -1220,7 +1247,7 @@ function styleMinimal(f,W,H,seed,twMM,thMM){
   const line2=[f.special,f.vintage,f.alc].filter(Boolean).join(' / ');
   let body='';
   if(variant===0||variant===3){ // centred: tiny mark high, airy stack (dot/blob boards + colour panel)
-    if(!MS.panel) body+=sImageZone('minimalist',{focal:[0.44,0.16,0.56,0.36],fade:[0.37,0.10,0.63,0.44],shape:'ellipse'},W,H);
+    if(!MS.panel) body+=sImageZone('minimalist',STYLE_ZONES['minimalist'][variant],W,H);
     body+=sFlow([
       {str:f.producer,size:H*0.030,f:SF.archivo,w:300,fill:SUB,caps:true,tr:0.45,maxW:cW*0.7,gap:H*0.02,pre:H*0.02},
       {str:f.wine,size:H*0.085,f:SF.archivo,w:MS.panel?600:300,fill:INK,caps:true,tr:0.28,maxW:cW*0.94,gap:H*0.018,pre:H*0.42},
@@ -1229,7 +1256,7 @@ function styleMinimal(f,W,H,seed,twMM,thMM){
       {str:line1,size:H*0.026,f:SF.archivo,w:400,fill:SUB,maxW:cW*0.8,gap:H*0.008,pre:H*0.855-SM},
       {str:line2,size:H*0.026,f:SF.archivo,w:400,fill:SUB,maxW:cW*0.8,gap:0}],cx,SM,'c').svg;
   }else if(variant===1){ // left column, mark right (Society / blue-square boards)
-    body+=sImageZone('minimalist',{focal:[0.64,0.18,0.86,0.56],fade:[0.55,0.08,0.95,0.68],shape:'rounded'},W,H);
+    body+=sImageZone('minimalist',STYLE_ZONES['minimalist'][variant],W,H);
     body+=sFlow([
       {str:f.producer,size:H*0.03,f:SF.archivo,w:300,fill:SUB,caps:true,tr:0.4,maxW:W*0.44,gap:H*0.05,pre:H*0.04},
       {str:f.wine,size:H*0.07,f:SF.archivo,w:400,fill:INK,caps:true,tr:0.2,lines:2,lh:1.15,maxW:W*0.46,gap:H*0.02},
@@ -1238,7 +1265,7 @@ function styleMinimal(f,W,H,seed,twMM,thMM){
       {str:line1,size:H*0.025,f:SF.archivo,w:400,fill:SUB,maxW:cW*0.9,gap:H*0.008,pre:H*0.855-SM},
       {str:line2,size:H*0.025,f:SF.archivo,w:400,fill:SUB,maxW:cW*0.9,gap:0}],SM,SM,'l').svg;
   }else{ // hero IS the mark: oversized single word, nothing else near it
-    body+=sImageZone('minimalist',{focal:[0.45,0.62,0.55,0.78],fade:[0.40,0.56,0.60,0.84],shape:'ellipse'},W,H);
+    body+=sImageZone('minimalist',STYLE_ZONES['minimalist'][variant],W,H);
     body+=sFlow([
       {str:f.producer,size:H*0.028,f:SF.archivo,w:300,fill:SUB,caps:true,tr:0.45,maxW:cW*0.7,gap:H*0.05,pre:H*0.05},
       {str:f.wine,size:H*0.12,f:SF.archivo,w:300,fill:INK,caps:true,tr:0.12,maxW:cW*0.96,gap:H*0.02},
@@ -1266,7 +1293,7 @@ function styleArtistic(f,W,H,seed,twMM,thMM){
   let body='';
   const rowY=H-SM-H*0.028;
   if(variant===0){ // naive drawing centre stage, marker name below (wine-club boards)
-    body+=sImageZone('artistic',{focal:[0.20,0.05,0.80,0.50],fade:[0.06,0.0,0.94,0.60],shape:'ellipse'},W,H);
+    body+=sImageZone('artistic',STYLE_ZONES['artistic'][variant],W,H);
     body+=sFlow([
       {str:f.wine,size:H*0.105,f:SF.marker,w:400,fill:INK,maxW:cW*0.94,gap:H*0.032,pre:H*0.60},
       {str:[f.appellation,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.045,f:SF.archivo,w:700,fill:AC,caps:true,tr:0.04,maxW:cW*0.8,gap:H*0.016},
@@ -1275,7 +1302,7 @@ function styleArtistic(f,W,H,seed,twMM,thMM){
       {str:reg,a:'c',f:SF.archivo,w:500,fill:INK,size:H*0.025},
       {str:[desc,alc].filter(Boolean).join(' / '),a:'r',f:SF.archivo,w:500,fill:INK,size:H*0.024}],W,rowY,H*0.028);
   }else if(variant===1){ // poster type: giant condensed caps stacked (RAW POWER board)
-    body+=sImageZone('artistic',{focal:[0.58,0.30,0.94,0.72],fade:[0.48,0.20,1.0,0.84],shape:'ellipse'},W,H);
+    body+=sImageZone('artistic',STYLE_ZONES['artistic'][variant],W,H);
     body+=sFlow([
       {str:f.producer,size:H*0.045,f:SF.marker,w:400,fill:INK,maxW:W*0.5,gap:H*0.045,pre:H*0.04},
       {str:f.wine,size:H*0.17,f:SF.anton,w:400,fill:INK,caps:true,lines:2,lh:0.95,maxW:W*0.52,gap:H*0.025},
@@ -1284,7 +1311,7 @@ function styleArtistic(f,W,H,seed,twMM,thMM){
       {str:[reg,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.028,f:SF.archivo,w:500,fill:INK,maxW:W*0.5,gap:0}],SM,SM,'l').svg;
     body+=sBlock([desc,alc].filter(Boolean).join(' / '),{x:SM,top:rowY,maxW:W*0.5,size:H*0.024,min:H*0.02,f:SF.archivo,w:500,fill:INK,a:'l'}).svg;
   }else if(variant===2){ // linocut figure full-height right, hand stack left (\u00c0 Bon Chat board)
-    body+=sImageZone('artistic',{focal:[0.55,0.10,0.95,0.86],fade:[0.45,0.0,1.0,1.0],shape:'band'},W,H);
+    body+=sImageZone('artistic',STYLE_ZONES['artistic'][variant],W,H);
     body+=sFlow([
       {str:f.producer,size:H*0.04,f:SF.marker,w:400,fill:AC,maxW:W*0.44,gap:H*0.05,pre:H*0.05},
       {str:f.wine,size:H*0.095,f:SF.marker,w:400,fill:INK,lines:2,lh:1.05,maxW:W*0.46,gap:H*0.025},
@@ -1294,7 +1321,7 @@ function styleArtistic(f,W,H,seed,twMM,thMM){
       {str:[reg,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.027,f:SF.archivo,w:500,fill:INK,maxW:W*0.44,gap:H*0.012},
       {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.024,f:SF.archivo,w:500,fill:INK,maxW:W*0.44,gap:0}],SM,SM,'l').svg;
   }else{ // riso poster: art top band, loud knockout hero on ground colour
-    body+=sImageZone('artistic',{focal:[0.10,0.04,0.90,0.44],fade:[0.0,0.0,1.0,0.55],shape:'band'},W,H);
+    body+=sImageZone('artistic',STYLE_ZONES['artistic'][variant],W,H);
     body+=sFlow([
       {str:f.wine,size:H*0.13,f:SF.anton,w:400,fill:INK,caps:true,maxW:cW*0.95,gap:H*0.018,pre:H*0.58},
       {str:[f.appellation,f.vintage].filter(Boolean).join('  \u00b7  '),size:H*0.045,f:SF.marker,w:400,fill:AC,maxW:cW*0.8,gap:H*0.016},
@@ -1331,5 +1358,5 @@ function renderStyleOptions(d,order,opts){
   });
 }
 
-window.LabelEngine={FONTS_URL,ensureFonts,renderPriorityOptions,renderStyleOptions,STYLE_LIST,previewLayout,renderOptions,renderLabel,LC_COMPS};
+window.LabelEngine={FONTS_URL,ensureFonts,renderPriorityOptions,renderStyleOptions,STYLE_LIST,styleZones,previewLayout,renderOptions,renderLabel,LC_COMPS};
 })();

@@ -4,6 +4,8 @@ export interface GenerationJob {
   negative?: string;
   /** client's uploaded sketch/photo as a data URL, or null */
   reference?: string | null;
+  /** layout zone the composition must honour (focal/fade fractions) */
+  zone?: { focal: number[]; fade: number[]; shape: string } | null;
   size?: { w: number; h: number };
   art?: { preset?: string; extra?: string; negative?: string; template?: string };
   data?: Record<string, string>;

@@ -98,7 +98,11 @@ const STYLE_NAMES={traditional:'Traditional',contemporary:'Contemporary',flora:'
 /* The BRIEF is the raw input only — vision text, reference, wine facts, seed.
    Prompt assembly (style recipes, sub-styles, focus rules, house rules) lives
    on the server; the client never sees or sends a prompt for the style set. */
-function buildBrief(){return {vision:visionText(),reference:window.__LABEL_REF__||null,data:data(),seed:EightKImageGen.seed||0};}
+function labelAspect(){var w=+((document.getElementById('le_wmm')||{}).value)||110,h=+((document.getElementById('le_hmm')||{}).value)||80;
+  var r=w/h;return r>1.15?'landscape':(r<0.87?'portrait':'square');}
+function buildBrief(){return {vision:visionText(),reference:window.__LABEL_REF__||null,data:data(),seed:EightKImageGen.seed||0,
+  zones:(window.LabelEngine&&window.LabelEngine.styleZones)?window.LabelEngine.styleZones(0):null,
+  aspect:labelAspect()};}
 /* offline fallback set provider: one placeholder per style so the package
    still works standalone (no server). Reports full progress immediately. */
 function placeholderSet(brief,onProgress){var map={};var job=buildJob();

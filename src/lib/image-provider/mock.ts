@@ -30,6 +30,12 @@ export async function generateMockImage(job: GenerationJob): Promise<string> {
   const ink = pick(["#4a4234", "#3f3a2f", "#514735"], 2);
   const subject = (job.vision || "").trim().slice(0, 90) || "Vineyard beneath the mountains";
 
+  // subject honours the layout zone (focal box) when provided — the mock is
+  // the visual proof that layout-first composition reaches the provider
+  const fz = job.zone?.focal;
+  const fcx = fz ? ((fz[0] + fz[2]) / 2) : 0.5;
+  const fcy = fz ? ((fz[1] + fz[3]) / 2) : 0.4;
+  const fr = fz ? Math.min((fz[2] - fz[0]) * W, (fz[3] - fz[1]) * H) * 0.38 : H * 0.28;
   // hills + sun vary with the seed so "regenerate" visibly changes the scene
   const sunX = 0.2 + ((seed >> 4) % 60) / 100;
   const h1 = 0.42 + ((seed >> 8) % 12) / 100;
@@ -48,6 +54,7 @@ export async function generateMockImage(job: GenerationJob): Promise<string> {
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">` +
     `<rect width="${W}" height="${H}" fill="${paper}"/>` +
+    `<circle cx="${(W * fcx).toFixed(0)}" cy="${(H * fcy).toFixed(0)}" r="${fr.toFixed(0)}" fill="none" stroke="${ink}" stroke-width="10"/>` +
     `<circle cx="${(W * sunX).toFixed(0)}" cy="${(H * 0.22).toFixed(0)}" r="${(H * 0.09).toFixed(0)}" fill="none" stroke="${ink}" stroke-width="3" opacity="0.7"/>` +
     `<path d="M 0 ${(H * h1).toFixed(0)} Q ${(W * 0.3).toFixed(0)} ${(H * (h1 - 0.14)).toFixed(0)} ${(W * 0.62).toFixed(0)} ${(H * h1).toFixed(0)} T ${W} ${(H * (h1 - 0.04)).toFixed(0)}" fill="none" stroke="${ink}" stroke-width="3" opacity="0.75"/>` +
     `<path d="M 0 ${(H * h2).toFixed(0)} Q ${(W * 0.45).toFixed(0)} ${(H * (h2 - 0.1)).toFixed(0)} ${W} ${(H * h2).toFixed(0)}" fill="none" stroke="${ink}" stroke-width="2.5" opacity="0.6"/>` +

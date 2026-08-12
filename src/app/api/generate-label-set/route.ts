@@ -76,7 +76,22 @@ function sanitizeBrief(raw: unknown): LabelBrief | { error: string } {
     }
   }
   const seed = Number.isFinite(Number(r.seed)) ? Math.abs(Math.floor(Number(r.seed))) : 0;
-  return { vision, reference, data, seed };
+  // layout zones: validated pass-through (fractional boxes only)
+  let zones: LabelBrief["zones"] = null;
+  if (r.zones && typeof r.zones === "object") {
+    zones = {};
+    for (const [k, v] of Object.entries(r.zones as Record<string, unknown>)) {
+      const z = v as { focal?: unknown; fade?: unknown; shape?: unknown } | null;
+      const box = (b: unknown) =>
+        Array.isArray(b) && b.length === 4 && b.every((n) => typeof n === "number" && n >= 0 && n <= 1);
+      zones[k] =
+        z && box(z.focal) && box(z.fade) && typeof z.shape === "string"
+          ? { focal: z.focal as number[], fade: z.fade as number[], shape: z.shape.slice(0, 20) }
+          : null;
+    }
+  }
+  const aspect = ["landscape", "portrait", "square"].includes(String(r.aspect)) ? String(r.aspect) : undefined;
+  return { vision, reference, data, seed, zones, aspect };
 }
 
 export async function POST(req: Request) {

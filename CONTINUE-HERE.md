@@ -180,6 +180,27 @@ colours as much as subjects.
   gold-line crests, naive wine-drinker line art, riso posters. White-background
   rule unchanged.
 
+## 5d. Image-generation architecture v2 (2026-08-12, in progress)
+
+**Focal doctrine corrected (owner clarification):** the black/gradient zones
+are COMPOSITIONAL, not visual effects. The renderer no longer applies any
+alpha masks — `sImageZone` draws the artwork at full opacity ('meet', so the
+subject can never be cropped). Instead, generation is **layout-first**: the
+engine's `STYLE_ZONES` table (per style/variant) is exported via
+`LabelEngine.styleZones(seed)`, the brief carries each style's zone + the
+label's aspect bucket (landscape/portrait/square), and the server verbalizes
+the geometry into the prompt (subject inside the focal area; only expendable
+surroundings spreading outward; scene dissolving into pure white before the
+edges — which multiply then makes vanish on the label). The mock provider
+draws its subject inside the focal box as pipeline proof.
+
+**Decided next (admin curation system):** Style charter + sub-styles in
+Mongo with /admin editing; reference-image uploads per sub-style passed as
+image inputs to gpt-image; a Playground tab generating trial grids;
+approve/reject with reason tags; approved exemplars reused as references;
+sampling weights for diversity control. Diversity = sub-style x ink/palette
+variant x composition variant x layout, all seeded and logged.
+
 ## 6. What's DONE / what's NEXT
 
 DONE: verbatim transplant with proven parity (engine 144/144 byte-identical;
