@@ -89,12 +89,12 @@ function buildPreviewPrompt(cfg: Config): string {
     .trim();
 }
 
-const TABS = ["Art Direction", "Generations", "Users"] as const;
+const TABS = ["Styles", "Art Direction", "Generations", "Users"] as const;
 type Tab = (typeof TABS)[number];
 
 export default function AdminPage() {
   const [authed, setAuthed] = useState<boolean | null>(null);
-  const [tab, setTab] = useState<Tab>("Art Direction");
+  const [tab, setTab] = useState<Tab>("Styles");
 
   useEffect(() => {
     fetch("/api/admin/me")
@@ -133,6 +133,7 @@ export default function AdminPage() {
           ))}
         </nav>
 
+        {tab === "Styles" && <StylesTab />}
         {tab === "Art Direction" && <ArtDirectionTab />}
         {tab === "Generations" && <GenerationsTab />}
         {tab === "Users" && <UsersTab onSessionLost={() => setAuthed(false)} />}
@@ -142,6 +143,136 @@ export default function AdminPage() {
 }
 
 /* ---------------- Login ---------------- */
+
+
+/* ---------- Styles: reference boards per style + derived variety ---------- */
+const STYLE_DEFS = [
+  ["traditional", "Traditional"], ["contemporary", "Contemporary"], ["flora", "Flora & Fauna"],
+  ["premium", "Premium"], ["minimalist", "Minimalist"], ["artistic", "Artistic / Punk"],
+] as const;
+
+interface RefRow { id: string; style: string; name: string; url: string; bytes: number }
+interface ProfileRow { style: string; summary: string; refCount: number; analyzedAt: string;
+  variants: { key: string; label: string; medium: string; composition: string; mood: string; palette: string }[] }
+
+function StylesTab() {
+  const [refs, setRefs] = useState<RefRow[]>([]);
+  const [profiles, setProfiles] = useState<Record<string, ProfileRow>>({});
+  const [busy, setBusy] = useState<string>("");
+  const [err, setErr] = useState<string>("");
+
+  const load = useCallback(async () => {
+    const r = await fetch("/api/admin/style-refs");
+    if (r.ok) {
+      const b = await r.json();
+      setRefs(b.refs || []);
+      setProfiles(b.profiles || {});
+    } else setErr((await r.json().catch(() => ({}))).error || `load failed (${r.status})`);
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  async function upload(style: string, files: FileList | null) {
+    if (!files?.length) return;
+    setBusy(`upload-${style}`); setErr("");
+    for (const f of Array.from(files)) {
+      const dataUrl = await new Promise<string>((res, rej) => {
+        const rd = new FileReader();
+        rd.onload = () => res(String(rd.result));
+        rd.onerror = () => rej(new Error("read failed"));
+        rd.readAsDataURL(f);
+      });
+      const r = await fetch("/api/admin/style-refs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ style, name: f.name, imageDataUrl: dataUrl }),
+      });
+      if (!r.ok) { setErr((await r.json().catch(() => ({}))).error || `upload failed (${r.status})`); break; }
+    }
+    setBusy(""); load();
+  }
+
+  async function remove(id: string) {
+    await fetch(`/api/admin/style-refs?id=${id}`, { method: "DELETE" });
+    load();
+  }
+
+  async function analyze(style: string) {
+    setBusy(`analyze-${style}`); setErr("");
+    const r = await fetch("/api/admin/style-refs/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ style }),
+    });
+    if (!r.ok) setErr((await r.json().catch(() => ({}))).error || `analysis failed (${r.status})`);
+    setBusy(""); load();
+  }
+
+  return (
+    <div>
+      <div style={S.card}>
+        <label style={{ ...S.label, margin: 0 }}>Style reference boards</label>
+        <p style={{ fontSize: 13, color: "#6b6a60", margin: "6px 0 0" }}>
+          Upload reference images per style — they define the artistic language. &ldquo;Derive
+          variety&rdquo; studies the board and produces the variation recipes generation rotates
+          through; the reference images themselves are also sent to the image model with every
+          generation of that style.
+        </p>
+        {err && <p style={{ color: "#a33", fontSize: 13 }}>{err}</p>}
+      </div>
+      {STYLE_DEFS.map(([key, name]) => {
+        const mine = refs.filter((r) => r.style === key);
+        const prof = profiles[key];
+        return (
+          <div key={key} style={S.card}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <label style={{ ...S.label, margin: 0 }}>{name} <span style={{ color: "#8a887e" }}>({mine.length} refs)</span></label>
+              <div style={{ display: "flex", gap: 10 }}>
+                <label style={{ ...S.btnGhost, display: "inline-block" }}>
+                  {busy === `upload-${key}` ? "Uploading…" : "Upload references"}
+                  <input type="file" accept="image/png,image/jpeg,image/webp" multiple hidden
+                    onChange={(e) => upload(key, e.target.files)} />
+                </label>
+                <button style={S.btn} disabled={!mine.length || busy === `analyze-${key}`}
+                  onClick={() => analyze(key)}>
+                  {busy === `analyze-${key}` ? "Analyzing…" : "Derive variety"}
+                </button>
+              </div>
+            </div>
+            {mine.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 14 }}>
+                {mine.map((r) => (
+                  <div key={r.id} style={{ position: "relative", width: 110 }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={r.url} alt={r.name} style={{ width: 110, height: 82, objectFit: "cover", borderRadius: 6, border: "1px solid #ddd" }} />
+                    <button title="Remove" onClick={() => remove(r.id)}
+                      style={{ position: "absolute", top: 2, right: 2, background: "#fff", border: "1px solid #ccc", borderRadius: 4, cursor: "pointer", fontSize: 11, lineHeight: "14px" }}>
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {prof && (
+              <div style={{ marginTop: 14 }}>
+                <p style={{ fontSize: 13, color: "#4a4a42", margin: 0 }}><b>Derived language:</b> {prof.summary}</p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 10, marginTop: 10 }}>
+                  {prof.variants.map((v) => (
+                    <div key={v.key} style={{ ...S.mono, fontSize: 12 }}>
+                      <b>{v.label}</b>{v.palette ? ` — ${v.palette}` : ""}
+{v.medium}
+{v.composition}
+{v.mood}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function LoginForm({ onSuccess }: { onSuccess: () => void }) {
   const [username, setUsername] = useState("");

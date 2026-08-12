@@ -6,6 +6,7 @@ import { loadConfig, DEFAULT_CONFIG } from "@/lib/admin/config-store";
 import { providerName, generateImageWithRetry } from "@/lib/image-provider";
 import { getImageStorage } from "@/lib/image-storage";
 import { logGeneration } from "@/lib/admin/generation-log";
+import { listRefs, getProfiles, refDataUrl, type StyleProfile, type StyleRefDoc } from "@/lib/admin/style-refs";
 
 /* POST /api/generate-label-set — the generation orchestrator.
 
@@ -107,9 +108,16 @@ export async function POST(req: Request) {
   const provider = providerName();
   const catalog = await loadCatalog();
   const art = await loadConfig().catch(() => ({ ...DEFAULT_CONFIG }));
+  // owner's uploaded references + derived variety profiles (empty when DB off)
+  let allRefs: StyleRefDoc[] = [];
+  let profiles: Record<string, StyleProfile> = {};
+  try {
+    [allRefs, profiles] = await Promise.all([listRefs(), getProfiles()]);
+  } catch {}
 
   const key = createHash("sha256")
-    .update(JSON.stringify([brief, catalog, art, provider]))
+    .update(JSON.stringify([brief, catalog, art, provider,
+      allRefs.map((r) => r.id), Object.values(profiles).map((p) => p.analyzedAt)]))
     .digest("hex");
 
   // Response is an NDJSON stream: one {type:"progress"} line per completed
@@ -136,8 +144,22 @@ export async function POST(req: Request) {
 
       await Promise.all(
         catalog.map(async (style, i) => {
-          const sub = pickSubStyle(style, brief.seed || 0, i);
-          const job = buildStyleJob(style, sub, brief, art);
+          const seed = brief.seed || 0;
+          // derived variety (from the owner's reference board) wins over the
+          // built-in catalog sub-styles; same seeded rotation either way
+          const prof = profiles[style.key];
+          const sub = prof?.variants?.length
+            ? { ...prof.variants[Math.abs(seed * 31 + i * 7 + ((seed >> 3) % 5)) % prof.variants.length] }
+            : pickSubStyle(style, seed, i);
+          // rotate up to 2 reference images per style by seed — variety in
+          // which exemplars steer each generation
+          const styleRefDocs = allRefs.filter((r) => r.style === style.key);
+          const styleRefs: string[] = [];
+          for (let k = 0; k < Math.min(2, styleRefDocs.length); k++) {
+            const d = refDataUrl(styleRefDocs[(seed + i + k) % styleRefDocs.length]);
+            if (d) styleRefs.push(d);
+          }
+          const job = buildStyleJob(style, sub, brief, art, styleRefs);
           const started = Date.now();
           try {
             const imageDataUrl = await generateImageWithRetry(job);

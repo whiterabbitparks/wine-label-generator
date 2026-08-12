@@ -33,12 +33,17 @@ export async function generateOpenAIImage(job: GenerationJob): Promise<string> {
   if (job.negative) prompt += ` Avoid: ${job.negative}.`;
 
   let res: Response;
-  if (job.reference) {
+  const imageInputs: { blob: Blob; name: string }[] = [];
+  // style references first (the artistic language), the winemaker's sketch last
+  for (const [i, ref] of (job.styleRefs || []).entries())
+    imageInputs.push({ blob: dataUrlToBlob(ref), name: `styleref-${i + 1}.png` });
+  if (job.reference) imageInputs.push({ blob: dataUrlToBlob(job.reference), name: "reference.png" });
+  if (imageInputs.length) {
     const form = new FormData();
     form.append("model", model);
     form.append("prompt", prompt);
     form.append("size", pickSize(job.size));
-    form.append("image", dataUrlToBlob(job.reference), "reference.png");
+    for (const inp of imageInputs) form.append("image[]", inp.blob, inp.name);
     res = await fetch(`${API}/images/edits`, {
       method: "POST",
       headers: { Authorization: `Bearer ${key}` },

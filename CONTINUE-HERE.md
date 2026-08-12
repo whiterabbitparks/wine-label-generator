@@ -194,7 +194,19 @@ surroundings spreading outward; scene dissolving into pure white before the
 edges — which multiply then makes vanish on the label). The mock provider
 draws its subject inside the focal box as pipeline proof.
 
-**Decided next (admin curation system):** Style charter + sub-styles in
+**BUILT (2026-08-12): per-style reference boards + derived variety.**
+/admin gained a Styles tab (default): upload reference images per style
+(stored in data/style-refs/ + Mongo `styleRefs`), delete, and "Derive
+variety" — a vision pass (gpt-4o-mini, OPENAI_VISION_MODEL overrides) that
+studies the board and stores 4-6 variation recipes in `styleProfiles`.
+Generation: derived recipes OVERRIDE catalog sub-styles for that style
+(seeded rotation), up to 2 reference images rotate into every gpt-image
+call as image inputs (edits endpoint, image[] array), and the prompt gains
+"follow the exact artistic language of the attached references". Cache key
+includes ref ids + profile timestamps. Styles without refs keep the
+catalog fallback. Verified end-to-end incl. a live vision analysis.
+
+**Later (fuller curation):** Style charter + sub-styles in
 Mongo with /admin editing; reference-image uploads per sub-style passed as
 image inputs to gpt-image; a Playground tab generating trial grids;
 approve/reject with reason tags; approved exemplars reused as references;

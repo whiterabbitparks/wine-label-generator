@@ -80,7 +80,8 @@ export function buildStylePrompt(
   style: StyleDef,
   sub: SubStyle,
   brief: LabelBrief,
-  art: ArtDirectionConfig
+  art: ArtDirectionConfig,
+  hasStyleRefs = false
 ): string {
   const d = brief.data || {};
   const subject = subjectFrom(brief.vision || "", d);
@@ -101,6 +102,9 @@ export function buildStylePrompt(
   const reference = brief.reference
     ? " Match the composition of the uploaded reference sketch."
     : "";
+  const refLanguage = hasStyleRefs
+    ? " Follow the exact artistic language, technique and ink treatment of the attached reference images."
+    : "";
   const rules = art.extra?.trim() ? ` House rules: ${art.extra.trim()}.` : "";
 
   // admin's template still applies if customised; {focus} is new and optional
@@ -114,6 +118,7 @@ export function buildStylePrompt(
     .replace("{focus}", focus)
     .replace("{reference}", reference)
     .replace("{rules}", rules)
+    .concat(refLanguage)
     .concat(WHITE_BG)
     .replace(/\s+/g, " ")
     .trim();
@@ -132,10 +137,12 @@ export function buildStyleJob(
   style: StyleDef,
   sub: SubStyle,
   brief: LabelBrief,
-  art: ArtDirectionConfig
+  art: ArtDirectionConfig,
+  styleRefs: string[] = []
 ): GenerationJob {
   return {
-    prompt: buildStylePrompt(style, sub, brief, art),
+    prompt: buildStylePrompt(style, sub, brief, art, styleRefs.length > 0),
+    styleRefs,
     negative: art.negative,
     reference: brief.reference || null,
     zone: brief.zones?.[style.key] ?? null,

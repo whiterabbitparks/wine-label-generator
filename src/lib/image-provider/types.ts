@@ -6,6 +6,8 @@ export interface GenerationJob {
   reference?: string | null;
   /** layout zone the composition must honour (focal/fade fractions) */
   zone?: { focal: number[]; fade: number[]; shape: string } | null;
+  /** owner's style reference images (data URLs) — passed as image inputs */
+  styleRefs?: string[];
   size?: { w: number; h: number };
   art?: { preset?: string; extra?: string; negative?: string; template?: string };
   data?: Record<string, string>;
