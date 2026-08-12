@@ -34,16 +34,16 @@ let order=['producer','wineName','appellation','grape','vintage','classification
    x/y/w/h = fractions of the content box · sz = font size as a fraction of the preview height ·
    wt = Hepta Slab weight (200 = ExtraLight, 700 = Bold) · a = text alignment. */
 const REF={
-  producer:      {x:0.0300,y:0.0350,w:0.4500,h:0.0730, sz:0.0525, wt:200, a:'center'},   // producer box (left half of the top row)
-  wineName:      {x:0.0377,y:0.3965,w:0.9208,h:0.1204, sz:0.0910, wt:700, a:'center'},
-  appellation:   {x:0.2254,y:0.5214,w:0.5454,h:0.0892, sz:0.0665, wt:700, a:'center'},
-  grape:         {x:0.1230,y:0.6692,w:0.7502,h:0.0777, sz:0.0595, wt:600, a:'center'},   // Hepta Slab Semibold
-  vintage:       {x:0.3853,y:0.7726,w:0.2295,h:0.0662, sz:0.0525, wt:600, a:'center'},   // Hepta Slab Semibold
-  regionCountry: {x:0.0000,y:0.7927,w:0.3589,h:0.0461, sz:0.0350, wt:600, a:'left'},     // Hepta Slab Semibold
-  special:       {x:0.6404,y:0.7927,w:0.3589,h:0.0461, sz:0.0350, wt:600, a:'right'},    // Hepta Slab Semibold
-  classification:{x:0.2926,y:0.8809,w:0.4111,h:0.0414, sz:0.0385, wt:200, a:'center'},   // own centred row (swapped)
-  attributes:    {x:0.0000,y:0.9600,w:0.7018,h:0.0415, sz:0.0210, wt:200, a:'left', grp:1},   // Sweetness/Color/Type labelled row
-  alcVol:        {x:0.7200,y:0.9600,w:0.2800,h:0.0415, sz:0.0210, wt:200, a:'left', grp:1}     // Alc./Vol. labelled row
+  producer:      {x:0.0300,y:0.0350,w:0.4500,h:0.0730, sz:0.04725, wt:200, a:'center'},   // producer box (left half of the top row)
+  wineName:      {x:0.0377,y:0.3965,w:0.9208,h:0.1204, sz:0.08190, wt:700, a:'center'},
+  appellation:   {x:0.2254,y:0.5214,w:0.5454,h:0.0892, sz:0.05985, wt:700, a:'center'},
+  grape:         {x:0.1230,y:0.6692,w:0.7502,h:0.0777, sz:0.05355, wt:600, a:'center'},   // Hepta Slab Semibold
+  vintage:       {x:0.3853,y:0.7726,w:0.2295,h:0.0662, sz:0.04725, wt:600, a:'center'},   // Hepta Slab Semibold
+  regionCountry: {x:0.0000,y:0.7927,w:0.3589,h:0.0461, sz:0.03150, wt:600, a:'left'},     // Hepta Slab Semibold
+  special:       {x:0.6404,y:0.7927,w:0.3589,h:0.0461, sz:0.03150, wt:600, a:'right'},    // Hepta Slab Semibold
+  classification:{x:0.2926,y:0.8809,w:0.4111,h:0.0414, sz:0.03465, wt:200, a:'center'},   // own centred row (swapped)
+  attributes:    {x:0.0000,y:0.9130,w:1.0000,h:0.0415, sz:0.0210, wt:200, a:'left', grp:1},   // Sweetness/Color/Type labelled row
+  alcVol:        {x:0.0000,y:0.9560,w:1.0000,h:0.0415, sz:0.0210, wt:200, a:'left', grp:1}     // Alc./Vol. labelled row
 };
 const LOGO={x:0.5500,y:0.0350,w:0.4200,h:0.0730};   // upload-logo box: right half of the top row, beside the producer box
 const REF_RATIO=(768.3-54.6)/(618.9-46.8);          // content-box aspect from the reference PDF
@@ -94,7 +94,7 @@ function attrSelectsHTML(){var v=FIELDS.attributes.value;
 }
 function alcGroupHTML(){var v=FIELDS.alcVol.value;
   return '<span class="le2-lbl">Alc.:</span><input class="le2-vinp" data-av="alcohol" placeholder="E.g. 12" value="'+esc(v.alcohol)+'">'
-    +'<span class="le2-lbl">Vol.:</span><input class="le2-vinp" data-av="volume" placeholder="E.g. 750" value="'+esc(v.volume)+'"><span class="le2-lbl">ml.</span>';
+    +'<span class="le2-lbl">Vol.:</span><input class="le2-vinp" data-av="volume" placeholder="E.g. 750" value="'+esc(v.volume)+'"><span class="le2-lbl">mL</span>';
 }
 function render(){
   if(!ensureContainers()) return;
@@ -247,13 +247,7 @@ function paint(){if(!window.LabelEngine)return;shown=true;var d=getLabelData();v
     var row=document.createElement('div');row.className='eng-selrow';
     var radio=document.createElement('span');radio.className='eng-radio'+(selIdx===i?' on':'');
     var lab=document.createElement('span');lab.className='eng-optlab';lab.textContent=(i+1)+'. '+(o.name||('Style '+(i+1)));
-    var dlk=null;
-    if(selIdx===i){
-      dlk=document.createElement('a');dlk.className='eng-dl';dlk.href='#';dlk.textContent='See Alternatives';
-      dlk.addEventListener('click',function(ev){ev.preventDefault();ev.stopPropagation();
-        altMode={styleKey:o.style||o.rank,base:(altMode&&altMode.styleKey===(o.style||o.rank))?altMode.base+12:baseSeed+2};
-        selIdx=-1;paint();});
-    }
+    var dlk=null;   // (See Alternatives removed 2026-08-12)
     row.appendChild(radio);row.appendChild(lab);
     row.addEventListener('click',function(){selIdx=i;paint();});
     cell.appendChild(box);cell.appendChild(row);if(dlk)cell.appendChild(dlk);grid.appendChild(cell);
