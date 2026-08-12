@@ -532,7 +532,10 @@ function wirePreviewLoader(btnId, loaderId, revealId, manual){
       setTimeout(()=>loader.scrollIntoView({behavior:'smooth',block:'center'}),80);
       startFacts();
     }
-    if(!manual){ if(wineRect) animateWineRise(wineRect,2000,finish); else animateLiquidRise(liquidRect,2000,finish); }
+    if(!manual){
+      setTimeout(()=>loader.scrollIntoView({behavior:'smooth',block:'center'}),80);
+      if(wineRect) animateWineRise(wineRect,2000,finish); else animateLiquidRise(liquidRect,2000,finish);
+    }
   });
   if(!manual) return;
   /* Manual mode (front): the wine level IS the artwork-generation progress.

@@ -181,6 +181,7 @@ function currentStyle(){var c=document.querySelector('.style-card.selected');ret
 function dl(svg,name){var b=new Blob([svg],{type:'image/svg+xml'});var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(function(){URL.revokeObjectURL(u);},1000);}
 let baseSeed=0, allOpts=[], selIdx=-1, galIdx=0, warned=false, shown=false;
 let altMode=null;   // {styleKey, base} — "See Alternatives": 6 seeds of ONE style
+let seedHist=[0], seedHistIdx=0;   // layout-set history for the prev/next arrows
 /* Generate the artwork set, then paint. While the set is generating, the
    Show Labels glass loader (Loader.pdf) fills in sync with REAL progress —
    one increment per completed style artwork — and the labels reveal only
@@ -197,18 +198,27 @@ function withArtwork(btn,go){var gen=window.EightKImageGen;
       if(window.__frontLoaderFail)window.__frontLoaderFail();
       alert('Image generation failed: '+(e&&e.message||e));})
     .then(function(){if(pending&&btn){btn.disabled=false;btn.textContent=old;}go();});}
-function mkRegen(){var rb=document.createElement('button');rb.type='button';rb.className='eng-regen';rb.textContent='Layout alternatives';rb.addEventListener('click',function(){var b=this;withArtwork(b,function(){altMode=null;baseSeed+=2;selIdx=-1;paint();});});return rb;}
+function mkRegen(){var rb=document.createElement('button');rb.type='button';rb.className='eng-regen';rb.textContent='Layout alternatives';rb.addEventListener('click',function(){var b=this;withArtwork(b,function(){altMode=null;baseSeed+=2;seedHist=seedHist.slice(0,seedHistIdx+1);seedHist.push(baseSeed);seedHistIdx=seedHist.length-1;selIdx=-1;paint();});});return rb;}
 function ensureExtras(){var reveal=document.getElementById('frontReveal');if(!reveal)return;
   var oldNote=document.getElementById('engStyleNote');if(oldNote)oldNote.remove();
   var oldTop=document.getElementById('engRegenTop');if(oldTop)oldTop.remove();
   // "Layout alternatives" sits BELOW the labels grid, with a dashed rule under it
   var grid=document.getElementById('frontThumbs');
   if(grid&&!document.getElementById('engRegen')){
+    var nav=document.createElement('div');nav.id='engNav';nav.className='eng-nav';
+    var pb=document.createElement('button');pb.type='button';pb.id='engPrev';pb.className='eng-arrow';pb.innerHTML='&#10094;';
+    pb.addEventListener('click',function(){if(seedHistIdx>0){seedHistIdx--;baseSeed=seedHist[seedHistIdx];selIdx=-1;paint();}});
     var rb=mkRegen();rb.id='engRegen';
-    grid.parentNode.insertBefore(rb,grid.nextSibling);
+    var nb=document.createElement('button');nb.type='button';nb.id='engNext';nb.className='eng-arrow';nb.innerHTML='&#10095;';
+    nb.addEventListener('click',function(){if(seedHistIdx<seedHist.length-1){seedHistIdx++;baseSeed=seedHist[seedHistIdx];selIdx=-1;paint();}});
+    nav.appendChild(pb);nav.appendChild(rb);nav.appendChild(nb);
+    grid.parentNode.insertBefore(nav,grid.nextSibling);
     var ds=document.createElement('div');ds.className='dash-sep';ds.id='engRegenSep';
-    rb.parentNode.insertBefore(ds,rb.nextSibling);
+    nav.parentNode.insertBefore(ds,nav.nextSibling);
   }
+  var pbtn=document.getElementById('engPrev'),nbtn=document.getElementById('engNext');
+  if(pbtn)pbtn.disabled=!(seedHistIdx>0);
+  if(nbtn)nbtn.disabled=!(seedHistIdx<seedHist.length-1);
 }
 function galShow(i){var ov=document.getElementById('eng-gallery');if(!ov||!allOpts.length)return;galIdx=(i+allOpts.length)%allOpts.length;
   ov.querySelector('.eng-gv-stage').innerHTML=allOpts[galIdx].svg;ov.querySelector('.eng-gv-cap').textContent=(allOpts[galIdx].name||('Style '+(galIdx+1)))+' — '+(galIdx+1)+' of '+allOpts.length;
@@ -283,7 +293,7 @@ function boot(){
       // the prototype page pre-loads #frontThumbs with 4 static demo images —
       // clear them so the reveal never flashes the old grid before paint()
       var g=document.getElementById('frontThumbs');if(g&&!shown)g.innerHTML='';
-      setTimeout(function(){withArtwork(b,function(){if(window.LabelEngine){window.LabelEngine.ensureFonts().then(function(){altMode=null;baseSeed=0;selIdx=-1;paint();
+      setTimeout(function(){withArtwork(b,function(){if(window.LabelEngine){window.LabelEngine.ensureFonts().then(function(){altMode=null;baseSeed=0;seedHist=[0];seedHistIdx=0;selIdx=-1;paint();
         if(window.__frontLoaderDone)window.__frontLoaderDone();});}});},50);});
     // any new input (story, sketch, any label detail) re-arms Show Labels
     var pf=document.getElementById('panel-front');

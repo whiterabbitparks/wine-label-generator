@@ -803,6 +803,7 @@
     <hr class="grey-divider">
 
     <div class="section-head"><h2>Export Compliance<span class="info" data-tip="Lorem ipsum dolor sit amet — a short tip about this section will appear here.">?</span></h2></div>
+      <hr class="grey-divider">
     <div class="country-grid" id="countryGrid">
       <label class="country-row"><input class="dot-input" type="checkbox"><span class="flag">🇪🇺</span> European Union</label>
       <label class="country-row"><input class="dot-input" type="checkbox"><span class="flag">🇦🇺</span> Australia</label>
@@ -880,6 +881,7 @@
     </div>
 
     <div class="section-head"><h2>Bottle<span class="info" data-tip="Lorem ipsum dolor sit amet — a short tip about this section will appear here.">?</span></h2></div>
+    <hr class="grey-divider">
     <div class="option-cols cols-5">
       <div class="opt-group">
         <h4>Wine Color</h4>
@@ -950,7 +952,7 @@
         <label class="opt-row"><input class="dot-input" type="checkbox" id="marketingImgSelect" checked> Download high resolution 4 product images</label>
       </div>
 
-      <div class="section-head" style="margin-top:40px;"><h2>Marketing Add-ons<span class="info" data-tip="Lorem ipsum dolor sit amet — a short tip about this section will appear here.">?</span></h2></div>
+      
       <div class="pricing" style="margin-top:0;border-top:none;">
       <div class="price-row required"><input class="dot-input" type="checkbox" checked disabled data-price="129" id="bottleMockupCheck"><label>Bottle Mockup (transparent PNG, front &amp; back view)</label><span class="amt">$ 129</span></div>
       <div class="price-row"><input class="dot-input" type="checkbox" checked data-price="99" id="marketingImagesCheck"><label>Marketing Images (4 product images for web/social)</label><span class="amt">$ 99</span></div>
@@ -1563,7 +1565,10 @@ function wirePreviewLoader(btnId, loaderId, revealId, manual){
       setTimeout(()=>loader.scrollIntoView({behavior:'smooth',block:'center'}),80);
       startFacts();
     }
-    if(!manual){ if(wineRect) animateWineRise(wineRect,2000,finish); else animateLiquidRise(liquidRect,2000,finish); }
+    if(!manual){
+      setTimeout(()=>loader.scrollIntoView({behavior:'smooth',block:'center'}),80);
+      if(wineRect) animateWineRise(wineRect,2000,finish); else animateLiquidRise(liquidRect,2000,finish);
+    }
   });
   if(!manual) return;
   /* Manual mode (front): the wine level IS the artwork-generation progress.
