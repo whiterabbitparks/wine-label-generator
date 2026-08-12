@@ -34,9 +34,17 @@ export default function EngineTest() {
     // trustworthy signal is actual FontFace entries reaching status === 'loaded'.
     // Re-invoke ensureFonts each round: once the faces are registered its load()
     // calls really fetch them.
-    const FAMILIES = [
-      "Archivo", "Anton", "Cormorant Garamond", "EB Garamond", "Cinzel",
-      "Caveat", "Fraunces", "Jost", "Bebas Neue", "Playfair Display",
+    // family alone is not enough: Archivo 400 loading must not mask a still-
+    // pending Archivo 800 (the shrink-to-fit measurement depends on the exact
+    // face). Require every family+weight(+style) the styles actually measure.
+    const NEED: Array<[string, string, string?]> = [
+      ["Archivo", "300"], ["Archivo", "400"], ["Archivo", "600"], ["Archivo", "700"], ["Archivo", "800"],
+      ["Barlow", "700"], ["Barlow Condensed", "700"], ["Permanent Marker", "400"],
+      ["Anton", "400"], ["Bebas Neue", "400"], ["Jost", "400"], ["Jost", "500"],
+      ["EB Garamond", "400"], ["EB Garamond", "500"], ["EB Garamond", "400", "italic"],
+      ["Cormorant Garamond", "600"], ["Cinzel", "500"], ["Cinzel", "600"],
+      ["Playfair Display", "700"], ["Fraunces", "600"], ["Fraunces", "700"], ["Tinos", "700"],
+      ["Caveat", "600"],
     ];
     (async () => {
       await loadScriptsSequentially(["/engine/img-data.js", "/engine/label-engine.js"]);
@@ -46,12 +54,15 @@ export default function EngineTest() {
       }
       for (let i = 0; i < 120; i++) {
         await window.LabelEngine.ensureFonts();
-        const loaded = new Set(
-          [...document.fonts]
-            .filter((f) => f.status === "loaded")
-            .map((f) => f.family.replace(/['"]/g, ""))
-        );
-        if (FAMILIES.every((f) => loaded.has(f))) {
+        const faces = [...document.fonts].filter((f) => f.status === "loaded");
+        const has = (fam: string, w: string, style?: string) =>
+          faces.some(
+            (f) =>
+              f.family.replace(/['"]/g, "") === fam &&
+              (f.weight === w || (f.weight === "normal" && w === "400")) &&
+              (style ? f.style === "italic" : f.style !== "italic")
+          );
+        if (NEED.every(([fam, w, st]) => has(fam, w, st))) {
           window.__ENGINE_READY__ = true;
           setStatus("engine ready");
           return;

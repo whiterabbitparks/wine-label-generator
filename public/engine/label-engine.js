@@ -259,8 +259,8 @@ async function ensureFonts(){
   if(typeof document!=='undefined'&&!document.getElementById('__lblfonts')){   // load the faces at the page level so inline-SVG text uses them
     const st=document.createElement('style'); st.id='__lblfonts'; st.textContent="@import url('"+FONTS_URL+"');"; document.head.appendChild(st);
   }
-  const specs=["600 40px 'Cormorant Garamond'","500 40px 'EB Garamond'","italic 400 40px 'EB Garamond'",
-    "600 40px 'Cinzel'","700 40px 'Playfair Display'","600 40px 'Playfair Display'","400 40px 'Pinyon Script'",
+  const specs=["600 40px 'Cormorant Garamond'","400 40px 'EB Garamond'","500 40px 'EB Garamond'","italic 400 40px 'EB Garamond'",
+    "500 40px 'Cinzel'","600 40px 'Cinzel'","700 40px 'Playfair Display'","600 40px 'Playfair Display'","400 40px 'Pinyon Script'",
     "400 40px 'Marcellus'","400 40px 'Prata'","400 40px 'Ballet'","400 40px 'Mrs Saint Delafield'",
     "400 40px 'Great Vibes'","400 40px 'MonteCarlo'","400 40px 'Estonia'","400 40px 'Felipa'","400 40px 'Italianno'",
     "400 40px 'Manufacturing Consent'","400 40px 'Cutive Mono'","600 40px 'Montagu Slab'","400 40px 'Girassol'",
