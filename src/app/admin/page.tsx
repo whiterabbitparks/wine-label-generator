@@ -153,7 +153,8 @@ const STYLE_DEFS = [
 
 interface RefRow { id: string; style: string; name: string; url: string; bytes: number }
 interface ProfileRow { style: string; summary: string; refCount: number; analyzedAt: string;
-  variants: { key: string; label: string; medium: string; composition: string; mood: string; palette: string }[] }
+  variants: { key: string; label: string; medium: string; composition: string; mood: string; palette: string }[];
+  layout?: { palettes: { bg: string; ink: string; acc: string }[] } | null }
 
 function StylesTab() {
   const [refs, setRefs] = useState<RefRow[]>([]);
@@ -255,6 +256,19 @@ function StylesTab() {
             {prof && (
               <div style={{ marginTop: 14 }}>
                 <p style={{ fontSize: 13, color: "#4a4a42", margin: 0 }}><b>Derived language:</b> {prof.summary}</p>
+                {prof.layout?.palettes?.length ? (
+                  <div style={{ display: "flex", gap: 10, marginTop: 8, flexWrap: "wrap", alignItems: "center" }}>
+                    <span style={{ fontSize: 11, letterSpacing: ".06em" }}>LAYOUT PALETTES:</span>
+                    {prof.layout.palettes.map((p, i) => (
+                      <span key={i} title={`bg ${p.bg} · ink ${p.ink} · accent ${p.acc}`}
+                        style={{ display: "inline-flex", border: "1px solid #000" }}>
+                        {[p.bg, p.ink, p.acc].map((c) => (
+                          <span key={c} style={{ width: 18, height: 18, background: c, display: "inline-block" }} />
+                        ))}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 10, marginTop: 10 }}>
                   {prof.variants.map((v) => (
                     <div key={v.key} style={{ ...S.mono, fontSize: 12 }}>

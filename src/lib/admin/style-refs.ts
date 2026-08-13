@@ -32,10 +32,18 @@ export interface StyleVariant {
   palette: string;
 }
 
+export interface LayoutPalette {
+  bg: string;
+  ink: string;
+  acc: string;
+}
+
 export interface StyleProfile {
   style: string;
   summary: string;
   variants: StyleVariant[];
+  /** layout-side hints derived from the same boards (palettes for the SVG layouts) */
+  layout?: { palettes: LayoutPalette[] } | null;
   refCount: number;
   analyzedAt: Date;
 }
@@ -111,8 +119,64 @@ export async function getProfiles(): Promise<Record<string, StyleProfile>> {
   return Object.fromEntries(rows.map((r) => [r.style, r]));
 }
 
+/* ---- palette sanitation: layout grounds must stay light (house rule — the
+   artwork is multiply-blended dark ink), inks dark, all values real hex. ---- */
+const HEX = /^#[0-9a-fA-F]{6}$/;
+function luminance(hex: string): number {
+  const n = parseInt(hex.slice(1), 16);
+  const f = (c: number) => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * f((n >> 16) & 255) + 0.7152 * f((n >> 8) & 255) + 0.0722 * f(n & 255);
+}
+export function sanitizePalettes(raw: unknown): LayoutPalette[] {
+  if (!Array.isArray(raw)) return [];
+  const out: LayoutPalette[] = [];
+  for (const p of raw.slice(0, 6)) {
+    const o = (p || {}) as Record<string, unknown>;
+    const bg = String(o.bg || ""), ink = String(o.ink || ""), acc = String(o.acc || o.accent || "");
+    if (!HEX.test(bg) || !HEX.test(ink) || !HEX.test(acc)) continue;
+    if (luminance(bg) < 0.55) continue; // ground must be light
+    if (luminance(ink) > 0.4) continue; // ink must be dark enough to read
+    out.push({ bg: bg.toUpperCase(), ink: ink.toUpperCase(), acc: acc.toUpperCase() });
+  }
+  return out;
+}
+
+/** Layout hints for the client SVG engine: per-style palette chords, with a
+    muted secondary ink computed by blending ink toward the ground. */
+export function layoutHintsFrom(
+  profiles: Record<string, StyleProfile>
+): Record<string, { palettes: { bg: string; ink: string; sub: string; acc: string }[] }> {
+  const mix = (a: string, b: string, t: number) => {
+    const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
+    const ch = (sh: number) =>
+      Math.round(((pa >> sh) & 255) * (1 - t) + ((pb >> sh) & 255) * t);
+    return (
+      "#" + [16, 8, 0].map((sh) => ch(sh).toString(16).padStart(2, "0")).join("").toUpperCase()
+    );
+  };
+  const out: Record<string, { palettes: { bg: string; ink: string; sub: string; acc: string }[] }> = {};
+  for (const [style, prof] of Object.entries(profiles)) {
+    const pals = prof.layout?.palettes;
+    if (!pals?.length) continue;
+    out[style] = {
+      palettes: pals.map((p) => ({ bg: p.bg, ink: p.ink, sub: mix(p.ink, p.bg, 0.45), acc: p.acc })),
+    };
+  }
+  return out;
+}
+
 /* Vision pass: study the reference board and derive the variety recipes.
-   The model returns strict JSON; we validate shape before storing. */
+   The model returns strict JSON; we validate shape before storing.
+
+   Owner rules (2026-08-13) baked into the instruction:
+   - references are a VISUAL-LANGUAGE source only — recipes must never name or
+     describe specific subjects, objects, figures or scenes from the boards
+     (the subject always comes from the winemaker's brief);
+   - 6-8 art directions per style so consecutive generations differ visibly;
+   - the same boards also yield layout palettes (light grounds only). */
 export async function analyzeStyle(style: string): Promise<StyleProfile> {
   const key = process.env.OPENAI_API_KEY;
   if (!key) throw new Error("OPENAI_API_KEY is not set — analysis needs the vision model");
@@ -120,7 +184,7 @@ export async function analyzeStyle(style: string): Promise<StyleProfile> {
   if (!refs.length) throw new Error("upload at least one reference image first");
 
   const images = refs
-    .slice(0, 8)
+    .slice(0, 12)
     .map((r) => refDataUrl(r))
     .filter(Boolean) as string[];
 
@@ -136,14 +200,24 @@ export async function analyzeStyle(style: string): Promise<StyleProfile> {
           role: "system",
           content:
             "You are an art director building a wine-label illustration system. " +
-            "Study the reference images as ONE style board. Return strict JSON: " +
+            "Study the reference images as ONE style board and distill its VISUAL LANGUAGE. " +
+            "Return strict JSON: " +
             '{"summary": string (2-3 sentences on the shared artistic language), ' +
-            '"variants": [4-6 items, each {"label": short name, "medium": detailed medium/technique phrase, ' +
-            '"composition": compositional doctrine phrase, "mood": mood/palette phrase, ' +
-            '"palette": the ink/colour treatment (e.g. single sepia ink, red+black duotone)}]}. ' +
-            "The variants must SPAN THE DIVERSITY of the board — different techniques, inks and " +
-            "compositions you actually observe, not invented ones. Phrases must work inside an " +
-            "image-generation prompt and assume a pure white background.",
+            '"variants": [6-8 items, each {"label": short name, "medium": detailed medium/technique phrase, ' +
+            '"composition": compositional doctrine phrase (framing, density, scale — never a specific scene), ' +
+            '"mood": mood phrase, ' +
+            '"palette": the ink/colour treatment (e.g. single sepia ink, red+black duotone)}], ' +
+            '"layout": {"palettes": [3-5 items, each {"bg": hex, "ink": hex, "acc": hex} — real colour ' +
+            "chords observed on the boards for label grounds, text ink and one accent; bg must always be " +
+            "a light paper-like colour, ink dark]}. " +
+            "CRITICAL RULES: the references are a STYLE reference only, never a content reference. " +
+            "Do NOT name, describe or allude to any specific subject, object, animal, figure, scene, " +
+            "symbol or distinctive shape that appears in them — every phrase must be fully " +
+            "subject-agnostic and reusable for ANY subject, which is supplied separately. " +
+            "The variants must SPAN THE DIVERSITY of the board — different techniques, inks, textures, " +
+            "line qualities and compositional densities you actually observe, not invented ones, and " +
+            "must be clearly DISTINCT from one another so consecutive generations look different. " +
+            "Phrases must work inside an image-generation prompt and assume a pure white background.",
         },
         {
           role: "user",
@@ -160,10 +234,11 @@ export async function analyzeStyle(style: string): Promise<StyleProfile> {
   const parsed = JSON.parse(json.choices?.[0]?.message?.content || "{}") as {
     summary?: string;
     variants?: Partial<StyleVariant>[];
+    layout?: { palettes?: unknown };
   };
   const variants: StyleVariant[] = (parsed.variants || [])
     .filter((v) => v && v.medium && v.composition && v.mood)
-    .slice(0, 8)
+    .slice(0, 10)
     .map((v, i) => ({
       key: `auto-${i + 1}`,
       label: String(v.label || `Variant ${i + 1}`).slice(0, 60),
@@ -174,10 +249,12 @@ export async function analyzeStyle(style: string): Promise<StyleProfile> {
     }));
   if (!variants.length) throw new Error("analysis returned no usable variants");
 
+  const palettes = sanitizePalettes(parsed.layout?.palettes);
   const profile: StyleProfile = {
     style,
     summary: String(parsed.summary || "").slice(0, 1000),
     variants,
+    layout: palettes.length ? { palettes } : null,
     refCount: refs.length,
     analyzedAt: new Date(),
   };

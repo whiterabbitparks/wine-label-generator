@@ -80,8 +80,7 @@ export function buildStylePrompt(
   style: StyleDef,
   sub: SubStyle,
   brief: LabelBrief,
-  art: ArtDirectionConfig,
-  hasStyleRefs = false
+  art: ArtDirectionConfig
 ): string {
   const d = brief.data || {};
   const subject = subjectFrom(brief.vision || "", d);
@@ -102,9 +101,11 @@ export function buildStylePrompt(
   const reference = brief.reference
     ? " Match the composition of the uploaded reference sketch."
     : "";
-  const refLanguage = hasStyleRefs
-    ? " Follow the exact artistic language, technique and ink treatment of the attached reference images."
-    : "";
+  // derived art directions carry an ink/colour treatment (owner rule
+  // 2026-08-13: reference boards inform the LANGUAGE via this text, never as
+  // image inputs — image inputs made the model copy shapes and subjects)
+  const paletteText = (sub as { palette?: string }).palette?.trim();
+  const inkTreatment = paletteText ? ` Ink and colour treatment: ${paletteText}.` : "";
   const rules = art.extra?.trim() ? ` House rules: ${art.extra.trim()}.` : "";
 
   // admin's template still applies if customised; {focus} is new and optional
@@ -118,7 +119,7 @@ export function buildStylePrompt(
     .replace("{focus}", focus)
     .replace("{reference}", reference)
     .replace("{rules}", rules)
-    .concat(refLanguage)
+    .concat(inkTreatment)
     .concat(WHITE_BG)
     .replace(/\s+/g, " ")
     .trim();
@@ -137,12 +138,10 @@ export function buildStyleJob(
   style: StyleDef,
   sub: SubStyle,
   brief: LabelBrief,
-  art: ArtDirectionConfig,
-  styleRefs: string[] = []
+  art: ArtDirectionConfig
 ): GenerationJob {
   return {
-    prompt: buildStylePrompt(style, sub, brief, art, styleRefs.length > 0),
-    styleRefs,
+    prompt: buildStylePrompt(style, sub, brief, art),
     negative: art.negative,
     reference: brief.reference || null,
     zone: brief.zones?.[style.key] ?? null,

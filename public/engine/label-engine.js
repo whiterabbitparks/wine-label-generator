@@ -934,6 +934,18 @@ function styleZones(seed){
   return out;
 }
 
+/* Layout hints derived from the owner's reference boards (server vision pass):
+   per-style palette chords {bg,ink,sub,acc} that REPLACE the built-in scheme
+   tables when present. Grounds are server-guaranteed light (multiply rule).
+   Without hints every style renders exactly as before. */
+let STYLE_HINTS={};
+function setStyleHints(h){STYLE_HINTS=(h&&typeof h==='object')?h:{};}
+function hintPal(key,def,map){
+  const h=STYLE_HINTS[key];
+  if(!(h&&h.palettes&&h.palettes.length))return def;
+  try{const out=h.palettes.map(map);return out.length?out:def;}catch(e){return def;}
+}
+
 /* Arched text along a circular path (textPath keeps output deterministic). */
 function sArcText(str,cx,topBaseY,R,o){
   if(!str)return '';
@@ -990,9 +1002,8 @@ function sRow(cells,W,y,size){
    letterspaced caps, italic serif accents, framed variant. ---- */
 function styleTraditional(d,order,seed,twMM,thMM){
   const f=sFields(d), W=twMM*10, H=thMM*10;
-  const TPAL=[['#FFFFFF','#D71920'],['#F6F0DE','#8E2430'],['#F2E9D2','#6B4A2F'],['#F4EFE0','#3E5C76']];
-  const [BG,ACC]=TPAL[Math.floor(seed/2)%TPAL.length];
-  const INK='#26221E', SUB='#5D564C';
+  const TPAL=hintPal('traditional',[['#FFFFFF','#D71920','#26221E','#5D564C'],['#F6F0DE','#8E2430','#26221E','#5D564C'],['#F2E9D2','#6B4A2F','#26221E','#5D564C'],['#F4EFE0','#3E5C76','#26221E','#5D564C']],function(p){return [p.bg,p.acc,p.ink,p.sub];});
+  const [BG,ACC,INK,SUB]=TPAL[Math.floor(seed/2)%TPAL.length];
   const cx=W/2, cW=W-2*SM;
   const variant=Math.floor(seed/2)%5;
   const alc=f.alc;
@@ -1062,11 +1073,11 @@ function styleTraditional(d,order,seed,twMM,thMM){
 function styleContemporary(f,W,H,seed,twMM,thMM){
   /* Reference-first: colour fields, giant type, one bold motif. Grounds and
      type combos rotate; the artwork's focal area is never covered by text. */
-  const CSCH=[{bg:'#FFFFFF',ink:'#231F20',sub:'#6D6E71',acc:'#E8542F'},
+  const CSCH=hintPal('contemporary',[{bg:'#FFFFFF',ink:'#231F20',sub:'#6D6E71',acc:'#E8542F'},
     {bg:'#F6F0E2',ink:'#231F20',sub:'#75716A',acc:'#2B4C9B'},
     {bg:'#F8EFE3',ink:'#20130E',sub:'#75655A',acc:'#E8542F'},
     {bg:'#F3D3C4',ink:'#232019',sub:'#7C5A4A',acc:'#B33A24'},
-    {bg:'#CDD6C2',ink:'#22271F',sub:'#5A6650',acc:'#2F5D3A'}];
+    {bg:'#CDD6C2',ink:'#22271F',sub:'#5A6650',acc:'#2F5D3A'}],function(p){return {bg:p.bg,ink:p.ink,sub:p.sub,acc:p.acc};});
   const SCH=CSCH[Math.floor(seed/2)%CSCH.length];
   const INK=SCH.ink, SUB=SCH.sub, cx=W/2, cW=W-2*SM;
   const variant=Math.floor(seed/2)%5;
@@ -1127,9 +1138,9 @@ function styleContemporary(f,W,H,seed,twMM,thMM){
    woodcut/naturalist artwork centre, clean caps or soft serif type, red
    diagonal-band variant, colours from the boards. ---- */
 function styleFlora(f,W,H,seed,twMM,thMM){
-  const FPAL=[['#F2EDDD','#C73A2E'],['#EFE8D6','#5F6B39'],['#F7F1E1','#B4552D'],['#EFE6CE','#3E5C46']];
-  const [BG,ACC]=FPAL[Math.floor(seed/2)%FPAL.length];
-  const INK='#2B2620', SUB='#6E6555', cx=W/2, cW=W-2*SM;
+  const FPAL=hintPal('flora',[['#F2EDDD','#C73A2E','#2B2620','#6E6555'],['#EFE8D6','#5F6B39','#2B2620','#6E6555'],['#F7F1E1','#B4552D','#2B2620','#6E6555'],['#EFE6CE','#3E5C46','#2B2620','#6E6555']],function(p){return [p.bg,p.acc,p.ink,p.sub];});
+  const [BG,ACC,INK,SUB]=FPAL[Math.floor(seed/2)%FPAL.length];
+  const cx=W/2, cW=W-2*SM;
   const variant=Math.floor(seed/2)%4;
   const alc=f.alc;
   const desc=(f.descriptor||'').replace(/,/g,'');
@@ -1184,9 +1195,9 @@ function styleFlora(f,W,H,seed,twMM,thMM){
 function stylePremium(f,W,H,seed,twMM,thMM){
   // house rule: artwork is multiply-blended, so grounds under it stay light —
   // the former charcoal variant is now a warm parchment
-  const ppi=Math.floor(seed/2)%3;
-  const BG=ppi===2?'#F7F2E6':(ppi===1?'#FFFFFF':'#F2EDE0');
-  const INK='#2B2822', SUB='#7A7160';
+  const PPAL=hintPal('premium',[['#F2EDE0','#2B2822','#7A7160'],['#FFFFFF','#2B2822','#7A7160'],['#F7F2E6','#2B2822','#7A7160']],function(p){return [p.bg,p.ink,p.sub];});
+  const ppi=Math.floor(seed/2)%PPAL.length;
+  const [BG,INK,SUB]=PPAL[ppi];
   const id='g'+(++__sid); const gold=`url(#${id})`;
   const defs=`<linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#D8BC85"/><stop offset="0.5" stop-color="#B08D57"/><stop offset="1" stop-color="#8C6A32"/></linearGradient>`;
   const cx=W/2, cW=W-2*SM;
@@ -1236,10 +1247,10 @@ function stylePremium(f,W,H,seed,twMM,thMM){
 /* ---- 5) MINIMALIST — reference-first: vast emptiness, one tiny mark,
    letterspaced type; colour-panel variant from the boards. ---- */
 function styleMinimal(f,W,H,seed,twMM,thMM){
-  const MSCH=[{bg:'#FBFBF9',ink:'#231F20',sub:'#8A8780',panel:null},
+  const MSCH=hintPal('minimalist',[{bg:'#FBFBF9',ink:'#231F20',sub:'#8A8780',panel:null},
     {bg:'#F4EFE4',ink:'#2A2722',sub:'#8F887B',panel:null},
     {bg:'#FFFFFF',ink:'#2B5BB7',sub:'#7C8797',panel:null},
-    {bg:'#E2574C',ink:'#FBF6EA',sub:'#F8E8DF',panel:true}];
+    {bg:'#E2574C',ink:'#FBF6EA',sub:'#F8E8DF',panel:true}],function(p){return {bg:p.bg,ink:p.ink,sub:p.sub,panel:null};});
   const MS=MSCH[Math.floor(seed/2)%MSCH.length];
   const INK=MS.ink, SUB=MS.sub, cx=W/2, cW=W-2*SM;
   const variant=Math.floor(seed/2)%4;
@@ -1283,10 +1294,9 @@ function styleMinimal(f,W,H,seed,twMM,thMM){
 function styleArtistic(f,W,H,seed,twMM,thMM){
   // house rule: no dark grounds under the multiply-blended artwork — the
   // former near-black riso ground is now a light bone paper
-  const api=Math.floor(seed/2)%4, loud=(api===1);
-  const BG=['#F3EFE4','#DA3D1C','#F2BFC9','#EFE9DA'][api];
-  const INK=loud?'#F8EFE0':'#171512';
-  const AC=loud?'#171512':(api===3?'#E8542F':'#C22A1C');
+  const APAL=hintPal('artistic',[['#F3EFE4','#171512','#C22A1C'],['#DA3D1C','#F8EFE0','#171512'],['#F2BFC9','#171512','#C22A1C'],['#EFE9DA','#171512','#E8542F']],function(p){return [p.bg,p.ink,p.acc];});
+  const api=Math.floor(seed/2)%APAL.length;
+  const [BG,INK,AC]=APAL[api];
   const cx=W/2, cW=W-2*SM;
   const variant=Math.floor(seed/2)%4;
   const alc=f.alc;
@@ -1360,6 +1370,6 @@ function renderStyleOptions(d,order,opts){
   });
 }
 
-window.LabelEngine={FONTS_URL,ensureFonts,renderPriorityOptions,renderStyleOptions,STYLE_LIST,styleZones,previewLayout,renderOptions,renderLabel,LC_COMPS};
+window.LabelEngine={FONTS_URL,ensureFonts,renderPriorityOptions,renderStyleOptions,STYLE_LIST,styleZones,setStyleHints,previewLayout,renderOptions,renderLabel,LC_COMPS};
 })();
 

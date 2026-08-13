@@ -76,7 +76,7 @@ export default function Configurator() {
           const reader = r.body.getReader();
           const dec = new TextDecoder();
           let buf = "";
-          let result: { images?: unknown; error?: string } | null = null;
+          let result: { images?: unknown; layoutHints?: unknown; error?: string } | null = null;
           for (;;) {
             const { done, value } = await reader.read();
             if (done) break;
@@ -100,6 +100,12 @@ export default function Configurator() {
             }
           }
           if (!result) throw new Error("generation stream ended unexpectedly");
+          // derived layout palettes must land before setImages triggers the
+          // repaint, so the layouts and the artwork arrive as one coherent set
+          const eng = (window as unknown as {
+            LabelEngine?: { setStyleHints?: (h: unknown) => void };
+          }).LabelEngine;
+          eng?.setStyleHints?.(result.layoutHints || {});
           return result.images;
         };
         gen.wired = true; // e2e tests wait for this before driving the UI

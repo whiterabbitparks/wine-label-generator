@@ -34,9 +34,9 @@ export async function generateOpenAIImage(job: GenerationJob): Promise<string> {
 
   let res: Response;
   const imageInputs: { blob: Blob; name: string }[] = [];
-  // style references first (the artistic language), the winemaker's sketch last
-  for (const [i, ref] of (job.styleRefs || []).entries())
-    imageInputs.push({ blob: dataUrlToBlob(ref), name: `styleref-${i + 1}.png` });
+  // only the winemaker's own sketch may steer as an image input — the owner's
+  // style-reference boards deliberately never reach the image model (rule
+  // 2026-08-13: image inputs made the model copy their shapes and subjects)
   if (job.reference) imageInputs.push({ blob: dataUrlToBlob(job.reference), name: "reference.png" });
   if (imageInputs.length) {
     const form = new FormData();

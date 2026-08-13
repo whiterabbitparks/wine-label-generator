@@ -6,7 +6,7 @@ import { loadConfig, DEFAULT_CONFIG } from "@/lib/admin/config-store";
 import { providerName, generateImageWithRetry } from "@/lib/image-provider";
 import { getImageStorage } from "@/lib/image-storage";
 import { logGeneration } from "@/lib/admin/generation-log";
-import { listRefs, getProfiles, refDataUrl, type StyleProfile, type StyleRefDoc } from "@/lib/admin/style-refs";
+import { getProfiles, layoutHintsFrom, type StyleProfile } from "@/lib/admin/style-refs";
 
 /* POST /api/generate-label-set — the generation orchestrator.
 
@@ -48,6 +48,8 @@ interface SetResult {
   provider: string;
   images: Record<string, SetEntry>;
   errors: Record<string, string>;
+  /** derived per-style layout palettes for the client SVG engine */
+  layoutHints: ReturnType<typeof layoutHintsFrom>;
 }
 
 declare global {
@@ -108,16 +110,18 @@ export async function POST(req: Request) {
   const provider = providerName();
   const catalog = await loadCatalog();
   const art = await loadConfig().catch(() => ({ ...DEFAULT_CONFIG }));
-  // owner's uploaded references + derived variety profiles (empty when DB off)
-  let allRefs: StyleRefDoc[] = [];
+  // derived variety profiles from the owner's reference boards (empty when DB
+  // off). The reference images themselves never reach the image model — they
+  // steer through the derived language only (owner rule 2026-08-13).
   let profiles: Record<string, StyleProfile> = {};
   try {
-    [allRefs, profiles] = await Promise.all([listRefs(), getProfiles()]);
+    profiles = await getProfiles();
   } catch {}
+  const layoutHints = layoutHintsFrom(profiles);
 
   const key = createHash("sha256")
     .update(JSON.stringify([brief, catalog, art, provider,
-      allRefs.map((r) => r.id), Object.values(profiles).map((p) => p.analyzedAt)]))
+      Object.values(profiles).map((p) => p.analyzedAt)]))
     .digest("hex");
 
   // Response is an NDJSON stream: one {type:"progress"} line per completed
@@ -151,15 +155,7 @@ export async function POST(req: Request) {
           const sub = prof?.variants?.length
             ? { ...prof.variants[Math.abs(seed * 31 + i * 7 + ((seed >> 3) % 5)) % prof.variants.length] }
             : pickSubStyle(style, seed, i);
-          // rotate up to 2 reference images per style by seed — variety in
-          // which exemplars steer each generation
-          const styleRefDocs = allRefs.filter((r) => r.style === style.key);
-          const styleRefs: string[] = [];
-          for (let k = 0; k < Math.min(2, styleRefDocs.length); k++) {
-            const d = refDataUrl(styleRefDocs[(seed + i + k) % styleRefDocs.length]);
-            if (d) styleRefs.push(d);
-          }
-          const job = buildStyleJob(style, sub, brief, art, styleRefs);
+          const job = buildStyleJob(style, sub, brief, art);
           const started = Date.now();
           try {
             const imageDataUrl = await generateImageWithRetry(job);
@@ -206,7 +202,7 @@ export async function POST(req: Request) {
       if (!Object.keys(images).length) {
         send({ type: "error", error: "all style generations failed", errors });
       } else {
-        const result: SetResult = { seed: brief.seed || 0, provider, images, errors };
+        const result: SetResult = { seed: brief.seed || 0, provider, images, errors, layoutHints };
         // only complete sets are cacheable — caching a partial set would pin
         // the missing styles as permanently absent for this brief
         if (!Object.keys(errors).length) {

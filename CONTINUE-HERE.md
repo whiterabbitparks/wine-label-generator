@@ -203,6 +203,22 @@ surroundings spreading outward; scene dissolving into pure white before the
 edges — which multiply then makes vanish on the label). The mock provider
 draws its subject inside the focal box as pipeline proof.
 
+**REVISED (2026-08-13): references are style-language only.**
+Owner rules after reviewing real output: (1) reference images must NEVER
+reach the image model — as image[] inputs the edits endpoint copied their
+shapes and subjects, and diversity collapsed onto the boards; (2) subject
+matter comes ONLY from the brief/wine facts, references define visual
+language; (3) each style needs several distinct art directions. So: the
+vision pass now derives 6-8 subject-agnostic art directions per style
+(anti-copy rules in the instruction) plus 3-5 layout palettes (light
+grounds enforced by sanitizePalettes). Generation rotates art directions
+by seed and appends the variant's ink treatment to the prompt; the boards
+themselves stay server-side. Layout palettes flow to the client as
+result.layoutHints -> LabelEngine.setStyleHints() and REPLACE the built-in
+scheme tables per style (engine renders byte-identically without hints —
+goldens unchanged). Note: same story + same seed still returns the cached
+set by design; variety appears on regenerate (new seed).
+
 **BUILT (2026-08-12): per-style reference boards + derived variety.**
 /admin gained a Styles tab (default): upload reference images per style
 (stored in data/style-refs/ + Mongo `styleRefs`), delete, and "Derive
