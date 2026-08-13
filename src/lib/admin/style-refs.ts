@@ -168,6 +168,19 @@ export function layoutHintsFrom(
   return out;
 }
 
+/* chat/completions with 429 retry — the vision TPM window resets within a
+   minute and the error message names its own wait time. */
+async function visionFetch(init: RequestInit): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", init);
+    if (res.status !== 429 || attempt >= 3) return res;
+    const text = await res.text().catch(() => "");
+    const m = text.match(/try again in ([\d.]+)s/i);
+    const wait = Math.min(60, m ? Math.ceil(parseFloat(m[1])) + 1 : 15);
+    await new Promise((r) => setTimeout(r, wait * 1000));
+  }
+}
+
 /* Vision pass: study the reference board and derive the variety recipes.
    The model returns strict JSON; we validate shape before storing.
 
@@ -189,7 +202,7 @@ export async function analyzeStyle(style: string): Promise<StyleProfile> {
     .filter(Boolean) as string[];
 
   const model = process.env.OPENAI_VISION_MODEL || "gpt-4o-mini";
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+  const res = await visionFetch({
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -211,9 +224,13 @@ export async function analyzeStyle(style: string): Promise<StyleProfile> {
             "chords observed on the boards for label grounds, text ink and one accent; bg must always be " +
             "a light paper-like colour, ink dark]}. " +
             "CRITICAL RULES: the references are a STYLE reference only, never a content reference. " +
-            "Do NOT name, describe or allude to any specific subject, object, animal, figure, scene, " +
-            "symbol or distinctive shape that appears in them — every phrase must be fully " +
-            "subject-agnostic and reusable for ANY subject, which is supplied separately. " +
+            "Do NOT name, describe or allude to any specific subject, object, animal, plant, figure, " +
+            "building, landscape, scene, symbol or distinctive shape that appears in them — in ANY " +
+            "field, including labels. Labels must be 2-4 word names of the TECHNIQUE or treatment " +
+            '(good: "Fine Crosshatch Engraving", "Loose Ink Wash", "Flat Riso Duotone"; bad: "Olive ' +
+            'Tree", "Village Scene"). If a draft phrase names anything depictable, replace it with ' +
+            "the technique it demonstrates. Every phrase must be fully subject-agnostic and reusable " +
+            "for ANY subject, which is supplied separately. " +
             "The variants must SPAN THE DIVERSITY of the board — different techniques, inks, textures, " +
             "line qualities and compositional densities you actually observe, not invented ones, and " +
             "must be clearly DISTINCT from one another so consecutive generations look different. " +
@@ -222,8 +239,15 @@ export async function analyzeStyle(style: string): Promise<StyleProfile> {
         {
           role: "user",
           content: [
-            { type: "text", text: `Style: ${style}. Derive the profile from these references.` },
-            ...images.map((url) => ({ type: "image_url" as const, image_url: { url } })),
+            {
+              type: "text",
+              text:
+                `Style: ${style}. Derive the profile from these references. ` +
+                "Remember: describe technique and treatment only — no nouns for anything depicted.",
+            },
+            // low detail: style language + palette chords survive the 512px
+            // downscale, and 12 boards stay far under the vision TPM budget
+            ...images.map((url) => ({ type: "image_url" as const, image_url: { url, detail: "low" as const } })),
           ],
         },
       ],
