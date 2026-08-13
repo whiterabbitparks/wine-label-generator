@@ -7,6 +7,7 @@ import { providerName, generateImageWithRetry } from "@/lib/image-provider";
 import { getImageStorage } from "@/lib/image-storage";
 import { logGeneration } from "@/lib/admin/generation-log";
 import { getProfiles, layoutHintsFrom, type StyleProfile } from "@/lib/admin/style-refs";
+import { feedbackAggregates, type StyleFeedbackAggregate } from "@/lib/admin/feedback";
 
 /* POST /api/generate-label-set — the generation orchestrator.
 
@@ -114,14 +115,15 @@ export async function POST(req: Request) {
   // off). The reference images themselves never reach the image model — they
   // steer through the derived language only (owner rule 2026-08-13).
   let profiles: Record<string, StyleProfile> = {};
+  let feedback: Record<string, StyleFeedbackAggregate> = {};
   try {
-    profiles = await getProfiles();
+    [profiles, feedback] = await Promise.all([getProfiles(), feedbackAggregates()]);
   } catch {}
   const layoutHints = layoutHintsFrom(profiles);
 
   const key = createHash("sha256")
     .update(JSON.stringify([brief, catalog, art, provider,
-      Object.values(profiles).map((p) => p.analyzedAt)]))
+      Object.values(profiles).map((p) => p.analyzedAt), feedback]))
     .digest("hex");
 
   // Response is an NDJSON stream: one {type:"progress"} line per completed
@@ -152,10 +154,24 @@ export async function POST(req: Request) {
           // derived variety (from the owner's reference board) wins over the
           // built-in catalog sub-styles; same seeded rotation either way
           const prof = profiles[style.key];
-          const sub = prof?.variants?.length
-            ? { ...prof.variants[Math.abs(seed * 31 + i * 7 + ((seed >> 3) % 5)) % prof.variants.length] }
-            : pickSubStyle(style, seed, i);
-          const job = buildStyleJob(style, sub, brief, art);
+          // owner approvals reweight the rotation: an approved art direction
+          // enters the pool extra times while a rejected one keeps a single
+          // slot, so it surfaces relatively less often. Without feedback the
+          // pool IS the variant list — the pick matches the plain rotation.
+          const fbAgg = feedback[style.key];
+          const baseVariants = prof?.variants?.length ? prof.variants : null;
+          let sub;
+          if (baseVariants) {
+            const pool = baseVariants.flatMap((v) => {
+              const w = fbAgg?.weights[v.key] ?? 1;
+              return Array(Math.max(1, Math.round(w))).fill(v);
+            });
+            sub = { ...pool[Math.abs(seed * 31 + i * 7 + ((seed >> 3) % 5)) % pool.length] };
+          } else {
+            sub = pickSubStyle(style, seed, i);
+          }
+          const fbLines = fbAgg ? { avoid: fbAgg.avoid, favour: fbAgg.favour } : undefined;
+          const job = buildStyleJob(style, sub, brief, art, fbLines);
           const started = Date.now();
           try {
             const imageDataUrl = await generateImageWithRetry(job);

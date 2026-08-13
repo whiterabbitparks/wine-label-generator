@@ -76,11 +76,18 @@ function subjectFrom(vision: string, d: Record<string, string>): string {
   return "a classic vineyard landscape at golden hour";
 }
 
+/** Owner-feedback lines folded into one style's prompt (refinement loop). */
+export interface FeedbackLines {
+  avoid: string[];
+  favour: string[];
+}
+
 export function buildStylePrompt(
   style: StyleDef,
   sub: SubStyle,
   brief: LabelBrief,
-  art: ArtDirectionConfig
+  art: ArtDirectionConfig,
+  fb?: FeedbackLines
 ): string {
   const d = brief.data || {};
   const subject = subjectFrom(brief.vision || "", d);
@@ -106,7 +113,10 @@ export function buildStylePrompt(
   // image inputs — image inputs made the model copy shapes and subjects)
   const paletteText = (sub as { palette?: string }).palette?.trim();
   const inkTreatment = paletteText ? ` Ink and colour treatment: ${paletteText}.` : "";
-  const rules = art.extra?.trim() ? ` House rules: ${art.extra.trim()}.` : "";
+  // rules = global house rules + this style's own rules + owner-approved traits
+  const ruleParts = [art.extra?.trim(), art.perStyle?.[style.key]?.rules?.trim()].filter(Boolean);
+  if (fb?.favour?.length) ruleParts.push(`favour: ${fb.favour.join("; ")}`);
+  const rules = ruleParts.length ? ` House rules: ${ruleParts.join(". ")}.` : "";
 
   // admin's template still applies if customised; {focus} is new and optional
   const template = art.template?.includes("{medium}") ? withFocusSlot(art.template) : TEMPLATE_DEFAULT;
@@ -138,11 +148,15 @@ export function buildStyleJob(
   style: StyleDef,
   sub: SubStyle,
   brief: LabelBrief,
-  art: ArtDirectionConfig
+  art: ArtDirectionConfig,
+  fb?: FeedbackLines
 ): GenerationJob {
+  // negative = global avoid-list + this style's avoid-list + owner-rejected traits
+  const negParts = [art.negative, art.perStyle?.[style.key]?.negative?.trim()].filter(Boolean);
+  if (fb?.avoid?.length) negParts.push(fb.avoid.join(", "));
   return {
-    prompt: buildStylePrompt(style, sub, brief, art),
-    negative: art.negative,
+    prompt: buildStylePrompt(style, sub, brief, art, fb),
+    negative: negParts.join(", "),
     reference: brief.reference || null,
     zone: brief.zones?.[style.key] ?? null,
     size: { w: 1024, h: 640 },

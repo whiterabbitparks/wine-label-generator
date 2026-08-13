@@ -13,6 +13,7 @@ interface Config {
   extra: string;
   negative: string;
   template: string;
+  perStyle: Record<string, { rules: string; negative: string }>;
 }
 
 interface GenerationRow {
@@ -32,64 +33,7 @@ interface UserRow {
   createdAt: string;
 }
 
-const PRESETS: Record<string, { label: string; medium: string; composition: string; mood: string }> = {
-  engraving: {
-    label: "Vintage engraving",
-    medium: "a fine, detailed vintage engraving and etching illustration with cross-hatching and delicate line work",
-    composition: "a single centred subject with clean negative space around it, designed as a wine-label illustration, no lettering and no border",
-    mood: "elegant, heritage, timeless; monochrome ink on cream paper",
-  },
-  botanical: {
-    label: "Botanical line art",
-    medium: "a delicate botanical line-art illustration with thin, even strokes in a herbarium style",
-    composition: "a centred plant, vine or leaf motif with airy negative space, no lettering and no border",
-    mood: "organic, natural and refined",
-  },
-  watercolor: {
-    label: "Soft watercolor",
-    medium: "a soft watercolour illustration with gentle washes and subtle paper texture",
-    composition: "a centred scene with light, airy margins, no lettering",
-    mood: "romantic and artisanal, in a muted natural palette",
-  },
-  minimal: {
-    label: "Minimal line icon",
-    medium: "a minimal single-line icon illustration, geometric and made of just a few strokes",
-    composition: "one simple centred mark with generous negative space, no lettering",
-    mood: "modern, understated and clean",
-  },
-  bold: {
-    label: "Bold graphic",
-    medium: "a bold, high-contrast graphic illustration in a screen-print poster style with a limited palette",
-    composition: "a strong centred composition with confident shapes, no lettering",
-    mood: "expressive, contemporary and punchy",
-  },
-};
-
-const SAMPLE_STORY = "A vineyard beneath the Caucasus Mountains at golden hour";
-const SAMPLE_DATA = { wineColorName: "Red", region: "Kakheti", country: "Georgia", grape: "Saperavi" };
-
-function buildPreviewPrompt(cfg: Config): string {
-  const P = PRESETS[cfg.preset] || PRESETS.engraving;
-  const ctx = [
-    SAMPLE_DATA.wineColorName.toLowerCase() + " wine",
-    "from " + SAMPLE_DATA.region + ", " + SAMPLE_DATA.country,
-    "grape: " + SAMPLE_DATA.grape,
-  ];
-  const context = "Context: " + ctx.join("; ") + ". ";
-  const rules = cfg.extra.trim() ? " House rules: " + cfg.extra.trim() + "." : "";
-  return cfg.template
-    .replace("{medium}", P.medium)
-    .replace("{subject}", SAMPLE_STORY)
-    .replace("{context}", context)
-    .replace("{composition}", P.composition)
-    .replace("{mood}", P.mood)
-    .replace("{reference}", "")
-    .replace("{rules}", rules)
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-const TABS = ["Styles", "Art Direction", "Generations", "Users"] as const;
+const TABS = ["Styles", "Playground", "Art Direction", "Generations", "Users"] as const;
 type Tab = (typeof TABS)[number];
 
 export default function AdminPage() {
@@ -134,6 +78,7 @@ export default function AdminPage() {
         </nav>
 
         {tab === "Styles" && <StylesTab />}
+        {tab === "Playground" && <PlaygroundTab />}
         {tab === "Art Direction" && <ArtDirectionTab />}
         {tab === "Generations" && <GenerationsTab />}
         {tab === "Users" && <UsersTab onSessionLost={() => setAuthed(false)} />}
@@ -154,7 +99,9 @@ const STYLE_DEFS = [
 interface RefRow { id: string; style: string; name: string; url: string; bytes: number }
 interface ProfileRow { style: string; summary: string; refCount: number; analyzedAt: string;
   variants: { key: string; label: string; medium: string; composition: string; mood: string; palette: string }[];
-  layout?: { palettes: { bg: string; ink: string; acc: string }[] } | null }
+  layout?: { palettes: { bg: string; ink: string; acc: string }[];
+    type?: { display: string; case: string } | null;
+    composition?: { alignment: string } | null } | null }
 
 function StylesTab() {
   const [refs, setRefs] = useState<RefRow[]>([]);
@@ -267,6 +214,12 @@ function StylesTab() {
                         ))}
                       </span>
                     ))}
+                    {prof.layout.type || prof.layout.composition ? (
+                      <span style={{ fontSize: 11, letterSpacing: ".06em" }}>
+                        {prof.layout.type ? `TYPE: ${prof.layout.type.display} (${prof.layout.type.case})` : ""}
+                        {prof.layout.composition ? ` · COMPOSITION: ${prof.layout.composition.alignment}` : ""}
+                      </span>
+                    ) : null}
                   </div>
                 ) : null}
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 10, marginTop: 10 }}>
@@ -333,11 +286,10 @@ function ArtDirectionTab() {
   const [config, setConfig] = useState<Config | null>(null);
   const [saved, setSaved] = useState<Config | null>(null);
   const [status, setStatus] = useState("");
-  const [testImg, setTestImg] = useState("");
-  const [testing, setTesting] = useState(false);
 
   const load = useCallback(async () => {
     const cfg = await fetch("/api/admin/config").then((r) => r.json());
+    cfg.perStyle = cfg.perStyle || {};
     setConfig(cfg);
     setSaved(cfg);
   }, []);
@@ -356,114 +308,296 @@ function ArtDirectionTab() {
     });
     if (r.ok) {
       const cfg = await r.json();
+      cfg.perStyle = cfg.perStyle || {};
       setConfig(cfg);
       setSaved(cfg);
-      setStatus("saved ✓ — active for all new client generations");
+      setStatus("saved ✓ — active for all new generations");
     } else {
       setStatus("save failed: " + ((await r.json()).error || r.status));
     }
   }
 
-  async function testGenerate() {
-    if (!config) return;
-    setTesting(true);
-    setTestImg("");
-    setStatus("generating test image (uses the LIVE provider — may cost money)…");
-    try {
-      const r = await fetch("/api/generate-label-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt: buildPreviewPrompt(config),
-          negative: config.negative,
-          size: { w: 1024, h: 640 },
-          vision: SAMPLE_STORY,
-          data: SAMPLE_DATA,
-          art: config,
-        }),
-      });
-      const body = await r.json();
-      if (!r.ok) throw new Error(body.error || String(r.status));
-      setTestImg(body.imageDataUrl);
-      setStatus(`test image generated (provider: ${body.provider})`);
-    } catch (e) {
-      setStatus("test generate failed: " + (e instanceof Error ? e.message : String(e)));
-    }
-    setTesting(false);
-  }
-
   const dirty = useMemo(() => JSON.stringify(config) !== JSON.stringify(saved), [config, saved]);
-  const preview = useMemo(() => (config ? buildPreviewPrompt(config) : ""), [config]);
 
   if (!config) return <div style={S.card}>Loading config…</div>;
+
+  const tuning = (k: string) => config.perStyle[k] || { rules: "", negative: "" };
+  const setTuning = (k: string, field: "rules" | "negative", v: string) =>
+    setConfig({
+      ...config,
+      perStyle: { ...config.perStyle, [k]: { ...tuning(k), [field]: v } },
+    });
 
   return (
     <>
       <p style={{ color: "#6b6a60", marginTop: 14 }}>
-        These settings shape every artwork the generator produces. Clients only contribute their story;
-        everything below is yours. Changes apply to all new generations after <b>Save</b>.
+        Direction is layered: <b>global</b> rules apply to every artwork, then each style adds its
+        own. The reference boards (Styles tab) define each style’s visual language automatically —
+        use these fields for corrections and taste the boards can’t express: “more negative space”,
+        “never depict people”, “always a hint of terracotta”. Judge results in the Playground.
       </p>
 
       <div style={S.card}>
-        <label style={S.label}>Image style preset</label>
-        <select
-          style={S.input}
-          value={config.preset}
-          onChange={(e) => setConfig({ ...config, preset: e.target.value })}
-        >
-          {Object.entries(PRESETS).map(([k, p]) => (
-            <option key={k} value={k}>{p.label}</option>
-          ))}
-        </select>
-
-        <label style={S.label}>House rules / art direction (plain English)</label>
+        <h3 style={{ margin: "0 0 4px" }}>Global — every style</h3>
+        <label style={S.label}>Rules (plain English — what to aim for)</label>
         <textarea
-          style={{ ...S.input, minHeight: 70 }}
-          placeholder="e.g. always monochrome; classical composition; subtle Georgian motifs welcome"
+          style={{ ...S.input, minHeight: 60 }}
+          placeholder="e.g. classical composition; subtle Georgian motifs welcome"
           value={config.extra}
           onChange={(e) => setConfig({ ...config, extra: e.target.value })}
         />
-
-        <label style={S.label}>Negative prompt (what to avoid)</label>
+        <label style={S.label}>Avoid (negative prompt — what must never appear)</label>
         <textarea
-          style={{ ...S.input, minHeight: 70 }}
+          style={{ ...S.input, minHeight: 60 }}
           value={config.negative}
           onChange={(e) => setConfig({ ...config, negative: e.target.value })}
         />
+      </div>
 
-        <label style={S.label}>
-          Prompt template — placeholders: {"{medium} {subject} {context} {composition} {mood} {reference} {rules}"}
-        </label>
-        <textarea
-          style={{ ...S.input, minHeight: 70 }}
-          value={config.template}
-          onChange={(e) => setConfig({ ...config, template: e.target.value })}
-        />
+      {STYLE_DEFS.map(([k, name]) => (
+        <div key={k} style={S.card}>
+          <h3 style={{ margin: "0 0 4px" }}>{name}</h3>
+          <label style={S.label}>Rules for this style only</label>
+          <textarea
+            style={{ ...S.input, minHeight: 48 }}
+            placeholder="e.g. denser ink coverage; motifs may bleed off one edge"
+            value={tuning(k).rules}
+            onChange={(e) => setTuning(k, "rules", e.target.value)}
+          />
+          <label style={S.label}>Avoid for this style only</label>
+          <textarea
+            style={{ ...S.input, minHeight: 48 }}
+            placeholder="e.g. no gradients; no soft washes"
+            value={tuning(k).negative}
+            onChange={(e) => setTuning(k, "negative", e.target.value)}
+          />
+        </div>
+      ))}
 
+      <div style={S.card}>
+        <details>
+          <summary style={{ cursor: "pointer", fontWeight: 600 }}>Advanced: prompt template</summary>
+          <p style={{ color: "#6b6a60", fontSize: 13 }}>
+            The skeleton every prompt is assembled from. Placeholders are filled per generation:
+            {" {medium} "} = the art direction’s technique, {" {subject} "} = the winemaker’s story
+            (or wine facts), {" {context} "} = wine colour/region/grape, {" {composition} "} and
+            {" {mood} "} = from the art direction, {" {reference} "} = sketch note,
+            {" {rules} "} = the rules above. Reorder or reword the connective text if you want a
+            different prompt structure — leave it alone otherwise.
+          </p>
+          <textarea
+            style={{ ...S.input, minHeight: 60 }}
+            value={config.template}
+            onChange={(e) => setConfig({ ...config, template: e.target.value })}
+          />
+        </details>
         <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
           <button style={S.btn} onClick={save} disabled={!dirty}>
             {dirty ? "Save" : "Saved"}
           </button>
           <button style={S.btnGhost} onClick={load}>Discard changes</button>
-          <button style={S.btnGhost} onClick={testGenerate} disabled={testing}>
-            {testing ? "Generating…" : "Test generate"}
-          </button>
         </div>
         {status && <div style={{ marginTop: 10, color: "#4a5a2e" }}>{status}</div>}
       </div>
+    </>
+  );
+}
+
+/* ---------------- Playground: generate, judge, refine ---------------- */
+
+interface PlayResult {
+  variantKey: string;
+  variantLabel: string;
+  url?: string;
+  imageUrl?: string | null;
+  prompt?: string;
+  error?: string;
+}
+interface FeedbackRow {
+  id: string;
+  style: string;
+  variantLabel: string;
+  verdict: "up" | "down";
+  comment: string;
+  imageUrl: string | null;
+  createdAt: string;
+}
+
+function PlaygroundTab() {
+  const [style, setStyle] = useState<string>("traditional");
+  const [story, setStory] = useState("");
+  const [count, setCount] = useState(4);
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState("");
+  const [results, setResults] = useState<PlayResult[]>([]);
+  const [judged, setJudged] = useState<Record<number, "up" | "down">>({});
+  const [comments, setComments] = useState<Record<number, string>>({});
+  const [history, setHistory] = useState<FeedbackRow[]>([]);
+
+  const loadHistory = useCallback(async (st: string) => {
+    const r = await fetch("/api/admin/feedback?style=" + st).then((r) => r.json());
+    setHistory(r.feedback || []);
+  }, []);
+
+  useEffect(() => {
+    loadHistory(style);
+  }, [style, loadHistory]);
+
+  async function generate() {
+    setBusy(true);
+    setResults([]);
+    setJudged({});
+    setComments({});
+    setStatus("generating " + count + " test images (LIVE provider — costs money)…");
+    try {
+      const r = await fetch("/api/admin/playground", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ style, vision: story, count }),
+      });
+      const body = await r.json();
+      if (!r.ok) throw new Error(body.error || String(r.status));
+      setResults(body.results || []);
+      setStatus("done — judge each result below; verdicts refine future generations");
+    } catch (e) {
+      setStatus("failed: " + (e instanceof Error ? e.message : String(e)));
+    }
+    setBusy(false);
+  }
+
+  async function judge(i: number, verdict: "up" | "down") {
+    const res = results[i];
+    if (!res || res.error) return;
+    const r = await fetch("/api/admin/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        style,
+        variantKey: res.variantKey,
+        variantLabel: res.variantLabel,
+        verdict,
+        comment: comments[i] || "",
+        imageUrl: res.imageUrl,
+        prompt: res.prompt,
+        story,
+      }),
+    });
+    if (r.ok) {
+      setJudged({ ...judged, [i]: verdict });
+      loadHistory(style);
+    }
+  }
+
+  return (
+    <>
+      <p style={{ color: "#6b6a60", marginTop: 14 }}>
+        Generate a test batch for one style — one image per art direction — then approve or reject
+        each. Approved directions appear more often in client generations; rejection comments become
+        avoid-rules, approval comments become favour-rules. All automatic from the next generation.
+      </p>
 
       <div style={S.card}>
-        <label style={S.label}>Assembled prompt preview (with a sample client story)</label>
-        <div style={S.mono}>{preview}</div>
-        <label style={S.label}>Stored config JSON</label>
-        <div style={S.mono}>{JSON.stringify(config, null, 2)}</div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+          <div>
+            <label style={S.label}>Style</label>
+            <select style={S.input} value={style} onChange={(e) => setStyle(e.target.value)}>
+              {STYLE_DEFS.map(([k, name]) => (
+                <option key={k} value={k}>{name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={S.label}>Images</label>
+            <select style={S.input} value={count} onChange={(e) => setCount(Number(e.target.value))}>
+              {[2, 4, 6, 8].map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+          </div>
+          <button style={S.btn} onClick={generate} disabled={busy}>
+            {busy ? "Generating…" : "Generate test batch"}
+          </button>
+        </div>
+        <label style={S.label}>Test story (optional — a default vineyard scene is used when empty)</label>
+        <textarea
+          style={{ ...S.input, minHeight: 48 }}
+          placeholder="e.g. an old vine on a stone terrace above the river"
+          value={story}
+          onChange={(e) => setStory(e.target.value)}
+        />
+        {status && <div style={{ marginTop: 10, color: "#4a5a2e" }}>{status}</div>}
       </div>
 
-      {testImg && (
+      {results.length > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))", gap: 14 }}>
+          {results.map((res, i) => (
+            <div key={i} style={S.card}>
+              <div style={{ fontSize: 12, letterSpacing: ".04em", marginBottom: 6 }}>
+                <b>{res.variantLabel}</b>
+              </div>
+              {res.error ? (
+                <div style={{ color: "#a33", fontSize: 13 }}>{res.error}</div>
+              ) : (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={res.url} alt={res.variantLabel} style={{ width: "100%" }} />
+                  <input
+                    style={{ ...S.input, marginTop: 8 }}
+                    placeholder="optional comment (why good / why bad)"
+                    value={comments[i] || ""}
+                    onChange={(e) => setComments({ ...comments, [i]: e.target.value })}
+                    disabled={!!judged[i]}
+                  />
+                  <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                    <button
+                      style={{ ...S.btn, opacity: judged[i] && judged[i] !== "up" ? 0.4 : 1 }}
+                      onClick={() => judge(i, "up")}
+                      disabled={!!judged[i]}
+                    >
+                      {judged[i] === "up" ? "Approved ✓" : "👍 Approve"}
+                    </button>
+                    <button
+                      style={{ ...S.btnGhost, opacity: judged[i] && judged[i] !== "down" ? 0.4 : 1 }}
+                      onClick={() => judge(i, "down")}
+                      disabled={!!judged[i]}
+                    >
+                      {judged[i] === "down" ? "Rejected ✕" : "👎 Reject"}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {history.length > 0 && (
         <div style={S.card}>
-          <label style={S.label}>Test result</label>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={testImg} alt="test generation" style={{ width: "100%", borderRadius: 6 }} />
+          <h3 style={{ margin: "0 0 8px" }}>Feedback so far — {style}</h3>
+          {history.map((f) => (
+            <div key={f.id} style={{ display: "flex", gap: 10, alignItems: "center", padding: "6px 0", borderTop: "1px solid #ddd" }}>
+              {f.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={f.imageUrl} alt="" style={{ width: 56, height: 35, objectFit: "cover" }} />
+              ) : (
+                <span style={{ width: 56 }} />
+              )}
+              <span style={{ fontSize: 16 }}>{f.verdict === "up" ? "👍" : "👎"}</span>
+              <span style={{ fontSize: 12, flex: 1 }}>
+                <b>{f.variantLabel}</b>
+                {f.comment ? " — " + f.comment : ""}
+              </span>
+              <button
+                style={{ ...S.btnGhost, padding: "2px 8px" }}
+                onClick={async () => {
+                  await fetch("/api/admin/feedback?id=" + f.id, { method: "DELETE" });
+                  loadHistory(style);
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
         </div>
       )}
     </>

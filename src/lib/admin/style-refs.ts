@@ -38,12 +38,30 @@ export interface LayoutPalette {
   acc: string;
 }
 
+export const TYPE_DISPLAYS = [
+  "serif", "sans", "condensed", "slab", "script", "poster", "mono", "elegant",
+] as const;
+export type TypeDisplay = (typeof TYPE_DISPLAYS)[number];
+
+export interface LayoutType {
+  /** dominant display-type character of the boards */
+  display: TypeDisplay;
+  case: "caps" | "lower" | "mixed";
+}
+export interface LayoutComposition {
+  alignment: "centered" | "left" | "mixed";
+}
+
 export interface StyleProfile {
   style: string;
   summary: string;
   variants: StyleVariant[];
-  /** layout-side hints derived from the same boards (palettes for the SVG layouts) */
-  layout?: { palettes: LayoutPalette[] } | null;
+  /** layout-side hints derived from the same boards (palettes, type, composition) */
+  layout?: {
+    palettes: LayoutPalette[];
+    type?: LayoutType | null;
+    composition?: LayoutComposition | null;
+  } | null;
   refCount: number;
   analyzedAt: Date;
 }
@@ -144,11 +162,34 @@ export function sanitizePalettes(raw: unknown): LayoutPalette[] {
   return out;
 }
 
-/** Layout hints for the client SVG engine: per-style palette chords, with a
-    muted secondary ink computed by blending ink toward the ground. */
+export function sanitizeLayoutType(raw: unknown): LayoutType | null {
+  const o = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const display = String(o.display || "");
+  if (!(TYPE_DISPLAYS as readonly string[]).includes(display)) return null;
+  const cs = String(o.case || "mixed");
+  return {
+    display: display as TypeDisplay,
+    case: cs === "caps" || cs === "lower" ? cs : "mixed",
+  };
+}
+export function sanitizeComposition(raw: unknown): LayoutComposition | null {
+  const o = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const a = String(o.alignment || "");
+  return a === "centered" || a === "left" || a === "mixed" ? { alignment: a } : null;
+}
+
+export interface StyleLayoutHints {
+  palettes: { bg: string; ink: string; sub: string; acc: string }[];
+  type?: LayoutType | null;
+  composition?: LayoutComposition | null;
+}
+
+/** Layout hints for the client SVG engine: per-style palette chords (with a
+    muted secondary ink computed by blending ink toward the ground) plus the
+    boards' typography character and composition preference. */
 export function layoutHintsFrom(
   profiles: Record<string, StyleProfile>
-): Record<string, { palettes: { bg: string; ink: string; sub: string; acc: string }[] }> {
+): Record<string, StyleLayoutHints> {
   const mix = (a: string, b: string, t: number) => {
     const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
     const ch = (sh: number) =>
@@ -157,12 +198,14 @@ export function layoutHintsFrom(
       "#" + [16, 8, 0].map((sh) => ch(sh).toString(16).padStart(2, "0")).join("").toUpperCase()
     );
   };
-  const out: Record<string, { palettes: { bg: string; ink: string; sub: string; acc: string }[] }> = {};
+  const out: Record<string, StyleLayoutHints> = {};
   for (const [style, prof] of Object.entries(profiles)) {
     const pals = prof.layout?.palettes;
     if (!pals?.length) continue;
     out[style] = {
       palettes: pals.map((p) => ({ bg: p.bg, ink: p.ink, sub: mix(p.ink, p.bg, 0.45), acc: p.acc })),
+      type: prof.layout?.type ?? null,
+      composition: prof.layout?.composition ?? null,
     };
   }
   return out;
@@ -222,7 +265,12 @@ export async function analyzeStyle(style: string): Promise<StyleProfile> {
             '"palette": the ink/colour treatment (e.g. single sepia ink, red+black duotone)}], ' +
             '"layout": {"palettes": [3-5 items, each {"bg": hex, "ink": hex, "acc": hex} — real colour ' +
             "chords observed on the boards for label grounds, text ink and one accent; bg must always be " +
-            "a light paper-like colour, ink dark]}. " +
+            "a light paper-like colour, ink dark], " +
+            '"type": {"display": the dominant display-type character of the boards, one of ' +
+            '"serif"|"sans"|"condensed"|"slab"|"script"|"poster"|"mono"|"elegant", ' +
+            '"case": dominant lettering case "caps"|"lower"|"mixed"}, ' +
+            '"composition": {"alignment": dominant text alignment on the boards ' +
+            '"centered"|"left"|"mixed"}}. ' +
             "CRITICAL RULES: the references are a STYLE reference only, never a content reference. " +
             "Do NOT name, describe or allude to any specific subject, object, animal, plant, figure, " +
             "building, landscape, scene, symbol or distinctive shape that appears in them — in ANY " +
@@ -258,7 +306,7 @@ export async function analyzeStyle(style: string): Promise<StyleProfile> {
   const parsed = JSON.parse(json.choices?.[0]?.message?.content || "{}") as {
     summary?: string;
     variants?: Partial<StyleVariant>[];
-    layout?: { palettes?: unknown };
+    layout?: { palettes?: unknown; type?: unknown; composition?: unknown };
   };
   const variants: StyleVariant[] = (parsed.variants || [])
     .filter((v) => v && v.medium && v.composition && v.mood)
@@ -274,11 +322,13 @@ export async function analyzeStyle(style: string): Promise<StyleProfile> {
   if (!variants.length) throw new Error("analysis returned no usable variants");
 
   const palettes = sanitizePalettes(parsed.layout?.palettes);
+  const type = sanitizeLayoutType(parsed.layout?.type);
+  const composition = sanitizeComposition(parsed.layout?.composition);
   const profile: StyleProfile = {
     style,
     summary: String(parsed.summary || "").slice(0, 1000),
     variants,
-    layout: palettes.length ? { palettes } : null,
+    layout: palettes.length || type || composition ? { palettes, type, composition } : null,
     refCount: refs.length,
     analyzedAt: new Date(),
   };

@@ -203,6 +203,23 @@ surroundings spreading outward; scene dissolving into pure white before the
 edges — which multiply then makes vanish on the label). The mock provider
 draws its subject inside the focal box as pipeline proof.
 
+**BUILT (2026-08-13): refinement loop + per-style direction + type/composition hints.**
+- /admin Playground tab: generate a test batch for one style (one image per
+  art direction, live provider), approve/reject with optional comments.
+  Feedback lives in Mongo `styleFeedback`; aggregates reweight the art-
+  direction rotation (approved directions enter the pool extra times),
+  rejection comments join the style's negative prompt, approval comments
+  become "favour:" rules. Cache key includes feedback state.
+- /admin Art Direction revamped: global rules/avoid + per-style rules/avoid
+  for the SIX real styles (config.perStyle in settings doc); legacy preset
+  picker removed from UI; prompt template moved under Advanced with an
+  explanation. buildStyleJob merges global + per-style + feedback lines.
+- Vision analysis also derives layout typography ({display enum, case}) and
+  composition ({alignment}) per style; layoutHints carry them and the engine
+  maps display->already-loaded fonts for the HERO text only (hintPal ->
+  heroFont) and prefers layout variants whose alignment matches the boards
+  (pickVariant tags). Engine without hints is byte-identical (goldens 144/144).
+
 **REVISED (2026-08-13): references are style-language only.**
 Owner rules after reviewing real output: (1) reference images must NEVER
 reach the image model — as image[] inputs the edits endpoint copied their
