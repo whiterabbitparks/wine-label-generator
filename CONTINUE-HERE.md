@@ -203,6 +203,20 @@ surroundings spreading outward; scene dissolving into pure white before the
 edges — which multiply then makes vanish on the label). The mock provider
 draws its subject inside the focal box as pipeline proof.
 
+**BUILT (2026-08-13 later): style CHARTER leads every prompt.**
+Owner feedback after approve/reject exercises: generation obeyed rules/avoids
+but resembled the reference boards too little. Fix: the vision pass now also
+derives a `charter` per style — a dense 60-120-word subject-agnostic paragraph
+of the board's visual DNA (line quality, texture, shading, ink application,
+printing feel, abstraction, negative space) — and `buildStylePrompt` PREPENDS
+it ("Artistic language (follow it exactly): … invent an original composition —
+never replicate any existing artwork") so the boards' language outweighs the
+trailing rule lists (image models weight early tokens most). Variant `medium`
+descriptions are now 20-40 words (tool, stroke weight, texture, imperfections).
+Older profiles without a charter fall back to their `summary`. Both prompt
+paths covered (set orchestrator + admin Playground); charter shown in the
+admin Styles tab. All 6 styles re-analyzed live 2026-08-13.
+
 **BUILT (2026-08-13): refinement loop + per-style direction + type/composition hints.**
 - /admin Playground tab: generate a test batch for one style (one image per
   art direction, live provider), approve/reject with optional comments.

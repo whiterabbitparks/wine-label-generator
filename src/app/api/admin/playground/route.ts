@@ -35,9 +35,11 @@ export async function POST(req: Request) {
   const art = await loadConfig().catch(() => ({ ...DEFAULT_CONFIG }));
   let variants: { key: string; label: string; medium: string; composition: string; mood: string }[] =
     style.subStyles;
+  let charter: string | null = null;
   try {
     const prof = (await getProfiles())[style.key];
     if (prof?.variants?.length) variants = prof.variants;
+    charter = prof?.charter || prof?.summary || null;
   } catch {}
 
   const provider = providerName();
@@ -45,7 +47,7 @@ export async function POST(req: Request) {
   const results = await Promise.all(
     Array.from({ length: count }, async (_, i) => {
       const sub = { ...variants[i % variants.length] };
-      const job = buildStyleJob(style, sub, brief, art);
+      const job = buildStyleJob(style, sub, brief, art, undefined, charter);
       const started = Date.now();
       try {
         const dataUrl = await generateImageWithRetry(job);

@@ -7,7 +7,10 @@ import type { GenerationJob } from "@/lib/image-provider/types";
    real guardrail (the client can no longer send arbitrary prompts) and so
    each style/sub-style gets its own recipe.
 
-   FINAL PROMPT = sub-style recipe (medium/composition/mood)
+   FINAL PROMPT = style charter (the reference board's visual DNA — LEADS the
+                  prompt; image models weight early tokens most, owner rule
+                  2026-08-13: resemble the references' style, never their subjects)
+                + sub-style recipe (medium/composition/mood)
                 + winemaker's story (subject; wine facts as fallback)
                 + wine context (colour, region, grape)
                 + focus-area guidance (style's clear-zone contract)
@@ -87,7 +90,8 @@ export function buildStylePrompt(
   sub: SubStyle,
   brief: LabelBrief,
   art: ArtDirectionConfig,
-  fb?: FeedbackLines
+  fb?: FeedbackLines,
+  charter?: string | null
 ): string {
   const d = brief.data || {};
   const subject = subjectFrom(brief.vision || "", d);
@@ -118,9 +122,18 @@ export function buildStylePrompt(
   if (fb?.favour?.length) ruleParts.push(`favour: ${fb.favour.join("; ")}`);
   const rules = ruleParts.length ? ` House rules: ${ruleParts.join(". ")}.` : "";
 
+  // the charter (derived from the owner's reference board) LEADS the prompt so
+  // the boards' visual language outweighs the trailing rule lists; the anti-copy
+  // clause keeps it a style contract, never a content one
+  const lead = charter?.trim()
+    ? `Artistic language (follow it exactly): ${charter.trim()} ` +
+      "Render strictly in this artistic language, but invent an original composition — " +
+      "never replicate any existing artwork. "
+    : "";
+
   // admin's template still applies if customised; {focus} is new and optional
   const template = art.template?.includes("{medium}") ? withFocusSlot(art.template) : TEMPLATE_DEFAULT;
-  return template
+  return lead + template
     .replace("{medium}", sub.medium)
     .replace("{subject}", subject)
     .replace("{context}", context)
@@ -149,13 +162,14 @@ export function buildStyleJob(
   sub: SubStyle,
   brief: LabelBrief,
   art: ArtDirectionConfig,
-  fb?: FeedbackLines
+  fb?: FeedbackLines,
+  charter?: string | null
 ): GenerationJob {
   // negative = global avoid-list + this style's avoid-list + owner-rejected traits
   const negParts = [art.negative, art.perStyle?.[style.key]?.negative?.trim()].filter(Boolean);
   if (fb?.avoid?.length) negParts.push(fb.avoid.join(", "));
   return {
-    prompt: buildStylePrompt(style, sub, brief, art, fb),
+    prompt: buildStylePrompt(style, sub, brief, art, fb, charter),
     negative: negParts.join(", "),
     reference: brief.reference || null,
     zone: brief.zones?.[style.key] ?? null,

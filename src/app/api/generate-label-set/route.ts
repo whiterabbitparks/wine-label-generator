@@ -171,7 +171,9 @@ export async function POST(req: Request) {
             sub = pickSubStyle(style, seed, i);
           }
           const fbLines = fbAgg ? { avoid: fbAgg.avoid, favour: fbAgg.favour } : undefined;
-          const job = buildStyleJob(style, sub, brief, art, fbLines);
+          // charter = the board's visual DNA; older profiles (pre-charter) fall
+          // back to their summary so the boards still lead the prompt
+          const job = buildStyleJob(style, sub, brief, art, fbLines, prof?.charter || prof?.summary);
           const started = Date.now();
           try {
             const imageDataUrl = await generateImageWithRetry(job);

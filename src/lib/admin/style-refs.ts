@@ -55,6 +55,10 @@ export interface LayoutComposition {
 export interface StyleProfile {
   style: string;
   summary: string;
+  /** dense subject-agnostic paragraph of the board's shared visual DNA —
+      leads every image prompt for this style (owner request 2026-08-13:
+      generation must resemble the references' artistic style more strongly) */
+  charter?: string;
   variants: StyleVariant[];
   /** layout-side hints derived from the same boards (palettes, type, composition) */
   layout?: {
@@ -259,7 +263,15 @@ export async function analyzeStyle(style: string): Promise<StyleProfile> {
             "Study the reference images as ONE style board and distill its VISUAL LANGUAGE. " +
             "Return strict JSON: " +
             '{"summary": string (2-3 sentences on the shared artistic language), ' +
-            '"variants": [6-8 items, each {"label": short name, "medium": detailed medium/technique phrase, ' +
+            '"charter": string (60-120 words, ONE dense paragraph of the board\'s shared visual DNA, ' +
+            "written as a direct instruction to an illustrator: line quality and stroke character, " +
+            "texture and surface, shading technique, how colour/ink is applied, the printing or tool " +
+            "feel, degree of abstraction vs realism, how negative space is used, characteristic " +
+            "imperfections. Pure technique — no subjects, no objects, no scenes), " +
+            '"variants": [6-8 items, each {"label": short name, ' +
+            '"medium": rich medium/technique description of 20-40 words — name the tool and stroke ' +
+            "weight, the texture, the shading method, the imperfections that make it feel handmade; " +
+            'specific enough that an illustrator could imitate the technique exactly, ' +
             '"composition": compositional doctrine phrase (framing, density, scale — never a specific scene), ' +
             '"mood": mood phrase, ' +
             '"palette": the ink/colour treatment (e.g. single sepia ink, red+black duotone)}], ' +
@@ -305,6 +317,7 @@ export async function analyzeStyle(style: string): Promise<StyleProfile> {
   const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
   const parsed = JSON.parse(json.choices?.[0]?.message?.content || "{}") as {
     summary?: string;
+    charter?: string;
     variants?: Partial<StyleVariant>[];
     layout?: { palettes?: unknown; type?: unknown; composition?: unknown };
   };
@@ -327,6 +340,7 @@ export async function analyzeStyle(style: string): Promise<StyleProfile> {
   const profile: StyleProfile = {
     style,
     summary: String(parsed.summary || "").slice(0, 1000),
+    charter: String(parsed.charter || "").slice(0, 1200),
     variants,
     layout: palettes.length || type || composition ? { palettes, type, composition } : null,
     refCount: refs.length,

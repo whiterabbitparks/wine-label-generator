@@ -97,7 +97,7 @@ const STYLE_DEFS = [
 ] as const;
 
 interface RefRow { id: string; style: string; name: string; url: string; bytes: number }
-interface ProfileRow { style: string; summary: string; refCount: number; analyzedAt: string;
+interface ProfileRow { style: string; summary: string; charter?: string; refCount: number; analyzedAt: string;
   variants: { key: string; label: string; medium: string; composition: string; mood: string; palette: string }[];
   layout?: { palettes: { bg: string; ink: string; acc: string }[];
     type?: { display: string; case: string } | null;
@@ -203,6 +203,11 @@ function StylesTab() {
             {prof && (
               <div style={{ marginTop: 14 }}>
                 <p style={{ fontSize: 13, color: "#4a4a42", margin: 0 }}><b>Derived language:</b> {prof.summary}</p>
+                {prof.charter && (
+                  <p style={{ fontSize: 13, color: "#4a4a42", margin: "8px 0 0" }}>
+                    <b>Style charter</b> (leads every prompt): {prof.charter}
+                  </p>
+                )}
                 {prof.layout?.palettes?.length ? (
                   <div style={{ display: "flex", gap: 10, marginTop: 8, flexWrap: "wrap", alignItems: "center" }}>
                     <span style={{ fontSize: 11, letterSpacing: ".06em" }}>LAYOUT PALETTES:</span>
