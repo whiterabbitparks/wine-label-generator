@@ -156,16 +156,32 @@ bold single-colour ground, e.g. the minimalist red panel.)
 
 ## 5c. Reference-FIRST layouts (branch Labels_By_Reference_Test)
 
-**2026-08-11 second pass (owner decision): the PDF layout templates are
-RETIRED on this branch.** All six styles' compositions are designed from the
-`Layout Styles/References/` boards. Rules kept: element hierarchy, NO text
-overlap at any size (sFlow gap-tracked stacks + sRow disjoint zones +
-single-line shrink-to-fit heroes), text never covers the artwork's focal
-area (zones placed per composition at design time), Google/free fonts only.
-26 compositions total: Traditional 5, Contemporary 5, Flora 4, Premium 3,
-Minimalist 4 (incl. colour panel), Artistic 4 — each with focal/fade artwork
-zones and per-style palette rotation. The `Layout Styles/*.pdf` era survives
-on branch Popika_test if ever needed.
+**2026-08-13 third pass (owner request): compositions + typography derived
+directly from the uploaded reference boards (`data/style-refs/`, viewed as
+contact sheets); the focal/fade zone template era is RETIRED.** Image
+placement doctrine now: each composition reserves a FREE AREA rectangle
+(`STYLE_BOXES` in label-engine.js) that text never enters, and the artwork
+is drawn centred inside it — 'meet', full opacity, multiply, no masks, no
+crops. `LabelEngine.styleZones(seed)` still exports {focal,fade,shape} for
+the server prompts, derived from each box (`zoneFromBox`: focal = box inset
+7%, fade = box +6%, shape from aspect), so the generation contract is
+unchanged. Rules kept: element hierarchy, NO text overlap at any size,
+7pt minimum, Google/free fonts only, light grounds under artwork.
+37 compositions total — Traditional 7 (Alsace blackletter oval, Bordeaux,
+framed type-only, red letterpress sans, engraved-portrait script signature,
+airy engraving over tracked caps, left column), Contemporary 7 (corner caps
++ centred motif, giant lowercase serif, split condensed, arched caps ring,
+letterspaced serif caps, horizon field, script signature), Flora 6 (big
+beast, arched stamped caps, naturalist plate, brush hero, airy creature,
+beast + script), Premium 5 (ghost numerals, tracked-caps silence, hairlines,
+data-sheet + emblem at foot, crest + copperplate script), Minimalist 6
+(airy centre, left column, oversized word, colour panel, handwritten scrawl,
+mark at the foot), Artistic 6 (naive centre, poster, handwritten corner
+title, rotated side caps, arched hand-lettering, riso band). New Google
+fonts: Grenze Gotisch 600 (blackletter), IM Fell English SC (stamped
+antique caps); arc via sArcText, rotated side caps via a local rotText.
+2026-08-11 era (26 comps, focal/fade zones) is in git history; the
+`Layout Styles/*.pdf` era survives on branch Popika_test if ever needed.
 
 ## 5c-old. Reference-driven design rules (first pass)
 

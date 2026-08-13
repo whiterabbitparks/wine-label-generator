@@ -14,7 +14,7 @@
 (function(){
 "use strict";
 
-const FONTS_URL="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@400;500&family=Ballet&family=Baskervville+SC&family=Cinzel:wght@500;600&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Cutive+Mono&family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400&family=Estonia&family=Felipa&family=Girassol&family=Great+Vibes&family=Italianno&family=Manufacturing+Consent&family=Marcellus&family=Mate+SC&family=MonteCarlo&family=Montagu+Slab:wght@500;600&family=Mrs+Saint+Delafield&family=Nixie+One&family=Pinyon+Script&family=Playfair+Display:wght@600;700&family=Prata&family=Tinos:ital,wght@0,400;0,700;1,400&family=Jost:wght@300;400;500;600&family=Archivo:wght@300;400;500;600;700;800&family=Barlow+Condensed:wght@600;700&family=Barlow:wght@600;700&family=Permanent+Marker&family=Anton&family=Bebas+Neue&family=Caveat:wght@500;600;700&family=Fraunces:ital,wght@0,400;0,500;0,600;0,700;1,500&display=swap";
+const FONTS_URL="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@400;500&family=Ballet&family=Baskervville+SC&family=Cinzel:wght@500;600&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Cutive+Mono&family=EB+Garamond:ital,wght@0,400;0,500;0,700;1,400&family=Estonia&family=Felipa&family=Girassol&family=Great+Vibes&family=Italianno&family=Manufacturing+Consent&family=Marcellus&family=Mate+SC&family=MonteCarlo&family=Montagu+Slab:wght@500;600&family=Mrs+Saint+Delafield&family=Nixie+One&family=Pinyon+Script&family=Playfair+Display:wght@600;700&family=Prata&family=Tinos:ital,wght@0,400;0,700;1,400&family=Jost:wght@300;400;500;600&family=Archivo:wght@300;400;500;600;700;800&family=Barlow+Condensed:wght@600;700&family=Barlow:wght@600;700&family=Permanent+Marker&family=Anton&family=Bebas+Neue&family=Caveat:wght@500;600;700&family=Fraunces:ital,wght@0,400;0,500;0,600;0,700;1,500&family=Grenze+Gotisch:wght@600&family=IM+Fell+English+SC&display=swap";
 const F={cormorant:"'Cormorant Garamond', serif",ebg:"'EB Garamond', serif",playfair:"'Playfair Display', serif",cinzel:"'Cinzel', serif",pinyon:"'Pinyon Script', cursive",marcellus:"'Marcellus', serif",prata:"'Prata', serif",
   ballet:"'Ballet', cursive",mrsSaint:"'Mrs Saint Delafield', cursive",greatVibes:"'Great Vibes', cursive",monteCarlo:"'MonteCarlo', cursive",estonia:"'Estonia', cursive",felipa:"'Felipa', cursive",italianno:"'Italianno', cursive",
   manufacturing:"'Manufacturing Consent', serif",cutiveMono:"'Cutive Mono', monospace",montaguSlab:"'Montagu Slab', serif",girassol:"'Girassol', serif",nixieOne:"'Nixie One', serif",alegreyaSC:"'Alegreya SC', serif",mateSC:"'Mate SC', serif",baskervvilleSC:"'Baskervville SC', serif",
@@ -269,7 +269,8 @@ async function ensureFonts(){
     "300 40px 'Jost'","400 40px 'Jost'","500 40px 'Jost'","600 40px 'Jost'",
     "300 40px 'Archivo'","400 40px 'Archivo'","500 40px 'Archivo'","600 40px 'Archivo'","700 40px 'Archivo'","800 40px 'Archivo'",
     "400 40px 'Anton'","400 40px 'Bebas Neue'","600 40px 'Barlow Condensed'","700 40px 'Barlow Condensed'","600 40px 'Barlow'","700 40px 'Barlow'","400 40px 'Permanent Marker'","500 40px 'Caveat'","600 40px 'Caveat'","700 40px 'Caveat'",
-    "400 40px 'Fraunces'","500 40px 'Fraunces'","600 40px 'Fraunces'","700 40px 'Fraunces'","italic 500 40px 'Fraunces'"];
+    "400 40px 'Fraunces'","500 40px 'Fraunces'","600 40px 'Fraunces'","700 40px 'Fraunces'","italic 500 40px 'Fraunces'",
+    "600 40px 'Grenze Gotisch'","400 40px 'IM Fell English SC'"];
   try{await Promise.all(specs.map(s=>document.fonts.load(s)));await document.fonts.ready;}catch(e){}
 }
 /* =============================================================================
@@ -827,6 +828,7 @@ const SM=50, SBLEED=20;                                     // 5 mm safe margin,
 const SF={jost:"'Jost',sans-serif",archivo:"'Archivo',sans-serif",anton:"'Anton',sans-serif",
   barlow:"'Barlow',sans-serif",barlowc:"'Barlow Condensed',sans-serif",marker:"'Permanent Marker',cursive",
   bebas:"'Bebas Neue',sans-serif",caveat:"'Caveat',cursive",fraunces:"'Fraunces',serif",
+  grenze:"'Grenze Gotisch',serif",imfell:"'IM Fell English SC',serif",
   cormorant:F.cormorant,cinzel:F.cinzel,ebg:F.ebg,marcellus:F.marcellus,playfair:F.playfair};
 let __sid=0;
 function sFields(d){const j=(a,s)=>a.map(x=>String(x==null?'':x).trim()).filter(Boolean).join(s);
@@ -886,50 +888,69 @@ function sImage(styleKey,x,y,w,h,mode,plate){
   return s;
 }
 
-/* Image zones per style/variant — the OWNER'S FOCAL DOCTRINE: `focal` is
-   where the artwork's SUBJECT must live; `fade` is where only neutral,
-   expendable content may spread. This is COMPOSITIONAL data: it is sent to
-   the generation server so the image is PAINTED this way (subject centred
-   in focal, content dissolving into pure white toward the edges) — the
-   renderer no longer fakes it with alpha masks. Variant index = the same
+/* Image boxes per style/variant — OWNER RULE (2026-08-13): the focal/fade
+   template era is retired. Each composition reserves a FREE AREA (fractions
+   [x0,y0,x1,y1] of W/H) that text never enters; the artwork is drawn centred
+   inside it ('meet', full opacity, multiply). Variant index = the same
    Math.floor(seed/2)%N each style uses. null = text-only composition. */
-const STYLE_ZONES={
+const STYLE_BOXES={
   traditional:[
-    {focal:[0.12,0.10,0.88,0.42],fade:[0.03,0.02,0.97,0.50],shape:'band'},
-    {focal:[0.28,0.10,0.72,0.44],fade:[0.18,0.03,0.82,0.54],shape:'ellipse'},
-    null,
-    {focal:[0,0.06,1,0.46],fade:[0,0,1,0.60],shape:'band'},
-    {focal:[0.05,0.14,0.42,0.72],fade:[0.0,0.05,0.5,0.85],shape:'rounded'}],
+    [0.22,0.05,0.78,0.40],   // Alsace oval vignette top
+    [0.28,0.34,0.72,0.66],   // Bordeaux vignette mid, type above+below
+    null,                    // framed text-only
+    [0.36,0.14,0.64,0.38],   // letterpress emblem over red sans hero
+    [0.30,0.05,0.70,0.42],   // portrait top, script signature hero
+    [0.34,0.07,0.66,0.38],   // airy engraving over tiny tracked caps
+    [0.05,0.10,0.46,0.78]],  // engraving left column, stack right
   contemporary:[
-    {focal:[0.28,0.06,0.72,0.44],fade:[0.16,0.0,0.84,0.55],shape:'ellipse'},
-    {focal:[0.30,0.08,0.70,0.34],fade:[0.20,0.02,0.80,0.44],shape:'ellipse'},
-    {focal:[0.56,0.12,0.98,0.80],fade:[0.48,0.0,1.0,0.95],shape:'band'},
-    {focal:[0,0.0,1,0.52],fade:[0,0,1,0.62],shape:'band'},
-    {focal:[0,0.05,1,0.42],fade:[0,0,1,0.52],shape:'band'}],
+    [0.28,0.18,0.72,0.62],   // big centred motif, caps hero below
+    [0.34,0.05,0.66,0.36],   // small motif top, giant lowercase serif hero
+    [0.52,0.08,0.97,0.78],   // split: image right, condensed stack left
+    [0.30,0.16,0.70,0.52],   // arched caps ring over centred motif
+    [0.28,0.05,0.72,0.42],   // motif top, letterspaced serif caps hero
+    [0.08,0.14,0.92,0.55],   // wide horizon field, type below
+    [0.33,0.24,0.67,0.60]],  // script producer top, small centred motif
   flora:[
-    {focal:[0.22,0.06,0.78,0.52],fade:[0.10,0.0,0.90,0.62],shape:'ellipse'},
-    {focal:[0.26,0.08,0.74,0.54],fade:[0.14,0.0,0.86,0.64],shape:'ellipse'},
-    {focal:[0.06,0.10,0.44,0.66],fade:[0.0,0.02,0.52,0.80],shape:'rounded'},
-    {focal:[0.40,0.05,0.60,0.30],fade:[0.32,0.0,0.68,0.38],shape:'ellipse'}],
+    [0.18,0.08,0.82,0.58],   // big beast centre
+    [0.26,0.17,0.74,0.58],   // arched stamped caps over beast
+    [0.05,0.10,0.46,0.74],   // naturalist plate left, serif right
+    [0.28,0.05,0.72,0.38],   // beast top, brush hero below
+    [0.36,0.22,0.64,0.52],   // tiny creature centre, airy quote
+    [0.06,0.08,0.56,0.60]],  // beast left, script hero right
   premium:[
-    {focal:[0.40,0.40,0.60,0.60],fade:[0.33,0.34,0.67,0.66],shape:'ellipse'},
-    {focal:[0.42,0.08,0.58,0.28],fade:[0.35,0.02,0.65,0.36],shape:'ellipse'},
-    {focal:[0.41,0.34,0.59,0.54],fade:[0.34,0.30,0.66,0.60],shape:'ellipse'}],
+    [0.42,0.40,0.58,0.60],   // ghosted numerals + central emblem
+    [0.42,0.08,0.58,0.28],   // tiny emblem over huge tracked caps
+    [0.41,0.34,0.59,0.54],   // hairline rules, emblem between
+    [0.40,0.60,0.60,0.84],   // data-sheet top, emblem at the foot
+    [0.38,0.05,0.62,0.28]],  // crest top, copperplate script hero
   minimalist:[
-    {focal:[0.44,0.16,0.56,0.36],fade:[0.37,0.10,0.63,0.44],shape:'ellipse'},
-    {focal:[0.64,0.18,0.86,0.56],fade:[0.55,0.08,0.95,0.68],shape:'rounded'},
-    {focal:[0.45,0.62,0.55,0.78],fade:[0.40,0.56,0.60,0.84],shape:'ellipse'},
-    null],
+    [0.42,0.14,0.58,0.36],   // tiny mark high, airy centred stack
+    [0.60,0.18,0.90,0.55],   // left column, mark right
+    [0.44,0.60,0.56,0.78],   // oversized word, mark low
+    null,                    // colour panel (text-only)
+    null,                    // handwritten scrawl hero (text-only)
+    [0.30,0.52,0.70,0.86]],  // caps corner top-left, mark at the foot
   artistic:[
-    {focal:[0.20,0.05,0.80,0.50],fade:[0.06,0.0,0.94,0.60],shape:'ellipse'},
-    {focal:[0.58,0.30,0.94,0.72],fade:[0.48,0.20,1.0,0.84],shape:'ellipse'},
-    {focal:[0.55,0.10,0.95,0.86],fade:[0.45,0.0,1.0,1.0],shape:'band'},
-    {focal:[0.10,0.04,0.90,0.44],fade:[0.0,0.0,1.0,0.55],shape:'band'}]};
+    [0.22,0.05,0.78,0.50],   // naive drawing centre stage
+    [0.55,0.10,0.95,0.82],   // poster type left, figure right
+    [0.34,0.14,0.94,0.70],   // handwritten title corner, figure right
+    [0.28,0.06,0.88,0.58],   // rotated side caps, riso figure centre
+    [0.28,0.15,0.72,0.58],   // arched hand-lettering ring over figure
+    [0.10,0.04,0.90,0.40]]}; // riso band top, knockout hero below
+/* Server contract unchanged: verbalize each box as focal (inset — the subject
+   lives here) + fade (slight overspill) + a shape word from its aspect. */
+function zoneFromBox(b){
+  if(!b)return null;
+  const w=b[2]-b[0],h=b[3]-b[1];
+  const fi=0.07, focal=[b[0]+w*fi,b[1]+h*fi,b[2]-w*fi,b[3]-h*fi];
+  const fe=0.06, fade=[Math.max(0,b[0]-w*fe),Math.max(0,b[1]-h*fe),Math.min(1,b[2]+w*fe),Math.min(1,b[3]+h*fe)];
+  return {focal,fade,shape:w>=1.8*h?'band':(h>=1.35*w?'rounded':'ellipse')};
+}
 function styleZones(seed){
   const out={};
-  for(const k in STYLE_ZONES){
-    const arr=STYLE_ZONES[k];
-    out[k]=arr[Math.floor((seed|0)/2)%arr.length]||null;
+  for(const k in STYLE_BOXES){
+    const arr=STYLE_BOXES[k];
+    out[k]=zoneFromBox(arr[Math.floor((seed|0)/2)%arr.length]);
   }
   return out;
 }
@@ -977,15 +998,14 @@ function sArcText(str,cx,topBaseY,R,o){
     +`<text font-family="${o.f}" font-weight="${o.w||400}" font-size="${o.size.toFixed(1)}" fill="${o.fill}"${ls}>`
     +`<textPath href="#${id}" startOffset="50%" text-anchor="middle">${esc(o.caps?up(str):str)}</textPath></text>`;
 }
-/* Draw the style's artwork inside its zone. NO masks/fades: the artwork is
-   generated with the subject inside `focal` and content dissolving to pure
-   white toward its edges, and multiply makes that white vanish on the label.
-   'meet' (contain) so the renderer can never crop the subject. */
-function sImageZone(styleKey,z,W,H){
+/* Draw the style's artwork centred in its composition's FREE AREA. No masks,
+   no fades, no crops: 'meet' keeps the whole artwork visible, the generated
+   white ground vanishes under multiply, and text never enters the box. */
+function sImageBox(styleKey,b,W,H){
   const m=(typeof window!=='undefined'&&window.__LABEL_IMGS__)||null;
-  const src=m&&m[styleKey]; if(!src||!z||!z.fade) return '';
-  const fx=z.fade[0]*W, fy=z.fade[1]*H, fw=(z.fade[2]-z.fade[0])*W, fh=(z.fade[3]-z.fade[1])*H;
-  return `<image x="${fx.toFixed(1)}" y="${fy.toFixed(1)}" width="${fw.toFixed(1)}" height="${fh.toFixed(1)}" preserveAspectRatio="xMidYMid meet" xlink:href="${src}" href="${src}" style="mix-blend-mode:multiply"/>`;
+  const src=m&&m[styleKey]; if(!src||!b) return '';
+  const x=b[0]*W, y=b[1]*H, w=(b[2]-b[0])*W, h=(b[3]-b[1])*H;
+  return `<image x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" preserveAspectRatio="xMidYMid meet" xlink:href="${src}" href="${src}" style="mix-blend-mode:multiply"/>`;
 }
 
 function sFlow(items,x,y0,a){
@@ -1015,17 +1035,18 @@ function sRow(cells,W,y,size){
   return svg;
 }
 
-/* ---- 1) TRADITIONAL — designed from the reference boards (classic French
-   labels): centred stacks on cream papers, engraving artwork in a fixed
-   focal band the text never invades, serif display hero in the accent ink,
-   letterspaced caps, italic serif accents, framed variant. ---- */
+/* ---- 1) TRADITIONAL — designed from the reference boards: Alsace ovals
+   with blackletter heroes, Bordeaux serif stacks, red letterpress sans,
+   engraved-portrait script signatures, airy engravings over tracked caps.
+   The artwork sits centred in each composition's free area. ---- */
 function styleTraditional(d,order,seed,twMM,thMM){
   const f=sFields(d), W=twMM*10, H=thMM*10;
   const TPAL=hintPal('traditional',[['#FFFFFF','#D71920','#26221E','#5D564C'],['#F6F0DE','#8E2430','#26221E','#5D564C'],['#F2E9D2','#6B4A2F','#26221E','#5D564C'],['#F4EFE0','#3E5C76','#26221E','#5D564C']],function(p){return [p.bg,p.acc,p.ink,p.sub];});
   const [BG,ACC,INK,SUB]=TPAL[Math.floor(seed/2)%TPAL.length];
   const cx=W/2, cW=W-2*SM;
   const HF=heroFont('traditional');
-  const variant=pickVariant('traditional',seed,['c','c','c','c','l']);
+  const variant=pickVariant('traditional',seed,['c','c','c','c','c','c','l']);
+  const BOX=STYLE_BOXES['traditional'][variant];
   const alc=f.alc;
   const desc=(f.descriptor||'').replace(/,/g,'');
   let body='';
@@ -1037,20 +1058,22 @@ function styleTraditional(d,order,seed,twMM,thMM){
     b+=sRow([{str:f.special,a:'l',f:EG,w:400,fill:SUB,ital:true},{str:f.vintage,a:'c',f:EG,w:500,fill:INK,size:H*0.04},
              {str:f.region,a:'r',f:EG,w:400,fill:SUB}],W,row2Y,H*0.03);
     return b;}
-  if(variant===0){ // engraving band top, centred serif stack below (Château Lafitte board)
-    body+=sImageZone('traditional',STYLE_ZONES['traditional'][variant],W,H);
+  if(variant===0){ // oval vignette top + blackletter hero (Gewürztraminer board)
+    body+=`<rect x="${(SM*0.55).toFixed(1)}" y="${(SM*0.55).toFixed(1)}" width="${(W-2*SM*0.55).toFixed(1)}" height="${(H-2*SM*0.55).toFixed(1)}" fill="none" stroke="${ACC}" stroke-width="${Math.max(1,H*0.003).toFixed(1)}"/>`;
+    body+=sImageBox('traditional',BOX,W,H);
     body+=sFlow([
-      {str:f.producer,size:H*0.036,f:EG,w:500,fill:INK,caps:true,tr:0.24,maxW:cW*0.8,gap:H*0.012,pre:H*0.52},
-      {str:f.wine,size:H*0.105,f:HF?HF[0]:(PF),w:HF?HF[1]:(700),fill:ACC,caps:true,maxW:cW*0.94,gap:H*0.012},
-      {str:f.appellation,size:H*0.048,f:CI,w:600,fill:INK,ital:true,maxW:cW*0.7,gap:H*0.014},
-      {str:f.classification,size:H*0.036,f:EG,w:400,fill:SUB,maxW:cW*0.8,gap:0}],cx,SM,'c').svg;
+      {str:f.wine,size:H*0.115,f:HF?HF[0]:(SF.grenze),w:HF?HF[1]:(600),fill:ACC,maxW:cW*0.92,gap:H*0.012,pre:H*0.42},
+      {str:f.producer,size:H*0.036,f:EG,w:500,fill:INK,caps:true,tr:0.22,maxW:cW*0.8,gap:H*0.012},
+      {str:f.appellation,size:H*0.046,f:CI,w:600,fill:INK,ital:true,maxW:cW*0.7,gap:H*0.012},
+      {str:f.classification,size:H*0.034,f:EG,w:400,fill:SUB,maxW:cW*0.8,gap:0}],cx,SM,'c').svg;
     body+=bottomRows();
-  }else if(variant===1){ // oval vignette + red hero (Pomerol/La Pointe boards)
-    body+=sImageZone('traditional',STYLE_ZONES['traditional'][variant],W,H);
+  }else if(variant===1){ // Bordeaux: serif stack above, vignette mid (La Couspaude board)
     body+=sFlow([
-      {str:f.producer,size:H*0.034,f:EG,w:500,fill:SUB,caps:true,tr:0.3,maxW:cW*0.7,gap:H*0.010,pre:H*0.55},
-      {str:f.wine,size:H*0.115,f:HF?HF[0]:(SF.tinos),w:HF?HF[1]:(700),fill:ACC,caps:true,maxW:cW*0.94,gap:H*0.012},
-      {str:f.appellation,size:H*0.05,f:PF,w:700,fill:INK,maxW:cW*0.66,gap:H*0.012},
+      {str:f.producer,size:H*0.036,f:EG,w:500,fill:SUB,caps:true,tr:0.3,maxW:cW*0.7,gap:H*0.012,pre:H*0.015},
+      {str:f.wine,size:H*0.10,f:HF?HF[0]:(PF),w:HF?HF[1]:(700),fill:ACC,caps:true,maxW:cW*0.94,gap:0}],cx,SM,'c').svg;
+    body+=sImageBox('traditional',BOX,W,H);
+    body+=sFlow([
+      {str:f.appellation,size:H*0.05,f:PF,w:700,fill:INK,maxW:cW*0.66,gap:H*0.012,pre:H*0.67},
       {str:f.classification,size:H*0.034,f:EG,w:400,fill:SUB,maxW:cW*0.8,gap:0}],cx,SM,'c').svg;
     body+=bottomRows();
   }else if(variant===2){ // framed, no artwork — pure type composition (Margaux/Ausone boards)
@@ -1066,16 +1089,35 @@ function styleTraditional(d,order,seed,twMM,thMM){
       {str:f.grape,size:H*0.037,f:EG,w:700,fill:INK,caps:true,tr:0.08,maxW:cW*0.7,gap:H*0.012},
       {str:[f.region,f.special].filter(Boolean).join(' \u00b7 '),size:H*0.03,f:EG,w:400,fill:SUB,maxW:cW*0.7,gap:H*0.012},
       {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.027,f:EG,w:400,fill:SUB,maxW:cW*0.7,gap:0}],cx,SM,'c').svg;
-  }else if(variant===3){ // full-bleed engraving upper half, halo hero on the fade (poster boards)
-    body+=sImageZone('traditional',STYLE_ZONES['traditional'][variant],W,H);
+  }else if(variant===3){ // letterpress: emblem centred, giant red sans hero (Mittelwihr board)
+    const o2=SM*0.6;
+    body+=`<rect x="${o2.toFixed(1)}" y="${o2.toFixed(1)}" width="${(W-2*o2).toFixed(1)}" height="${(H-2*o2).toFixed(1)}" fill="none" stroke="${ACC}" stroke-width="${Math.max(1,H*0.0025).toFixed(1)}"/>`;
+    body+=sImageBox('traditional',BOX,W,H);
     body+=sFlow([
-      {str:f.producer,size:H*0.034,f:EG,w:500,fill:INK,caps:true,tr:0.28,maxW:cW*0.7,halo:true,gap:H*0.010,pre:H*0.50},
-      {str:f.wine,size:H*0.12,f:HF?HF[0]:(SF.tinos),w:HF?HF[1]:(700),fill:ACC,caps:true,halo:true,maxW:cW*0.95,gap:H*0.014},
-      {str:f.appellation,size:H*0.05,f:PF,w:700,fill:INK,maxW:cW*0.6,gap:H*0.016},
-      {str:f.classification,size:H*0.034,f:EG,w:400,fill:SUB,maxW:cW*0.8,gap:0}],cx,SM,'c').svg;
+      {str:f.appellation,size:H*0.042,f:SF.archivo,w:500,fill:ACC,caps:true,tr:0.3,maxW:cW*0.8,gap:0,pre:H*0.03}],cx,SM,'c').svg;
+    body+=sFlow([
+      {str:f.wine,size:H*0.115,f:HF?HF[0]:(SF.archivo),w:HF?HF[1]:(800),fill:ACC,caps:true,tr:0.06,maxW:cW*0.92,gap:H*0.014,pre:H*0.40},
+      {str:f.producer,size:H*0.034,f:EG,w:500,fill:INK,caps:true,tr:0.24,maxW:cW*0.75,gap:H*0.012},
+      {str:f.classification,size:H*0.032,f:EG,w:400,fill:SUB,maxW:cW*0.8,gap:0}],cx,SM,'c').svg;
+    body+=bottomRows();
+  }else if(variant===4){ // engraved portrait top, script signature hero (Kirile board)
+    body+=sImageBox('traditional',BOX,W,H);
+    body+=sFlow([
+      {str:f.wine,size:H*0.145,f:HF?HF[0]:(F.greatVibes),w:HF?HF[1]:(400),fill:INK,maxW:cW*0.92,gap:H*0.026,pre:H*0.43},
+      {str:f.producer,size:H*0.032,f:EG,w:500,fill:SUB,caps:true,tr:0.28,maxW:cW*0.75,gap:H*0.012},
+      {str:f.appellation,size:H*0.044,f:CI,w:600,fill:ACC,ital:true,maxW:cW*0.66,gap:H*0.012},
+      {str:f.classification,size:H*0.032,f:EG,w:400,fill:SUB,maxW:cW*0.8,gap:0}],cx,SM,'c').svg;
+    body+=bottomRows();
+  }else if(variant===5){ // airy engraving, tiny tracked caps beneath (Olive Tree board)
+    body+=sImageBox('traditional',BOX,W,H);
+    body+=sFlow([
+      {str:f.wine,size:H*0.052,f:HF?HF[0]:(EG),w:HF?HF[1]:(500),fill:INK,caps:true,tr:0.42,maxW:cW*0.9,gap:H*0.016,pre:H*0.41},
+      {str:f.producer,size:H*0.028,f:EG,w:400,fill:SUB,caps:true,tr:0.34,maxW:cW*0.7,gap:H*0.02},
+      {str:f.appellation,size:H*0.04,f:CI,w:600,fill:ACC,ital:true,maxW:cW*0.6,gap:H*0.014},
+      {str:f.classification,size:H*0.03,f:EG,w:400,fill:SUB,maxW:cW*0.7,gap:0}],cx,SM,'c').svg;
     body+=bottomRows();
   }else{ // engraved tree left, left-aligned stack right (Rio Mendoza board)
-    body+=sImageZone('traditional',STYLE_ZONES['traditional'][variant],W,H);
+    body+=sImageBox('traditional',BOX,W,H);
     const Lx2=W*0.52;
     body+=sFlow([
       {str:f.producer,size:H*0.035,f:EG,w:500,fill:SUB,caps:true,tr:0.26,maxW:W*0.42,gap:H*0.018,pre:H*0.10},
@@ -1091,8 +1133,9 @@ function styleTraditional(d,order,seed,twMM,thMM){
 }
 
 function styleContemporary(f,W,H,seed,twMM,thMM){
-  /* Reference-first: colour fields, giant type, one bold motif. Grounds and
-     type combos rotate; the artwork's focal area is never covered by text. */
+  /* Reference-first: white/cream grounds, ONE centred motif, letterspaced
+     caps, script signatures, arched type rings, horizon fields. The artwork
+     sits centred in each composition's free area; text never enters it. */
   const CSCH=hintPal('contemporary',[{bg:'#FFFFFF',ink:'#231F20',sub:'#6D6E71',acc:'#E8542F'},
     {bg:'#F6F0E2',ink:'#231F20',sub:'#75716A',acc:'#2B4C9B'},
     {bg:'#F8EFE3',ink:'#20130E',sub:'#75655A',acc:'#E8542F'},
@@ -1101,32 +1144,34 @@ function styleContemporary(f,W,H,seed,twMM,thMM){
   const SCH=CSCH[Math.floor(seed/2)%CSCH.length];
   const INK=SCH.ink, SUB=SCH.sub, cx=W/2, cW=W-2*SM;
   const HF=heroFont('contemporary');
-  const variant=pickVariant('contemporary',seed,['c','c','l','c','c']);
+  const variant=pickVariant('contemporary',seed,['c','c','l','c','c','c','c']);
+  const BOX=STYLE_BOXES['contemporary'][variant];
   const alc=f.alc;
   const desc=(f.descriptor||'').replace(/,/g,'');
   const reg=[f.region,f.special].filter(Boolean).join(' / ');
   let body='';
   const rowY=H-SM-H*0.03;
-  if(variant===0){ // motif top, giant grotesque hero below (Gotes / eye-label boards)
-    body+=sImageZone('contemporary',STYLE_ZONES['contemporary'][variant],W,H);
+  if(variant===0){ // small caps corners, big centred motif, caps hero below (Gotes board)
+    body+=sBlock(f.producer,{x:SM,top:SM,maxW:W*0.48,size:H*0.032,min:H*0.022,f:SF.archivo,w:600,fill:INK,a:'l',caps:true,tr:0.3}).svg;
+    body+=sBlock(f.vintage,{x:W-SM,top:SM,maxW:W*0.28,size:H*0.032,min:H*0.022,f:SF.jost,w:500,fill:SUB,a:'r'}).svg;
+    body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
-      {str:f.wine,size:H*0.125,f:HF?HF[0]:(SF.archivo),w:HF?HF[1]:(800),fill:INK,caps:true,maxW:cW*0.96,gap:H*0.018,pre:H*0.57},
-      {str:f.appellation,size:H*0.045,f:SF.jost,w:500,fill:SUB,maxW:cW*0.7,gap:H*0.02},
-      {str:[f.grape,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.033,f:SF.jost,w:400,fill:SUB,maxW:cW*0.85,gap:0}],cx,SM,'c').svg;
-    body+=sRow([{str:f.producer,a:'l',f:SF.archivo,w:600,fill:INK,caps:true,tr:0.14},
+      {str:f.wine,size:H*0.10,f:HF?HF[0]:(SF.archivo),w:HF?HF[1]:(800),fill:INK,caps:true,maxW:cW*0.96,gap:H*0.016,pre:H*0.645},
+      {str:[f.appellation,f.grape].filter(Boolean).join(' \u00b7 '),size:H*0.038,f:SF.jost,w:500,fill:SUB,maxW:cW*0.85,gap:0}],cx,SM,'c').svg;
+    body+=sRow([{str:f.classification,a:'l',f:SF.jost,w:400,fill:SUB},
       {str:[reg,desc].filter(Boolean).join(' / '),a:'c',f:SF.jost,w:400,fill:SUB,size:H*0.026},
-      {str:[f.vintage,alc].filter(Boolean).join('  \u00b7  '),a:'r',f:SF.jost,w:500,fill:INK}],W,rowY,H*0.03);
-  }else if(variant===1){ // giant lowercase serif hero (\u00f1or board), tiny details
-    body+=sImageZone('contemporary',STYLE_ZONES['contemporary'][variant],W,H);
+      {str:alc,a:'r',f:SF.jost,w:400,fill:SUB,size:H*0.025}],W,rowY,H*0.028);
+  }else if(variant===1){ // small motif top, giant lowercase serif hero (ñor board)
+    body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
-      {str:f.wine.toLowerCase(),size:H*0.20,f:HF?HF[0]:(SF.fraunces),w:HF?HF[1]:(600),fill:SCH.acc,maxW:cW*0.96,gap:H*0.012,pre:H*0.44},
+      {str:f.wine.toLowerCase(),size:H*0.20,f:HF?HF[0]:(SF.fraunces),w:HF?HF[1]:(600),fill:SCH.acc,maxW:cW*0.96,gap:H*0.012,pre:H*0.40},
       {str:f.appellation,size:H*0.045,f:SF.jost,w:500,fill:INK,maxW:cW*0.7,gap:H*0.018},
       {str:[f.producer,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.035,f:SF.archivo,w:600,fill:INK,caps:true,tr:0.1,maxW:cW*0.8,gap:H*0.014},
       {str:[f.grape,f.classification].filter(Boolean).join(' / '),size:H*0.03,f:SF.jost,w:400,fill:SUB,maxW:cW*0.85,gap:0}],cx,SM,'c').svg;
     body+=sRow([{str:reg,a:'l',f:SF.jost,w:400,fill:SUB},{str:desc,a:'c',f:SF.jost,w:400,fill:SUB},
       {str:alc,a:'r',f:SF.jost,w:400,fill:SUB,size:H*0.025}],W,rowY,H*0.028);
-  }else if(variant===2){ // split: image right half, condensed stack left (Chilow\u00e9 board)
-    body+=sImageZone('contemporary',STYLE_ZONES['contemporary'][variant],W,H);
+  }else if(variant===2){ // split: image right half, condensed stack left (Chilowé board)
+    body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
       {str:f.producer,size:H*0.04,f:SF.barlowc,w:700,fill:SCH.acc,caps:true,tr:0.06,maxW:W*0.4,gap:H*0.03,pre:H*0.06},
       {str:f.wine,size:H*0.10,f:HF?HF[0]:(SF.barlowc),w:HF?HF[1]:(700),fill:INK,caps:true,lines:2,lh:1.0,maxW:W*0.42,gap:H*0.02},
@@ -1136,59 +1181,93 @@ function styleContemporary(f,W,H,seed,twMM,thMM){
       {str:reg,size:H*0.03,f:SF.jost,w:400,fill:SUB,maxW:W*0.4,gap:H*0.02},
       {str:f.vintage,size:H*0.07,f:SF.barlowc,w:700,fill:SCH.acc,maxW:W*0.3,gap:0}],SM,SM,'l').svg;
     body+=sBlock([desc,alc].filter(Boolean).join(' / '),{x:SM,top:rowY,maxW:W*0.42,size:H*0.026,min:H*0.02,f:SF.jost,w:400,fill:SUB,a:'l'}).svg;
-  }else if(variant===3){ // horizon art full-bleed top, clean strip below (sunset-band boards)
-    body+=sImageZone('contemporary',STYLE_ZONES['contemporary'][variant],W,H);
+  }else if(variant===3){ // arched caps ring over the motif (Wine People board)
+    (function(){
+      let asz=H*0.042; const R=W*0.42;
+      const aw=measure(up(f.producer||''),asz,SF.jost,500,false,asz*0.34);
+      if(aw>R*1.55)asz=Math.max(MIN7,asz*R*1.55/aw);
+      body+=sArcText(f.producer,cx,SM+H*0.01,R,{f:SF.jost,w:500,size:asz,fill:INK,tr:0.34,caps:true});
+    })();
+    body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
-      {str:[f.producer,f.vintage].filter(Boolean).join('   '),size:H*0.036,f:SF.archivo,w:600,fill:INK,caps:true,tr:0.16,maxW:cW*0.8,gap:H*0.014,pre:H*0.64},
-      {str:f.wine,size:H*0.10,f:HF?HF[0]:(SF.archivo),w:HF?HF[1]:(800),fill:INK,caps:true,maxW:cW*0.94,gap:H*0.014},
+      {str:f.wine,size:H*0.085,f:HF?HF[0]:(SF.archivo),w:HF?HF[1]:(700),fill:INK,caps:true,tr:0.08,maxW:cW*0.92,gap:H*0.014,pre:H*0.555},
+      {str:f.appellation,size:H*0.052,f:SF.caveat,w:600,fill:SCH.acc,maxW:cW*0.7,gap:H*0.012},
+      {str:[f.grape,f.classification].filter(Boolean).join(' / '),size:H*0.03,f:SF.jost,w:400,fill:SUB,maxW:cW*0.85,gap:0}],cx,SM,'c').svg;
+    body+=sRow([{str:f.vintage,a:'l',f:SF.jost,w:500,fill:INK},
+      {str:reg,a:'c',f:SF.jost,w:400,fill:SUB,size:H*0.026},
+      {str:[desc,alc].filter(Boolean).join(' / '),a:'r',f:SF.jost,w:400,fill:SUB,size:H*0.025}],W,rowY,H*0.028);
+  }else if(variant===4){ // motif top, letterspaced serif caps hero (Saperavi board)
+    body+=sImageBox('contemporary',BOX,W,H);
+    body+=sFlow([
+      {str:f.wine,size:H*0.07,f:HF?HF[0]:(SF.marcellus),w:HF?HF[1]:(400),fill:INK,caps:true,tr:0.24,maxW:cW*0.92,gap:H*0.014,pre:H*0.46},
+      {str:desc,size:H*0.042,f:SF.fraunces,w:500,fill:SCH.acc,ital:true,maxW:cW*0.6,gap:H*0.018},
+      {str:f.appellation,size:H*0.036,f:SF.jost,w:500,fill:SUB,maxW:cW*0.7,gap:H*0.014},
+      {str:[f.grape,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.03,f:SF.jost,w:400,fill:SUB,maxW:cW*0.85,gap:0}],cx,SM,'c').svg;
+    body+=sRow([{str:f.producer,a:'l',f:SF.archivo,w:600,fill:INK,caps:true,tr:0.14},
+      {str:reg,a:'c',f:SF.jost,w:400,fill:SUB,size:H*0.026},
+      {str:[f.vintage,alc].filter(Boolean).join('  \u00b7  '),a:'r',f:SF.jost,w:500,fill:INK}],W,rowY,H*0.028);
+  }else if(variant===5){ // wide horizon field, type strip below (sunset boards)
+    body+=sRow([{str:f.producer,a:'l',f:SF.archivo,w:600,fill:INK,caps:true,tr:0.16},
+      {str:f.vintage,a:'r',f:SF.jost,w:500,fill:INK}],W,SM,H*0.03);
+    body+=sImageBox('contemporary',BOX,W,H);
+    body+=sFlow([
+      {str:f.wine,size:H*0.095,f:HF?HF[0]:(SF.archivo),w:HF?HF[1]:(800),fill:INK,caps:true,maxW:cW*0.94,gap:H*0.014,pre:H*0.575},
       {str:[f.appellation,f.grape].filter(Boolean).join(' \u00b7 '),size:H*0.038,f:SF.jost,w:500,fill:SUB,maxW:cW*0.85,gap:0}],cx,SM,'c').svg;
     body+=sRow([{str:f.classification,a:'l',f:SF.jost,w:400,fill:SUB},{str:reg,a:'c',f:SF.jost,w:400,fill:SUB},
-      {str:alc,a:'r',f:SF.jost,w:400,fill:SUB,size:H*0.025}],W,rowY,H*0.027);
-  }else{ // art band top, bold type block below \u2014 single ground (house rule: no split-colour backgrounds)
-    body+=sImageZone('contemporary',STYLE_ZONES['contemporary'][variant],W,H);
+      {str:[desc,alc].filter(Boolean).join(' / '),a:'r',f:SF.jost,w:400,fill:SUB,size:H*0.025}],W,rowY,H*0.027);
+  }else{ // script signature top, small centred motif, quiet stack (Finca Collado board)
+    body+=sBlock(f.producer,{x:cx,top:SM,maxW:cW*0.8,size:H*0.065,min:H*0.04,f:SF.caveat,w:600,fill:SCH.acc,a:'c'}).svg;
+    body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
-      {str:f.wine,size:H*0.115,f:HF?HF[0]:(SF.archivo),w:HF?HF[1]:(800),fill:INK,caps:true,maxW:cW*0.94,gap:H*0.016,pre:H*0.60},
-      {str:[f.appellation,f.vintage].filter(Boolean).join('  \u00b7  '),size:H*0.045,f:SF.jost,w:500,fill:SCH.acc,maxW:cW*0.8,gap:H*0.016},
-      {str:[f.grape,f.classification,reg].filter(Boolean).join(' / '),size:H*0.03,f:SF.jost,w:400,fill:SUB,maxW:cW*0.9,gap:H*0.012},
-      {str:[f.producer,desc,alc].filter(Boolean).join('  \u00b7  '),size:H*0.027,f:SF.jost,w:400,fill:SUB,maxW:cW*0.9,gap:0}],cx,SM,'c').svg;
+      {str:f.wine,size:H*0.075,f:HF?HF[0]:(SF.archivo),w:HF?HF[1]:(600),fill:INK,caps:true,tr:0.12,maxW:cW*0.92,gap:H*0.014,pre:H*0.625},
+      {str:[f.appellation,f.vintage].filter(Boolean).join('  \u00b7  '),size:H*0.036,f:SF.jost,w:500,fill:SUB,maxW:cW*0.8,gap:H*0.012},
+      {str:[f.grape,f.classification,reg].filter(Boolean).join(' / '),size:H*0.028,f:SF.jost,w:400,fill:SUB,maxW:cW*0.9,gap:H*0.010},
+      {str:[desc,alc].filter(Boolean).join('  \u00b7  '),size:H*0.026,f:SF.jost,w:400,fill:SUB,maxW:cW*0.9,gap:0}],cx,SM,'c').svg;
   }
   return sWrap(W,H,twMM,thMM,SCH.bg,body);
 }
 
-/* ---- 3) FLORA & FAUNA — reference-first: the animal IS the label. Big
-   woodcut/naturalist artwork centre, clean caps or soft serif type, red
-   diagonal-band variant, colours from the boards. ---- */
+/* ---- 3) FLORA & FAUNA — reference-first: the animal IS the label. Beast
+   engravings centred, arched stamped caps, brush-marker heroes, script
+   names beside naturalist plates. Artwork centred in the free area. ---- */
 function styleFlora(f,W,H,seed,twMM,thMM){
   const FPAL=hintPal('flora',[['#F2EDDD','#C73A2E','#2B2620','#6E6555'],['#EFE8D6','#5F6B39','#2B2620','#6E6555'],['#F7F1E1','#B4552D','#2B2620','#6E6555'],['#EFE6CE','#3E5C46','#2B2620','#6E6555']],function(p){return [p.bg,p.acc,p.ink,p.sub];});
   const [BG,ACC,INK,SUB]=FPAL[Math.floor(seed/2)%FPAL.length];
   const cx=W/2, cW=W-2*SM;
   const HF=heroFont('flora');
-  const variant=pickVariant('flora',seed,['c','c','l','c']);
+  const variant=pickVariant('flora',seed,['c','c','l','c','l','l']);
+  const BOX=STYLE_BOXES['flora'][variant];
   const alc=f.alc;
   const desc=(f.descriptor||'').replace(/,/g,'');
   const reg=[f.region,f.special].filter(Boolean).join(' \u00b7 ');
   let body='';
   const rowY=H-SM-H*0.03;
   if(variant===0){ // big beast centre, caps stack below (Hermit Ram / Natura boards)
-    body+=sImageZone('flora',STYLE_ZONES['flora'][variant],W,H);
+    body+=sImageBox('flora',BOX,W,H);
     body+=sFlow([
-      {str:f.wine,size:H*0.095,f:HF?HF[0]:(SF.fraunces),w:HF?HF[1]:(700),fill:INK,caps:true,maxW:cW*0.94,gap:H*0.014,pre:H*0.64},
-      {str:[f.appellation,f.vintage].filter(Boolean).join('  \u00b7  '),size:H*0.042,f:SF.archivo,w:500,fill:ACC,caps:true,tr:0.1,maxW:cW*0.8,gap:H*0.016},
-      {str:[f.grape,f.classification].filter(Boolean).join(' / '),size:H*0.031,f:SF.jost,w:400,fill:SUB,maxW:cW*0.85,gap:0}],cx,SM,'c').svg;
+      {str:f.wine,size:H*0.09,f:HF?HF[0]:(SF.fraunces),w:HF?HF[1]:(700),fill:INK,caps:true,maxW:cW*0.94,gap:H*0.014,pre:H*0.605},
+      {str:[f.appellation,f.vintage].filter(Boolean).join('  \u00b7  '),size:H*0.04,f:SF.archivo,w:500,fill:ACC,caps:true,tr:0.1,maxW:cW*0.8,gap:H*0.014},
+      {str:[f.grape,f.classification].filter(Boolean).join(' / '),size:H*0.03,f:SF.jost,w:400,fill:SUB,maxW:cW*0.85,gap:0}],cx,SM,'c').svg;
     body+=sRow([{str:f.producer,a:'l',f:SF.archivo,w:600,fill:INK,caps:true,tr:0.14},
       {str:reg,a:'c',f:SF.jost,w:400,fill:SUB,size:H*0.026},
       {str:[desc,alc].filter(Boolean).join(' / '),a:'r',f:SF.jost,w:400,fill:SUB,size:H*0.025}],W,rowY,H*0.03);
-  }else if(variant===1){ // beast high on a clean single ground (band removed — house rule: no split-colour backgrounds)
-    body+=sImageZone('flora',STYLE_ZONES['flora'][variant],W,H);
+  }else if(variant===1){ // arched stamped caps over the beast (Elephant in the Room board)
+    (function(){
+      let asz=H*0.05; const R=W*0.40;
+      const aw=measure(up(f.wine||''),asz,SF.imfell,400,false,asz*0.16);
+      if(aw>R*1.55)asz=Math.max(MIN7,asz*R*1.55/aw);
+      body+=sArcText(f.wine,cx,SM+H*0.005,R,{f:SF.imfell,w:400,size:asz,fill:INK,tr:0.16,caps:true});
+    })();
+    body+=sImageBox('flora',BOX,W,H);
     body+=sFlow([
-      {str:f.producer,size:H*0.032,f:SF.archivo,w:600,fill:INK,caps:true,tr:0.22,maxW:cW*0.7,gap:H*0.012,pre:H*0.66},
-      {str:f.wine,size:H*0.09,f:HF?HF[0]:(SF.fraunces),w:HF?HF[1]:(700),fill:INK,caps:true,maxW:cW*0.94,gap:H*0.014},
-      {str:[f.appellation,f.grape].filter(Boolean).join(' \u00b7 '),size:H*0.036,f:SF.jost,w:500,fill:SUB,maxW:cW*0.85,gap:0}],cx,SM,'c').svg;
-    body+=sRow([{str:[f.classification,f.vintage].filter(Boolean).join(' \u00b7 '),a:'l',f:SF.jost,w:400,fill:SUB},
+      {str:f.appellation,size:H*0.048,f:SF.imfell,w:400,fill:INK,caps:true,tr:0.1,maxW:cW*0.85,gap:H*0.012,pre:H*0.605},
+      {str:f.vintage,size:H*0.04,f:SF.imfell,w:400,fill:ACC,maxW:cW*0.3,gap:H*0.012},
+      {str:[f.grape,f.classification].filter(Boolean).join(' / '),size:H*0.03,f:SF.jost,w:400,fill:SUB,maxW:cW*0.85,gap:0}],cx,SM,'c').svg;
+    body+=sRow([{str:f.producer,a:'l',f:SF.archivo,w:600,fill:INK,caps:true,tr:0.14},
       {str:reg,a:'c',f:SF.jost,w:400,fill:SUB,size:H*0.026},
       {str:[desc,alc].filter(Boolean).join(' / '),a:'r',f:SF.jost,w:400,fill:SUB,size:H*0.025}],W,rowY,H*0.028);
   }else if(variant===2){ // naturalist plate left, elegant serif right (L'attente board)
-    body+=sImageZone('flora',STYLE_ZONES['flora'][variant],W,H);
+    body+=sImageBox('flora',BOX,W,H);
     body+=sFlow([
       {str:f.producer,size:H*0.033,f:SF.archivo,w:600,fill:SUB,caps:true,tr:0.22,maxW:W*0.42,gap:H*0.02,pre:H*0.10},
       {str:f.wine,size:H*0.082,f:HF?HF[0]:(SF.fraunces),w:HF?HF[1]:(600),fill:INK,lines:2,lh:1.05,maxW:W*0.43,gap:H*0.016},
@@ -1198,41 +1277,63 @@ function styleFlora(f,W,H,seed,twMM,thMM){
       {str:f.vintage,size:H*0.05,f:SF.fraunces,w:600,fill:ACC,maxW:W*0.3,gap:0}],W*0.52,SM,'l').svg;
     body+=sRow([{str:reg,a:'l',f:SF.jost,w:400,fill:SUB},
       {str:[desc,alc].filter(Boolean).join(' / '),a:'r',f:SF.jost,w:400,fill:SUB}],W,rowY,H*0.026);
-  }else{ // tiny creature top like a seal, wide airy stack (Decoy / MOR boards)
-    body+=sImageZone('flora',STYLE_ZONES['flora'][variant],W,H);
+  }else if(variant===3){ // beast top, big brush hero below (Chico Malo board)
+    body+=sImageBox('flora',BOX,W,H);
     body+=sFlow([
-      {str:f.wine,size:H*0.10,f:HF?HF[0]:(SF.fraunces),w:HF?HF[1]:(700),fill:ACC,caps:true,maxW:cW*0.9,gap:H*0.016,pre:H*0.42},
-      {str:f.appellation,size:H*0.045,f:SF.archivo,w:500,fill:INK,caps:true,tr:0.12,maxW:cW*0.7,gap:H*0.02},
-      {str:[f.grape,f.classification].filter(Boolean).join(' / '),size:H*0.033,f:SF.jost,w:400,fill:SUB,maxW:cW*0.8,gap:H*0.014},
-      {str:reg,size:H*0.03,f:SF.jost,w:400,fill:SUB,maxW:cW*0.8,gap:0}],cx,SM,'c').svg;
-    body+=sRow([{str:f.producer,a:'l',f:SF.archivo,w:600,fill:INK,caps:true,tr:0.12},
-      {str:f.vintage,a:'c',f:SF.fraunces,w:600,fill:INK,size:H*0.04},
-      {str:[desc,alc].filter(Boolean).join(' / '),a:'r',f:SF.jost,w:400,fill:SUB,size:H*0.025}],W,rowY,H*0.028);
+      {str:f.wine,size:H*0.125,f:HF?HF[0]:(SF.caveat),w:HF?HF[1]:(700),fill:INK,maxW:cW*0.92,gap:H*0.016,pre:H*0.40},
+      {str:desc,size:H*0.032,f:SF.archivo,w:500,fill:ACC,caps:true,tr:0.18,maxW:cW*0.7,gap:H*0.016},
+      {str:[f.appellation,f.grape,f.classification].filter(Boolean).join(' / '),size:H*0.03,f:SF.jost,w:400,fill:SUB,maxW:cW*0.85,gap:0}],cx,SM,'c').svg;
+    body+=sRow([{str:f.producer,a:'l',f:SF.fraunces,w:600,fill:ACC,size:H*0.032},
+      {str:reg,a:'c',f:SF.jost,w:400,fill:SUB,size:H*0.026},
+      {str:[f.vintage,alc].filter(Boolean).join('  \u00b7  '),a:'r',f:SF.jost,w:500,fill:INK}],W,rowY,H*0.028);
+  }else if(variant===4){ // tiny creature centre, airy caps + italic aside (Hugh Hamilton board)
+    body+=sBlock(f.producer,{x:SM,top:SM,maxW:W*0.5,size:H*0.03,min:H*0.022,f:SF.archivo,w:600,fill:INK,a:'l',caps:true,tr:0.3}).svg;
+    body+=sBlock(f.vintage,{x:W-SM,top:SM,maxW:W*0.28,size:H*0.03,min:H*0.022,f:SF.jost,w:500,fill:SUB,a:'r'}).svg;
+    body+=sImageBox('flora',BOX,W,H);
+    body+=sFlow([
+      {str:f.wine,size:H*0.055,f:HF?HF[0]:(SF.fraunces),w:HF?HF[1]:(600),fill:INK,caps:true,tr:0.3,maxW:cW*0.9,gap:H*0.016,pre:H*0.545},
+      {str:f.appellation,size:H*0.042,f:F.cormorant,w:600,fill:ACC,ital:true,maxW:cW*0.65,gap:H*0.014},
+      {str:[f.grape,f.classification].filter(Boolean).join(' / '),size:H*0.03,f:SF.jost,w:400,fill:SUB,maxW:cW*0.8,gap:0}],cx,SM,'c').svg;
+    body+=sRow([{str:reg,a:'l',f:SF.jost,w:400,fill:SUB},
+      {str:[desc,alc].filter(Boolean).join(' / '),a:'r',f:SF.jost,w:400,fill:SUB,size:H*0.025}],W,rowY,H*0.026);
+  }else{ // beast left, script hero right (Aleria board)
+    body+=sImageBox('flora',BOX,W,H);
+    body+=sFlow([
+      {str:f.producer,size:H*0.03,f:SF.archivo,w:600,fill:SUB,caps:true,tr:0.24,maxW:W*0.34,gap:H*0.02,pre:H*0.08},
+      {str:f.wine,size:H*0.13,f:HF?HF[0]:(F.italianno),w:HF?HF[1]:(400),fill:INK,maxW:W*0.36,gap:H*0.016},
+      {str:f.appellation,size:H*0.042,f:F.cormorant,w:600,fill:ACC,ital:true,maxW:W*0.34,gap:H*0.016},
+      {str:f.grape,size:H*0.032,f:SF.jost,w:500,fill:INK,maxW:W*0.34,gap:H*0.012},
+      {str:f.classification,size:H*0.03,f:SF.jost,w:400,fill:SUB,maxW:W*0.34,gap:H*0.012},
+      {str:f.vintage,size:H*0.048,f:SF.fraunces,w:600,fill:ACC,maxW:W*0.3,gap:0}],W*0.60,SM,'l').svg;
+    body+=sRow([{str:reg,a:'l',f:SF.jost,w:400,fill:SUB},
+      {str:[desc,alc].filter(Boolean).join(' / '),a:'r',f:SF.jost,w:400,fill:SUB}],W,rowY,H*0.026);
   }
   return sWrap(W,H,twMM,thMM,BG,body);
 }
 
-/* ---- 4) PREMIUM — reference-first: ivory stock, gold serif caps, giant
-   ghosted vintage numerals, small precious emblem, charcoal variant. ---- */
+/* ---- 4) PREMIUM — reference-first: vast ivory space, tiny gold emblems,
+   extreme letterspaced caps, copperplate script names, ghosted numerals,
+   a data-sheet comp with the emblem at the foot. ---- */
 function stylePremium(f,W,H,seed,twMM,thMM){
-  // house rule: artwork is multiply-blended, so grounds under it stay light —
-  // the former charcoal variant is now a warm parchment
+  // house rule: artwork is multiply-blended, so grounds under it stay light
   const PPAL=hintPal('premium',[['#F2EDE0','#2B2822','#7A7160'],['#FFFFFF','#2B2822','#7A7160'],['#F7F2E6','#2B2822','#7A7160']],function(p){return [p.bg,p.ink,p.sub];});
   const ppi=Math.floor(seed/2)%PPAL.length;
   const [BG,INK,SUB]=PPAL[ppi];
   const id='g'+(++__sid); const gold=`url(#${id})`;
+  const RED='#8E2430';
   const defs=`<linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#D8BC85"/><stop offset="0.5" stop-color="#B08D57"/><stop offset="1" stop-color="#8C6A32"/></linearGradient>`;
   const cx=W/2, cW=W-2*SM;
   const HF=heroFont('premium');
-  const variant=pickVariant('premium',seed,['c','c','c']);
+  const variant=pickVariant('premium',seed,['c','c','c','c','c']);
+  const BOX=STYLE_BOXES['premium'][variant];
   const alc=f.alc;
   const desc=(f.descriptor||'').replace(/,/g,'');
   const reg=[f.region,f.special].filter(Boolean).join(' \u00b7 ');
   let body='';
   const rowY=H-SM-H*0.028;
-  if(variant===0){ // giant ghosted numerals + gold caps (1780 / 1896 boards)
+  if(variant===0){ // giant ghosted numerals + central emblem (1780 / 1896 boards)
     body+=sBlock(f.vintage,{x:cx,top:H*0.06,maxW:cW*0.9,size:H*0.30,min:H*0.18,f:SF.cinzel,w:600,fill:gold,a:'c',tr:0.04}).svg;
-    body+=sImageZone('premium',STYLE_ZONES['premium'][variant],W,H);
+    body+=sImageBox('premium',BOX,W,H);
     body+=sFlow([
       {str:f.producer,size:H*0.034,f:SF.cinzel,w:500,fill:SUB,caps:true,tr:0.3,maxW:cW*0.7,gap:H*0.018,pre:H*0.64},
       {str:f.wine,size:H*0.078,f:HF?HF[0]:(SF.cinzel),w:HF?HF[1]:(600),fill:INK,caps:true,tr:0.06,maxW:cW*0.92,gap:H*0.016},
@@ -1240,35 +1341,58 @@ function stylePremium(f,W,H,seed,twMM,thMM){
     body+=sRow([{str:[f.grape,f.classification].filter(Boolean).join(' \u00b7 '),a:'l',f:SF.cinzel,w:500,fill:SUB,tr:0.06,size:H*0.026},
       {str:reg,a:'c',f:SF.cinzel,w:500,fill:SUB,size:H*0.025},
       {str:[desc,alc].filter(Boolean).join(' / '),a:'r',f:F.ebg,w:400,fill:SUB,size:H*0.024}],W,rowY,H*0.026);
-  }else if(variant===1){ // small gold emblem high, wide-tracked caps (Sinegal / Taylor boards)
-    body+=sImageZone('premium',STYLE_ZONES['premium'][variant],W,H);
+  }else if(variant===1){ // tiny emblem high, huge tracked caps, silence (Sinegal board)
+    body+=sImageBox('premium',BOX,W,H);
     body+=sFlow([
-      {str:f.wine,size:H*0.075,f:HF?HF[0]:(SF.cinzel),w:HF?HF[1]:(600),fill:INK,caps:true,tr:0.16,maxW:cW*0.92,gap:H*0.02,pre:H*0.40},
-      {str:f.vintage,size:H*0.042,f:SF.cinzel,w:500,fill:gold,tr:0.2,maxW:cW*0.4,gap:H*0.02},
-      {str:f.appellation,size:H*0.04,f:F.cormorant,w:600,fill:SUB,ital:true,maxW:cW*0.6,gap:H*0.022},
-      {str:[f.grape,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.03,f:SF.cinzel,w:500,fill:SUB,tr:0.08,maxW:cW*0.85,gap:H*0.014},
-      {str:reg,size:H*0.027,f:F.ebg,w:400,fill:SUB,maxW:cW*0.8,gap:0}],cx,SM,'c').svg;
+      {str:f.wine,size:H*0.068,f:HF?HF[0]:(SF.cinzel),w:HF?HF[1]:(600),fill:INK,caps:true,tr:0.30,maxW:cW*0.94,gap:H*0.022,pre:H*0.315},
+      {str:f.vintage,size:H*0.04,f:SF.cinzel,w:500,fill:gold,tr:0.22,maxW:cW*0.4,gap:H*0.02},
+      {str:f.appellation,size:H*0.038,f:F.cormorant,w:600,fill:SUB,ital:true,maxW:cW*0.6,gap:H*0.024},
+      {str:[f.grape,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.029,f:SF.cinzel,w:500,fill:SUB,tr:0.08,maxW:cW*0.85,gap:H*0.014},
+      {str:reg,size:H*0.026,f:F.ebg,w:400,fill:SUB,maxW:cW*0.8,gap:0}],cx,SM,'c').svg;
     body+=sRow([{str:f.producer,a:'l',f:SF.cinzel,w:500,fill:SUB,caps:true,tr:0.2},
       {str:desc,a:'c',f:F.ebg,w:400,fill:SUB,ital:true,size:H*0.025},
       {str:alc,a:'r',f:F.ebg,w:400,fill:SUB,size:H*0.024}],W,rowY,H*0.027);
-  }else{ // hairline rules + centred stack, emblem between rules (Rioja Vega board)
+  }else if(variant===2){ // hairline rules + centred stack, emblem between rules (Rioja Vega board)
     const ry=H*0.30;
     body+=`<line x1="${(cx-cW*0.30).toFixed(1)}" y1="${ry.toFixed(1)}" x2="${(cx+cW*0.30).toFixed(1)}" y2="${ry.toFixed(1)}" stroke="${gold}" stroke-width="${Math.max(1,H*0.0035).toFixed(1)}"/>`;
-    body+=sImageZone('premium',STYLE_ZONES['premium'][variant],W,H);
+    body+=sImageBox('premium',BOX,W,H);
     body+=sFlow([
       {str:f.producer,size:H*0.036,f:SF.cinzel,w:500,fill:SUB,caps:true,tr:0.26,maxW:cW*0.72,gap:H*0.02,pre:H*0.08},
       {str:f.wine,size:H*0.085,f:HF?HF[0]:(SF.cinzel),w:HF?HF[1]:(600),fill:INK,caps:true,tr:0.05,maxW:cW*0.92,gap:0}],cx,SM,'c').svg;
     body+=sFlow([
-      {str:f.appellation,size:H*0.04,f:F.cormorant,w:600,fill:SUB,ital:true,maxW:cW*0.6,gap:H*0.016,pre:H*0.60},
+      {str:f.appellation,size:H*0.04,f:F.cormorant,w:600,fill:SUB,ital:true,maxW:cW*0.6,gap:H*0.016,pre:H*0.58},
       {str:[f.grape,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.03,f:SF.cinzel,w:500,fill:SUB,tr:0.08,maxW:cW*0.85,gap:H*0.014},
       {str:[f.vintage,reg].filter(Boolean).join('  \u00b7  '),size:H*0.028,f:F.ebg,w:400,fill:SUB,maxW:cW*0.8,gap:0}],cx,SM,'c').svg;
     body+=sRow([{str:desc,a:'l',f:F.ebg,w:400,fill:SUB,ital:true},{str:alc,a:'r',f:F.ebg,w:400,fill:SUB,size:H*0.024}],W,rowY,H*0.025);
+  }else if(variant===3){ // data-sheet top, emblem at the foot (Ram's Gate board)
+    body+=sFlow([
+      {str:f.wine,size:H*0.065,f:HF?HF[0]:(SF.cinzel),w:HF?HF[1]:(600),fill:INK,caps:true,tr:0.14,maxW:cW*0.92,gap:H*0.016,pre:H*0.015},
+      {str:desc,size:H*0.034,f:SF.cinzel,w:500,fill:RED,caps:true,tr:0.14,maxW:cW*0.7,gap:H*0.02},
+      {str:f.appellation,size:H*0.032,f:F.ebg,w:500,fill:INK,caps:true,tr:0.24,maxW:cW*0.8,gap:H*0.016},
+      {str:[f.vintage,f.grape].filter(Boolean).join('  \u00b7  '),size:H*0.03,f:F.ebg,w:400,fill:SUB,maxW:cW*0.8,gap:H*0.012},
+      {str:f.classification,size:H*0.028,f:F.ebg,w:400,fill:SUB,maxW:cW*0.8,gap:H*0.012},
+      {str:reg,size:H*0.026,f:F.ebg,w:400,fill:SUB,maxW:cW*0.8,gap:0}],cx,SM,'c').svg;
+    body+=`<line x1="${(cx-cW*0.24).toFixed(1)}" y1="${(H*0.555).toFixed(1)}" x2="${(cx+cW*0.24).toFixed(1)}" y2="${(H*0.555).toFixed(1)}" stroke="${gold}" stroke-width="${Math.max(1,H*0.003).toFixed(1)}"/>`;
+    body+=sImageBox('premium',BOX,W,H);
+    body+=sRow([{str:f.producer,a:'l',f:SF.cinzel,w:500,fill:SUB,caps:true,tr:0.2},
+      {str:alc,a:'r',f:F.ebg,w:400,fill:SUB,size:H*0.024}],W,rowY,H*0.026);
+  }else{ // crest top, copperplate script hero (Juan Campinún board)
+    body+=sImageBox('premium',BOX,W,H);
+    body+=sFlow([
+      {str:f.wine,size:H*0.145,f:HF?HF[0]:(F.monteCarlo),w:HF?HF[1]:(400),fill:INK,maxW:cW*0.94,gap:H*0.030,pre:H*0.30},
+      {str:f.producer,size:H*0.03,f:SF.cinzel,w:500,fill:SUB,caps:true,tr:0.3,maxW:cW*0.72,gap:H*0.016},
+      {str:f.appellation,size:H*0.036,f:F.cormorant,w:600,fill:SUB,ital:true,maxW:cW*0.6,gap:H*0.016},
+      {str:[f.grape,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.028,f:SF.cinzel,w:500,fill:SUB,tr:0.08,maxW:cW*0.85,gap:H*0.014},
+      {str:reg,size:H*0.036,f:SF.cinzel,w:500,fill:INK,caps:true,tr:0.12,maxW:cW*0.7,gap:0}],cx,SM,'c').svg;
+    body+=sRow([{str:desc,a:'l',f:F.ebg,w:400,fill:SUB,ital:true},
+      {str:f.vintage,a:'c',f:SF.cinzel,w:500,fill:gold,size:H*0.034},
+      {str:alc,a:'r',f:F.ebg,w:400,fill:SUB,size:H*0.024}],W,rowY,H*0.026);
   }
   return sWrap(W,H,twMM,thMM,BG,body,defs);
 }
 
 /* ---- 5) MINIMALIST — reference-first: vast emptiness, one tiny mark,
-   letterspaced type; colour-panel variant from the boards. ---- */
+   letterspaced type, handwritten scrawl hero, mark-at-the-foot comp. ---- */
 function styleMinimal(f,W,H,seed,twMM,thMM){
   const MSCH=hintPal('minimalist',[{bg:'#FBFBF9',ink:'#231F20',sub:'#8A8780',panel:null},
     {bg:'#F4EFE4',ink:'#2A2722',sub:'#8F887B',panel:null},
@@ -1277,12 +1401,13 @@ function styleMinimal(f,W,H,seed,twMM,thMM){
   const MS=MSCH[Math.floor(seed/2)%MSCH.length];
   const INK=MS.ink, SUB=MS.sub, cx=W/2, cW=W-2*SM;
   const HF=heroFont('minimalist');
-  const variant=pickVariant('minimalist',seed,['c','l','c','c']);
+  const variant=pickVariant('minimalist',seed,['c','l','c','c','c','l']);
+  const BOX=STYLE_BOXES['minimalist'][variant];
   const line1=[f.grape,f.classification,f.region].filter(Boolean).join(' / ');
   const line2=[f.special,f.vintage,f.alc].filter(Boolean).join(' / ');
   let body='';
   if(variant===0||variant===3){ // centred: tiny mark high, airy stack (dot/blob boards + colour panel)
-    if(!MS.panel) body+=sImageZone('minimalist',STYLE_ZONES['minimalist'][variant],W,H);
+    if(!MS.panel) body+=sImageBox('minimalist',BOX,W,H);
     body+=sFlow([
       {str:f.producer,size:H*0.030,f:SF.archivo,w:300,fill:SUB,caps:true,tr:0.45,maxW:cW*0.7,gap:H*0.02,pre:H*0.02},
       {str:f.wine,size:H*0.085,f:HF?HF[0]:(SF.archivo),w:HF?HF[1]:(MS.panel?600:300),fill:INK,caps:true,tr:0.28,maxW:cW*0.94,gap:H*0.018,pre:H*0.42},
@@ -1291,7 +1416,7 @@ function styleMinimal(f,W,H,seed,twMM,thMM){
       {str:line1,size:H*0.026,f:SF.archivo,w:400,fill:SUB,maxW:cW*0.8,gap:H*0.008,pre:H*0.855-SM},
       {str:line2,size:H*0.026,f:SF.archivo,w:400,fill:SUB,maxW:cW*0.8,gap:0}],cx,SM,'c').svg;
   }else if(variant===1){ // left column, mark right (Society / blue-square boards)
-    body+=sImageZone('minimalist',STYLE_ZONES['minimalist'][variant],W,H);
+    body+=sImageBox('minimalist',BOX,W,H);
     body+=sFlow([
       {str:f.producer,size:H*0.03,f:SF.archivo,w:300,fill:SUB,caps:true,tr:0.4,maxW:W*0.44,gap:H*0.05,pre:H*0.04},
       {str:f.wine,size:H*0.07,f:HF?HF[0]:(SF.archivo),w:HF?HF[1]:(400),fill:INK,caps:true,tr:0.2,lines:2,lh:1.15,maxW:W*0.46,gap:H*0.02},
@@ -1299,8 +1424,8 @@ function styleMinimal(f,W,H,seed,twMM,thMM){
     body+=sFlow([
       {str:line1,size:H*0.025,f:SF.archivo,w:400,fill:SUB,maxW:cW*0.9,gap:H*0.008,pre:H*0.855-SM},
       {str:line2,size:H*0.025,f:SF.archivo,w:400,fill:SUB,maxW:cW*0.9,gap:0}],SM,SM,'l').svg;
-  }else{ // hero IS the mark: oversized single word, nothing else near it
-    body+=sImageZone('minimalist',STYLE_ZONES['minimalist'][variant],W,H);
+  }else if(variant===2){ // hero IS the mark: oversized single word, nothing else near it
+    body+=sImageBox('minimalist',BOX,W,H);
     body+=sFlow([
       {str:f.producer,size:H*0.028,f:SF.archivo,w:300,fill:SUB,caps:true,tr:0.45,maxW:cW*0.7,gap:H*0.05,pre:H*0.05},
       {str:f.wine,size:H*0.12,f:HF?HF[0]:(SF.archivo),w:HF?HF[1]:(300),fill:INK,caps:true,tr:0.12,maxW:cW*0.96,gap:H*0.02},
@@ -1308,38 +1433,60 @@ function styleMinimal(f,W,H,seed,twMM,thMM){
     body+=sFlow([
       {str:line1,size:H*0.025,f:SF.archivo,w:400,fill:SUB,maxW:cW*0.85,gap:H*0.008,pre:H*0.87-SM},
       {str:line2,size:H*0.025,f:SF.archivo,w:400,fill:SUB,maxW:cW*0.85,gap:0}],cx,SM,'c').svg;
+  }else if(variant===4){ // handwritten scrawl hero across the silence (Valdez board)
+    body+=sBlock(f.producer,{x:W-SM,top:SM,maxW:W*0.5,size:H*0.028,min:H*0.02,f:SF.archivo,w:300,fill:SUB,a:'r',caps:true,tr:0.4}).svg;
+    body+=sFlow([
+      {str:f.wine,size:H*0.16,f:HF?HF[0]:(SF.caveat),w:HF?HF[1]:(700),fill:INK,maxW:cW*0.94,gap:H*0.02,pre:H*0.34},
+      {str:f.appellation,size:H*0.036,f:SF.archivo,w:400,fill:SUB,maxW:cW*0.6,gap:0}],cx,SM,'c').svg;
+    body+=sFlow([
+      {str:line1,size:H*0.025,f:SF.archivo,w:400,fill:SUB,maxW:cW*0.85,gap:H*0.008,pre:H*0.87-SM},
+      {str:line2,size:H*0.025,f:SF.archivo,w:400,fill:SUB,maxW:cW*0.85,gap:0}],W-SM,SM,'r').svg;
+  }else{ // caps corner top-left, mark at the foot (mountain boards)
+    body+=sFlow([
+      {str:f.producer,size:H*0.028,f:SF.archivo,w:300,fill:SUB,caps:true,tr:0.4,maxW:W*0.6,gap:H*0.022,pre:H*0.02},
+      {str:f.wine,size:H*0.052,f:HF?HF[0]:(SF.archivo),w:HF?HF[1]:(500),fill:INK,caps:true,tr:0.22,lines:2,lh:1.12,maxW:W*0.6,gap:H*0.016},
+      {str:f.appellation,size:H*0.034,f:SF.archivo,w:400,fill:SUB,maxW:W*0.6,gap:H*0.018},
+      {str:line1,size:H*0.025,f:SF.archivo,w:400,fill:SUB,maxW:W*0.6,gap:H*0.008},
+      {str:line2,size:H*0.025,f:SF.archivo,w:400,fill:SUB,maxW:W*0.6,gap:0}],SM,SM,'l').svg;
+    body+=sImageBox('minimalist',BOX,W,H);
   }
   return sWrap(W,H,twMM,thMM,MS.bg,body);
 }
 
 /* ---- 6) ARTISTIC / PUNK — reference-first: naive art big and proud,
-   marker hand + heavy grotesque, riso grounds; text zones fully disjoint
-   from each other and from the artwork's focal area. ---- */
+   handwritten titles, rotated riso side caps, arched hand-lettering,
+   marker hand + heavy grotesque on light riso grounds. ---- */
 function styleArtistic(f,W,H,seed,twMM,thMM){
-  // house rule: no dark grounds under the multiply-blended artwork — the
-  // former near-black riso ground is now a light bone paper
+  // house rule: no dark grounds under the multiply-blended artwork
   const APAL=hintPal('artistic',[['#F3EFE4','#171512','#C22A1C'],['#DA3D1C','#F8EFE0','#171512'],['#F2BFC9','#171512','#C22A1C'],['#EFE9DA','#171512','#E8542F']],function(p){return [p.bg,p.ink,p.acc];});
   const api=Math.floor(seed/2)%APAL.length;
   const [BG,INK,AC]=APAL[api];
   const cx=W/2, cW=W-2*SM;
   const HF=heroFont('artistic');
-  const variant=pickVariant('artistic',seed,['c','l','l','c']);
+  const variant=pickVariant('artistic',seed,['c','l','l','l','c','c']);
+  const BOX=STYLE_BOXES['artistic'][variant];
   const alc=f.alc;
   const desc=(f.descriptor||'').replace(/,/g,'');
   const reg=[f.region,f.special].filter(Boolean).join(' \u00b7 ');
   let body='';
   const rowY=H-SM-H*0.028;
+  function rotText(t,x,size,fspec,w,fill,tr){if(!t)return '';
+    const s0=up(String(t)); let sz=size;
+    const wpx=measure(s0,sz,fspec,w,false,sz*(tr||0)); const maxL=H-2*SM;
+    if(wpx>maxL)sz=Math.max(MIN7,sz*maxL/wpx);
+    const cy=H/2, ls=tr?` letter-spacing="${(sz*tr).toFixed(2)}"`:'';
+    return `<text transform="rotate(-90 ${x.toFixed(1)} ${cy.toFixed(1)})" x="${x.toFixed(1)}" y="${cy.toFixed(1)}" font-family="${fspec}" font-weight="${w}" font-size="${sz.toFixed(1)}" text-anchor="middle" fill="${fill}"${ls}>${esc(s0)}</text>`;}
   if(variant===0){ // naive drawing centre stage, marker name below (wine-club boards)
-    body+=sImageZone('artistic',STYLE_ZONES['artistic'][variant],W,H);
+    body+=sImageBox('artistic',BOX,W,H);
     body+=sFlow([
-      {str:f.wine,size:H*0.105,f:HF?HF[0]:(SF.marker),w:HF?HF[1]:(400),fill:INK,maxW:cW*0.94,gap:H*0.032,pre:H*0.60},
+      {str:f.wine,size:H*0.105,f:HF?HF[0]:(SF.marker),w:HF?HF[1]:(400),fill:INK,maxW:cW*0.94,gap:H*0.03,pre:H*0.53},
       {str:[f.appellation,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.045,f:SF.archivo,w:700,fill:AC,caps:true,tr:0.04,maxW:cW*0.8,gap:H*0.016},
       {str:[f.grape,f.classification].filter(Boolean).join(' / '),size:H*0.03,f:SF.archivo,w:500,fill:INK,maxW:cW*0.85,gap:0}],cx,SM,'c').svg;
     body+=sRow([{str:f.producer,a:'l',f:SF.marker,w:400,fill:AC,size:H*0.035},
       {str:reg,a:'c',f:SF.archivo,w:500,fill:INK,size:H*0.025},
       {str:[desc,alc].filter(Boolean).join(' / '),a:'r',f:SF.archivo,w:500,fill:INK,size:H*0.024}],W,rowY,H*0.028);
   }else if(variant===1){ // poster type: giant condensed caps stacked (RAW POWER board)
-    body+=sImageZone('artistic',STYLE_ZONES['artistic'][variant],W,H);
+    body+=sImageBox('artistic',BOX,W,H);
     body+=sFlow([
       {str:f.producer,size:H*0.045,f:SF.marker,w:400,fill:INK,maxW:W*0.5,gap:H*0.045,pre:H*0.04},
       {str:f.wine,size:H*0.17,f:HF?HF[0]:(SF.anton),w:HF?HF[1]:(400),fill:INK,caps:true,lines:2,lh:0.95,maxW:W*0.52,gap:H*0.025},
@@ -1347,20 +1494,44 @@ function styleArtistic(f,W,H,seed,twMM,thMM){
       {str:[f.grape,f.classification].filter(Boolean).join(' / '),size:H*0.03,f:SF.archivo,w:600,fill:INK,maxW:W*0.5,gap:H*0.012},
       {str:[reg,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.028,f:SF.archivo,w:500,fill:INK,maxW:W*0.5,gap:0}],SM,SM,'l').svg;
     body+=sBlock([desc,alc].filter(Boolean).join(' / '),{x:SM,top:rowY,maxW:W*0.5,size:H*0.024,min:H*0.02,f:SF.archivo,w:500,fill:INK,a:'l'}).svg;
-  }else if(variant===2){ // linocut figure full-height right, hand stack left (\u00c0 Bon Chat board)
-    body+=sImageZone('artistic',STYLE_ZONES['artistic'][variant],W,H);
+  }else if(variant===2){ // handwritten title corner, figure right (Say When board)
+    body+=sBlock(f.wine,{x:SM,top:SM,maxW:cW*0.9,size:H*0.08,min:H*0.05,f:HF?HF[0]:(SF.caveat),w:HF?HF[1]:(700),fill:AC,a:'l',caps:true}).svg;
+    body+=sImageBox('artistic',BOX,W,H);
     body+=sFlow([
-      {str:f.producer,size:H*0.04,f:SF.marker,w:400,fill:AC,maxW:W*0.44,gap:H*0.05,pre:H*0.05},
-      {str:f.wine,size:H*0.095,f:HF?HF[0]:(SF.marker),w:HF?HF[1]:(400),fill:INK,lines:2,lh:1.05,maxW:W*0.46,gap:H*0.025},
-      {str:f.appellation,size:H*0.042,f:SF.archivo,w:700,fill:INK,caps:true,tr:0.04,maxW:W*0.44,gap:H*0.02},
-      {str:f.grape,size:H*0.03,f:SF.archivo,w:500,fill:INK,maxW:W*0.44,gap:H*0.012},
-      {str:f.classification,size:H*0.028,f:SF.archivo,w:500,fill:INK,maxW:W*0.44,gap:H*0.012},
-      {str:[reg,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.027,f:SF.archivo,w:500,fill:INK,maxW:W*0.44,gap:H*0.012},
-      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.024,f:SF.archivo,w:500,fill:INK,maxW:W*0.44,gap:0}],SM,SM,'l').svg;
-  }else{ // riso poster: art top band, loud knockout hero on ground colour
-    body+=sImageZone('artistic',STYLE_ZONES['artistic'][variant],W,H);
+      {str:f.appellation,size:H*0.045,f:SF.marker,w:400,fill:INK,maxW:W*0.26,gap:H*0.02,pre:H*0.16},
+      {str:f.grape,size:H*0.03,f:SF.archivo,w:500,fill:INK,maxW:W*0.26,gap:H*0.012},
+      {str:f.classification,size:H*0.028,f:SF.archivo,w:500,fill:INK,maxW:W*0.26,gap:H*0.012},
+      {str:f.vintage,size:H*0.05,f:SF.marker,w:400,fill:INK,maxW:W*0.26,gap:0}],SM,SM,'l').svg;
+    body+=sRow([{str:f.producer,a:'l',f:SF.marker,w:400,fill:INK,size:H*0.032},
+      {str:reg,a:'c',f:SF.archivo,w:500,fill:INK,size:H*0.025},
+      {str:[desc,alc].filter(Boolean).join(' / '),a:'r',f:SF.archivo,w:500,fill:INK,size:H*0.024}],W,rowY,H*0.026);
+  }else if(variant===3){ // rotated side caps, riso figure centre (PET-NAT / SUR512 boards)
+    body+=rotText(f.producer,SM+H*0.028,H*0.034,SF.anton,400,AC,0.14);
+    body+=sImageBox('artistic',BOX,W,H);
     body+=sFlow([
-      {str:f.wine,size:H*0.13,f:HF?HF[0]:(SF.anton),w:HF?HF[1]:(400),fill:INK,caps:true,maxW:cW*0.95,gap:H*0.018,pre:H*0.58},
+      {str:f.wine,size:H*0.10,f:HF?HF[0]:(SF.marker),w:HF?HF[1]:(400),fill:INK,maxW:cW*0.86,gap:H*0.02,pre:H*0.61},
+      {str:[f.appellation,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.04,f:SF.archivo,w:700,fill:AC,caps:true,tr:0.04,maxW:cW*0.8,gap:0}],cx+H*0.02,SM,'c').svg;
+    body+=sRow([{str:[f.grape,f.classification].filter(Boolean).join(' / '),a:'l',f:SF.archivo,w:500,fill:INK},
+      {str:reg,a:'c',f:SF.archivo,w:500,fill:INK,size:H*0.025},
+      {str:[desc,alc].filter(Boolean).join(' / '),a:'r',f:SF.archivo,w:500,fill:INK,size:H*0.024}],W,rowY,H*0.026);
+  }else if(variant===4){ // arched hand-lettering ring over the figure (Silvaner board)
+    (function(){
+      let asz=H*0.055; const R=W*0.40;
+      const aw=measure(String(f.producer||''),asz,SF.caveat,600,false,asz*0.06);
+      if(aw>R*1.55)asz=Math.max(MIN7,asz*R*1.55/aw);
+      body+=sArcText(f.producer,cx,SM,R,{f:SF.caveat,w:600,size:asz,fill:AC,tr:0.06});
+    })();
+    body+=sImageBox('artistic',BOX,W,H);
+    body+=sFlow([
+      {str:f.wine,size:H*0.10,f:HF?HF[0]:(SF.marker),w:HF?HF[1]:(400),fill:INK,maxW:cW*0.92,gap:H*0.018,pre:H*0.605},
+      {str:[f.appellation,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.045,f:SF.caveat,w:600,fill:AC,maxW:cW*0.8,gap:H*0.014},
+      {str:[f.grape,f.classification].filter(Boolean).join(' / '),size:H*0.028,f:SF.archivo,w:500,fill:INK,maxW:cW*0.85,gap:0}],cx,SM,'c').svg;
+    body+=sRow([{str:reg,a:'l',f:SF.archivo,w:500,fill:INK},
+      {str:[desc,alc].filter(Boolean).join(' / '),a:'r',f:SF.archivo,w:500,fill:INK,size:H*0.024}],W,rowY,H*0.026);
+  }else{ // riso band top, loud knockout hero below (poster boards)
+    body+=sImageBox('artistic',BOX,W,H);
+    body+=sFlow([
+      {str:f.wine,size:H*0.13,f:HF?HF[0]:(SF.anton),w:HF?HF[1]:(400),fill:INK,caps:true,maxW:cW*0.95,gap:H*0.018,pre:H*0.43},
       {str:[f.appellation,f.vintage].filter(Boolean).join('  \u00b7  '),size:H*0.045,f:SF.marker,w:400,fill:AC,maxW:cW*0.8,gap:H*0.016},
       {str:[f.grape,f.classification,reg].filter(Boolean).join(' / '),size:H*0.028,f:SF.archivo,w:500,fill:INK,maxW:cW*0.9,gap:0}],cx,SM,'c').svg;
     body+=sRow([{str:f.producer,a:'l',f:SF.marker,w:400,fill:INK,size:H*0.032},
