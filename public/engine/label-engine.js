@@ -1064,7 +1064,7 @@ function styleContemporary(f,W,H,seed,twMM,thMM){
      type combos rotate; the artwork's focal area is never covered by text. */
   const CSCH=[{bg:'#FFFFFF',ink:'#231F20',sub:'#6D6E71',acc:'#E8542F'},
     {bg:'#F6F0E2',ink:'#231F20',sub:'#75716A',acc:'#2B4C9B'},
-    {bg:'#E8542F',ink:'#20130E',sub:'#F8EFE3',acc:'#F8EFE3'},
+    {bg:'#F8EFE3',ink:'#20130E',sub:'#75655A',acc:'#E8542F'},
     {bg:'#F3D3C4',ink:'#232019',sub:'#7C5A4A',acc:'#B33A24'},
     {bg:'#CDD6C2',ink:'#22271F',sub:'#5A6650',acc:'#2F5D3A'}];
   const SCH=CSCH[Math.floor(seed/2)%CSCH.length];
@@ -1112,15 +1112,13 @@ function styleContemporary(f,W,H,seed,twMM,thMM){
       {str:[f.appellation,f.grape].filter(Boolean).join(' \u00b7 '),size:H*0.038,f:SF.jost,w:500,fill:SUB,maxW:cW*0.85,gap:0}],cx,SM,'c').svg;
     body+=sRow([{str:f.classification,a:'l',f:SF.jost,w:400,fill:SUB},{str:reg,a:'c',f:SF.jost,w:400,fill:SUB},
       {str:alc,a:'r',f:SF.jost,w:400,fill:SUB,size:H*0.025}],W,rowY,H*0.027);
-  }else{ // colour-block: bold band of ground colour bottom, image band top
+  }else{ // art band top, bold type block below \u2014 single ground (house rule: no split-colour backgrounds)
     body+=sImageZone('contemporary',STYLE_ZONES['contemporary'][variant],W,H);
-    body+=`<rect x="0" y="${(H*0.56).toFixed(1)}" width="${W}" height="${(H*0.44).toFixed(1)}" fill="${SCH.acc}"/>`;
-    const KN=(SCH.acc==='#F8EFE3')?'#20130E':'#FFF9EF';
     body+=sFlow([
-      {str:f.wine,size:H*0.115,f:SF.archivo,w:800,fill:KN,caps:true,maxW:cW*0.94,gap:H*0.016,pre:H*0.60},
-      {str:[f.appellation,f.vintage].filter(Boolean).join('  \u00b7  '),size:H*0.045,f:SF.jost,w:500,fill:KN,maxW:cW*0.8,gap:H*0.016},
-      {str:[f.grape,f.classification,reg].filter(Boolean).join(' / '),size:H*0.03,f:SF.jost,w:400,fill:KN,maxW:cW*0.9,gap:H*0.012},
-      {str:[f.producer,desc,alc].filter(Boolean).join('  \u00b7  '),size:H*0.027,f:SF.jost,w:400,fill:KN,maxW:cW*0.9,gap:0}],cx,SM,'c').svg;
+      {str:f.wine,size:H*0.115,f:SF.archivo,w:800,fill:INK,caps:true,maxW:cW*0.94,gap:H*0.016,pre:H*0.60},
+      {str:[f.appellation,f.vintage].filter(Boolean).join('  \u00b7  '),size:H*0.045,f:SF.jost,w:500,fill:SCH.acc,maxW:cW*0.8,gap:H*0.016},
+      {str:[f.grape,f.classification,reg].filter(Boolean).join(' / '),size:H*0.03,f:SF.jost,w:400,fill:SUB,maxW:cW*0.9,gap:H*0.012},
+      {str:[f.producer,desc,alc].filter(Boolean).join('  \u00b7  '),size:H*0.027,f:SF.jost,w:400,fill:SUB,maxW:cW*0.9,gap:0}],cx,SM,'c').svg;
   }
   return sWrap(W,H,twMM,thMM,SCH.bg,body);
 }
@@ -1147,8 +1145,7 @@ function styleFlora(f,W,H,seed,twMM,thMM){
     body+=sRow([{str:f.producer,a:'l',f:SF.archivo,w:600,fill:INK,caps:true,tr:0.14},
       {str:reg,a:'c',f:SF.jost,w:400,fill:SUB,size:H*0.026},
       {str:[desc,alc].filter(Boolean).join(' / '),a:'r',f:SF.jost,w:400,fill:SUB,size:H*0.025}],W,rowY,H*0.03);
-  }else if(variant===1){ // diagonal accent band behind the beast (Hermit Ram red diagonal)
-    body+=`<path d="M0 ${(H*0.62).toFixed(1)} L ${W} ${(H*0.10).toFixed(1)} L ${W} ${(H*0.62).toFixed(1)} Z" fill="${ACC}" opacity="0.92"/>`;
+  }else if(variant===1){ // beast high on a clean single ground (band removed — house rule: no split-colour backgrounds)
     body+=sImageZone('flora',STYLE_ZONES['flora'][variant],W,H);
     body+=sFlow([
       {str:f.producer,size:H*0.032,f:SF.archivo,w:600,fill:INK,caps:true,tr:0.22,maxW:cW*0.7,gap:H*0.012,pre:H*0.66},
@@ -1185,9 +1182,11 @@ function styleFlora(f,W,H,seed,twMM,thMM){
 /* ---- 4) PREMIUM — reference-first: ivory stock, gold serif caps, giant
    ghosted vintage numerals, small precious emblem, charcoal variant. ---- */
 function stylePremium(f,W,H,seed,twMM,thMM){
-  const ppi=Math.floor(seed/2)%3, dark=(ppi===2);
-  const BG=dark?'#23211E':(ppi===1?'#FFFFFF':'#F2EDE0');
-  const INK=dark?'#EFE6D2':'#2B2822', SUB=dark?'#B8A888':'#7A7160';
+  // house rule: artwork is multiply-blended, so grounds under it stay light —
+  // the former charcoal variant is now a warm parchment
+  const ppi=Math.floor(seed/2)%3;
+  const BG=ppi===2?'#F7F2E6':(ppi===1?'#FFFFFF':'#F2EDE0');
+  const INK='#2B2822', SUB='#7A7160';
   const id='g'+(++__sid); const gold=`url(#${id})`;
   const defs=`<linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#D8BC85"/><stop offset="0.5" stop-color="#B08D57"/><stop offset="1" stop-color="#8C6A32"/></linearGradient>`;
   const cx=W/2, cW=W-2*SM;
@@ -1282,10 +1281,12 @@ function styleMinimal(f,W,H,seed,twMM,thMM){
    marker hand + heavy grotesque, riso grounds; text zones fully disjoint
    from each other and from the artwork's focal area. ---- */
 function styleArtistic(f,W,H,seed,twMM,thMM){
-  const api=Math.floor(seed/2)%4, dark=(api===3), loud=(api===1);
-  const BG=['#F3EFE4','#DA3D1C','#F2BFC9','#161412'][api];
-  const INK=loud?'#F8EFE0':(dark?'#F4EFE3':'#171512');
-  const AC=loud?'#171512':(dark?'#E8542F':'#C22A1C');
+  // house rule: no dark grounds under the multiply-blended artwork — the
+  // former near-black riso ground is now a light bone paper
+  const api=Math.floor(seed/2)%4, loud=(api===1);
+  const BG=['#F3EFE4','#DA3D1C','#F2BFC9','#EFE9DA'][api];
+  const INK=loud?'#F8EFE0':'#171512';
+  const AC=loud?'#171512':(api===3?'#E8542F':'#C22A1C');
   const cx=W/2, cW=W-2*SM;
   const variant=Math.floor(seed/2)%4;
   const alc=f.alc;

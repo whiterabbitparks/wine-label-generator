@@ -145,6 +145,15 @@ assembly happens server-side, one prompt per label style:
   **revert by setting `DEMO_FILL=false`** (then rebuild + extract + re-run
   gates). The empty-box warning and grey placeholders are unaffected.
 
+**Standing rule (owner, 2026-08-13): label grounds.** Never paint
+split-colour backgrounds (two-tone bands/panels behind the composition), and
+never place the artwork on a dark ground — the artwork is multiply-blended
+dark ink, so a dark ground makes it invisible. Comps that include the image
+zone always sit on a single light ground. (Removed: contemporary colour-block
+band + orange full ground, flora diagonal accent band, premium charcoal
+variant, artistic near-black riso ground. Text-only comps may still use a
+bold single-colour ground, e.g. the minimalist red panel.)
+
 ## 5c. Reference-FIRST layouts (branch Labels_By_Reference_Test)
 
 **2026-08-11 second pass (owner decision): the PDF layout templates are
