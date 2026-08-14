@@ -154,6 +154,25 @@ band + orange full ground, flora diagonal accent band, premium charcoal
 variant, artistic near-black riso ground. Text-only comps may still use a
 bold single-colour ground, e.g. the minimalist red panel.)
 
+## 5c-fix. Variety unblocked; auto-hint overrides retired (2026-08-14)
+
+Owner reported layouts still felt like the old templates and images never
+varied. Root causes found and fixed:
+1. `EightKImageGen.seed` was hard-coded 0 — the server always picked the
+   same art direction per style and always answered from cache. FIX: new
+   **"New artwork"** button (`#engNewArt`, next to Layout alternatives)
+   bumps the seed and regenerates the set — the ONE deliberate paid action
+   (6 images, cached per seed). "Layout alternatives" stays free and never
+   touches artwork (owner decision). `buildBrief` zones now follow the seed.
+2. The engine's vision-hint layer was flattening the reference-designed
+   comps: `heroFont` replaced EVERY comp's hero font with one font per
+   style, `pickVariant` filtered out non-"centered" comps, `hintPal`
+   replaced the board palettes with washed auto-derived chords. All three
+   overrides RETIRED — `setStyleHints` still accepts the server payload but
+   rendering ignores it. Goldens unchanged (144/144, no re-baseline).
+e2e: test-imagegen asserts reseed = cached + New artwork = exactly one new
+set call with changed artwork.
+
 ## 5c. Reference-FIRST layouts (branch Labels_By_Reference_Test)
 
 **2026-08-13 third pass (owner request): compositions + typography derived

@@ -198,6 +198,15 @@ function withArtwork(btn,go){var gen=window.EightKImageGen;
       alert('Image generation failed: '+(e&&e.message||e));})
     .then(function(){if(pending&&btn){btn.disabled=false;btn.textContent=old;}go();});}
 function mkRegen(){var rb=document.createElement('button');rb.type='button';rb.className='eng-regen';rb.textContent='Layout alternatives';rb.addEventListener('click',function(){var b=this;withArtwork(b,function(){altMode=null;baseSeed+=2;seedHist=seedHist.slice(0,seedHistIdx+1);seedHist.push(baseSeed);seedHistIdx=seedHist.length-1;selIdx=-1;paint();});});return rb;}
+/* "New artwork" (owner, 2026-08-14): layouts stay put, the ARTWORK re-rolls.
+   Bumping the generation seed changes the server's art-direction pick per
+   style, so this is the one deliberate paid action (6 images, cached per
+   seed). Layout alternatives remain free and never touch the artwork. */
+function mkNewArt(){var ab=document.createElement('button');ab.type='button';ab.className='eng-regen';ab.id='engNewArt';ab.textContent='New artwork';
+  ab.addEventListener('click',function(){var b=this;var gen=window.EightKImageGen;if(!gen)return;
+    gen.seed=(gen.seed|0)+1;
+    withArtwork(b,function(){selIdx=-1;paint();});});
+  return ab;}
 function ensureExtras(){var reveal=document.getElementById('frontReveal');if(!reveal)return;
   var oldNote=document.getElementById('engStyleNote');if(oldNote)oldNote.remove();
   var oldTop=document.getElementById('engRegenTop');if(oldTop)oldTop.remove();
@@ -208,9 +217,10 @@ function ensureExtras(){var reveal=document.getElementById('frontReveal');if(!re
     var pb=document.createElement('button');pb.type='button';pb.id='engPrev';pb.className='eng-arrow';pb.innerHTML='&#10094;';
     pb.addEventListener('click',function(){if(seedHistIdx>0){seedHistIdx--;baseSeed=seedHist[seedHistIdx];selIdx=-1;paint();}});
     var rb=mkRegen();rb.id='engRegen';
+    var ab=mkNewArt();
     var nb=document.createElement('button');nb.type='button';nb.id='engNext';nb.className='eng-arrow';nb.innerHTML='&#10095;';
     nb.addEventListener('click',function(){if(seedHistIdx<seedHist.length-1){seedHistIdx++;baseSeed=seedHist[seedHistIdx];selIdx=-1;paint();}});
-    nav.appendChild(pb);nav.appendChild(rb);nav.appendChild(nb);
+    nav.appendChild(pb);nav.appendChild(rb);nav.appendChild(ab);nav.appendChild(nb);
     grid.parentNode.insertBefore(nav,grid.nextSibling);
     var ds=document.createElement('div');ds.className='dash-sep';ds.id='engRegenSep';
     nav.parentNode.insertBefore(ds,nav.nextSibling);
