@@ -166,7 +166,10 @@ export async function POST(req: Request) {
               const w = fbAgg?.weights[v.key] ?? 1;
               return Array(Math.max(1, Math.round(w))).fill(v);
             });
-            sub = { ...pool[Math.abs(seed * 31 + i * 7 + ((seed >> 3) % 5)) % pool.length] };
+            // the story hash joins the rotation so a new story rolls new art
+            // directions even within one session (seed is per-session)
+            const vh = Array.from(brief.vision || "").reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 0);
+            sub = { ...pool[Math.abs(seed * 31 + i * 7 + ((seed >> 3) % 5) + (vh % 97)) % pool.length] };
           } else {
             sub = pickSubStyle(style, seed, i);
           }

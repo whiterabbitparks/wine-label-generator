@@ -46,7 +46,7 @@ page.on('pageerror', (e) => console.log('PAGE ERROR:', e.message));
 // parity mode: both sides (dist file AND ported app) must use the package's
 // offline placeholder artwork — server-generated images are environment-
 // dependent and would make post-generation states incomparable
-await page.addInitScript(() => { window.__PARITY_OFFLINE__ = true; });
+await page.addInitScript(() => { window.__PARITY_OFFLINE__ = true; window.__SEED0__ = 0; });
 
 console.log('opening', ORIGINAL);
 await page.goto(ORIGINAL);

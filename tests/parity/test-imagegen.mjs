@@ -66,21 +66,19 @@ await page.waitForTimeout(1200);
 if (setCalls !== 1) fail(`unchanged brief should reuse the cached set (calls: ${setCalls})`);
 console.log('reseed reuses cached set ✓');
 
-// "New artwork" bumps the generation seed → exactly ONE new set call and at
-// least one style's artwork changes (owner 2026-08-14: layouts stay put,
-// artwork re-rolls; this is the single deliberate paid action)
-const beforeNew = await page.evaluate(() => ({ ...window.__LABEL_IMGS__ }));
-await page.click('#engNewArt');
-await page.waitForFunction(
-  () => !document.querySelector('#engNewArt') || !document.querySelector('#engNewArt').disabled,
-  null, { timeout: 60000 }
+// Layout alternatives roll a NEW random combination every press (owner
+// 2026-08-14) — the rendered label SVGs must change, with no extra set call
+const svgsBefore = await page.evaluate(() =>
+  [...document.querySelectorAll('#frontThumbs svg')].map((s) => s.outerHTML).join('')
 );
+await page.click('#engRegen');
 await page.waitForTimeout(1200);
-if (setCalls !== 2) fail(`New artwork should trigger exactly one more set call (calls: ${setCalls})`);
-const afterNew = await page.evaluate(() => ({ ...window.__LABEL_IMGS__ }));
-if (!Object.keys(afterNew).some((k) => afterNew[k] !== beforeNew[k]))
-  fail('New artwork did not change any style artwork');
-console.log('New artwork → one new set call, artwork changed ✓');
+const svgsAfter = await page.evaluate(() =>
+  [...document.querySelectorAll('#frontThumbs svg')].map((s) => s.outerHTML).join('')
+);
+if (setCalls !== 1) fail(`layout roll must not trigger generation (calls: ${setCalls})`);
+if (svgsBefore === svgsAfter) fail('layout roll did not change the rendered layouts');
+console.log('layout roll → new combination, no generation call ✓');
 
 await page.screenshot({ path: 'tests/parity/imagegen-e2e.png', fullPage: false });
 console.log('\nIMAGE GEN E2E: PASS');

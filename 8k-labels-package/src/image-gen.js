@@ -138,7 +138,7 @@ function addStyleThumb(wrap,k,entry){var d=document.createElement('div');d.class
 const EightKImageGen={
   PRESETS:PRESETS, ART:ART, STYLE_KEYS:STYLE_KEYS, STYLE_NAMES:STYLE_NAMES,
   buildPrompt:buildPrompt, buildJob:buildJob, buildBrief:buildBrief,
-  seed:0,                                                    // drives sub-style + layout variety; re-roll for new combinations
+  seed:0,                                                    // randomized per session below — drives the server's art-direction pick
   getConfig:function(){return {preset:ART.preset,extra:ART.extra,negative:ART.negative,template:ART.template};},
   setConfig:function(c){c=c||{};['preset','extra','negative','template'].forEach(function(k){if(c[k]!=null)ART[k]=c[k];});},
   provider:function(job){return Promise.resolve(placeholderImage(job));},   // single-image hook (admin Test generate)
@@ -187,6 +187,11 @@ const EightKImageGen={
   openAdmin:function(){buildAdmin(true);}
 };
 window.EightKImageGen=EightKImageGen;
+/* Every session rolls its own generation seed (owner 2026-08-14: sub-style
+   variety must be automatic — no two visits repeat the same art-direction
+   combination). Within a session the seed is stable, so the cached set is
+   reused and layout edits stay free. __SEED0__ pins it for parity/tests. */
+EightKImageGen.seed=(typeof window.__SEED0__==='number')?window.__SEED0__:(1+Math.floor(Math.random()*100000));
 
 /* ======================= CLIENT wiring (no panel) =======================
    The "Label Artwork" panel was removed (owner decision 2026-07-31): artwork

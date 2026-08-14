@@ -154,6 +154,27 @@ band + orange full ground, flora diagonal accent band, premium charcoal
 variant, artistic near-black riso ground. Text-only comps may still use a
 bold single-colour ground, e.g. the minimalist red panel.)
 
+## 5c-fix2. AUTOMATIC combinatorial variety (2026-08-14, supersedes the
+New-artwork button — owner rejected any manual button)
+
+Variety is now automatic and combinatorial:
+- **Engine**: `sRand/sPick` (deterministic hash PRNG) + `STYLE_SALT`;
+  composition, palette and hero font are INDEPENDENT seeded picks per
+  style. `HERO_ALTS` gives every composition 2-4 board-compatible hero
+  fonts (blackletter comps offer blackletters, script comps scripts…) →
+  ~100+ combinations per style. `styleZones` uses the same variant pick so
+  server prompts match the shown comp. Red minimalist panel forces the
+  text-only comp (light-ground rule). Goldens re-baselined (144/144).
+- **Client**: `baseSeed` random per session; every "Layout alternatives"
+  press = `newSeed()` (fresh random combo, never a fixed cycle; prev/next
+  history still works). `EightKImageGen.seed` random per session too, so
+  every visit gets new art directions; within a session the cache holds
+  (layout edits stay free). `window.__SEED0__` pins both seeds for
+  parity/tests (set in capture-original.mjs).
+- **Server**: art-direction rotation mixes a hash of the story into the
+  pick — same session + new story = new directions. No New-artwork button.
+e2e: layout roll changes rendered SVGs with zero generation calls.
+
 ## 5c-fix. Variety unblocked; auto-hint overrides retired (2026-08-14)
 
 Owner reported layouts still felt like the old templates and images never
