@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requestIsAuthenticated } from "@/lib/admin/session";
 import { listFeedback, addFeedback, deleteFeedback } from "@/lib/admin/feedback";
 
-const STYLES = ["traditional", "contemporary", "flora", "premium", "minimalist", "artistic"];
+const STYLES = ["traditional", "contemporary", "punk"];
 
 export async function GET(req: Request) {
   if (!(await requestIsAuthenticated()))

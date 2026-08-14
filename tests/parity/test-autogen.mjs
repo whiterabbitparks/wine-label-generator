@@ -1,6 +1,6 @@
 /* E2E for auto-generation on Show Labels (per-style set flow):
    1. NO story, one field + Show Labels -> one set call (server builds the
-      subject from the wine facts), 6 artworks, traditional embedded
+      subject from the wine facts), 3 artworks, traditional embedded
    2. "Other Layout Options" (reseed) -> NO extra call (brief unchanged)
    3. adding a story + reseed -> exactly one MORE call, artwork changes
    Run against a server with IMAGE_PROVIDER=mock (default: http://localhost:3200). */
@@ -33,14 +33,14 @@ await page.waitForTimeout(800);
 
 if (setCalls !== 1) fail(`expected 1 set call after Show Labels, saw ${setCalls}`);
 const imgs = await page.evaluate(() => window.__LABEL_IMGS__ || {});
-if (Object.keys(imgs).length !== 6) fail(`expected 6 per-style artworks, saw ${Object.keys(imgs).length}`);
+if (Object.keys(imgs).length !== 3) fail(`expected 3 per-style artworks, saw ${Object.keys(imgs).length}`);
 const embedded = await page.evaluate(() => {
   const svgs = [...document.querySelectorAll('#frontThumbs svg')];
   const frag = (window.__LABEL_IMGS__.traditional || '').slice(0, 200);
   return frag && svgs.some((s) => s.innerHTML.includes(frag));
 });
 if (!embedded) fail('traditional artwork not embedded in the label options');
-console.log('auto-generate without a story: 1 set call, 6 artworks, embedded ✓');
+console.log('auto-generate without a story: 1 set call, 3 artworks, embedded ✓');
 
 // reseed with an unchanged brief — must NOT regenerate
 await page.click('#engRegen');

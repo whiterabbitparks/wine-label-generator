@@ -39,19 +39,12 @@ export interface StyleDef {
   treatment: { blend: "multiply" | "normal" };
 }
 
-export const STYLE_KEYS = [
-  "traditional",
-  "contemporary",
-  "flora",
-  "premium",
-  "minimalist",
-  "artistic",
-] as const;
+export const STYLE_KEYS = ["traditional", "contemporary", "punk"] as const;
 export type StyleKey = (typeof STYLE_KEYS)[number];
 
 const MULTIPLY = { blend: "multiply" as const };
 
-export const DEFAULT_CATALOG: StyleDef[] = [
+const RAW_CATALOG: StyleDef[] = [
   {
     key: "traditional",
     name: "Traditional",
@@ -362,6 +355,28 @@ export const DEFAULT_CATALOG: StyleDef[] = [
     },
     treatment: MULTIPLY,
   },
+];
+
+/* 3 public styles (owner, 2026-08-14 restart): Contemporary absorbs the old
+   contemporary + flora + premium + minimalist art-direction pools; Punk is
+   the old artistic. The RAW six-style entries above stay as the source. */
+function rawByKey(k: string): StyleDef {
+  const d = RAW_CATALOG.find((s) => s.key === k);
+  if (!d) throw new Error("missing raw style " + k);
+  return d;
+}
+export const DEFAULT_CATALOG: StyleDef[] = [
+  rawByKey("traditional"),
+  {
+    key: "contemporary",
+    name: "Contemporary",
+    subStyles: ["contemporary", "flora", "premium", "minimalist"].flatMap(
+      (k) => rawByKey(k).subStyles
+    ),
+    focus: rawByKey("contemporary").focus,
+    treatment: { blend: "multiply" },
+  },
+  { ...rawByKey("artistic"), key: "punk", name: "Punk" },
 ];
 
 const DOC_ID = "style-catalog";

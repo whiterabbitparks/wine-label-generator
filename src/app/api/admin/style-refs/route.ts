@@ -3,7 +3,7 @@ import { requestIsAuthenticated } from "@/lib/admin/session";
 import { listRefs, addRef, deleteRef } from "@/lib/admin/style-refs";
 import { getProfiles } from "@/lib/admin/style-refs";
 
-const STYLES = ["traditional", "contemporary", "flora", "premium", "minimalist", "artistic"];
+const STYLES = ["traditional", "contemporary", "punk"];
 
 export async function GET(req: Request) {
   if (!(await requestIsAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });

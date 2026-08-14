@@ -316,5 +316,19 @@ function boot(){
 // expose data + repaint so the image-generation module can read wine details and refresh shown labels
 window.EightKEditor={getData:getLabelData,repaint:function(){if(shown&&window.LabelEngine){window.LabelEngine.ensureFonts().then(function(){paint();});}}};
 document.addEventListener('8kRepaint',function(){window.EightKEditor.repaint();});
+/* ADMIN LAYOUT HINTS (owner, 2026-08-14 restart): the /admin Layout section
+   curates palettes, hero fonts and composition weights per style; this is the
+   ONLY external influence on layout rendering. Fetched once at boot; offline
+   and parity runs skip it so goldens/captures stay deterministic. */
+if(typeof window!=='undefined'&&!window.__PARITY_OFFLINE__&&typeof fetch==='function'){
+  try{
+    fetch('/api/layout-hints').then(function(r){return r&&r.ok?r.json():null;}).then(function(j){
+      if(j&&j.hints&&window.LabelEngine&&window.LabelEngine.setStyleHints){
+        window.LabelEngine.setStyleHints(j.hints);
+        if(shown)window.EightKEditor.repaint();
+      }
+    }).catch(function(){});
+  }catch(e){}
+}
 if(document.readyState!=='loading')boot();else document.addEventListener('DOMContentLoaded',boot);
 })();

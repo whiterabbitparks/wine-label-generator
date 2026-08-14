@@ -92,9 +92,8 @@ function buildJob(presetKey){var d=data();
     data:d,vision:visionText()};}
 
 /* ---- per-style generation (one artwork per label style) ---- */
-const STYLE_KEYS=['traditional','contemporary','flora','premium','minimalist','artistic'];
-const STYLE_NAMES={traditional:'Traditional',contemporary:'Contemporary',flora:'Flora & Fauna',
-  premium:'Premium',minimalist:'Minimalist',artistic:'Artistic / Punk'};
+const STYLE_KEYS=['traditional','contemporary','punk'];
+const STYLE_NAMES={traditional:'Traditional',contemporary:'Contemporary',punk:'Punk'};
 /* The BRIEF is the raw input only — vision text, reference, wine facts, seed.
    Prompt assembly (style recipes, sub-styles, focus rules, house rules) lives
    on the server; the client never sees or sends a prompt for the style set. */

@@ -33,12 +33,12 @@ interface UserRow {
   createdAt: string;
 }
 
-const TABS = ["Styles", "Playground", "Art Direction", "Generations", "Users"] as const;
+const TABS = ["Image · Refs", "Image · Rules", "Image · Playground", "Layout · Refs & Rules", "Layout · Playground", "Generations", "Users"] as const;
 type Tab = (typeof TABS)[number];
 
 export default function AdminPage() {
   const [authed, setAuthed] = useState<boolean | null>(null);
-  const [tab, setTab] = useState<Tab>("Styles");
+  const [tab, setTab] = useState<Tab>("Image · Refs");
 
   useEffect(() => {
     fetch("/api/admin/me")
@@ -77,9 +77,11 @@ export default function AdminPage() {
           ))}
         </nav>
 
-        {tab === "Styles" && <StylesTab />}
-        {tab === "Playground" && <PlaygroundTab />}
-        {tab === "Art Direction" && <ArtDirectionTab />}
+        {tab === "Image · Refs" && <StylesTab />}
+        {tab === "Image · Playground" && <PlaygroundTab />}
+        {tab === "Image · Rules" && <ArtDirectionTab />}
+        {tab === "Layout · Refs & Rules" && <LayoutTab />}
+        {tab === "Layout · Playground" && <LayoutPlaygroundTab />}
         {tab === "Generations" && <GenerationsTab />}
         {tab === "Users" && <UsersTab onSessionLost={() => setAuthed(false)} />}
       </div>
@@ -92,8 +94,7 @@ export default function AdminPage() {
 
 /* ---------- Styles: reference boards per style + derived variety ---------- */
 const STYLE_DEFS = [
-  ["traditional", "Traditional"], ["contemporary", "Contemporary"], ["flora", "Flora & Fauna"],
-  ["premium", "Premium"], ["minimalist", "Minimalist"], ["artistic", "Artistic / Punk"],
+  ["traditional", "Traditional"], ["contemporary", "Contemporary"], ["punk", "Punk"],
 ] as const;
 
 interface RefRow { id: string; style: string; name: string; url: string; bytes: number }
@@ -840,3 +841,249 @@ const S: Record<string, React.CSSProperties> = {
   th: { textAlign: "left", borderBottom: "2px solid #ddd", padding: "6px 8px", fontSize: 11, textTransform: "uppercase", color: "#5a5a52" },
   td: { borderBottom: "1px solid #eee", padding: "6px 8px", verticalAlign: "top" },
 };
+
+/* ================= LAYOUT SECTION (owner, 2026-08-14 restart) =================
+   Fully separate from images: layout references + rules feed a vision pass
+   that derives the CONCRETE levers the engine consumes (palettes, hero-font
+   pool); the playground's approve/reject weights which compositions appear.
+   Everything reaches the client via /api/layout-hints — nothing else touches
+   layout rendering. */
+
+interface LayoutRefRow { id: string; style: string; name: string; url: string }
+interface LayoutProfileRow {
+  style: string; notes: string; refCount: number; analyzedAt: string;
+  palettes: { bg: string; ink: string; acc: string }[];
+  heroFonts: [string, number][];
+}
+interface LayoutRulesRow { global: string; perStyle: Record<string, string> }
+
+function LayoutTab() {
+  const [refs, setRefs] = useState<LayoutRefRow[]>([]);
+  const [profiles, setProfiles] = useState<Record<string, LayoutProfileRow>>({});
+  const [rules, setRules] = useState<LayoutRulesRow>({ global: "", perStyle: {} });
+  const [busy, setBusy] = useState(""); const [err, setErr] = useState(""); const [saved, setSaved] = useState(false);
+
+  const load = useCallback(async () => {
+    const r = await fetch("/api/admin/layout-refs");
+    if (r.ok) { const b = await r.json(); setRefs(b.refs || []); setProfiles(b.profiles || {}); setRules(b.rules || { global: "", perStyle: {} }); }
+    else setErr((await r.json().catch(() => ({}))).error || `load failed (${r.status})`);
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  async function upload(style: string, files: FileList | null) {
+    if (!files?.length) return;
+    setBusy(`upload-${style}`); setErr("");
+    for (const f of Array.from(files)) {
+      const dataUrl = await new Promise<string>((res, rej) => {
+        const rd = new FileReader(); rd.onload = () => res(String(rd.result)); rd.onerror = () => rej(new Error("read failed")); rd.readAsDataURL(f);
+      });
+      const r = await fetch("/api/admin/layout-refs", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ style, name: f.name, imageDataUrl: dataUrl }),
+      });
+      if (!r.ok) { setErr((await r.json().catch(() => ({}))).error || `upload failed (${r.status})`); break; }
+    }
+    setBusy(""); load();
+  }
+  async function remove(id: string) { await fetch(`/api/admin/layout-refs?id=${id}`, { method: "DELETE" }); load(); }
+  async function analyze(style: string) {
+    setBusy(`analyze-${style}`); setErr("");
+    const r = await fetch("/api/admin/layout-refs/analyze", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ style }),
+    });
+    if (!r.ok) setErr((await r.json().catch(() => ({}))).error || `analysis failed (${r.status})`);
+    setBusy(""); load();
+  }
+  async function saveRules() {
+    setBusy("rules"); setSaved(false);
+    const r = await fetch("/api/admin/layout-rules", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(rules),
+    });
+    setBusy(""); if (r.ok) { setSaved(true); setTimeout(() => setSaved(false), 2500); }
+  }
+
+  return (
+    <div>
+      <p style={{ fontSize: 14, color: "#4a4a42" }}>
+        Upload <b>layout</b> references per style (full labels whose layout you like — typography and
+        colour are what gets analysed). &ldquo;Derive layout language&rdquo; extracts the palettes and
+        hero-font pool the engine will actually use. Rules below are handed to the analysis.
+      </p>
+      {err && <p style={{ color: "#a03030" }}>{err}</p>}
+      {STYLE_DEFS.map(([key, name]) => {
+        const mine = refs.filter((r) => r.style === key);
+        const prof = profiles[key];
+        return (
+          <section key={key} style={{ margin: "26px 0", borderTop: "2px solid #111", paddingTop: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+              <h2 style={{ margin: 0, fontSize: 18 }}>{name} <span style={{ color: "#8a887e", fontSize: 13 }}>({mine.length} layout refs)</span></h2>
+              <div style={{ display: "flex", gap: 10 }}>
+                <label style={{ ...S.btnGhost, display: "inline-block" }}>
+                  {busy === `upload-${key}` ? "Uploading…" : "Upload layout refs"}
+                  <input type="file" accept="image/png,image/jpeg,image/webp" multiple style={{ display: "none" }}
+                    onChange={(e) => upload(key, e.target.files)} />
+                </label>
+                <button style={S.btn} disabled={!mine.length || busy === `analyze-${key}`} onClick={() => analyze(key)}>
+                  {busy === `analyze-${key}` ? "Analysing…" : "Derive layout language"}
+                </button>
+              </div>
+            </div>
+            {mine.length > 0 && (
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
+                {mine.map((r) => (
+                  <div key={r.id} style={{ position: "relative" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={r.url} alt={r.name} style={{ width: 110, height: 110, objectFit: "cover", border: "1px solid #999" }} />
+                    <button title="Delete" onClick={() => remove(r.id)}
+                      style={{ position: "absolute", top: 2, right: 2, border: "none", background: "#fff", cursor: "pointer", lineHeight: 1 }}>×</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {prof && (
+              <div style={{ marginTop: 12, fontSize: 13, color: "#4a4a42" }}>
+                <p style={{ margin: 0 }}><b>Derived:</b> {prof.notes}</p>
+                {prof.palettes?.length ? (
+                  <div style={{ display: "flex", gap: 10, marginTop: 8, flexWrap: "wrap", alignItems: "center" }}>
+                    <span style={{ fontSize: 11, letterSpacing: ".06em" }}>PALETTES:</span>
+                    {prof.palettes.map((p, i) => (
+                      <span key={i} title={`bg ${p.bg} · ink ${p.ink} · accent ${p.acc}`} style={{ display: "inline-flex", border: "1px solid #000" }}>
+                        {[p.bg, p.ink, p.acc].map((c) => (
+                          <span key={c} style={{ width: 18, height: 18, background: c, display: "inline-block" }} />
+                        ))}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                {prof.heroFonts?.length ? (
+                  <p style={{ margin: "8px 0 0" }}><b>Hero fonts:</b> {prof.heroFonts.map((f) => String(f[0]).split(",")[0].replace(/'/g, "")).join(" · ")}</p>
+                ) : null}
+              </div>
+            )}
+            <textarea
+              placeholder={`${name} layout rules (plain words — e.g. "always centered", "huge margins", "wine name never smaller than producer")`}
+              value={rules.perStyle?.[key] || ""}
+              onChange={(e) => setRules({ ...rules, perStyle: { ...rules.perStyle, [key]: e.target.value } })}
+              style={{ ...S.input, marginTop: 12, minHeight: 60 }} />
+          </section>
+        );
+      })}
+      <section style={{ margin: "26px 0", borderTop: "2px solid #111", paddingTop: 12 }}>
+        <h2 style={{ margin: 0, fontSize: 18 }}>Global layout rules</h2>
+        <textarea
+          placeholder='Rules that apply to every style (e.g. "generous margins", "never cramped")'
+          value={rules.global}
+          onChange={(e) => setRules({ ...rules, global: e.target.value })}
+          style={{ ...S.input, marginTop: 10, minHeight: 70 }} />
+        <div style={{ marginTop: 10, display: "flex", gap: 12, alignItems: "center" }}>
+          <button style={S.btn} disabled={busy === "rules"} onClick={saveRules}>{busy === "rules" ? "Saving…" : "Save rules"}</button>
+          {saved && <span style={{ color: "#5a6b3b" }}>Saved ✓</span>}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+/* Layout playground: renders REAL label layouts with the engine (free — no
+   image generation) under the CURRENT curated hints; approve/reject writes
+   weights that immediately bias what customers see. */
+const PLAY_DATA = {
+  producer: "GRAND VIN", wine: "Château Margaux", appellation: "Margaux AOC",
+  grape: "Cabernet Sauvignon", region: "Bordeaux", country: "France", special: "Vieilles Vignes",
+  vintage: "2018", classification: "Grand Cru Classé", sweetness: "Dry",
+  wineColorName: "Red", wineType: "Still Wine", alcohol: "12.5", volume: "750",
+};
+
+interface LayoutCard { seed: number; variant: number; svg: string; done?: "approve" | "reject" }
+
+function LayoutPlaygroundTab() {
+  const [style, setStyle] = useState("traditional");
+  const [cards, setCards] = useState<LayoutCard[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [engineReady, setEngineReady] = useState(false);
+
+  useEffect(() => {
+    const w = window as unknown as { LabelEngine?: { ensureFonts: () => Promise<void> } };
+    if (w.LabelEngine) { setEngineReady(true); return; }
+    const sc = document.createElement("script");
+    sc.src = "/engine/label-engine.js";
+    sc.onload = () => { w.LabelEngine?.ensureFonts().then(() => setEngineReady(true)); };
+    document.body.appendChild(sc);
+  }, []);
+
+  async function roll() {
+    setBusy(true);
+    const w = window as unknown as {
+      LabelEngine: {
+        ensureFonts: () => Promise<void>;
+        setStyleHints: (h: unknown) => void;
+        variantFor: (k: string, seed: number) => number;
+        renderStyleOptions: (d: unknown, o: null, opts: { widthMM: number; heightMM: number; seed: number }) => { style: string; svg: string }[];
+      };
+    };
+    // render under the SAME hints customers get
+    try {
+      const h = await fetch("/api/layout-hints").then((r) => r.json());
+      w.LabelEngine.setStyleHints(h.hints || {});
+    } catch {}
+    await w.LabelEngine.ensureFonts();
+    const seen = new Set<number>(); const next: LayoutCard[] = [];
+    let guard = 0;
+    while (next.length < 8 && guard++ < 200) {
+      const seed = 1 + Math.floor(Math.random() * 100000);
+      const variant = w.LabelEngine.variantFor(style, seed);
+      if (seen.has(variant) && guard < 120) continue; // favour distinct comps first
+      seen.add(variant);
+      const opts = w.LabelEngine.renderStyleOptions(PLAY_DATA, null, { widthMM: 110, heightMM: 80, seed });
+      const entry = opts.find((o) => o.style === style);
+      if (entry) next.push({ seed, variant, svg: entry.svg });
+    }
+    setCards(next); setBusy(false);
+  }
+
+  async function verdict(i: number, v: "approve" | "reject") {
+    const c = cards[i];
+    await fetch("/api/admin/layout-feedback", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ style, variant: c.variant, verdict: v }),
+    });
+    setCards(cards.map((x, j) => (j === i ? { ...x, done: v } : x)));
+  }
+
+  return (
+    <div>
+      <p style={{ fontSize: 14, color: "#4a4a42" }}>
+        Renders real layouts (free — no image generation) with your current layout language applied.
+        Approve what looks right, reject what doesn&apos;t — approved compositions appear more often
+        for customers, rejected ones fade out. Takes effect immediately.
+      </p>
+      <div style={{ display: "flex", gap: 12, alignItems: "center", margin: "14px 0" }}>
+        <select value={style} onChange={(e) => setStyle(e.target.value)} style={{ ...S.input, width: 220 }}>
+          {STYLE_DEFS.map(([k, n]) => <option key={k} value={k}>{n}</option>)}
+        </select>
+        <button style={S.btn} disabled={!engineReady || busy} onClick={roll}>
+          {busy ? "Rendering…" : engineReady ? "Render 8 layouts" : "Loading engine…"}
+        </button>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        {cards.map((c, i) => (
+          <div key={c.seed} style={{ border: "1px solid #bbb", background: "#fff", padding: 8 }}>
+            <div style={{ width: "100%" }} dangerouslySetInnerHTML={{ __html: c.svg.replace(/width="110mm" height="80mm"/, 'width="100%" height="auto"') }} />
+            <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center" }}>
+              <span style={{ fontSize: 11, color: "#8a887e" }}>comp #{c.variant + 1}</span>
+              {c.done ? (
+                <b style={{ color: c.done === "approve" ? "#5a6b3b" : "#a03030" }}>{c.done === "approve" ? "Approved ✓" : "Rejected ✕"}</b>
+              ) : (
+                <>
+                  <button style={{ ...S.btnGhost, padding: "5px 14px" }} onClick={() => verdict(i, "approve")}>Approve</button>
+                  <button style={{ ...S.btnGhost, padding: "5px 14px", color: "#a03030", borderColor: "#a03030" }} onClick={() => verdict(i, "reject")}>Reject</button>
+                </>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

@@ -1,6 +1,6 @@
 /* E2E: per-style artwork via Show Labels (the Label Artwork panel is gone —
    generation is invisible and the artworks appear inside the labels).
-   Verifies: no panel; one set call; 6 distinct per-style artworks; EACH of the
+   Verifies: no panel; one set call; 3 distinct per-style artworks; EACH of the
    six style options embeds its OWN style's image with multiply blend; a second
    press reuses the cached set.
    Run against a server with IMAGE_PROVIDER=mock (default: http://localhost:3200). */
@@ -8,7 +8,7 @@ import { chromium } from 'playwright';
 
 const BASE = process.argv[2] || 'http://localhost:3200';
 const fail = (msg) => { console.error('FAIL:', msg); process.exit(1); };
-const STYLES = ['traditional', 'contemporary', 'flora', 'premium', 'minimalist', 'artistic'];
+const STYLES = ['traditional', 'contemporary', 'punk'];
 
 const browser = await chromium.launch({ channel: 'chrome' });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
@@ -33,15 +33,15 @@ await page.fill('input.le2-inp[data-zone-fid="wineName"]', 'Château Test');
 await page.click('#frontPreviewBtn');
 await page.waitForSelector('#frontThumbs svg', { timeout: 60000 });
 await page.waitForFunction(
-  () => window.__LABEL_IMGS__ && Object.keys(window.__LABEL_IMGS__).length === 6,
+  () => window.__LABEL_IMGS__ && Object.keys(window.__LABEL_IMGS__).length === 3,
   null, { timeout: 60000 }
 );
 await page.waitForTimeout(1500); // let the post-generation repaint land
 
 if (setCalls !== 1) fail(`expected 1 set call, saw ${setCalls}`);
 const imgs = await page.evaluate(() => window.__LABEL_IMGS__);
-if (new Set(Object.values(imgs)).size !== 6) fail('styles did not get distinct artworks');
-console.log('one set call → 6 distinct per-style artworks ✓');
+if (new Set(Object.values(imgs)).size !== 3) fail('styles did not get distinct artworks');
+console.log('one set call → 3 distinct per-style artworks ✓');
 
 // every style card embeds ITS OWN artwork (cards render in STYLE_LIST order)
 const cardChecks = await page.evaluate((styles) => {
@@ -60,7 +60,7 @@ for (const c of cardChecks) {
   if (!c.embedded) fail(`style "${c.style}" does not embed its own artwork`);
   if (!c.multiply) fail(`style "${c.style}" artwork missing multiply blend`);
 }
-console.log('all 6 style options embed their own artwork with multiply ✓');
+console.log('all 3 style options embed their own artwork with multiply ✓');
 
 // unchanged brief + reseed (Show Labels is replaced by "Other Layout Options"
 // once labels are shown) → cached, no extra call

@@ -900,7 +900,7 @@ const STYLE_BOXES={
     [0.30,0.05,0.70,0.44],   // Kirile: portrait top, script + side verticals
     [0.32,0.07,0.68,0.40],   // Olive Tree: airy engraving over tiny caps
     null],                   // Margaux: framed pure type
-  contemporary:[
+  contemporaryX:[
     [0.28,0.16,0.72,0.60],   // Gotes: big motif, data bottom-left
     [0.34,0.05,0.66,0.34],   // ñor: small motif over the giant lowercase hero
     [0.28,0.05,0.72,0.42],   // Saperavi: motif top, side vertical data
@@ -926,7 +926,7 @@ const STYLE_BOXES={
     null,                    // colour panel (text-only)
     null,                    // handwritten scrawl hero (text-only)
     [0.30,0.52,0.70,0.86]],  // caps corner top-left, mark at the foot
-  artistic:[
+  punk:[
     [0.22,0.05,0.78,0.50],   // naive drawing centre stage
     [0.55,0.10,0.95,0.82],   // poster type left, figure right
     [0.34,0.14,0.94,0.70],   // handwritten title corner, figure right
@@ -942,30 +942,41 @@ function zoneFromBox(b){
   const fe=0.06, fade=[Math.max(0,b[0]-w*fe),Math.max(0,b[1]-h*fe),Math.min(1,b[2]+w*fe),Math.min(1,b[3]+h*fe)];
   return {focal,fade,shape:w>=1.8*h?'band':(h>=1.35*w?'rounded':'ellipse')};
 }
+/* THREE public styles (owner, 2026-08-14 restart): traditional · contemporary
+   (the merged pool of the old contemporary/flora/premium/minimalist comps) ·
+   punk (the old artistic). The merged pool keeps every composition; one
+   seeded pick chooses across all of them. */
+const C_POOL=[['contemporaryX',6],['flora',5],['premium',5],['minimalist',6]];
+const C_TOTAL=22;
+function cVariantFor(seed){
+  let idx=pickVariant('contemporary',seed,C_TOTAL);
+  for(const [k,n] of C_POOL){if(idx<n)return {key:k,local:idx};idx-=n;}
+  return {key:'contemporaryX',local:0};
+}
 function styleZones(seed){
-  const out={};
-  for(const k in STYLE_BOXES){
-    const arr=STYLE_BOXES[k];
-    out[k]=zoneFromBox(arr[sPick(seed,(STYLE_SALT[k]||0)*7+1,arr.length)]);
-  }
-  return out;
+  const cv=cVariantFor(seed);
+  return {
+    traditional:zoneFromBox(STYLE_BOXES.traditional[pickVariant('traditional',seed,STYLE_BOXES.traditional.length)]),
+    contemporary:zoneFromBox(STYLE_BOXES[cv.key][cv.local]),
+    punk:zoneFromBox(STYLE_BOXES.punk[pickVariant('punk',seed,STYLE_BOXES.punk.length)])
+  };
 }
 
-/* Auto-hint overrides RETIRED (owner, 2026-08-14). The vision-derived layout
-   hints used to replace palettes, swap every hero font and filter variants by
-   alignment — which flattened the reference-designed compositions back into
-   one look per style. The boards' influence is now hand-built into the comps,
-   palettes and typography above, so hints are accepted (setStyleHints keeps
-   the API for the server) but no longer change the rendering. */
+/* ADMIN LAYOUT HINTS (owner, 2026-08-14 restart): the ONLY external influence
+   on rendering, and it is explicit admin curation — never derived silently.
+   setStyleHints({style:{palettes:[{bg,ink,sub,acc}], heroFonts:[[family,weight]],
+   weights:[per-variant numbers]}}). Palettes replace the built-in chords,
+   heroFonts replace the per-comp alternates, weights bias which composition
+   the seeded pick lands on (rejected comps fade, approved appear more).
+   Without hints everything renders from the built-ins (goldens). */
 let STYLE_HINTS={};
 function setStyleHints(h){STYLE_HINTS=(h&&typeof h==='object')?h:{};}
-function hintPal(key,def,map){return def;}
 
 /* COMBINATORIAL VARIETY (owner, 2026-08-14): composition, palette and hero
    font are INDEPENDENT seeded picks, so every new seed is a fresh
    combination instead of one locked sequence. Deterministic per seed (same
    seed always renders the same set — goldens, cache, history arrows). */
-const STYLE_SALT={traditional:0,contemporary:1,flora:2,premium:3,minimalist:4,artistic:5};
+const STYLE_SALT={traditional:0,contemporary:1,flora:2,premium:3,minimalist:4,punk:5,contemporaryX:1};
 function sRand(seed,salt){
   let t=((seed|0)+1)*2654435761+(salt|0)*40503;
   t=Math.imul(t^(t>>>15),2246822519);
@@ -973,8 +984,26 @@ function sRand(seed,salt){
   return ((t^(t>>>16))>>>0)/4294967296;
 }
 function sPick(seed,salt,n){return n>0?Math.floor(sRand(seed,salt)*n)%n:0;}
-function pickVariant(key,seed,tags){return sPick(seed,(STYLE_SALT[key]||0)*7+1,tags.length);}
-function palPick(key,seed,arr){return arr[sPick(seed,(STYLE_SALT[key]||0)*7+2,arr.length)];}
+function pickVariant(key,seed,tags){
+  const n=Array.isArray(tags)?tags.length:tags;
+  const h=STYLE_HINTS[key], w=h&&h.weights;
+  if(Array.isArray(w)&&w.length===n){
+    let sum=0;for(let i=0;i<n;i++)sum+=Math.max(0.05,+w[i]||0);
+    let r=sRand(seed,(STYLE_SALT[key]||0)*7+1)*sum;
+    for(let i=0;i<n;i++){r-=Math.max(0.05,+w[i]||0);if(r<=0)return i;}
+    return n-1;
+  }
+  return sPick(seed,(STYLE_SALT[key]||0)*7+1,n);
+}
+/* hintKey = the public style the admin curates; saltKey = the internal pool
+   (merged contemporary keeps four internal pools for palette diversity). */
+function palPick(hintKey,saltKey,seed,arr,map){
+  const h=STYLE_HINTS[hintKey], hp=h&&h.palettes;
+  if(Array.isArray(hp)&&hp.length&&map){
+    try{return map(hp[sPick(seed,(STYLE_SALT[saltKey]||0)*7+2,hp.length)]);}catch(e){}
+  }
+  return arr[sPick(seed,(STYLE_SALT[saltKey]||0)*7+2,arr.length)];
+}
 /* Per-variant hero-font alternates — every option hand-picked to fit that
    composition's board (blackletter comps offer blackletters, script comps
    scripts, letterpress comps loud sans). Empty list = the designed font. */
@@ -986,7 +1015,7 @@ const HERO_ALTS={
     [[F.greatVibes,400],[F.italianno,400],[F.mrsSaint,400],[F.pinyon,400]],
     [[SF.ebg,500],[F.cinzel,500],[F.marcellus,400]],
     [[SF.playfair,700],[F.cinzel,600],[F.prata,400]]],
-  contemporary:[
+  contemporaryX:[
     [[SF.archivo,800],[SF.anton,400],[SF.bebas,400]],
     [[SF.fraunces,600],[SF.playfair,700],[F.prata,400]],
     [[SF.marcellus,400],[F.prata,400],[F.cinzel,500]],
@@ -1012,14 +1041,19 @@ const HERO_ALTS={
     [],
     [[SF.caveat,700],[SF.marker,400]],
     [[SF.archivo,500],[SF.jost,500]]],
-  artistic:[
+  punk:[
     [[SF.marker,400],[SF.caveat,700]],
     [[SF.anton,400],[SF.bebas,400],[SF.barlowc,700]],
     [[SF.caveat,700],[SF.marker,400]],
     [[SF.marker,400],[SF.caveat,700]],
     [[SF.marker,400],[SF.caveat,700]],
     [[SF.anton,400],[SF.bebas,400]]]};
-function heroPick(seed,key,variant){
+function heroPick(seed,key,variant,hintKey){
+  const h=STYLE_HINTS[hintKey||key], hf=h&&h.heroFonts;
+  if(Array.isArray(hf)&&hf.length){
+    const f=hf[sPick(seed,(STYLE_SALT[key]||0)*7+3+variant,hf.length)];
+    if(Array.isArray(f)&&f.length>=2)return [String(f[0]),+f[1]||400];
+  }
   const list=(HERO_ALTS[key]||[])[variant]||[];
   if(!list.length)return null;
   return list[sPick(seed,(STYLE_SALT[key]||0)*7+3+variant,list.length)];
@@ -1090,11 +1124,11 @@ function sRow(cells,W,y,size){
    source label does. ---- */
 function styleTraditional(d,order,seed,twMM,thMM){
   const f=sFields(d), W=twMM*10, H=thMM*10;
-  const TPAL=hintPal('traditional',[['#FFFFFF','#D71920','#26221E','#5D564C'],['#F6F0DE','#8E2430','#26221E','#5D564C'],['#F2E9D2','#6B4A2F','#26221E','#5D564C'],['#F4EFE0','#3E5C76','#26221E','#5D564C']],function(p){return [p.bg,p.acc,p.ink,p.sub];});
-  const [BG,ACC,INK,SUB]=palPick('traditional',seed,TPAL);
+  const TPAL=[['#FFFFFF','#D71920','#26221E','#5D564C'],['#F6F0DE','#8E2430','#26221E','#5D564C'],['#F2E9D2','#6B4A2F','#26221E','#5D564C'],['#F4EFE0','#3E5C76','#26221E','#5D564C']];
+  const [BG,ACC,INK,SUB]=palPick('traditional','traditional',seed,TPAL,function(p){return [p.bg,p.acc||p.ink,p.ink,p.sub];});
   const cx=W/2, cW=W-2*SM;
-  const variant=pickVariant('traditional',seed,[1,2,3,4,5,6]);
-  const HP=heroPick(seed,'traditional',variant);
+  const variant=pickVariant('traditional',seed,6);
+  const HP=heroPick(seed,'traditional',variant,'traditional');
   const BOX=STYLE_BOXES['traditional'][variant];
   const alc=f.alc, desc=(f.descriptor||'').replace(/,/g,'');
   const EG=SF.ebg, PF=SF.playfair, CI=F.cormorant;
@@ -1181,17 +1215,17 @@ function styleTraditional(d,order,seed,twMM,thMM){
 }
 
 /* ---- 2) CONTEMPORARY — structural copies of the board's full labels. ---- */
-function styleContemporary(f,W,H,seed,twMM,thMM){
-  const CSCH=hintPal('contemporary',[{bg:'#FFFFFF',ink:'#231F20',sub:'#6D6E71',acc:'#E8542F'},
+function styleContempX(f,W,H,seed,twMM,thMM,fv){
+  const CSCH=[{bg:'#FFFFFF',ink:'#231F20',sub:'#6D6E71',acc:'#E8542F'},
     {bg:'#F6F0E2',ink:'#231F20',sub:'#75716A',acc:'#2B4C9B'},
     {bg:'#F8EFE3',ink:'#20130E',sub:'#75655A',acc:'#E8542F'},
     {bg:'#F3D3C4',ink:'#232019',sub:'#7C5A4A',acc:'#B33A24'},
-    {bg:'#CDD6C2',ink:'#22271F',sub:'#5A6650',acc:'#2F5D3A'}],function(p){return {bg:p.bg,ink:p.ink,sub:p.sub,acc:p.acc};});
-  const SCH=palPick('contemporary',seed,CSCH);
+    {bg:'#CDD6C2',ink:'#22271F',sub:'#5A6650',acc:'#2F5D3A'}];
+  const SCH=palPick('contemporary','contemporaryX',seed,CSCH,function(p){return {bg:p.bg,ink:p.ink,sub:p.sub,acc:p.acc};});
   const INK=SCH.ink, SUB=SCH.sub, cx=W/2, cW=W-2*SM;
-  const variant=pickVariant('contemporary',seed,[1,2,3,4,5,6]);
-  const HP=heroPick(seed,'contemporary',variant);
-  const BOX=STYLE_BOXES['contemporary'][variant];
+  const variant=(fv!=null)?fv:pickVariant('contemporaryX',seed,6);
+  const HP=heroPick(seed,'contemporaryX',variant,'contemporary');
+  const BOX=STYLE_BOXES['contemporaryX'][variant];
   const alc=f.alc, desc=(f.descriptor||'').replace(/,/g,'');
   const reg=[f.region,f.special].filter(Boolean).join(' / ');
   let body='';
@@ -1264,18 +1298,18 @@ function styleContemporary(f,W,H,seed,twMM,thMM){
 }
 
 /* ---- 3) FLORA & FAUNA — structural copies of the board's full labels. ---- */
-function styleFlora(f,W,H,seed,twMM,thMM){
-  const FPAL=hintPal('flora',[['#F2EDDD','#C73A2E','#2B2620','#6E6555'],['#EFE8D6','#5F6B39','#2B2620','#6E6555'],['#F7F1E1','#B4552D','#2B2620','#6E6555'],['#EFE6CE','#3E5C46','#2B2620','#6E6555']],function(p){return [p.bg,p.acc,p.ink,p.sub];});
-  const [BG,ACC,INK,SUB]=palPick('flora',seed,FPAL);
+function styleFlora(f,W,H,seed,twMM,thMM,fv){
+  const FPAL=[['#F2EDDD','#C73A2E','#2B2620','#6E6555'],['#EFE8D6','#5F6B39','#2B2620','#6E6555'],['#F7F1E1','#B4552D','#2B2620','#6E6555'],['#EFE6CE','#3E5C46','#2B2620','#6E6555']];
+  const [BG,ACC,INK,SUB]=palPick('contemporary','flora',seed,FPAL,function(p){return [p.bg,p.acc||p.ink,p.ink,p.sub];});
   const cx=W/2, cW=W-2*SM;
-  const variant=pickVariant('flora',seed,[1,2,3,4,5]);
-  const HP=heroPick(seed,'flora',variant);
+  const variant=(fv!=null)?fv:pickVariant('flora',seed,5);
+  const HP=heroPick(seed,'flora',variant,'contemporary');
   const BOX=STYLE_BOXES['flora'][variant];
   const alc=f.alc, desc=(f.descriptor||'').replace(/,/g,'');
   const reg=[f.region,f.special].filter(Boolean).join(' \u00b7 ');
   let body='';
   if(variant===0){ // Hermit Ram board: huge beast, tight centred title block under it
-    body+=sImageBox('flora',BOX,W,H);
+    body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
       {str:f.wine,size:H*0.072,f:HP?HP[0]:(SF.fraunces),w:HP?HP[1]:(700),fill:INK,caps:true,maxW:cW*0.92,gap:H*0.012,pre:H*0.575},
       {str:[f.appellation,f.vintage].filter(Boolean).join('  \u00b7  '),size:H*0.034,f:SF.ebg,w:500,fill:ACC,caps:true,tr:0.16,maxW:cW*0.8,gap:H*0.010},
@@ -1289,7 +1323,7 @@ function styleFlora(f,W,H,seed,twMM,thMM){
       if(aw>R*1.55)asz=Math.max(MIN7,asz*R*1.55/aw);
       body+=sArcText(f.wine,cx,SM+H*0.005,R,{f:SF.imfell,w:400,size:asz,fill:INK,tr:0.16,caps:true});
     })();
-    body+=sImageBox('flora',BOX,W,H);
+    body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
       {str:f.appellation,size:H*0.046,f:SF.imfell,w:400,fill:INK,caps:true,tr:0.1,maxW:cW*0.85,gap:H*0.012,pre:H*0.585},
       {str:f.vintage,size:H*0.038,f:SF.imfell,w:400,fill:ACC,maxW:cW*0.3,gap:H*0.010},
@@ -1298,7 +1332,7 @@ function styleFlora(f,W,H,seed,twMM,thMM){
       {str:f.producer,size:H*0.027,f:SF.archivo,w:600,fill:INK,tr:0.16},
       {str:[reg,desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:SF.jost,w:400,fill:SUB}],cx,H-SM-2,H*0.007,'c',cW*0.85).svg;
   }else if(variant===2){ // Chico Malo board: beast top, huge brush hero, gold-ish producer at foot
-    body+=sImageBox('flora',BOX,W,H);
+    body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
       {str:f.wine,size:H*0.125,f:HP?HP[0]:(SF.caveat),w:HP?HP[1]:(700),fill:INK,maxW:cW*0.9,gap:H*0.016,pre:H*0.385},
       {str:desc,size:H*0.030,f:SF.archivo,w:500,fill:ACC,caps:true,tr:0.2,maxW:cW*0.7,gap:H*0.014},
@@ -1310,7 +1344,7 @@ function styleFlora(f,W,H,seed,twMM,thMM){
   }else if(variant===3){ // Hugh Hamilton board: tiny creature, italic aside, airy
     body+=sBlock(f.producer,{x:SM,top:SM,maxW:W*0.5,size:H*0.028,min:H*0.02,f:SF.archivo,w:600,fill:INK,a:'l',caps:true,tr:0.3}).svg;
     body+=sBlock(f.vintage,{x:W-SM,top:SM,maxW:W*0.26,size:H*0.028,min:H*0.02,f:SF.jost,w:500,fill:SUB,a:'r'}).svg;
-    body+=sImageBox('flora',BOX,W,H);
+    body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
       {str:f.wine,size:H*0.052,f:HP?HP[0]:(SF.fraunces),w:HP?HP[1]:(600),fill:INK,caps:true,tr:0.3,maxW:cW*0.9,gap:H*0.014,pre:H*0.53},
       {str:f.appellation,size:H*0.040,f:F.cormorant,w:600,fill:ACC,ital:true,maxW:cW*0.65,gap:0}],cx,SM,'c').svg;
@@ -1318,7 +1352,7 @@ function styleFlora(f,W,H,seed,twMM,thMM){
       {str:[f.grape,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.026,f:SF.jost,w:500,fill:INK},
       {str:[reg,desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:SF.jost,w:400,fill:SUB}],cx,H-SM-2,H*0.007,'c',cW*0.8).svg;
   }else{ // Aleria/Tarosi boards: beast left, script hero right, vertical edge caps
-    body+=sImageBox('flora',BOX,W,H);
+    body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
       {str:f.producer,size:H*0.028,f:SF.archivo,w:600,fill:SUB,caps:true,tr:0.24,maxW:W*0.34,gap:H*0.02,pre:H*0.08},
       {str:f.wine,size:H*0.125,f:HP?HP[0]:(F.italianno),w:HP?HP[1]:(400),fill:INK,maxW:W*0.36,gap:H*0.016},
@@ -1333,21 +1367,21 @@ function styleFlora(f,W,H,seed,twMM,thMM){
 }
 
 /* ---- 4) PREMIUM — structural copies of the board's full labels. ---- */
-function stylePremium(f,W,H,seed,twMM,thMM){
-  const PPAL=hintPal('premium',[['#F2EDE0','#2B2822','#7A7160'],['#FFFFFF','#2B2822','#7A7160'],['#F7F2E6','#2B2822','#7A7160']],function(p){return [p.bg,p.ink,p.sub];});
-  const [BG,INK,SUB]=palPick('premium',seed,PPAL);
+function stylePremium(f,W,H,seed,twMM,thMM,fv){
+  const PPAL=[['#F2EDE0','#2B2822','#7A7160'],['#FFFFFF','#2B2822','#7A7160'],['#F7F2E6','#2B2822','#7A7160']];
+  const [BG,INK,SUB]=palPick('contemporary','premium',seed,PPAL,function(p){return [p.bg,p.ink,p.sub];});
   const id='g'+(++__sid); const gold=`url(#${id})`;
   const RED='#8E2430';
   const defs=`<linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#D8BC85"/><stop offset="0.5" stop-color="#B08D57"/><stop offset="1" stop-color="#8C6A32"/></linearGradient>`;
   const cx=W/2, cW=W-2*SM;
-  const variant=pickVariant('premium',seed,[1,2,3,4,5]);
-  const HP=heroPick(seed,'premium',variant);
+  const variant=(fv!=null)?fv:pickVariant('premium',seed,5);
+  const HP=heroPick(seed,'premium',variant,'contemporary');
   const BOX=STYLE_BOXES['premium'][variant];
   const alc=f.alc, desc=(f.descriptor||'').replace(/,/g,'');
   const reg=[f.region,f.special].filter(Boolean).join(' \u00b7 ');
   let body='';
   if(variant===0){ // Sinegal board: tiny emblem, huge tracked caps, silence
-    body+=sImageBox('premium',BOX,W,H);
+    body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
       {str:f.wine,size:H*0.065,f:HP?HP[0]:(SF.cinzel),w:HP?HP[1]:(600),fill:INK,caps:true,tr:0.30,maxW:cW*0.94,gap:H*0.024,pre:H*0.30},
       {str:f.vintage,size:H*0.038,f:SF.cinzel,w:500,fill:gold,tr:0.24,maxW:cW*0.4,gap:H*0.022},
@@ -1367,9 +1401,9 @@ function stylePremium(f,W,H,seed,twMM,thMM){
       {str:f.classification,size:H*0.027,f:F.ebg,w:400,fill:SUB,maxW:cW*0.8,gap:H*0.010},
       {str:reg,size:H*0.025,f:F.ebg,w:400,fill:SUB,maxW:cW*0.8,gap:H*0.010},
       {str:[f.producer,alc].filter(Boolean).join('   \u00b7   '),size:H*0.023,f:F.ebg,w:400,fill:SUB,maxW:cW*0.8,gap:0}],cx,SM,'c').svg;
-    body+=sImageBox('premium',BOX,W,H);
+    body+=sImageBox('contemporary',BOX,W,H);
   }else if(variant===2){ // Juan Campinún board: crest, copperplate script, RIOJA caps
-    body+=sImageBox('premium',BOX,W,H);
+    body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
       {str:f.wine,size:H*0.14,f:HP?HP[0]:(F.monteCarlo),w:HP?HP[1]:(400),fill:INK,maxW:cW*0.92,gap:H*0.026,pre:H*0.285},
       {str:f.producer,size:H*0.028,f:SF.cinzel,w:500,fill:SUB,caps:true,tr:0.3,maxW:cW*0.72,gap:H*0.014},
@@ -1381,7 +1415,7 @@ function stylePremium(f,W,H,seed,twMM,thMM){
       {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F.ebg,w:400,fill:SUB}],cx,H-SM-2,H*0.008,'c',cW*0.7).svg;
   }else if(variant===3){ // 1780 board: giant gold numerals, tiny producer + mark above
     body+=sBlock(f.producer,{x:cx,top:SM,maxW:cW*0.7,size:H*0.027,min:H*0.02,f:SF.cinzel,w:500,fill:SUB,a:'c',caps:true,tr:0.3}).svg;
-    body+=sImageBox('premium',BOX,W,H);
+    body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
       {str:f.vintage,size:H*0.23,f:SF.cinzel,w:600,fill:gold,maxW:cW*0.8,gap:H*0.02,pre:H*0.245},
       {str:f.wine,size:H*0.052,f:HP?HP[0]:(SF.cinzel),w:HP?HP[1]:(600),fill:INK,caps:true,tr:0.12,maxW:cW*0.9,gap:H*0.016,},
@@ -1391,7 +1425,7 @@ function stylePremium(f,W,H,seed,twMM,thMM){
       {str:reg,size:H*0.024,f:F.ebg,w:400,fill:SUB},
       {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.021,f:F.ebg,w:400,fill:SUB}],cx,H-SM-2,H*0.008,'c',cW*0.8).svg;
   }else{ // Implicit board: gold mark centre, extreme tracked caps beneath
-    body+=sImageBox('premium',BOX,W,H);
+    body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
       {str:f.wine,size:H*0.058,f:HP?HP[0]:(SF.cinzel),w:HP?HP[1]:(600),fill:INK,caps:true,tr:0.44,maxW:cW*0.96,gap:H*0.02,pre:H*0.545},
       {str:f.producer,size:H*0.026,f:SF.cinzel,w:500,fill:SUB,caps:true,tr:0.5,maxW:cW*0.8,gap:0}],cx,SM,'c').svg;
@@ -1405,22 +1439,22 @@ function stylePremium(f,W,H,seed,twMM,thMM){
 
 /* ---- 5) MINIMALIST — reference-first: vast emptiness, one tiny mark,
    letterspaced type, handwritten scrawl hero, mark-at-the-foot comp. ---- */
-function styleMinimal(f,W,H,seed,twMM,thMM){
-  const MSCH=hintPal('minimalist',[{bg:'#FBFBF9',ink:'#231F20',sub:'#8A8780',panel:null},
+function styleMinimal(f,W,H,seed,twMM,thMM,fv){
+  const MSCH=[{bg:'#FBFBF9',ink:'#231F20',sub:'#8A8780',panel:null},
     {bg:'#F4EFE4',ink:'#2A2722',sub:'#8F887B',panel:null},
     {bg:'#FFFFFF',ink:'#2B5BB7',sub:'#7C8797',panel:null},
-    {bg:'#E2574C',ink:'#FBF6EA',sub:'#F8E8DF',panel:true}],function(p){return {bg:p.bg,ink:p.ink,sub:p.sub,panel:null};});
-  const MS=palPick('minimalist',seed,MSCH);
+    {bg:'#E2574C',ink:'#FBF6EA',sub:'#F8E8DF',panel:true}];
+  const MS=palPick('contemporary','minimalist',seed,MSCH,function(p){return {bg:p.bg,ink:p.ink,sub:p.sub,panel:null};});
   const INK=MS.ink, SUB=MS.sub, cx=W/2, cW=W-2*SM;
-  let variant=pickVariant('minimalist',seed,['c','l','c','c','c','l']);
+  let variant=(fv!=null)?fv:pickVariant('minimalist',seed,6);
   if(MS.panel)variant=3; // bold colour panel is text-only by design (light-ground rule)
-  const HP=heroPick(seed,'minimalist',variant);
+  const HP=heroPick(seed,'minimalist',variant,'contemporary');
   const BOX=STYLE_BOXES['minimalist'][variant];
   const line1=[f.grape,f.classification,f.region].filter(Boolean).join(' / ');
   const line2=[f.special,f.vintage,f.alc].filter(Boolean).join(' / ');
   let body='';
   if(variant===0||variant===3){ // centred: tiny mark high, airy stack (dot/blob boards + colour panel)
-    if(!MS.panel) body+=sImageBox('minimalist',BOX,W,H);
+    if(!MS.panel) body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
       {str:f.producer,size:H*0.030,f:SF.archivo,w:300,fill:SUB,caps:true,tr:0.45,maxW:cW*0.7,gap:H*0.02,pre:H*0.02},
       {str:f.wine,size:H*0.085,f:HP?HP[0]:(SF.archivo),w:HP?HP[1]:(MS.panel?600:300),fill:INK,caps:true,tr:0.28,maxW:cW*0.94,gap:H*0.018,pre:H*0.42},
@@ -1429,7 +1463,7 @@ function styleMinimal(f,W,H,seed,twMM,thMM){
       {str:line1,size:H*0.026,f:SF.archivo,w:400,fill:SUB,maxW:cW*0.8,gap:H*0.008,pre:H*0.855-SM},
       {str:line2,size:H*0.026,f:SF.archivo,w:400,fill:SUB,maxW:cW*0.8,gap:0}],cx,SM,'c').svg;
   }else if(variant===1){ // left column, mark right (Society / blue-square boards)
-    body+=sImageBox('minimalist',BOX,W,H);
+    body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
       {str:f.producer,size:H*0.03,f:SF.archivo,w:300,fill:SUB,caps:true,tr:0.4,maxW:W*0.44,gap:H*0.05,pre:H*0.04},
       {str:f.wine,size:H*0.07,f:HP?HP[0]:(SF.archivo),w:HP?HP[1]:(400),fill:INK,caps:true,tr:0.2,lines:2,lh:1.15,maxW:W*0.46,gap:H*0.02},
@@ -1438,7 +1472,7 @@ function styleMinimal(f,W,H,seed,twMM,thMM){
       {str:line1,size:H*0.025,f:SF.archivo,w:400,fill:SUB,maxW:cW*0.9,gap:H*0.008,pre:H*0.855-SM},
       {str:line2,size:H*0.025,f:SF.archivo,w:400,fill:SUB,maxW:cW*0.9,gap:0}],SM,SM,'l').svg;
   }else if(variant===2){ // hero IS the mark: oversized single word, nothing else near it
-    body+=sImageBox('minimalist',BOX,W,H);
+    body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
       {str:f.producer,size:H*0.028,f:SF.archivo,w:300,fill:SUB,caps:true,tr:0.45,maxW:cW*0.7,gap:H*0.05,pre:H*0.05},
       {str:f.wine,size:H*0.12,f:HP?HP[0]:(SF.archivo),w:HP?HP[1]:(300),fill:INK,caps:true,tr:0.12,maxW:cW*0.96,gap:H*0.02},
@@ -1461,7 +1495,7 @@ function styleMinimal(f,W,H,seed,twMM,thMM){
       {str:f.appellation,size:H*0.034,f:SF.archivo,w:400,fill:SUB,maxW:W*0.6,gap:H*0.018},
       {str:line1,size:H*0.025,f:SF.archivo,w:400,fill:SUB,maxW:W*0.6,gap:H*0.008},
       {str:line2,size:H*0.025,f:SF.archivo,w:400,fill:SUB,maxW:W*0.6,gap:0}],SM,SM,'l').svg;
-    body+=sImageBox('minimalist',BOX,W,H);
+    body+=sImageBox('contemporary',BOX,W,H);
   }
   return sWrap(W,H,twMM,thMM,MS.bg,body);
 }
@@ -1472,20 +1506,20 @@ function styleMinimal(f,W,H,seed,twMM,thMM){
 /* ---- 6) ARTISTIC / PUNK — reference-first: naive art big and proud,
    handwritten titles, rotated riso side caps, arched hand-lettering,
    marker hand + heavy grotesque on light riso grounds. ---- */
-function styleArtistic(f,W,H,seed,twMM,thMM){
+function stylePunk(f,W,H,seed,twMM,thMM){
   // house rule: no dark grounds under the multiply-blended artwork
-  const APAL=hintPal('artistic',[['#F3EFE4','#171512','#C22A1C'],['#DA3D1C','#F8EFE0','#171512'],['#F2BFC9','#171512','#C22A1C'],['#EFE9DA','#171512','#E8542F']],function(p){return [p.bg,p.ink,p.acc];});
-  const [BG,INK,AC]=palPick('artistic',seed,APAL);
+  const APAL=[['#F3EFE4','#171512','#C22A1C'],['#DA3D1C','#F8EFE0','#171512'],['#F2BFC9','#171512','#C22A1C'],['#EFE9DA','#171512','#E8542F']];
+  const [BG,INK,AC]=palPick('punk','punk',seed,APAL,function(p){return [p.bg,p.ink,p.acc||p.sub];});
   const cx=W/2, cW=W-2*SM;
-  const variant=pickVariant('artistic',seed,['c','l','l','l','c','c']);
-  const HP=heroPick(seed,'artistic',variant);
-  const BOX=STYLE_BOXES['artistic'][variant];
+  const variant=pickVariant('punk',seed,6);
+  const HP=heroPick(seed,'punk',variant,'punk');
+  const BOX=STYLE_BOXES['punk'][variant];
   const alc=f.alc;
   const desc=(f.descriptor||'').replace(/,/g,'');
   const reg=[f.region,f.special].filter(Boolean).join(' \u00b7 ');
   let body='';
   if(variant===0){ // naive drawing centre stage, marker name below (wine-club boards)
-    body+=sImageBox('artistic',BOX,W,H);
+    body+=sImageBox('punk',BOX,W,H);
     body+=sFlow([
       {str:f.wine,size:H*0.105,f:HP?HP[0]:(SF.marker),w:HP?HP[1]:(400),fill:INK,maxW:cW*0.94,gap:H*0.03,pre:H*0.53},
       {str:[f.appellation,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.045,f:SF.archivo,w:700,fill:AC,caps:true,tr:0.04,maxW:cW*0.8,gap:H*0.016},
@@ -1494,7 +1528,7 @@ function styleArtistic(f,W,H,seed,twMM,thMM){
       {str:f.producer,size:H*0.034,f:SF.marker,w:400,fill:AC},
       {str:[reg,desc,alc].filter(Boolean).join(' / '),size:H*0.023,f:SF.archivo,w:500,fill:INK}],cx,H-SM-2,H*0.008,'c',cW*0.85).svg;
   }else if(variant===1){ // poster type: giant condensed caps stacked (RAW POWER board)
-    body+=sImageBox('artistic',BOX,W,H);
+    body+=sImageBox('punk',BOX,W,H);
     body+=sFlow([
       {str:f.producer,size:H*0.045,f:SF.marker,w:400,fill:INK,maxW:W*0.5,gap:H*0.045,pre:H*0.04},
       {str:f.wine,size:H*0.17,f:HP?HP[0]:(SF.anton),w:HP?HP[1]:(400),fill:INK,caps:true,lines:2,lh:0.95,maxW:W*0.52,gap:H*0.025},
@@ -1504,7 +1538,7 @@ function styleArtistic(f,W,H,seed,twMM,thMM){
     body+=sBlock([desc,alc].filter(Boolean).join(' / '),{x:SM,top:rowY,maxW:W*0.5,size:H*0.024,min:H*0.02,f:SF.archivo,w:500,fill:INK,a:'l'}).svg;
   }else if(variant===2){ // handwritten title corner, figure right (Say When board)
     body+=sBlock(f.wine,{x:SM,top:SM,maxW:cW*0.9,size:H*0.08,min:H*0.05,f:HP?HP[0]:(SF.caveat),w:HP?HP[1]:(700),fill:AC,a:'l',caps:true}).svg;
-    body+=sImageBox('artistic',BOX,W,H);
+    body+=sImageBox('punk',BOX,W,H);
     body+=sFlow([
       {str:f.appellation,size:H*0.045,f:SF.marker,w:400,fill:INK,maxW:W*0.26,gap:H*0.02,pre:H*0.16},
       {str:f.grape,size:H*0.03,f:SF.archivo,w:500,fill:INK,maxW:W*0.26,gap:H*0.012},
@@ -1516,7 +1550,7 @@ function styleArtistic(f,W,H,seed,twMM,thMM){
       {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:SF.archivo,w:500,fill:INK}],SM,H-SM-2,H*0.008,'l',W*0.4).svg;
   }else if(variant===3){ // rotated side caps, riso figure centre (PET-NAT / SUR512 boards)
     body+=sRot(f.producer,SM+H*0.028,H,{size:H*0.034,f:SF.anton,w:400,fill:AC,tr:0.14,caps:true});
-    body+=sImageBox('artistic',BOX,W,H);
+    body+=sImageBox('punk',BOX,W,H);
     body+=sFlow([
       {str:f.wine,size:H*0.10,f:HP?HP[0]:(SF.marker),w:HP?HP[1]:(400),fill:INK,maxW:cW*0.86,gap:H*0.02,pre:H*0.61},
       {str:[f.appellation,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.04,f:SF.archivo,w:700,fill:AC,caps:true,tr:0.04,maxW:cW*0.8,gap:0}],cx+H*0.02,SM,'c').svg;
@@ -1530,7 +1564,7 @@ function styleArtistic(f,W,H,seed,twMM,thMM){
       if(aw>R*1.55)asz=Math.max(MIN7,asz*R*1.55/aw);
       body+=sArcText(f.producer,cx,SM,R,{f:SF.caveat,w:600,size:asz,fill:AC,tr:0.06});
     })();
-    body+=sImageBox('artistic',BOX,W,H);
+    body+=sImageBox('punk',BOX,W,H);
     body+=sFlow([
       {str:f.wine,size:H*0.10,f:HP?HP[0]:(SF.marker),w:HP?HP[1]:(400),fill:INK,maxW:cW*0.92,gap:H*0.018,pre:H*0.605},
       {str:[f.appellation,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.045,f:SF.caveat,w:600,fill:AC,maxW:cW*0.8,gap:H*0.014},
@@ -1539,7 +1573,7 @@ function styleArtistic(f,W,H,seed,twMM,thMM){
       {str:reg,size:H*0.024,f:SF.archivo,w:500,fill:INK},
       {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:SF.archivo,w:500,fill:INK}],cx,H-SM-2,H*0.008,'c',cW*0.8).svg;
   }else{ // riso band top, loud knockout hero below (poster boards)
-    body+=sImageBox('artistic',BOX,W,H);
+    body+=sImageBox('punk',BOX,W,H);
     body+=sFlow([
       {str:f.wine,size:H*0.13,f:HP?HP[0]:(SF.anton),w:HP?HP[1]:(400),fill:INK,caps:true,maxW:cW*0.95,gap:H*0.018,pre:H*0.43},
       {str:[f.appellation,f.vintage].filter(Boolean).join('  \u00b7  '),size:H*0.045,f:SF.marker,w:400,fill:AC,maxW:cW*0.8,gap:H*0.016},
@@ -1551,13 +1585,19 @@ function styleArtistic(f,W,H,seed,twMM,thMM){
   return sWrap(W,H,twMM,thMM,BG,body);
 }
 
+/* Merged Contemporary: one seeded (and admin-weighted) pick across the four
+   internal pools; the chosen pool renders with its own palette/typography. */
+function styleContemporary(f,W,H,seed,twMM,thMM){
+  const cv=cVariantFor(seed);
+  if(cv.key==='flora')return styleFlora(f,W,H,seed,twMM,thMM,cv.local);
+  if(cv.key==='premium')return stylePremium(f,W,H,seed,twMM,thMM,cv.local);
+  if(cv.key==='minimalist')return styleMinimal(f,W,H,seed,twMM,thMM,cv.local);
+  return styleContempX(f,W,H,seed,twMM,thMM,cv.local);
+}
 const STYLE_LIST=[
   {key:'traditional',name:'Traditional'},
   {key:'contemporary',name:'Contemporary'},
-  {key:'flora',name:'Flora & Fauna'},
-  {key:'premium',name:'Premium'},
-  {key:'minimalist',name:'Minimalist'},
-  {key:'artistic',name:'Artistic / Punk'}
+  {key:'punk',name:'Punk'}
 ];
 function renderStyleOptions(d,order,opts){
   opts=opts||{}; const seed=opts.seed|0;
@@ -1567,14 +1607,23 @@ function renderStyleOptions(d,order,opts){
     try{
       if(st.key==='traditional') svg=styleTraditional(d,order,seed,twMM,thMM);
       else if(st.key==='contemporary') svg=styleContemporary(f,W,H,seed,twMM,thMM);
-      else if(st.key==='flora') svg=styleFlora(f,W,H,seed,twMM,thMM);
-      else if(st.key==='premium') svg=stylePremium(f,W,H,seed,twMM,thMM);
-      else if(st.key==='minimalist') svg=styleMinimal(f,W,H,seed,twMM,thMM);
-      else svg=styleArtistic(f,W,H,seed,twMM,thMM);
+      else svg=stylePunk(f,W,H,seed,twMM,thMM);
     }catch(e){ svg=sWrap(W,H,twMM,thMM,'#f4f2ec',`<text x="${(W/2).toFixed(1)}" y="${(H/2).toFixed(1)}" text-anchor="middle" font-family="${SF.jost}" font-size="${(14*PT_U).toFixed(1)}" fill="#a33">${esc(st.name)}</text>`); }
     return {name:st.name,rank:st.key,style:st.key,desc:st.name,svg};
   });
 }
 
-window.LabelEngine={FONTS_URL,ensureFonts,renderPriorityOptions,renderStyleOptions,STYLE_LIST,styleZones,setStyleHints,previewLayout,renderOptions,renderLabel,LC_COMPS};
+/* Which composition a seed lands on (contemporary reports its merged index) —
+   the admin layout playground uses this to attach feedback to the right comp. */
+function variantFor(key,seed){
+  if(key==='contemporary'){
+    const cv=cVariantFor(seed);
+    let off=0;for(const [k,n] of C_POOL){if(k===cv.key)break;off+=n;}
+    return off+cv.local;
+  }
+  if(key==='traditional')return pickVariant('traditional',seed,STYLE_BOXES.traditional.length);
+  if(key==='punk')return pickVariant('punk',seed,STYLE_BOXES.punk.length);
+  return 0;
+}
+window.LabelEngine={FONTS_URL,ensureFonts,renderPriorityOptions,renderStyleOptions,STYLE_LIST,styleZones,setStyleHints,variantFor,previewLayout,renderOptions,renderLabel,LC_COMPS};
 })();

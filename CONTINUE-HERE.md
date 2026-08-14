@@ -154,6 +154,38 @@ band + orange full ground, flora diagonal accent band, premium charcoal
 variant, artistic near-black riso ground. Text-only comps may still use a
 bold single-colour ground, e.g. the minimalist red panel.)
 
+## 5-RESTART (2026-08-14, branch Popika_Label&Image_Generation) — READ FIRST
+
+Owner reset: previous layout/image guideline eras were compounding
+confusion. New world, supersedes older 5x sections below where they clash:
+
+**THREE public styles**: `traditional` · `contemporary` (merged pool of the
+old contemporary+flora+premium+minimalist comps — 22 comps, internal pools
+keep their own palettes/typography) · `punk` (old artistic). Engine:
+`cVariantFor` maps contemporary's merged index; `LabelEngine.variantFor`
+exposes it; sets are 3 images (cheaper). Mongo refs migrated
+(flora/premium/minimalist→contemporary, artistic→punk); old profiles,
+feedback and per-style art rules WIPED; image profiles re-derived for 3.
+
+**Admin panel split (page.tsx)**: Image · Refs / Rules / Playground (the
+old tools, 3 styles) and NEW **Layout · Refs & Rules** + **Layout ·
+Playground** (`src/lib/admin/layout-refs.ts`, APIs under
+/api/admin/layout-*). Layout refs are their own uploads
+(data/layout-refs/, `layoutRefs`); "Derive layout language" (vision +
+owner rules) produces palettes + a hero-font pool mapped onto engine
+fonts (FONT_CHOICES); the playground renders REAL comps client-side
+(engine script + variantFor) and approve/reject writes `layoutFeedback`
+→ per-comp weights.
+
+**The one influence pipeline (no hidden overrides)**: GET /api/layout-hints
+(public) = palettes + heroFonts + weights per style → editor-embed fetches
+at boot → LabelEngine.setStyleHints → palPick/heroPick/pickVariant consume
+them. Without hints: built-ins (goldens deterministic; parity/tests pin
+__SEED0__=0 and skip the fetch via __PARITY_OFFLINE__). Verified e2e:
+posting a reject changes /api/layout-hints weights immediately.
+
+Gates now: goldens 72/72 (3 styles), parity 0.000%, both e2e suites pass.
+
 ## 5c-fix3. Structural label copies + per-direction image language (2026-08-14)
 
 Owner: comps still read as the old templates (shared 3-column footer
