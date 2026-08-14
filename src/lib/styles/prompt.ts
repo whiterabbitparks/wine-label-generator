@@ -122,11 +122,14 @@ export function buildStylePrompt(
   if (fb?.favour?.length) ruleParts.push(`favour: ${fb.favour.join("; ")}`);
   const rules = ruleParts.length ? ` House rules: ${ruleParts.join(". ")}.` : "";
 
-  // the charter (derived from the owner's reference board) LEADS the prompt so
-  // the boards' visual language outweighs the trailing rule lists; the anti-copy
-  // clause keeps it a style contract, never a content one
-  const lead = charter?.trim()
-    ? `Artistic language (follow it exactly): ${charter.trim()} ` +
+  // THIS art direction's own rich language LEADS the prompt (owner
+  // 2026-08-14: one shared charter made every generation of a style converge
+  // on a single look — each direction must speak for itself, so consecutive
+  // generations look like different artists from the same board). The charter
+  // is only the fallback for pre-language profiles.
+  const language = (sub as { language?: string }).language?.trim() || charter?.trim();
+  const lead = language
+    ? `Artistic language (follow it exactly): ${language} ` +
       "Render strictly in this artistic language, but invent an original composition — " +
       "never replicate any existing artwork. "
     : "";

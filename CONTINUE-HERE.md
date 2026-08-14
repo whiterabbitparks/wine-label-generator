@@ -154,6 +154,27 @@ band + orange full ground, flora diagonal accent band, premium charcoal
 variant, artistic near-black riso ground. Text-only comps may still use a
 bold single-colour ground, e.g. the minimalist red panel.)
 
+## 5c-fix3. Structural label copies + per-direction image language (2026-08-14)
+
+Owner: comps still read as the old templates (shared 3-column footer
+skeleton from the PDF era) and each style's images converged on one look.
+- **Layouts**: all six styles rebuilt as STRUCTURAL COPIES of specific full
+  labels on the boards (named in comments: Gewürztraminer, La Couspaude,
+  Mittelwihr, Kirile, Olive Tree, Margaux / Gotes, ñor, Saperavi, Wine
+  People, horizon, Finca Collado / Hermit Ram, Elephant, Chico Malo,
+  Hamilton, Aleria / Sinegal, Ram's Gate, Campinún, 1780, Implicit / …).
+  The uniform sRow footer is GONE — every comp carries its own small-print
+  structure (centred stacks via stackUp, corner stacks, vertical edge
+  captions via the new shared `sRot`). Variant counts now 6/6/5/5/6/6.
+  Text-only comps are allowed (minimalist scrawl/panel) — e2e pins
+  __SEED0__=0 so embed assertions see the artwork comps.
+- **Images**: vision pass now derives a self-contained 40-70-word
+  `language` PER art direction (each mirroring one distinct cluster of the
+  board, "different artists" rule); buildStylePrompt leads with the CHOSEN
+  direction's language, charter only as legacy fallback — so consecutive
+  generations look like different artists from the same board.
+Goldens re-baselined; parity 0.000%; profiles re-derived live.
+
 ## 5c-fix2. AUTOMATIC combinatorial variety (2026-08-14, supersedes the
 New-artwork button — owner rejected any manual button)
 

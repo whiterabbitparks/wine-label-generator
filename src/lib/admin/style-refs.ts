@@ -30,6 +30,11 @@ export interface StyleVariant {
   composition: string;
   mood: string;
   palette: string;
+  /** self-contained rich visual language for THIS direction — leads the
+      prompt (owner 2026-08-14: one shared charter made every generation of a
+      style converge on one look; each direction must stand alone, mirroring
+      a distinct cluster of the reference board) */
+  language?: string;
 }
 
 export interface LayoutPalette {
@@ -269,9 +274,13 @@ export async function analyzeStyle(style: string): Promise<StyleProfile> {
             "feel, degree of abstraction vs realism, how negative space is used, characteristic " +
             "imperfections. Pure technique — no subjects, no objects, no scenes), " +
             '"variants": [6-8 items, each {"label": short name, ' +
-            '"medium": rich medium/technique description of 20-40 words — name the tool and stroke ' +
-            "weight, the texture, the shading method, the imperfections that make it feel handmade; " +
-            'specific enough that an illustrator could imitate the technique exactly, ' +
+            '"language": a SELF-CONTAINED 40-70 word paragraph, written as a direct instruction to an ' +
+            "illustrator, describing this direction's complete visual language: medium and tool, line " +
+            "quality, texture, shading, how ink/colour is applied, degree of abstraction, negative " +
+            "space, characteristic imperfections. Each variant mirrors ONE distinct cluster of images " +
+            "on the board and must be SO different from the other variants that a viewer would assume " +
+            'different artists made them, ' +
+            '"medium": short technique summary of the same direction (one phrase), ' +
             '"composition": compositional doctrine phrase (framing, density, scale — never a specific scene), ' +
             '"mood": mood phrase, ' +
             '"palette": the ink/colour treatment (e.g. single sepia ink, red+black duotone)}], ' +
@@ -331,6 +340,7 @@ export async function analyzeStyle(style: string): Promise<StyleProfile> {
       composition: String(v.composition).slice(0, 400),
       mood: String(v.mood).slice(0, 300),
       palette: String(v.palette || "").slice(0, 200),
+      language: String((v as { language?: string }).language || "").slice(0, 900),
     }));
   if (!variants.length) throw new Error("analysis returned no usable variants");
 

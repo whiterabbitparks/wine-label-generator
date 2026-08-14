@@ -12,6 +12,9 @@ const STYLES = ['traditional', 'contemporary', 'flora', 'premium', 'minimalist',
 
 const browser = await chromium.launch({ channel: 'chrome' });
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+// pin the variety seeds: minimalist has text-only comps by design, so the
+// embed assertions need the deterministic seed-0 set (like the parity captures)
+await page.addInitScript(() => { window.__SEED0__ = 0; });
 page.on('pageerror', (e) => console.log('PAGE ERROR:', e.message));
 
 let setCalls = 0;
