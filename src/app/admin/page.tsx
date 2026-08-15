@@ -33,7 +33,7 @@ interface UserRow {
   createdAt: string;
 }
 
-const TABS = ["Image · Refs", "Image · Rules", "Image · Playground", "Layout · Refs & Rules", "Layout · Playground", "Generations", "Users"] as const;
+const TABS = ["Image · Refs", "Image · Rules", "Image · Playground", "Layout · Refs & Rules", "Layout · Playground", "Layout · Fonts", "Generations", "Users"] as const;
 type Tab = (typeof TABS)[number];
 
 export default function AdminPage() {
@@ -82,6 +82,7 @@ export default function AdminPage() {
         {tab === "Image · Rules" && <ArtDirectionTab />}
         {tab === "Layout · Refs & Rules" && <LayoutTab />}
         {tab === "Layout · Playground" && <LayoutPlaygroundTab />}
+        {tab === "Layout · Fonts" && <FontsTab />}
         {tab === "Generations" && <GenerationsTab />}
         {tab === "Users" && <UsersTab onSessionLost={() => setAuthed(false)} />}
       </div>
@@ -1020,6 +1021,7 @@ function LayoutPlaygroundTab() {
   const [engineReady, setEngineReady] = useState(false);
   const [reviewAll, setReviewAll] = useState(false);
   const [weights, setWeights] = useState<Record<string, number[]>>({});
+  const [notes, setNotes] = useState<Record<number, string>>({});
 
   useEffect(() => {
     const w = window as unknown as { LabelEngine?: { ensureFonts: () => Promise<void> } };
@@ -1073,7 +1075,7 @@ function LayoutPlaygroundTab() {
     const c = cards[i];
     const r = await fetch("/api/admin/layout-feedback", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ style, variant: c.variant, verdict: v }),
+      body: JSON.stringify({ style, variant: c.variant, verdict: v, comment: notes[i] || "" }),
     });
     if (r.ok) setWeights((await r.json()).weights || {});
     setCards(cards.map((x, j) => (j === i ? { ...x, done: v } : x)));
@@ -1102,6 +1104,14 @@ function LayoutPlaygroundTab() {
         {cards.map((c, i) => (
           <div key={c.seed} style={{ border: "1px solid #bbb", background: "#fff", padding: 8 }}>
             <div style={{ width: "100%" }} dangerouslySetInnerHTML={{ __html: c.svg.replace(/width="110mm" height="80mm"/, 'width="100%" height="auto"') }} />
+            {!c.done && (
+              <input
+                style={{ ...S.input, marginTop: 8, fontSize: 13 }}
+                placeholder="optional comment — plain words steer the next derivation"
+                value={notes[i] || ""}
+                onChange={(e) => setNotes({ ...notes, [i]: e.target.value })}
+              />
+            )}
             <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center" }}>
               <span style={{ fontSize: 11, color: "#8a887e" }}>comp #{c.variant + 1}</span>
               {weightBadge(weights[style]?.[c.variant])}
@@ -1116,6 +1126,92 @@ function LayoutPlaygroundTab() {
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+/* ============ FONTS PLAYGROUND (owner request 2026-08-15) ============
+   Every free font the engine can render, shown as the wine name. Approve →
+   the font JOINS that style's hero-font pool on real labels; net-rejected →
+   it never appears. Applies immediately via /api/layout-hints. */
+
+interface FontRow { family: string; weight: number; label: string }
+
+function FontsTab() {
+  const [style, setStyle] = useState("traditional");
+  const [sample, setSample] = useState("Château Margaux");
+  const [pool, setPool] = useState<FontRow[]>([]);
+  const [scores, setScores] = useState<Record<string, Record<string, number>>>({});
+  const [fontsReady, setFontsReady] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/admin/font-feedback").then((r) => r.json()).then((b) => {
+      setPool(b.pool || []); setScores(b.scores || {});
+    });
+    // load the same Google-fonts stylesheet the label engine uses
+    const w = window as unknown as { LabelEngine?: { FONTS_URL: string } };
+    const attach = (url: string) => {
+      if (!document.getElementById("__adminFonts")) {
+        const l = document.createElement("link");
+        l.id = "__adminFonts"; l.rel = "stylesheet"; l.href = url;
+        document.head.appendChild(l);
+      }
+      setFontsReady(true);
+    };
+    if (w.LabelEngine) attach(w.LabelEngine.FONTS_URL);
+    else {
+      const sc = document.createElement("script");
+      sc.src = "/engine/label-engine.js";
+      sc.onload = () => attach((window as unknown as { LabelEngine: { FONTS_URL: string } }).LabelEngine.FONTS_URL);
+      document.body.appendChild(sc);
+    }
+  }, []);
+
+  async function verdict(f: FontRow, v: "approve" | "reject") {
+    const r = await fetch("/api/admin/font-feedback", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ style, family: f.family, weight: f.weight, verdict: v }),
+    });
+    if (r.ok) setScores((await r.json()).scores || {});
+  }
+
+  const per = scores[style] || {};
+  const score = (f: FontRow) => per[`${f.family}@${f.weight}`] ?? 0;
+  const status = (n: number): [string, string] =>
+    n > 0 ? ["in the pool ✓", "#5a6b3b"] : n < 0 ? ["banned ✕", "#a03030"] : ["unrated", "#8a887e"];
+
+  return (
+    <div>
+      <p style={{ fontSize: 14, color: "#4a4a42" }}>
+        Approve a font and it joins <b>{style}</b>&rsquo;s hero-font pool on real labels immediately;
+        reject it and it never appears for that style. Unrated fonts follow the derived layout language.
+      </p>
+      <div style={{ display: "flex", gap: 12, alignItems: "center", margin: "14px 0", flexWrap: "wrap" }}>
+        <select value={style} onChange={(e) => setStyle(e.target.value)} style={{ ...S.input, width: 200 }}>
+          {STYLE_DEFS.map(([k, n]) => <option key={k} value={k}>{n}</option>)}
+        </select>
+        <input style={{ ...S.input, width: 280 }} value={sample} placeholder="sample text"
+          onChange={(e) => setSample(e.target.value)} />
+      </div>
+      {!fontsReady && <p style={{ color: "#8a887e" }}>Loading fonts…</p>}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        {pool.map((f) => {
+          const n = score(f); const [txt, col] = status(n);
+          return (
+            <div key={`${f.family}@${f.weight}`} style={{ border: "1px solid #bbb", background: "#fff", padding: "10px 14px" }}>
+              <div style={{ fontFamily: f.family, fontWeight: f.weight, fontSize: 30, lineHeight: 1.25, minHeight: 42, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
+                {sample || "Château Margaux"}
+              </div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 11, color: "#8a887e", flex: 1 }}>{f.label}</span>
+                <span style={{ fontSize: 11, color: col, border: `1px solid ${col}`, borderRadius: 4, padding: "1px 7px" }}>{txt}</span>
+                <button style={{ ...S.btnGhost, padding: "3px 10px", fontSize: 12 }} onClick={() => verdict(f, "approve")}>Approve</button>
+                <button style={{ ...S.btnGhost, padding: "3px 10px", fontSize: 12, color: "#a03030", borderColor: "#a03030" }} onClick={() => verdict(f, "reject")}>Reject</button>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
