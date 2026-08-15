@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { requestIsAuthenticated } from "@/lib/admin/session";
 import {
-  addFontFeedback, fontScores, getCasePrefs, FONT_POOL, FONT_ROLES, LAYOUT_STYLES,
+  addFontFeedback, fontScores, getCasePrefs, fullFontPool, FONT_ROLES, LAYOUT_STYLES,
   type FontRole,
 } from "@/lib/admin/layout-refs";
 
 export async function GET() {
   if (!(await requestIsAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const [scores, casePrefs] = await Promise.all([fontScores(), getCasePrefs()]);
-  return NextResponse.json({ pool: FONT_POOL, roles: FONT_ROLES, scores, casePrefs });
+  return NextResponse.json({ pool: await fullFontPool(), roles: FONT_ROLES, scores, casePrefs });
 }
 
 export async function POST(req: Request) {
@@ -24,7 +24,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "unknown style" }, { status: 400 });
   const role = FONT_ROLES.includes(body.role as FontRole) ? (body.role as FontRole) : null;
   if (!role) return NextResponse.json({ error: "role must be hero|secondary|small" }, { status: 400 });
-  const font = FONT_POOL.find((f) => f.family === body.family && f.weight === Number(body.weight));
+  const POOL = await fullFontPool();
+  const font = POOL.find((f) => f.family === body.family && f.weight === Number(body.weight));
   if (!font) return NextResponse.json({ error: "unknown font" }, { status: 400 });
   if (body.verdict !== "approve" && body.verdict !== "reject")
     return NextResponse.json({ error: "verdict must be approve|reject" }, { status: 400 });

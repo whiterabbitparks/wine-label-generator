@@ -175,7 +175,7 @@ export async function saveLayoutRules(rules: LayoutRules): Promise<void> {
    Approving ANY of them puts it on real labels: the engine loads non-built-in
    families dynamically (EXTRA_FONTS_URL). Rejected fonts leave the deck for
    good; the "Show new fonts" deck keeps dealing unrated candidates. ---- */
-type PoolFont = { family: string; weight: number; label: string; styles: string[] };
+export type PoolFont = { family: string; weight: number; label: string; styles: string[]; custom?: boolean };
 const T = "traditional", C = "contemporary", P = "punk";
 export const FONT_POOL: PoolFont[] = [
   // ---- classic serif · didone · garalde (traditional core) ----
@@ -350,6 +350,35 @@ export const FONT_POOL: PoolFont[] = [
   { family: "'Wallpoet',cursive", weight: 400, label: "Wallpoet — stencil", styles: [P, C] },
 ];
 
+/* Owner-added fonts by name (validated against Google Fonts by the route).
+   They join the catalog permanently and are auto-approved on add. */
+export interface CustomFontDoc { family: string; weight: number; label: string; styles: string[]; createdAt: Date }
+export async function addCustomFont(name: string, weight: number, style: string): Promise<PoolFont> {
+  const family = `'${name}',sans-serif`;
+  const db = await getDb();
+  const col = db.collection<CustomFontDoc>("customFonts");
+  const existing = await col.findOne({ family, weight });
+  if (existing) {
+    if (!existing.styles.includes(style)) await col.updateOne({ family, weight }, { $addToSet: { styles: style } });
+    return { family, weight, label: existing.label, styles: [...new Set([...existing.styles, style])], custom: true };
+  }
+  const doc: CustomFontDoc = { family, weight, label: `${name} — added by you`, styles: [style], createdAt: new Date() };
+  await col.insertOne({ ...doc });
+  return { family: doc.family, weight: doc.weight, label: doc.label, styles: doc.styles, custom: true };
+}
+export async function fullFontPool(): Promise<PoolFont[]> {
+  let customs: CustomFontDoc[] = [];
+  try {
+    const db = await getDb();
+    customs = await db.collection<CustomFontDoc>("customFonts").find({}, { projection: { _id: 0 } }).toArray();
+  } catch {}
+  const seen = new Set(FONT_POOL.map((f) => `${f.family}@${f.weight}`));
+  const extra = customs
+    .filter((c) => !seen.has(`${c.family}@${c.weight}`))
+    .map((c) => ({ family: c.family, weight: c.weight, label: c.label, styles: c.styles, custom: true }));
+  return [...FONT_POOL, ...extra];
+}
+
 export type FontRole = "hero" | "secondary" | "small";
 export const FONT_ROLES: FontRole[] = ["hero", "secondary", "small"];
 
@@ -457,8 +486,8 @@ export async function layoutWeights(): Promise<Record<string, number[]>> {
     Hero-font pool = fonts approved in the Fonts playground ∪ the derived
     profile fonts, minus anything net-rejected — verdicts apply immediately. */
 export async function buildLayoutHints(): Promise<Record<string, unknown>> {
-  const [profiles, weights, fonts, casePrefs] = await Promise.all([
-    getLayoutProfiles(), layoutWeights(), fontScores(), getCasePrefs(),
+  const [profiles, weights, fonts, casePrefs, POOL] = await Promise.all([
+    getLayoutProfiles(), layoutWeights(), fontScores(), getCasePrefs(), fullFontPool(),
   ]);
   const hints: Record<string, unknown> = {};
   for (const style of LAYOUT_STYLES) {
@@ -478,7 +507,7 @@ export async function buildLayoutHints(): Promise<Record<string, unknown>> {
       (casePrefs[style]?.[role] || {})[`${fam}@${w}`.replace(/\./g, "·")] ?? null;
     // hero: approved ∪ (derived minus net-rejected); secondary/small: approved-only pools
     const heroScores = byRole.hero || {};
-    const approvedHero = FONT_POOL.filter((f) => (heroScores[`${f.family}@${f.weight}`] ?? 0) > 0)
+    const approvedHero = POOL.filter((f) => (heroScores[`${f.family}@${f.weight}`] ?? 0) > 0)
       .map((f) => [f.family, f.weight, caseOf("hero", f.family, f.weight)] as [string, number, CasePref]);
     const derivedKept = (prof?.heroFonts || []).filter(
       (f) => (heroScores[`${f[0]}@${f[1]}`] ?? 0) >= 0 &&
@@ -488,7 +517,7 @@ export async function buildLayoutHints(): Promise<Record<string, unknown>> {
     if (heroPool.length) entry.heroFonts = heroPool;
     for (const [role, key] of [["secondary", "secondaryFonts"], ["small", "smallFonts"]] as const) {
       const sc = byRole[role] || {};
-      const pool = FONT_POOL.filter((f) => (sc[`${f.family}@${f.weight}`] ?? 0) > 0)
+      const pool = POOL.filter((f) => (sc[`${f.family}@${f.weight}`] ?? 0) > 0)
         .map((f) => [f.family, f.weight, caseOf(role, f.family, f.weight)] as [string, number, CasePref]);
       if (pool.length) entry[key] = pool;
     }

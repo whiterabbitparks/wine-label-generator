@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requestIsAuthenticated } from "@/lib/admin/session";
 import {
-  setCasePref, getCasePrefs, FONT_POOL, FONT_ROLES, LAYOUT_STYLES, type FontRole,
+  setCasePref, getCasePrefs, fullFontPool, FONT_ROLES, LAYOUT_STYLES, type FontRole,
 } from "@/lib/admin/layout-refs";
 
 /* Per-FONT case switch (owner, 2026-08-15): default null = standard grammar
@@ -20,7 +20,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "unknown style" }, { status: 400 });
   const role = FONT_ROLES.includes(body.role as FontRole) ? (body.role as FontRole) : null;
   if (!role) return NextResponse.json({ error: "role must be hero|secondary|small" }, { status: 400 });
-  const font = FONT_POOL.find((f) => f.family === body.family && f.weight === Number(body.weight));
+  const POOL = await fullFontPool();
+  const font = POOL.find((f) => f.family === body.family && f.weight === Number(body.weight));
   if (!font) return NextResponse.json({ error: "unknown font" }, { status: 400 });
   const pref = body.pref === "upper" ? "upper" : null;
   await setCasePref(style, role, `${font.family}@${font.weight}`, pref);
