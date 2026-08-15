@@ -7,7 +7,8 @@ import { loadConfig, DEFAULT_CONFIG } from "@/lib/admin/config-store";
 import { providerName, generateImageWithRetry } from "@/lib/image-provider";
 import { getImageStorage } from "@/lib/image-storage";
 import { logGeneration } from "@/lib/admin/generation-log";
-import { getProfiles } from "@/lib/admin/style-refs";
+import { getProfiles, listRefs } from "@/lib/admin/style-refs";
+import { getImageRules, ruleLines, verifyImage } from "@/lib/admin/image-rules";
 import { feedbackAggregates } from "@/lib/admin/feedback";
 
 /* POST /api/admin/playground — owner's test bench for the refinement loop.
@@ -38,12 +39,15 @@ export async function POST(req: Request) {
     style.subStyles;
   let charter: string | null = null;
   let weights: Record<string, number> = {};
+  let refUrls: Record<string, string> = {};
   try {
     const prof = (await getProfiles())[style.key];
     if (prof?.variants?.length) variants = prof.variants;
     charter = prof?.charter || prof?.summary || null;
     weights = (await feedbackAggregates())[style.key]?.weights || {};
+    refUrls = Object.fromEntries((await listRefs(style.key)).map((r) => [r.id, r.url]));
   } catch {}
+  const rules = ruleLines(await getImageRules().catch(() => ({ global: '', perStyle: {} })), style.key);
 
   // the bench mirrors what customers get: directions ordered by learned
   // weight, retired ones (two+ rejections) shown only when nothing else is
@@ -51,7 +55,9 @@ export async function POST(req: Request) {
   const ranked = [...variants].sort(
     (a, b) => (weights[b.key] ?? 1) - (weights[a.key] ?? 1)
   );
-  const active = ranked.filter((v) => (weights[v.key] ?? 1) > 0.3);
+  // one rejection (weight 0.5) removes a style card from the bench;
+  // two retire it from customer generation as well
+  const active = ranked.filter((v) => (weights[v.key] ?? 1) > 0.55);
   const bench = (active.length ? active : ranked);
 
   const provider = providerName();
@@ -62,7 +68,18 @@ export async function POST(req: Request) {
       const job = buildStyleJob(style, sub, brief, art, undefined, charter);
       const started = Date.now();
       try {
-        const dataUrl = await generateImageWithRetry(job);
+        let dataUrl = await generateImageWithRetry(job);
+        // VERIFIED RULES: check the image against the owner's plain-English
+        // rules; a violator is regenerated once with the broken rules strict
+        let check = await verifyImage(dataUrl, rules);
+        if (!check.ok) {
+          const strictJob = { ...job, prompt: job.prompt + ' STRICT NON-NEGOTIABLE REQUIREMENTS: ' + check.violations.join('; ') + '.' };
+          try {
+            dataUrl = await generateImageWithRetry(strictJob);
+            check = await verifyImage(dataUrl, rules);
+            check.violations = check.ok ? [] : check.violations;
+          } catch {}
+        }
         let stored = null;
         try {
           stored = await getImageStorage().save(
@@ -82,6 +99,8 @@ export async function POST(req: Request) {
           variantKey: sub.key,
           variantLabel: sub.label,
           weight: weights[sub.key] ?? 1,
+          refUrl: refUrls[sub.key] || null,
+          check,
           url: dataUrl,
           imageUrl: stored?.url ?? null,
           prompt: job.prompt,

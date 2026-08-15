@@ -8,6 +8,7 @@ import { getImageStorage } from "@/lib/image-storage";
 import { logGeneration } from "@/lib/admin/generation-log";
 import { getProfiles, layoutHintsFrom, type StyleProfile } from "@/lib/admin/style-refs";
 import { feedbackAggregates, weightedPick, type StyleFeedbackAggregate } from "@/lib/admin/feedback";
+import { getImageRules, ruleLines, verifyImage } from "@/lib/admin/image-rules";
 
 /* POST /api/generate-label-set — the generation orchestrator.
 
@@ -120,6 +121,7 @@ export async function POST(req: Request) {
     [profiles, feedback] = await Promise.all([getProfiles(), feedbackAggregates()]);
   } catch {}
   const layoutHints = layoutHintsFrom(profiles);
+  const imageRules = await getImageRules().catch(() => ({ global: "", perStyle: {} }));
 
   const key = createHash("sha256")
     .update(JSON.stringify([brief, catalog, art, provider,
@@ -175,7 +177,18 @@ export async function POST(req: Request) {
           const job = buildStyleJob(style, sub, brief, art, fbLines, prof?.charter || prof?.summary);
           const started = Date.now();
           try {
-            const imageDataUrl = await generateImageWithRetry(job);
+            let imageDataUrl = await generateImageWithRetry(job);
+            // verified rules: regenerate once when the owner's plain-English
+            // image rules are visibly broken
+            const rules = ruleLines(imageRules, style.key);
+            if (rules.length) {
+              const check = await verifyImage(imageDataUrl, rules);
+              if (!check.ok) {
+                try {
+                  imageDataUrl = await generateImageWithRetry({ ...job, prompt: job.prompt + " STRICT NON-NEGOTIABLE REQUIREMENTS: " + check.violations.join("; ") + "." });
+                } catch {}
+              }
+            }
 
             let stored = null;
             try {

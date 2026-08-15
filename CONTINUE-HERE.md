@@ -154,6 +154,29 @@ band + orange full ground, flora diagonal accent band, premium charcoal
 variant, artistic near-black riso ground. Text-only comps may still use a
 bold single-colour ground, e.g. the minimalist red panel.)
 
+## 5-IMAGES-V3 (2026-08-15) — PER-REFERENCE style cards + verified rules
+
+Owner: rejections kept coming back; wants each reference image remembered
+as ONE specific style. Root bug found: feedback was keyed by auto-N
+direction keys that RESHUFFLED on every re-derive, orphaning all
+verdicts (36 orphans wiped). Now:
+- analyzeStyle derives ONE style card PER REFERENCE image (incremental —
+  only new refs analyzed; force=true redoes all; deleting a ref removes
+  its card). Card key = reference id — permanent identity; feedback
+  sticks forever. 56 cards derived (traditional 7 / contemporary 29 /
+  punk 20).
+- Image Play shows the SOURCE REFERENCE thumbnail beside each generated
+  image for 1:1 judging. Bench: weight>0.55 — ONE rejection removes a
+  card from the bench, two retire it from customer generation
+  (weightedPick floor 0.05).
+- VERIFIED image rules (src/lib/admin/image-rules.ts, settings/
+  image-hard-rules, /api/admin/image-rules, UI section in Image Rules):
+  plain-English rules, one per line, global+per-style. EVERY generated
+  image (playground AND customer sets) is inspected against them by a
+  vision model (OPENAI_VERIFY_MODEL, default gpt-4o-mini); violators are
+  regenerated once with the broken rules made strict; playground cards
+  show pass/fail. Check never blocks generation on API failure.
+
 ## 5-IMAGES-V2 (2026-08-15) — cluster-first derivation, anti-AI prompting
 
 Owner: images looked generic-AI and identical across styles. Root cause:

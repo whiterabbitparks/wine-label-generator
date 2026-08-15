@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid JSON body" }, { status: 400 });
   }
   try {
-    const profile = await analyzeStyle(String(body.style || ""));
+    const profile = await analyzeStyle(String(body.style || ""), !!(body as {force?:boolean}).force);
     return NextResponse.json({ ok: true, profile });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 400 });

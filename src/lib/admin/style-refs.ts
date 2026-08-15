@@ -242,17 +242,14 @@ async function visionFetch(init: RequestInit): Promise<Response> {
      (the subject always comes from the winemaker's brief);
    - 6-8 art directions per style so consecutive generations differ visibly;
    - the same boards also yield layout palettes (light grounds only). */
-/* CLUSTER-FIRST derivation (owner GO, 2026-08-15). The old one-pass analysis
-   over 12 low-res refs with a small model produced generic art-school
-   category language ("bold color blocks", "soft washes") — identical across
-   styles, and prompts written in stock language produce stock images. Now:
-   PASS 1 (all refs, low detail): group the board into 3-6 clusters of shared
-   visual language, each anchored to specific reference images.
-   PASS 2 (per cluster, HIGH detail, ≤4 refs): describe THAT cluster alone as
-   one art direction in concrete process language — banned-vocabulary list
-   keeps it specific — explicitly distinct from directions already derived.
-   PASS 3 (text): cross-style distinctness audit rewrites anything that
-   overlaps another style's directions. */
+/* PER-REFERENCE styles (owner, 2026-08-15): "remember each image's visual
+   style as ONE specific style, remember its category, mimic the style but
+   never the shapes or themes." Every reference image becomes exactly one
+   style card, keyed by the REFERENCE ID — a stable identity, so approve/
+   reject feedback survives re-analysis forever (the old auto-N keys
+   reshuffled on every derive, which silently orphaned all feedback).
+   Analysis is incremental: only new references are analyzed; deleting a
+   reference removes its card. */
 
 const GENERIC_BAN =
   "BANNED VOCABULARY (too generic, forbidden anywhere): bold, clean, playful, " +
@@ -281,120 +278,71 @@ async function visionJSON(key: string, model: string, system: string, user: unkn
   return JSON.parse(json.choices?.[0]?.message?.content || "{}");
 }
 
-export async function analyzeStyle(style: string): Promise<StyleProfile> {
+async function analyzeOneRef(key: string, model: string, style: string, url: string): Promise<Omit<StyleVariant, "key"> | null> {
+  const out = await visionJSON(key, model,
+    "You are a master printmaker studying ONE wine-label artwork so another " +
+    "artist could reproduce its TECHNIQUE exactly — never its subject. " +
+    "Return strict JSON: " +
+    '{"label": 2-4 word technique name, ' +
+    '"language": 60-90 words of concrete process instruction: the exact ' +
+    "process/tool (engraving, riso, linocut, gouache, marker…), line weight " +
+    "behaviour, how ink sits on paper, halftone/hatching character, colour " +
+    "application, registration flaws, edge texture, what the eye notices " +
+    "first. Imperative voice. NEVER mention any depicted subject, object, " +
+    "animal, figure, building or scene — technique only, reusable for any " +
+    'subject, ' +
+    '"palette": the exact ink/colour treatment as hex-like plain words (e.g. "single oxblood ink", "tomato red + cobalt riso"), ' +
+    '"composition": framing/density doctrine (never a scene), ' +
+    '"mood": 4-6 words}. ' +
+    GENERIC_BAN +
+    " The artwork will be regenerated on a pure white background; do not mention backgrounds.",
+    [
+      { type: "text", text: `Style category: ${style}. Describe this one artwork's technique:` },
+      { type: "image_url", image_url: { url, detail: "high" } },
+    ]);
+  if (!out.language) return null;
+  return {
+    label: String(out.label || "Untitled technique").slice(0, 60),
+    medium: String(out.label || "").slice(0, 400),
+    composition: String(out.composition || "").slice(0, 400),
+    mood: String(out.mood || "").slice(0, 300),
+    palette: String(out.palette || "").slice(0, 200),
+    language: String(out.language).slice(0, 900),
+  };
+}
+
+/** Incremental: analyzes only references without a style card (or all, when
+    force). Card key = reference id — the permanent identity feedback sticks to. */
+export async function analyzeStyle(style: string, force = false): Promise<StyleProfile> {
   const key = process.env.OPENAI_API_KEY;
   if (!key) throw new Error("OPENAI_API_KEY is not set — analysis needs the vision model");
   const refs = await listRefs(style);
   if (!refs.length) throw new Error("upload at least one reference image first");
   const model = process.env.OPENAI_VISION_MODEL || "gpt-4o";
 
-  const capped = refs.slice(0, 24);
-  const urls = capped.map((r) => refDataUrl(r));
+  const prev = (await getProfiles())[style];
+  const existing = new Map((prev?.variants || []).filter((v) => v.language).map((v) => [v.key, v]));
 
-  // ---- PASS 1: cluster the board ----
-  const p1user: unknown[] = [
-    { type: "text", text: `Style "${style}": ${capped.length} wine-label reference images follow, each preceded by its number.` },
-  ];
-  urls.forEach((u, i) => {
-    if (!u) return;
-    p1user.push({ type: "text", text: `IMAGE ${i + 1}:` });
-    p1user.push({ type: "image_url", image_url: { url: u, detail: "low" } });
-  });
-  const p1 = await visionJSON(key, model,
-    "You are a printmaking connoisseur sorting a wine-label reference board. " +
-    "Group the numbered images into 3-6 CLUSTERS purely by shared visual/technical " +
-    "language (same printing process, ink handling, line character) — NEVER by " +
-    "subject matter. Every image belongs to exactly one cluster. Return strict JSON: " +
-    '{"clusters":[{"name": 2-4 word technique name, "images":[numbers], ' +
-    '"hint": one sentence on what technically unites them}], ' +
-    '"notes": 2 sentences on the board as a whole}. ' + GENERIC_BAN,
-    p1user);
-  let clusters = (Array.isArray(p1.clusters) ? p1.clusters : []) as { name?: string; images?: number[]; hint?: string }[];
-  clusters = clusters.filter((c) => Array.isArray(c.images) && c.images.length).slice(0, 8);
-  if (!clusters.length) clusters = [{ name: "whole board", images: capped.map((_, i) => i + 1), hint: "" }];
-
-  // ---- PASS 2: one rich direction per cluster (high detail) ----
   const variants: StyleVariant[] = [];
-  for (const [ci, cl] of clusters.entries()) {
-    const clUrls = (cl.images || [])
-      .map((n) => urls[n - 1])
-      .filter(Boolean)
-      .slice(0, 4) as string[];
-    if (!clUrls.length) continue;
-    const done = variants.map((v) => `"${v.label}": ${v.language?.slice(0, 90)}`).join("\n");
-    const p2user: unknown[] = [
-      { type: "text", text: `Cluster "${cl.name || "untitled"}" (${cl.hint || ""}) — these images only:` },
-      ...clUrls.map((u) => ({ type: "image_url", image_url: { url: u, detail: "high" as const } })),
-    ];
-    const p2 = await visionJSON(key, model,
-      "You are a master printmaker describing ONE art direction from the attached " +
-      "reference images so another artist could reproduce the TECHNIQUE exactly. " +
-      "Return strict JSON: " +
-      '{"label": 2-4 word technique name, ' +
-      '"language": 60-100 words of concrete process instruction — the exact ' +
-      "process/tool (engraving, riso, linocut, gouache, marker…), line weight " +
-      "behaviour, how ink sits on paper, halftone/hatching character, colour " +
-      "application, registration flaws, texture of edges, what the eye notices " +
-      "first. Written as imperative instructions. NEVER mention any depicted " +
-      "subject, object, animal, figure or scene — technique only, reusable for " +
-      "any subject, " +
-      '"palette": exact ink/colour treatment seen (e.g. "single oxblood ink", "tomato red + cobalt riso"), ' +
-      '"composition": framing/density doctrine (never a scene), ' +
-      '"mood": 4-6 words}. ' +
-      GENERIC_BAN +
-      (done ? " ALREADY-DERIVED directions for this style — yours must be UNMISTAKABLY different from all of them:\n" + done : "") +
-      " The artwork will be generated on a pure white background; do not mention backgrounds.",
-      p2user);
-    if (p2.language) {
-      variants.push({
-        key: `auto-${ci + 1}`,
-        label: String(p2.label || cl.name || `Direction ${ci + 1}`).slice(0, 60),
-        medium: String(p2.label || "").slice(0, 400),
-        composition: String(p2.composition || "").slice(0, 400),
-        mood: String(p2.mood || "").slice(0, 300),
-        palette: String(p2.palette || "").slice(0, 200),
-        language: String(p2.language).slice(0, 900),
-      });
+  for (const ref of refs) {
+    const kept = !force && existing.get(ref.id);
+    if (kept) { variants.push(kept); continue; }
+    const url = refDataUrl(ref);
+    if (!url) continue;
+    try {
+      const card = await analyzeOneRef(key, model, style, url);
+      if (card) variants.push({ key: ref.id, ...card });
+    } catch (e) {
+      // keep going — one unreadable reference must not sink the whole board
+      console.error(`analyze ref ${ref.id} failed:`, e instanceof Error ? e.message : e);
     }
   }
-  if (!variants.length) throw new Error("analysis returned no usable directions");
-
-  // ---- PASS 3: cross-style distinctness audit (text only) ----
-  try {
-    const others = await getProfiles();
-    const foreign = Object.values(others)
-      .filter((pr) => pr.style !== style && pr.variants?.length)
-      .flatMap((pr) => pr.variants.map((v) => `[${pr.style}] ${v.label}: ${(v.language || v.medium || "").slice(0, 90)}`));
-    if (foreign.length) {
-      const audit = await visionJSON(key, model,
-        "You audit art directions for a 3-style wine label system. The NEW directions " +
-        "below must be unmistakably different from the OTHER STYLES' directions — no " +
-        "shared signature technique vocabulary (if two directions both say 'stippling' " +
-        "or 'ink wash', a blind reader could not tell the styles apart). Rewrite ONLY " +
-        "the new directions that overlap, pushing them toward what makes THIS style's " +
-        "references unique; keep the rest byte-identical. Return strict JSON " +
-        '{"variants":[{"label","language","palette","composition","mood"} in the same order]}. ' +
-        GENERIC_BAN,
-        [{ type: "text", text:
-          `NEW (${style}):\n` + variants.map((v) => `${v.label}: ${v.language}`).join("\n\n") +
-          `\n\nOTHER STYLES:\n` + foreign.join("\n") }]);
-      const rewritten = (Array.isArray(audit.variants) ? audit.variants : []) as Partial<StyleVariant>[];
-      if (rewritten.length === variants.length) {
-        rewritten.forEach((r, i) => {
-          if (r.language) variants[i].language = String(r.language).slice(0, 900);
-          if (r.label) variants[i].label = String(r.label).slice(0, 60);
-          if (r.palette) variants[i].palette = String(r.palette).slice(0, 200);
-          if (r.composition) variants[i].composition = String(r.composition).slice(0, 400);
-          if (r.mood) variants[i].mood = String(r.mood).slice(0, 300);
-        });
-      }
-    }
-  } catch { /* audit is best-effort — clustered directions stand on their own */ }
+  if (!variants.length) throw new Error("analysis produced no style cards");
 
   const profile: StyleProfile = {
     style,
-    summary: String(p1.notes || "").slice(0, 1000),
-    charter: "",   // per-direction language leads prompts; no shared charter to flatten them
+    summary: `${variants.length} per-reference style cards`,
+    charter: "",
     variants,
     layout: null,
     refCount: refs.length,

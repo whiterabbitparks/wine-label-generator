@@ -163,10 +163,10 @@ function StylesTab() {
       <div style={S.card}>
         <label style={{ ...S.label, margin: 0 }}>Style reference boards</label>
         <p style={{ fontSize: 13, color: "#6b6a60", margin: "6px 0 0" }}>
-          Upload reference images per style — they define the artistic language. &ldquo;Derive
-          variety&rdquo; studies the board and produces the variation recipes generation rotates
-          through; the reference images themselves are also sent to the image model with every
-          generation of that style.
+          Every reference image becomes ONE style card: its technique is described and remembered
+          under that exact reference, and generation mimics it (style only, never the subject).
+          &ldquo;Analyze references&rdquo; processes new uploads; deleting a reference removes its
+          style card. Approve/reject in Image Play sticks to the reference permanently.
         </p>
         {err && <p style={{ color: "#a33", fontSize: 13 }}>{err}</p>}
       </div>
@@ -185,7 +185,7 @@ function StylesTab() {
                 </label>
                 <button style={S.btn} disabled={!mine.length || busy === `analyze-${key}`}
                   onClick={() => analyze(key)}>
-                  {busy === `analyze-${key}` ? "Analyzing…" : "Derive variety"}
+                  {busy === `analyze-${key}` ? "Analyzing…" : "Analyze references"}
                 </button>
               </div>
             </div>
@@ -289,6 +289,49 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
 }
 
 /* ---------------- Art Direction ---------------- */
+
+/* Verified image rules: plain-English, one per line — every generated image
+   is CHECKED against them by a vision model and regenerated on violation. */
+function VerifiedRulesSection() {
+  const [rules, setRules] = useState<{ global: string; perStyle: Record<string, string> }>({ global: "", perStyle: {} });
+  const [saved, setSaved] = useState(false);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    fetch("/api/admin/image-rules").then((r) => r.json()).then((b) => { if (b.rules) setRules(b.rules); });
+  }, []);
+  async function save() {
+    setBusy(true); setSaved(false);
+    const r = await fetch("/api/admin/image-rules", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(rules),
+    });
+    setBusy(false); if (r.ok) { setSaved(true); setTimeout(() => setSaved(false), 2500); }
+  }
+  return (
+    <div style={S.card}>
+      <label style={{ ...S.label, margin: 0 }}>Verified image rules</label>
+      <p style={{ fontSize: 12, color: "#6b6a60", margin: "6px 0 10px" }}>
+        One rule per line, plain English (e.g. &ldquo;never show people&rdquo;, &ldquo;no text or
+        letters inside the artwork&rdquo;, &ldquo;single ink colour only&rdquo;). These actually work:
+        every generated image is <b>inspected against them</b> by a vision model — a violator is
+        regenerated once with the broken rules made strict, and the playground shows the result of
+        the check on every card.
+      </p>
+      <textarea value={rules.global} placeholder="Rules for ALL styles — one per line"
+        onChange={(e) => setRules({ ...rules, global: e.target.value })}
+        style={{ ...S.input, minHeight: 70 }} />
+      {STYLE_DEFS.map(([k, n]) => (
+        <textarea key={k} value={rules.perStyle?.[k] || ""} placeholder={n + " rules — one per line"}
+          onChange={(e) => setRules({ ...rules, perStyle: { ...rules.perStyle, [k]: e.target.value } })}
+          style={{ ...S.input, minHeight: 46, marginTop: 8 }} />
+      ))}
+      <div style={{ marginTop: 10, display: "flex", gap: 12, alignItems: "center" }}>
+        <button style={S.btn} disabled={busy} onClick={save}>{busy ? "Saving…" : "Save verified rules"}</button>
+        {saved && <span style={{ color: "#5a6b3b", fontSize: 12 }}>Saved ✓ — applies to every next generation</span>}
+      </div>
+    </div>
+  );
+}
 
 function ArtDirectionTab() {
   const [config, setConfig] = useState<Config | null>(null);
@@ -417,6 +460,8 @@ interface PlayResult {
   variantKey: string;
   variantLabel: string;
   weight?: number;
+  refUrl?: string | null;
+  check?: { ok: boolean; violations: string[] };
   url?: string;
   imageUrl?: string | null;
   prompt?: string;
@@ -523,6 +568,7 @@ function PlaygroundTab() {
       <div style={S.card}>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
           <div>
+      <VerifiedRulesSection />
             <label style={S.label}>Style</label>
             <select style={S.input} value={style} onChange={(e) => setStyle(e.target.value)}>
               {STYLE_DEFS.map(([k, name]) => (
@@ -563,8 +609,23 @@ function PlaygroundTab() {
                 <div style={{ color: "#a33", fontSize: 13 }}>{res.error}</div>
               ) : (
                 <>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={res.url} alt={res.variantLabel} style={{ width: "100%" }} />
+                  <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                    {res.refUrl && (
+                      <figure style={{ margin: 0, width: 110, flexShrink: 0 }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={res.refUrl} alt="reference" style={{ width: "100%", border: "1px solid #999" }} />
+                        <figcaption style={{ fontSize: 10, color: "#8a887e", textAlign: "center" }}>the reference it mimics</figcaption>
+                      </figure>
+                    )}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={res.url} alt={res.variantLabel} style={{ flex: 1, minWidth: 0, width: "100%" }} />
+                  </div>
+                  {res.check && !res.check.ok && (
+                    <p style={{ fontSize: 11, color: "#a03030", margin: "6px 0 0" }}>⚠ rule check failed even after retry: {res.check.violations.join("; ")}</p>
+                  )}
+                  {res.check && res.check.ok && (
+                    <p style={{ fontSize: 11, color: "#5a6b3b", margin: "6px 0 0" }}>✓ passed your image rules</p>
+                  )}
                   <input
                     style={{ ...S.input, marginTop: 8 }}
                     placeholder="optional comment (why good / why bad)"
