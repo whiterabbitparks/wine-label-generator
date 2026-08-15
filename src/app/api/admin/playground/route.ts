@@ -8,6 +8,7 @@ import { providerName, generateImageWithRetry } from "@/lib/image-provider";
 import { getImageStorage } from "@/lib/image-storage";
 import { logGeneration } from "@/lib/admin/generation-log";
 import { getProfiles } from "@/lib/admin/style-refs";
+import { feedbackAggregates } from "@/lib/admin/feedback";
 
 /* POST /api/admin/playground — owner's test bench for the refinement loop.
    Generates a small batch for ONE style, cycling through its art directions
@@ -36,17 +37,28 @@ export async function POST(req: Request) {
   let variants: { key: string; label: string; medium: string; composition: string; mood: string }[] =
     style.subStyles;
   let charter: string | null = null;
+  let weights: Record<string, number> = {};
   try {
     const prof = (await getProfiles())[style.key];
     if (prof?.variants?.length) variants = prof.variants;
     charter = prof?.charter || prof?.summary || null;
+    weights = (await feedbackAggregates())[style.key]?.weights || {};
   } catch {}
+
+  // the bench mirrors what customers get: directions ordered by learned
+  // weight, retired ones (two+ rejections) shown only when nothing else is
+  // left — each card reports its status so the learning is visible
+  const ranked = [...variants].sort(
+    (a, b) => (weights[b.key] ?? 1) - (weights[a.key] ?? 1)
+  );
+  const active = ranked.filter((v) => (weights[v.key] ?? 1) > 0.3);
+  const bench = (active.length ? active : ranked);
 
   const provider = providerName();
   const brief: LabelBrief = { vision, data: {}, seed: 0, zones: null };
   const results = await Promise.all(
     Array.from({ length: count }, async (_, i) => {
-      const sub = { ...variants[i % variants.length] };
+      const sub = { ...bench[i % bench.length] };
       const job = buildStyleJob(style, sub, brief, art, undefined, charter);
       const started = Date.now();
       try {
@@ -69,6 +81,7 @@ export async function POST(req: Request) {
         return {
           variantKey: sub.key,
           variantLabel: sub.label,
+          weight: weights[sub.key] ?? 1,
           url: dataUrl,
           imageUrl: stored?.url ?? null,
           prompt: job.prompt,

@@ -414,10 +414,26 @@ function ArtDirectionTab() {
 interface PlayResult {
   variantKey: string;
   variantLabel: string;
+  weight?: number;
   url?: string;
   imageUrl?: string | null;
   prompt?: string;
   error?: string;
+}
+
+/** Learned status of a direction/composition from its feedback weight. */
+function weightBadge(w: number | undefined) {
+  const v = w ?? 1;
+  const [label, color] =
+    v >= 1.8 ? ["favourite", "#5a6b3b"] :
+    v > 1.05 ? ["boosted", "#5a6b3b"] :
+    v <= 0.1 ? ["retired", "#a03030"] :
+    v < 0.95 ? ["fading", "#a06a30"] : ["neutral", "#8a887e"];
+  return (
+    <span style={{ fontSize: 11, border: `1px solid ${color}`, color, borderRadius: 4, padding: "1px 7px" }}>
+      {label} ×{v.toFixed(2)}
+    </span>
+  );
 }
 interface FeedbackRow {
   id: string;
@@ -539,7 +555,7 @@ function PlaygroundTab() {
           {results.map((res, i) => (
             <div key={i} style={S.card}>
               <div style={{ fontSize: 12, letterSpacing: ".04em", marginBottom: 6 }}>
-                <b>{res.variantLabel}</b>
+                <b>{res.variantLabel}</b> {weightBadge(res.weight)}
               </div>
               {res.error ? (
                 <div style={{ color: "#a33", fontSize: 13 }}>{res.error}</div>
@@ -1002,6 +1018,8 @@ function LayoutPlaygroundTab() {
   const [cards, setCards] = useState<LayoutCard[]>([]);
   const [busy, setBusy] = useState(false);
   const [engineReady, setEngineReady] = useState(false);
+  const [reviewAll, setReviewAll] = useState(false);
+  const [weights, setWeights] = useState<Record<string, number[]>>({});
 
   useEffect(() => {
     const w = window as unknown as { LabelEngine?: { ensureFonts: () => Promise<void> } };
@@ -1022,18 +1040,27 @@ function LayoutPlaygroundTab() {
         renderStyleOptions: (d: unknown, o: null, opts: { widthMM: number; heightMM: number; seed: number }) => { style: string; svg: string }[];
       };
     };
-    // render under the SAME hints customers get
+    // render under the SAME hints customers get — including your feedback
+    // weights, so rejected comps genuinely stop appearing here too
     try {
-      const h = await fetch("/api/layout-hints").then((r) => r.json());
+      const [h, fw] = await Promise.all([
+        fetch("/api/layout-hints").then((r) => r.json()),
+        fetch("/api/admin/layout-feedback").then((r) => r.json()),
+      ]);
       w.LabelEngine.setStyleHints(h.hints || {});
+      setWeights(fw.weights || {});
     } catch {}
     await w.LabelEngine.ensureFonts();
     const seen = new Set<number>(); const next: LayoutCard[] = [];
     let guard = 0;
-    while (next.length < 8 && guard++ < 200) {
+    while (next.length < 8 && guard++ < 300) {
       const seed = 1 + Math.floor(Math.random() * 100000);
       const variant = w.LabelEngine.variantFor(style, seed);
-      if (seen.has(variant) && guard < 120) continue; // favour distinct comps first
+      // "Review every composition" forces distinct comps (weights ignored, for
+      // auditing); the default samples exactly like customer traffic, so a
+      // rejected comp shows up about as rarely as customers would see it
+      if (reviewAll && seen.has(variant) && guard < 250) continue;
+      if (!reviewAll && seen.has(variant) && guard < 40) continue; // light dedupe only
       seen.add(variant);
       const opts = w.LabelEngine.renderStyleOptions(PLAY_DATA, null, { widthMM: 110, heightMM: 80, seed });
       const entry = opts.find((o) => o.style === style);
@@ -1044,10 +1071,11 @@ function LayoutPlaygroundTab() {
 
   async function verdict(i: number, v: "approve" | "reject") {
     const c = cards[i];
-    await fetch("/api/admin/layout-feedback", {
+    const r = await fetch("/api/admin/layout-feedback", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ style, variant: c.variant, verdict: v }),
     });
+    if (r.ok) setWeights((await r.json()).weights || {});
     setCards(cards.map((x, j) => (j === i ? { ...x, done: v } : x)));
   }
 
@@ -1065,6 +1093,10 @@ function LayoutPlaygroundTab() {
         <button style={S.btn} disabled={!engineReady || busy} onClick={roll}>
           {busy ? "Rendering…" : engineReady ? "Render 8 layouts" : "Loading engine…"}
         </button>
+        <label style={{ fontSize: 13, color: "#4a4a42", display: "flex", gap: 6, alignItems: "center" }}>
+          <input type="checkbox" checked={reviewAll} onChange={(e) => setReviewAll(e.target.checked)} />
+          Review every composition (ignore my feedback)
+        </label>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         {cards.map((c, i) => (
@@ -1072,6 +1104,7 @@ function LayoutPlaygroundTab() {
             <div style={{ width: "100%" }} dangerouslySetInnerHTML={{ __html: c.svg.replace(/width="110mm" height="80mm"/, 'width="100%" height="auto"') }} />
             <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center" }}>
               <span style={{ fontSize: 11, color: "#8a887e" }}>comp #{c.variant + 1}</span>
+              {weightBadge(weights[style]?.[c.variant])}
               {c.done ? (
                 <b style={{ color: c.done === "approve" ? "#5a6b3b" : "#a03030" }}>{c.done === "approve" ? "Approved ✓" : "Rejected ✕"}</b>
               ) : (

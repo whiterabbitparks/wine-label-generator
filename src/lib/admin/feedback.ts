@@ -97,6 +97,25 @@ export async function feedbackAggregates(): Promise<Record<string, StyleFeedback
   }
   for (const agg of Object.values(out))
     for (const k of Object.keys(agg.weights))
-      agg.weights[k] = Math.max(0.2, agg.weights[k]);
+      agg.weights[k] = Math.max(0.05, agg.weights[k]);
   return out;
+}
+
+/** Deterministic weighted pick — the ONE selection rule for art directions.
+    Rejected directions genuinely fade (two rejections ≈ retired at the 0.05
+    floor) instead of keeping a full slot like the old duplication pool. */
+export function weightedPick<T extends { key: string }>(
+  items: T[],
+  weights: Record<string, number> | undefined,
+  hash: number
+): T {
+  const w = items.map((v) => Math.max(0.05, weights?.[v.key] ?? 1));
+  const sum = w.reduce((a, b) => a + b, 0);
+  let t = (Math.imul(hash ^ 0x9e3779b9, 2654435761) >>> 0) / 4294967296;
+  t *= sum;
+  for (let i = 0; i < items.length; i++) {
+    t -= w[i];
+    if (t <= 0) return items[i];
+  }
+  return items[items.length - 1];
 }

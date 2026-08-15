@@ -7,7 +7,7 @@ import { providerName, generateImageWithRetry } from "@/lib/image-provider";
 import { getImageStorage } from "@/lib/image-storage";
 import { logGeneration } from "@/lib/admin/generation-log";
 import { getProfiles, layoutHintsFrom, type StyleProfile } from "@/lib/admin/style-refs";
-import { feedbackAggregates, type StyleFeedbackAggregate } from "@/lib/admin/feedback";
+import { feedbackAggregates, weightedPick, type StyleFeedbackAggregate } from "@/lib/admin/feedback";
 
 /* POST /api/generate-label-set — the generation orchestrator.
 
@@ -154,22 +154,18 @@ export async function POST(req: Request) {
           // derived variety (from the owner's reference board) wins over the
           // built-in catalog sub-styles; same seeded rotation either way
           const prof = profiles[style.key];
-          // owner approvals reweight the rotation: an approved art direction
-          // enters the pool extra times while a rejected one keeps a single
-          // slot, so it surfaces relatively less often. Without feedback the
-          // pool IS the variant list — the pick matches the plain rotation.
+          // owner feedback truly reweights the pick: approvals boost an art
+          // direction, rejections fade it toward the 0.05 floor (two
+          // rejections ≈ retired). Without feedback all directions are equal.
           const fbAgg = feedback[style.key];
           const baseVariants = prof?.variants?.length ? prof.variants : null;
           let sub;
           if (baseVariants) {
-            const pool = baseVariants.flatMap((v) => {
-              const w = fbAgg?.weights[v.key] ?? 1;
-              return Array(Math.max(1, Math.round(w))).fill(v);
-            });
             // the story hash joins the rotation so a new story rolls new art
             // directions even within one session (seed is per-session)
             const vh = Array.from(brief.vision || "").reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 0);
-            sub = { ...pool[Math.abs(seed * 31 + i * 7 + ((seed >> 3) % 5) + (vh % 97)) % pool.length] };
+            const hash = Math.abs(seed * 31 + i * 7 + ((seed >> 3) % 5) + (vh % 97));
+            sub = { ...weightedPick(baseVariants, fbAgg?.weights, hash) };
           } else {
             sub = pickSubStyle(style, seed, i);
           }
