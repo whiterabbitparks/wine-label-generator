@@ -33,12 +33,12 @@ interface UserRow {
   createdAt: string;
 }
 
-const TABS = ["Image · Refs", "Image · Rules", "Image · Playground", "Layout · Refs & Rules", "Layout · Playground", "Layout · Fonts", "Generations", "Users"] as const;
+const TABS = ["Image Refs", "Image Rules", "Image Play", "Layout Refs", "Layout Play", "Fonts", "Hard Rules", "Generations", "Users"] as const;
 type Tab = (typeof TABS)[number];
 
 export default function AdminPage() {
   const [authed, setAuthed] = useState<boolean | null>(null);
-  const [tab, setTab] = useState<Tab>("Image · Refs");
+  const [tab, setTab] = useState<Tab>("Image Refs");
 
   useEffect(() => {
     fetch("/api/admin/me")
@@ -77,12 +77,13 @@ export default function AdminPage() {
           ))}
         </nav>
 
-        {tab === "Image · Refs" && <StylesTab />}
-        {tab === "Image · Playground" && <PlaygroundTab />}
-        {tab === "Image · Rules" && <ArtDirectionTab />}
-        {tab === "Layout · Refs & Rules" && <LayoutTab />}
-        {tab === "Layout · Playground" && <LayoutPlaygroundTab />}
-        {tab === "Layout · Fonts" && <FontsTab />}
+        {tab === "Image Refs" && <StylesTab />}
+        {tab === "Image Play" && <PlaygroundTab />}
+        {tab === "Image Rules" && <ArtDirectionTab />}
+        {tab === "Layout Refs" && <LayoutTab />}
+        {tab === "Layout Play" && <LayoutPlaygroundTab />}
+        {tab === "Fonts" && <FontsTab />}
+        {tab === "Hard Rules" && <HardRulesTab />}
         {tab === "Generations" && <GenerationsTab />}
         {tab === "Users" && <UsersTab onSessionLost={() => setAuthed(false)} />}
       </div>
@@ -844,15 +845,15 @@ function UsersTab({ onSessionLost }: { onSessionLost: () => void }) {
 
 const S: Record<string, React.CSSProperties> = {
   page: { minHeight: "100vh", background: "#f0f0ee", padding: "32px 20px", fontFamily: "'Hepta Slab', Georgia, serif", color: "#1e1e1e" },
-  h1: { fontSize: 26, fontWeight: 700 },
-  tabbar: { display: "flex", gap: 4, borderBottom: "2px solid #d8d7cf", marginTop: 10 },
-  tab: { font: "inherit", fontSize: 13, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", background: "transparent", border: "none", borderBottomWidth: 3, borderBottomStyle: "solid", borderBottomColor: "transparent", padding: "10px 18px", cursor: "pointer", color: "#8a887e", marginBottom: -2 },
+  h1: { fontSize: 19, fontWeight: 700 },
+  tabbar: { display: "flex", gap: 2, flexWrap: "wrap", borderBottom: "2px solid #d8d7cf", marginTop: 8 },
+  tab: { font: "inherit", fontSize: 11, fontWeight: 700, letterSpacing: 0.2, whiteSpace: "nowrap", background: "transparent", border: "none", borderBottomWidth: 3, borderBottomStyle: "solid", borderBottomColor: "transparent", padding: "7px 9px", cursor: "pointer", color: "#8a887e", marginBottom: -2 },
   tabActive: { color: "#3f4d2a", borderBottomColor: "#5a6b3b" },
-  card: { background: "#fff", border: "1px solid #ddd", borderRadius: 10, padding: 22, marginTop: 18 },
-  label: { display: "block", fontSize: 12, fontWeight: 700, letterSpacing: 0.5, textTransform: "uppercase", color: "#5a5a52", margin: "14px 0 6px" },
-  input: { width: "100%", boxSizing: "border-box", font: "inherit", fontSize: 14, padding: "9px 11px", border: "1px solid #ccc", borderRadius: 6, background: "#fdfdfb" },
-  btn: { font: "inherit", fontWeight: 700, background: "#5a6b3b", color: "#fff", border: "none", borderRadius: 6, padding: "10px 22px", cursor: "pointer" },
-  btnGhost: { font: "inherit", background: "transparent", color: "#5a6b3b", border: "1px solid #5a6b3b", borderRadius: 6, padding: "10px 18px", cursor: "pointer" },
+  card: { background: "#fff", border: "1px solid #ddd", borderRadius: 8, padding: 14, marginTop: 12 },
+  label: { display: "block", fontSize: 11, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", color: "#5a5a52", margin: "10px 0 5px" },
+  input: { width: "100%", boxSizing: "border-box", font: "inherit", fontSize: 13, padding: "6px 9px", border: "1px solid #ccc", borderRadius: 6, background: "#fdfdfb" },
+  btn: { font: "inherit", fontSize: 13, fontWeight: 700, background: "#5a6b3b", color: "#fff", border: "none", borderRadius: 6, padding: "7px 15px", cursor: "pointer" },
+  btnGhost: { font: "inherit", fontSize: 13, background: "transparent", color: "#5a6b3b", border: "1px solid #5a6b3b", borderRadius: 6, padding: "6px 12px", cursor: "pointer" },
   linkBtn: { font: "inherit", fontSize: 13, background: "none", border: "none", padding: 0, color: "#5a6b3b", textDecoration: "underline", cursor: "pointer" },
   mono: { font: "12px/1.5 Menlo, Consolas, monospace", background: "#f4f3ee", border: "1px solid #e2e1da", borderRadius: 6, padding: 12, whiteSpace: "pre-wrap", wordBreak: "break-word" },
   th: { textAlign: "left", borderBottom: "2px solid #ddd", padding: "6px 8px", fontSize: 11, textTransform: "uppercase", color: "#5a5a52" },
@@ -1329,6 +1330,58 @@ function FontsTab() {
             : <p style={{ fontSize: 12, color: "#8a887e" }}>All candidates rated — add fonts by name above, or ask Claude to extend the catalog.</p>}
         </>
       )}
+    </div>
+  );
+}
+
+/* ============ HARD RULES (owner, 2026-08-15) ============
+   Mechanical constraints enforced in the rendering engine and proven by the
+   geometry verifier (tests/parity/check-hard-rules.mjs). Fixed rules are
+   shown for reference; tunable ones apply to customers immediately. */
+function HardRulesTab() {
+  const [minGap, setMinGap] = useState("1");
+  const [saved, setSaved] = useState("");
+  useEffect(() => {
+    fetch("/api/admin/hard-rules").then((r) => r.json()).then((b) => {
+      if (b.rules) setMinGap(String(b.rules.minGapMM));
+    });
+  }, []);
+  async function save() {
+    setSaved("");
+    const r = await fetch("/api/admin/hard-rules", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ minGapMM: Number(minGap) }),
+    });
+    const b = await r.json();
+    if (r.ok) { setSaved("Saved ✓ — applies to the next render"); setMinGap(String(b.rules.minGapMM)); }
+    else setSaved(b.error || "failed");
+  }
+  const row = { display: "flex", gap: 12, alignItems: "center", padding: "10px 0", borderBottom: "1px solid #e5e4dc", fontSize: 13 } as const;
+  return (
+    <div style={S.card}>
+      <p style={{ fontSize: 13, color: "#4a4a42", marginTop: 0 }}>
+        These rules are <b>enforced in the rendering engine</b> — not wishes. Every one is proven by a
+        geometry test that renders all styles across seeds and label sizes and measures the output.
+        To add a new hard rule, tell Claude — it becomes code plus a verifier.
+      </p>
+      <div style={row}>
+        <b style={{ width: 240 }}>Safe margin</b>
+        <span>5 mm — no element may cross it</span>
+        <span style={{ marginLeft: "auto", color: "#8a887e", fontSize: 11 }}>fixed</span>
+      </div>
+      <div style={row}>
+        <b style={{ width: 240 }}>Minimum font size</b>
+        <span>7 pt — nothing prints smaller</span>
+        <span style={{ marginLeft: "auto", color: "#8a887e", fontSize: 11 }}>fixed</span>
+      </div>
+      <div style={{ ...row, borderBottom: "none" }}>
+        <b style={{ width: 240 }}>Minimum gap between texts</b>
+        <input type="number" min={0} max={5} step={0.5} value={minGap}
+          onChange={(e) => setMinGap(e.target.value)}
+          style={{ ...S.input, width: 90 }} /> <span>mm</span>
+        <button style={{ ...S.btn, marginLeft: 8 }} onClick={save}>Save</button>
+        {saved && <span style={{ fontSize: 12, color: saved.startsWith("Saved") ? "#5a6b3b" : "#a03030" }}>{saved}</span>}
+      </div>
     </div>
   );
 }

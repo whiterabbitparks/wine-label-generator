@@ -78,19 +78,19 @@
           "style": "traditional",
           "name": "Traditional",
           "desc": "Traditional",
-          "bytes": 2549
+          "bytes": 2701
         },
         {
           "style": "contemporary",
           "name": "Contemporary",
           "desc": "Contemporary",
-          "bytes": 2220
+          "bytes": 2334
         },
         {
           "style": "punk",
           "name": "Punk",
           "desc": "Punk",
-          "bytes": 2153
+          "bytes": 2229
         }
       ]
     },
@@ -104,19 +104,19 @@
           "style": "traditional",
           "name": "Traditional",
           "desc": "Traditional",
-          "bytes": 2935
+          "bytes": 3053
         },
         {
           "style": "contemporary",
           "name": "Contemporary",
           "desc": "Contemporary",
-          "bytes": 2221
+          "bytes": 2335
         },
         {
           "style": "punk",
           "name": "Punk",
           "desc": "Punk",
-          "bytes": 1344
+          "bytes": 2472
         }
       ]
     },
@@ -130,19 +130,19 @@
           "style": "traditional",
           "name": "Traditional",
           "desc": "Traditional",
-          "bytes": 2913
+          "bytes": 3031
         },
         {
           "style": "contemporary",
           "name": "Contemporary",
           "desc": "Contemporary",
-          "bytes": 2108
+          "bytes": 2203
         },
         {
           "style": "punk",
           "name": "Punk",
           "desc": "Punk",
-          "bytes": 1344
+          "bytes": 2472
         }
       ]
     },
@@ -156,7 +156,475 @@
           "style": "traditional",
           "name": "Traditional",
           "desc": "Traditional",
-          "bytes": 2516
+          "bytes": 2611
+        },
+        {
+          "style": "contemporary",
+          "name": "Contemporary",
+          "desc": "Contemporary",
+          "bytes": 2170
+        },
+        {
+          "style": "punk",
+          "name": "Punk",
+          "desc": "Punk",
+          "bytes": 2633
+        }
+      ]
+    },
+    {
+      "dataset": "full",
+      "widthMM": 80,
+      "heightMM": 110,
+      "seed": 0,
+      "styles": [
+        {
+          "style": "traditional",
+          "name": "Traditional",
+          "desc": "Traditional",
+          "bytes": 2704
+        },
+        {
+          "style": "contemporary",
+          "name": "Contemporary",
+          "desc": "Contemporary",
+          "bytes": 2329
+        },
+        {
+          "style": "punk",
+          "name": "Punk",
+          "desc": "Punk",
+          "bytes": 2208
+        }
+      ]
+    },
+    {
+      "dataset": "full",
+      "widthMM": 80,
+      "heightMM": 110,
+      "seed": 1,
+      "styles": [
+        {
+          "style": "traditional",
+          "name": "Traditional",
+          "desc": "Traditional",
+          "bytes": 3054
+        },
+        {
+          "style": "contemporary",
+          "name": "Contemporary",
+          "desc": "Contemporary",
+          "bytes": 2329
+        },
+        {
+          "style": "punk",
+          "name": "Punk",
+          "desc": "Punk",
+          "bytes": 2454
+        }
+      ]
+    },
+    {
+      "dataset": "full",
+      "widthMM": 80,
+      "heightMM": 110,
+      "seed": 2,
+      "styles": [
+        {
+          "style": "traditional",
+          "name": "Traditional",
+          "desc": "Traditional",
+          "bytes": 3030
+        },
+        {
+          "style": "contemporary",
+          "name": "Contemporary",
+          "desc": "Contemporary",
+          "bytes": 2180
+        },
+        {
+          "style": "punk",
+          "name": "Punk",
+          "desc": "Punk",
+          "bytes": 2454
+        }
+      ]
+    },
+    {
+      "dataset": "full",
+      "widthMM": 80,
+      "heightMM": 110,
+      "seed": 7,
+      "styles": [
+        {
+          "style": "traditional",
+          "name": "Traditional",
+          "desc": "Traditional",
+          "bytes": 2611
+        },
+        {
+          "style": "contemporary",
+          "name": "Contemporary",
+          "desc": "Contemporary",
+          "bytes": 2163
+        },
+        {
+          "style": "punk",
+          "name": "Punk",
+          "desc": "Punk",
+          "bytes": 2604
+        }
+      ]
+    },
+    {
+      "dataset": "full",
+      "widthMM": 100,
+      "heightMM": 80,
+      "seed": 0,
+      "styles": [
+        {
+          "style": "traditional",
+          "name": "Traditional",
+          "desc": "Traditional",
+          "bytes": 2701
+        },
+        {
+          "style": "contemporary",
+          "name": "Contemporary",
+          "desc": "Contemporary",
+          "bytes": 2334
+        },
+        {
+          "style": "punk",
+          "name": "Punk",
+          "desc": "Punk",
+          "bytes": 2222
+        }
+      ]
+    },
+    {
+      "dataset": "full",
+      "widthMM": 100,
+      "heightMM": 80,
+      "seed": 1,
+      "styles": [
+        {
+          "style": "traditional",
+          "name": "Traditional",
+          "desc": "Traditional",
+          "bytes": 3053
+        },
+        {
+          "style": "contemporary",
+          "name": "Contemporary",
+          "desc": "Contemporary",
+          "bytes": 2334
+        },
+        {
+          "style": "punk",
+          "name": "Punk",
+          "desc": "Punk",
+          "bytes": 2472
+        }
+      ]
+    },
+    {
+      "dataset": "full",
+      "widthMM": 100,
+      "heightMM": 80,
+      "seed": 2,
+      "styles": [
+        {
+          "style": "traditional",
+          "name": "Traditional",
+          "desc": "Traditional",
+          "bytes": 3031
+        },
+        {
+          "style": "contemporary",
+          "name": "Contemporary",
+          "desc": "Contemporary",
+          "bytes": 2203
+        },
+        {
+          "style": "punk",
+          "name": "Punk",
+          "desc": "Punk",
+          "bytes": 2472
+        }
+      ]
+    },
+    {
+      "dataset": "full",
+      "widthMM": 100,
+      "heightMM": 80,
+      "seed": 7,
+      "styles": [
+        {
+          "style": "traditional",
+          "name": "Traditional",
+          "desc": "Traditional",
+          "bytes": 2609
+        },
+        {
+          "style": "contemporary",
+          "name": "Contemporary",
+          "desc": "Contemporary",
+          "bytes": 2167
+        },
+        {
+          "style": "punk",
+          "name": "Punk",
+          "desc": "Punk",
+          "bytes": 2629
+        }
+      ]
+    },
+    {
+      "dataset": "minimal",
+      "widthMM": 110,
+      "heightMM": 80,
+      "seed": 0,
+      "styles": [
+        {
+          "style": "traditional",
+          "name": "Traditional",
+          "desc": "Traditional",
+          "bytes": 2086
+        },
+        {
+          "style": "contemporary",
+          "name": "Contemporary",
+          "desc": "Contemporary",
+          "bytes": 2098
+        },
+        {
+          "style": "punk",
+          "name": "Punk",
+          "desc": "Punk",
+          "bytes": 1961
+        }
+      ]
+    },
+    {
+      "dataset": "minimal",
+      "widthMM": 110,
+      "heightMM": 80,
+      "seed": 1,
+      "styles": [
+        {
+          "style": "traditional",
+          "name": "Traditional",
+          "desc": "Traditional",
+          "bytes": 2310
+        },
+        {
+          "style": "contemporary",
+          "name": "Contemporary",
+          "desc": "Contemporary",
+          "bytes": 2076
+        },
+        {
+          "style": "punk",
+          "name": "Punk",
+          "desc": "Punk",
+          "bytes": 1929
+        }
+      ]
+    },
+    {
+      "dataset": "minimal",
+      "widthMM": 110,
+      "heightMM": 80,
+      "seed": 2,
+      "styles": [
+        {
+          "style": "traditional",
+          "name": "Traditional",
+          "desc": "Traditional",
+          "bytes": 2299
+        },
+        {
+          "style": "contemporary",
+          "name": "Contemporary",
+          "desc": "Contemporary",
+          "bytes": 1793
+        },
+        {
+          "style": "punk",
+          "name": "Punk",
+          "desc": "Punk",
+          "bytes": 1929
+        }
+      ]
+    },
+    {
+      "dataset": "minimal",
+      "widthMM": 110,
+      "heightMM": 80,
+      "seed": 7,
+      "styles": [
+        {
+          "style": "traditional",
+          "name": "Traditional",
+          "desc": "Traditional",
+          "bytes": 2012
+        },
+        {
+          "style": "contemporary",
+          "name": "Contemporary",
+          "desc": "Contemporary",
+          "bytes": 1763
+        },
+        {
+          "style": "punk",
+          "name": "Punk",
+          "desc": "Punk",
+          "bytes": 2078
+        }
+      ]
+    },
+    {
+      "dataset": "minimal",
+      "widthMM": 80,
+      "heightMM": 110,
+      "seed": 0,
+      "styles": [
+        {
+          "style": "traditional",
+          "name": "Traditional",
+          "desc": "Traditional",
+          "bytes": 2089
+        },
+        {
+          "style": "contemporary",
+          "name": "Contemporary",
+          "desc": "Contemporary",
+          "bytes": 2100
+        },
+        {
+          "style": "punk",
+          "name": "Punk",
+          "desc": "Punk",
+          "bytes": 1960
+        }
+      ]
+    },
+    {
+      "dataset": "minimal",
+      "widthMM": 80,
+      "heightMM": 110,
+      "seed": 1,
+      "styles": [
+        {
+          "style": "traditional",
+          "name": "Traditional",
+          "desc": "Traditional",
+          "bytes": 2454
+        },
+        {
+          "style": "contemporary",
+          "name": "Contemporary",
+          "desc": "Contemporary",
+          "bytes": 2077
+        },
+        {
+          "style": "punk",
+          "name": "Punk",
+          "desc": "Punk",
+          "bytes": 2070
+        }
+      ]
+    },
+    {
+      "dataset": "minimal",
+      "widthMM": 80,
+      "heightMM": 110,
+      "seed": 2,
+      "styles": [
+        {
+          "style": "traditional",
+          "name": "Traditional",
+          "desc": "Traditional",
+          "bytes": 2432
+        },
+        {
+          "style": "contemporary",
+          "name": "Contemporary",
+          "desc": "Contemporary",
+          "bytes": 1795
+        },
+        {
+          "style": "punk",
+          "name": "Punk",
+          "desc": "Punk",
+          "bytes": 2070
+        }
+      ]
+    },
+    {
+      "dataset": "minimal",
+      "widthMM": 80,
+      "heightMM": 110,
+      "seed": 7,
+      "styles": [
+        {
+          "style": "traditional",
+          "name": "Traditional",
+          "desc": "Traditional",
+          "bytes": 2011
+        },
+        {
+          "style": "contemporary",
+          "name": "Contemporary",
+          "desc": "Contemporary",
+          "bytes": 1763
+        },
+        {
+          "style": "punk",
+          "name": "Punk",
+          "desc": "Punk",
+          "bytes": 2074
+        }
+      ]
+    },
+    {
+      "dataset": "minimal",
+      "widthMM": 100,
+      "heightMM": 80,
+      "seed": 0,
+      "styles": [
+        {
+          "style": "traditional",
+          "name": "Traditional",
+          "desc": "Traditional",
+          "bytes": 2086
+        },
+        {
+          "style": "contemporary",
+          "name": "Contemporary",
+          "desc": "Contemporary",
+          "bytes": 2098
+        },
+        {
+          "style": "punk",
+          "name": "Punk",
+          "desc": "Punk",
+          "bytes": 1961
+        }
+      ]
+    },
+    {
+      "dataset": "minimal",
+      "widthMM": 100,
+      "heightMM": 80,
+      "seed": 1,
+      "styles": [
+        {
+          "style": "traditional",
+          "name": "Traditional",
+          "desc": "Traditional",
+          "bytes": 2310
         },
         {
           "style": "contemporary",
@@ -168,475 +636,7 @@
           "style": "punk",
           "name": "Punk",
           "desc": "Punk",
-          "bytes": 2481
-        }
-      ]
-    },
-    {
-      "dataset": "full",
-      "widthMM": 80,
-      "heightMM": 110,
-      "seed": 0,
-      "styles": [
-        {
-          "style": "traditional",
-          "name": "Traditional",
-          "desc": "Traditional",
-          "bytes": 2552
-        },
-        {
-          "style": "contemporary",
-          "name": "Contemporary",
-          "desc": "Contemporary",
-          "bytes": 2215
-        },
-        {
-          "style": "punk",
-          "name": "Punk",
-          "desc": "Punk",
-          "bytes": 2132
-        }
-      ]
-    },
-    {
-      "dataset": "full",
-      "widthMM": 80,
-      "heightMM": 110,
-      "seed": 1,
-      "styles": [
-        {
-          "style": "traditional",
-          "name": "Traditional",
-          "desc": "Traditional",
-          "bytes": 2936
-        },
-        {
-          "style": "contemporary",
-          "name": "Contemporary",
-          "desc": "Contemporary",
-          "bytes": 2215
-        },
-        {
-          "style": "punk",
-          "name": "Punk",
-          "desc": "Punk",
-          "bytes": 1344
-        }
-      ]
-    },
-    {
-      "dataset": "full",
-      "widthMM": 80,
-      "heightMM": 110,
-      "seed": 2,
-      "styles": [
-        {
-          "style": "traditional",
-          "name": "Traditional",
-          "desc": "Traditional",
-          "bytes": 2912
-        },
-        {
-          "style": "contemporary",
-          "name": "Contemporary",
-          "desc": "Contemporary",
-          "bytes": 2083
-        },
-        {
-          "style": "punk",
-          "name": "Punk",
-          "desc": "Punk",
-          "bytes": 1344
-        }
-      ]
-    },
-    {
-      "dataset": "full",
-      "widthMM": 80,
-      "heightMM": 110,
-      "seed": 7,
-      "styles": [
-        {
-          "style": "traditional",
-          "name": "Traditional",
-          "desc": "Traditional",
-          "bytes": 2516
-        },
-        {
-          "style": "contemporary",
-          "name": "Contemporary",
-          "desc": "Contemporary",
-          "bytes": 2067
-        },
-        {
-          "style": "punk",
-          "name": "Punk",
-          "desc": "Punk",
-          "bytes": 2452
-        }
-      ]
-    },
-    {
-      "dataset": "full",
-      "widthMM": 100,
-      "heightMM": 80,
-      "seed": 0,
-      "styles": [
-        {
-          "style": "traditional",
-          "name": "Traditional",
-          "desc": "Traditional",
-          "bytes": 2549
-        },
-        {
-          "style": "contemporary",
-          "name": "Contemporary",
-          "desc": "Contemporary",
-          "bytes": 2220
-        },
-        {
-          "style": "punk",
-          "name": "Punk",
-          "desc": "Punk",
-          "bytes": 2146
-        }
-      ]
-    },
-    {
-      "dataset": "full",
-      "widthMM": 100,
-      "heightMM": 80,
-      "seed": 1,
-      "styles": [
-        {
-          "style": "traditional",
-          "name": "Traditional",
-          "desc": "Traditional",
-          "bytes": 2933
-        },
-        {
-          "style": "contemporary",
-          "name": "Contemporary",
-          "desc": "Contemporary",
-          "bytes": 2220
-        },
-        {
-          "style": "punk",
-          "name": "Punk",
-          "desc": "Punk",
-          "bytes": 1344
-        }
-      ]
-    },
-    {
-      "dataset": "full",
-      "widthMM": 100,
-      "heightMM": 80,
-      "seed": 2,
-      "styles": [
-        {
-          "style": "traditional",
-          "name": "Traditional",
-          "desc": "Traditional",
-          "bytes": 2911
-        },
-        {
-          "style": "contemporary",
-          "name": "Contemporary",
-          "desc": "Contemporary",
-          "bytes": 2108
-        },
-        {
-          "style": "punk",
-          "name": "Punk",
-          "desc": "Punk",
-          "bytes": 1344
-        }
-      ]
-    },
-    {
-      "dataset": "full",
-      "widthMM": 100,
-      "heightMM": 80,
-      "seed": 7,
-      "styles": [
-        {
-          "style": "traditional",
-          "name": "Traditional",
-          "desc": "Traditional",
-          "bytes": 2514
-        },
-        {
-          "style": "contemporary",
-          "name": "Contemporary",
-          "desc": "Contemporary",
-          "bytes": 2072
-        },
-        {
-          "style": "punk",
-          "name": "Punk",
-          "desc": "Punk",
-          "bytes": 2477
-        }
-      ]
-    },
-    {
-      "dataset": "minimal",
-      "widthMM": 110,
-      "heightMM": 80,
-      "seed": 0,
-      "styles": [
-        {
-          "style": "traditional",
-          "name": "Traditional",
-          "desc": "Traditional",
-          "bytes": 1991
-        },
-        {
-          "style": "contemporary",
-          "name": "Contemporary",
-          "desc": "Contemporary",
-          "bytes": 2003
-        },
-        {
-          "style": "punk",
-          "name": "Punk",
-          "desc": "Punk",
-          "bytes": 1885
-        }
-      ]
-    },
-    {
-      "dataset": "minimal",
-      "widthMM": 110,
-      "heightMM": 80,
-      "seed": 1,
-      "styles": [
-        {
-          "style": "traditional",
-          "name": "Traditional",
-          "desc": "Traditional",
-          "bytes": 2249
-        },
-        {
-          "style": "contemporary",
-          "name": "Contemporary",
-          "desc": "Contemporary",
-          "bytes": 1981
-        },
-        {
-          "style": "punk",
-          "name": "Punk",
-          "desc": "Punk",
-          "bytes": 1344
-        }
-      ]
-    },
-    {
-      "dataset": "minimal",
-      "widthMM": 110,
-      "heightMM": 80,
-      "seed": 2,
-      "styles": [
-        {
-          "style": "traditional",
-          "name": "Traditional",
-          "desc": "Traditional",
-          "bytes": 2238
-        },
-        {
-          "style": "contemporary",
-          "name": "Contemporary",
-          "desc": "Contemporary",
-          "bytes": 1736
-        },
-        {
-          "style": "punk",
-          "name": "Punk",
-          "desc": "Punk",
-          "bytes": 1344
-        }
-      ]
-    },
-    {
-      "dataset": "minimal",
-      "widthMM": 110,
-      "heightMM": 80,
-      "seed": 7,
-      "styles": [
-        {
-          "style": "traditional",
-          "name": "Traditional",
-          "desc": "Traditional",
-          "bytes": 1974
-        },
-        {
-          "style": "contemporary",
-          "name": "Contemporary",
-          "desc": "Contemporary",
-          "bytes": 1706
-        },
-        {
-          "style": "punk",
-          "name": "Punk",
-          "desc": "Punk",
-          "bytes": 1984
-        }
-      ]
-    },
-    {
-      "dataset": "minimal",
-      "widthMM": 80,
-      "heightMM": 110,
-      "seed": 0,
-      "styles": [
-        {
-          "style": "traditional",
-          "name": "Traditional",
-          "desc": "Traditional",
-          "bytes": 1994
-        },
-        {
-          "style": "contemporary",
-          "name": "Contemporary",
-          "desc": "Contemporary",
-          "bytes": 2005
-        },
-        {
-          "style": "punk",
-          "name": "Punk",
-          "desc": "Punk",
-          "bytes": 1885
-        }
-      ]
-    },
-    {
-      "dataset": "minimal",
-      "widthMM": 80,
-      "heightMM": 110,
-      "seed": 1,
-      "styles": [
-        {
-          "style": "traditional",
-          "name": "Traditional",
-          "desc": "Traditional",
-          "bytes": 2393
-        },
-        {
-          "style": "contemporary",
-          "name": "Contemporary",
-          "desc": "Contemporary",
-          "bytes": 1982
-        },
-        {
-          "style": "punk",
-          "name": "Punk",
-          "desc": "Punk",
-          "bytes": 1344
-        }
-      ]
-    },
-    {
-      "dataset": "minimal",
-      "widthMM": 80,
-      "heightMM": 110,
-      "seed": 2,
-      "styles": [
-        {
-          "style": "traditional",
-          "name": "Traditional",
-          "desc": "Traditional",
-          "bytes": 2371
-        },
-        {
-          "style": "contemporary",
-          "name": "Contemporary",
-          "desc": "Contemporary",
-          "bytes": 1737
-        },
-        {
-          "style": "punk",
-          "name": "Punk",
-          "desc": "Punk",
-          "bytes": 1344
-        }
-      ]
-    },
-    {
-      "dataset": "minimal",
-      "widthMM": 80,
-      "heightMM": 110,
-      "seed": 7,
-      "styles": [
-        {
-          "style": "traditional",
-          "name": "Traditional",
-          "desc": "Traditional",
-          "bytes": 1973
-        },
-        {
-          "style": "contemporary",
-          "name": "Contemporary",
-          "desc": "Contemporary",
-          "bytes": 1705
-        },
-        {
-          "style": "punk",
-          "name": "Punk",
-          "desc": "Punk",
-          "bytes": 1979
-        }
-      ]
-    },
-    {
-      "dataset": "minimal",
-      "widthMM": 100,
-      "heightMM": 80,
-      "seed": 0,
-      "styles": [
-        {
-          "style": "traditional",
-          "name": "Traditional",
-          "desc": "Traditional",
-          "bytes": 1991
-        },
-        {
-          "style": "contemporary",
-          "name": "Contemporary",
-          "desc": "Contemporary",
-          "bytes": 2003
-        },
-        {
-          "style": "punk",
-          "name": "Punk",
-          "desc": "Punk",
-          "bytes": 1885
-        }
-      ]
-    },
-    {
-      "dataset": "minimal",
-      "widthMM": 100,
-      "heightMM": 80,
-      "seed": 1,
-      "styles": [
-        {
-          "style": "traditional",
-          "name": "Traditional",
-          "desc": "Traditional",
-          "bytes": 2247
-        },
-        {
-          "style": "contemporary",
-          "name": "Contemporary",
-          "desc": "Contemporary",
-          "bytes": 1980
-        },
-        {
-          "style": "punk",
-          "name": "Punk",
-          "desc": "Punk",
-          "bytes": 1344
+          "bytes": 1929
         }
       ]
     },
@@ -650,19 +650,19 @@
           "style": "traditional",
           "name": "Traditional",
           "desc": "Traditional",
-          "bytes": 2369
+          "bytes": 2432
         },
         {
           "style": "contemporary",
           "name": "Contemporary",
           "desc": "Contemporary",
-          "bytes": 1736
+          "bytes": 1793
         },
         {
           "style": "punk",
           "name": "Punk",
           "desc": "Punk",
-          "bytes": 1344
+          "bytes": 1929
         }
       ]
     },
@@ -676,19 +676,19 @@
           "style": "traditional",
           "name": "Traditional",
           "desc": "Traditional",
-          "bytes": 1972
+          "bytes": 2010
         },
         {
           "style": "contemporary",
           "name": "Contemporary",
           "desc": "Contemporary",
-          "bytes": 1704
+          "bytes": 1761
         },
         {
           "style": "punk",
           "name": "Punk",
           "desc": "Punk",
-          "bytes": 1984
+          "bytes": 2078
         }
       ]
     }

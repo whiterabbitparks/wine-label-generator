@@ -28,9 +28,11 @@ John/Doe), MongoDB Atlas db `8k-labels`.
 5. `npm run capture:original` + `capture:ported` + `compare:screens` (<0.5%)
 6. `node tests/parity/test-imagegen.mjs http://localhost:3200` and
    `test-autogen.mjs` (both must PASS)
-7. **Goldens LAST**: `npm run golden:check` (144/144). `golden:extract` only
-   for intentional engine-output changes.
-8. commit + push, then rebuild/restart whatever server the owner uses.
+7. `node tests/parity/check-hard-rules.mjs` must PASS (margin/7pt/gap +
+   crash detector) after ANY engine change.
+8. **Goldens LAST**: `npm run golden:check` (72/72, 3 styles). `golden:extract`
+   only for intentional engine-output changes.
+9. commit + push, then rebuild/restart whatever server the owner uses.
 
 ## Traps (each cost real debugging time)
 - Golden scripts start a dev server on :3199 that REWRITES `.next`; any

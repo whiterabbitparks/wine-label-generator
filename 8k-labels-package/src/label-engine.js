@@ -104,6 +104,23 @@ const TPL_DESC={t1:'centered · logo & illustration',t2:'centered · brand top',
 const _ctx=document.createElement('canvas').getContext('2d');
 const up=s=>String(s==null?'':s).toUpperCase();
 const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+/* real ink ascent/descent of a string — the hard-rules geometry (5mm margin,
+   1mm gaps) is enforced against what actually prints, not the em box */
+function inkVA(t,size,fam,w,it){
+  // measure at a fixed reference size and scale: hinting at fractional pixel
+  // sizes is not perfectly reproducible run-to-run, and goldens must be
+  // byte-identical. 512px metrics are stable; scaling is pure arithmetic.
+  // measured upright even for italic runs: synthesized italics rasterize
+  // non-deterministically (goldens) — upright ink is within ~0.2mm of italic
+  const REF=512;
+  _ctx.font=`${w||400} ${REF}px ${fam}`;
+  const m=_ctx.measureText(t||'M');
+  // quantized to whole 0.1mm units so run-to-run float noise can never flip
+  // a rounded coordinate (goldens are byte-compared)
+  const asc=Math.round(((m.actualBoundingBoxAscent!=null)?m.actualBoundingBoxAscent/REF:0.8)*size);
+  const desc=Math.round(((m.actualBoundingBoxDescent!=null)?m.actualBoundingBoxDescent/REF:0.2)*size);
+  return {asc,desc};
+}
 function measure(t,size,fam,w,it,tr){_ctx.font=`${it?'italic ':''}${w||400} ${size}px ${fam}`;let x=_ctx.measureText(t).width;if(tr)x+=tr*Math.max(0,t.length-1);return x;}
 function wrapFit(t,maxW,base,min,maxLines,fam,w,it,tr){
   let size=base;
@@ -270,7 +287,9 @@ async function ensureFonts(){
     "400 40px 'Anton'","400 40px 'Bebas Neue'","600 40px 'Barlow Condensed'","700 40px 'Barlow Condensed'","600 40px 'Barlow'","700 40px 'Barlow'","400 40px 'Permanent Marker'","500 40px 'Caveat'","600 40px 'Caveat'","700 40px 'Caveat'",
     "400 40px 'Fraunces'","500 40px 'Fraunces'","600 40px 'Fraunces'","700 40px 'Fraunces'","italic 500 40px 'Fraunces'",
     "600 40px 'Grenze Gotisch'","400 40px 'IM Fell English SC'"];
-  try{await Promise.all(specs.map(s=>document.fonts.load(s)));await document.fonts.ready;}catch(e){}
+  // probe text forces the latin-ext subset too — accented glyphs (Château,
+  // Classé) otherwise load late and shift ink metrics between runs
+  try{await Promise.all(specs.map(s=>document.fonts.load(s,'ÂÉÈâéèçÇüÜ AaBb0123')));await document.fonts.ready;}catch(e){}
 }
 /* =============================================================================
    PRIORITY-DRIVEN LAYOUT — priority order (from the editor) drives the SVG.
@@ -853,17 +872,30 @@ function sBlock(str,o){if(!str)return {svg:'',bottom:o.top,size:0,nlines:0};
   const reqSize=Math.max(o.size,MIN7), reqMin=Math.max(o.min||o.size,MIN7);
   const s0=o.caps?up(str):str, trAbs=o.tr?reqSize*o.tr:0, maxLines=o.lines||1;
   const fit=wrapFit(s0,o.maxW,reqSize,reqMin,maxLines,o.f,o.w||400,!!o.ital,trAbs);
-  const sz=fit.size, lh=(o.lh||1.16)*sz, anchor=o.a==='l'?'start':o.a==='r'?'end':'middle', base=o.top+sz*0.80;
+  const sz=fit.size, lh=(o.lh||1.16)*sz, anchor=o.a==='l'?'start':o.a==='r'?'end':'middle';
+  const va0=inkVA(fit.lines[0],sz,o.f,o.w||400,!!o.ital);
+  const vaN=inkVA(fit.lines[fit.lines.length-1],sz,o.f,o.w||400,!!o.ital);
+  const n=fit.lines.length;
+  const base=o.fromBottom?(o.top-vaN.desc-(n-1)*lh):(o.top+va0.asc);
+  const topY=base-va0.asc, botY=base+(n-1)*lh+vaN.desc;
   const ls=trAbs?` letter-spacing="${trAbs.toFixed(2)}"`:'', it=o.ital?' font-style="italic"':'';
   const halo=o.halo?` stroke="#ffffff" stroke-width="${(sz*0.14).toFixed(1)}" stroke-linejoin="round" style="paint-order:stroke"`:'';
   let svg=''; fit.lines.forEach((l,i)=>{svg+=`<text x="${o.x.toFixed(1)}" y="${(base+i*lh).toFixed(1)}" font-family="${o.f}" font-weight="${o.w||400}" font-size="${sz.toFixed(1)}" text-anchor="${anchor}" fill="${o.fill||'#111'}"${ls}${it}${halo}>${esc(l)}</text>`;});
-  return {svg,bottom:o.top+(fit.lines.length-1)*lh+sz,size:sz,nlines:fit.lines.length};}
+  return {svg:'<g data-tb="1">'+svg+'</g>',bottom:botY,top:topY,size:sz,nlines:n};}
+/* Fit a hero between a top limit and a bottom limit, shrinking (never below
+   7pt) so hard rule 3 (1mm gaps) holds against the stack beneath it. */
+function fitHero(str,x,topY,bottomLimit,o){
+  if(!str)return {svg:'',bottom:topY};
+  const size=Math.max(MIN7,Math.min(o.size,(bottomLimit-topY-MINGAP)*0.72));
+  return sBlock(str,{x,top:topY,maxW:o.maxW,size,min:Math.max(o.min||size*0.6,MIN7),
+    f:o.f,w:o.w,fill:o.fill,a:o.a||'c',tr:o.tr,caps:o.caps,ital:o.ital,lines:o.lines,lh:o.lh});
+}
 /* stack single-line detail items UP from a bottom baseline (centred/left/right). */
 function stackUp(items,x,botY,gap,a,maxW){let y=botY,svg='';
   for(let i=items.length-1;i>=0;i--){const it=items[i];if(!it||!it.str)continue;
-    const b=sBlock(it.str,{x,top:y-it.size,maxW:it.maxW||maxW,size:it.size,min:it.size*0.72,lines:1,f:it.f,w:it.w||400,fill:it.fill,a:a||'c',tr:it.tr||0,lh:1.1});
-    svg=b.svg+svg; y=(y-it.size)-gap;}
-  return {svg,topY:y+gap};}
+    const b=sBlock(it.str,{x,top:y,fromBottom:true,maxW:it.maxW||maxW,size:it.size,min:it.size*0.72,lines:1,f:it.f,w:it.w||400,fill:it.fill,a:a||'c',tr:it.tr||0,lh:1.1,caps:it.caps,ital:it.ital});
+    svg=b.svg+svg; y=b.top-Math.max(gap,MINGAP);}
+  return {svg,topY:y+Math.max(gap,MINGAP)};}
 function sInitials(name){var p=String(name||'').trim().split(/\s+/).filter(Boolean);if(!p.length)return '';
   if(p.length===1)return up(p[0].slice(0,2));return up(p[0][0]+p[p.length-1][0]);}
 /* a pointed botanical leaf (two quadratics), rotated about its base */
@@ -975,7 +1007,17 @@ function styleZones(seed){
    the seeded pick lands on (rejected comps fade, approved appear more).
    Without hints everything renders from the built-ins (goldens). */
 let STYLE_HINTS={};
-function setStyleHints(h){STYLE_HINTS=(h&&typeof h==='object')?h:{};refreshHintFonts();}
+/* HARD RULES (owner 2026-08-15). MINGAP: no two text blocks closer than this
+   (units of 0.1mm; default 1mm; tunable from the admin Hard Rules panel via
+   hints.__hardRules). The 5mm margin (SM) and 7pt floor (MIN7) are fixed. */
+let MINGAP=10;
+function setStyleHints(h){
+  STYLE_HINTS=(h&&typeof h==='object')?h:{};
+  const hr=STYLE_HINTS.__hardRules;
+  MINGAP=(hr&&isFinite(+hr.minGapMM)&&+hr.minGapMM>=0)?Math.round(+hr.minGapMM*10):10;
+  delete STYLE_HINTS.__hardRules;
+  refreshHintFonts();
+}
 /* Curated fonts may be ANY Google font, not just the built-in set: collect
    every family the hints reference that FONTS_URL doesn't already load,
    build a second css2 URL for them, inject it page-level and embed it in
@@ -1009,7 +1051,7 @@ function refreshHintFonts(){
     if(EXTRA_FONTS_URL){
       if(!el){el=document.createElement('style');el.id='__lblfonts_x';document.head.appendChild(el);}
       el.textContent="@import url('"+EXTRA_FONTS_URL+"');";
-      names.forEach(function(n){Object.keys(fams[n]).forEach(function(w){try{document.fonts.load(w+" 40px '"+n+"'");}catch(e){}});});
+      names.forEach(function(n){Object.keys(fams[n]).forEach(function(w){try{document.fonts.load(w+" 40px '"+n+"'",'ÂÉÈâéèçÇüÜ AaBb0123');}catch(e){}});});
     }else if(el)el.remove();
   }
 }
@@ -1136,7 +1178,9 @@ function sArcText(str,cx,topBaseY,R,o){
 function sImageBox(styleKey,b,W,H){
   const m=(typeof window!=='undefined'&&window.__LABEL_IMGS__)||null;
   const src=m&&m[styleKey]; if(!src||!b) return '';
-  const x=b[0]*W, y=b[1]*H, w=(b[2]-b[0])*W, h=(b[3]-b[1])*H;
+  let x=b[0]*W, y=b[1]*H, x2=b[2]*W, y2=b[3]*H;
+  x=Math.max(x,SM); y=Math.max(y,SM); x2=Math.min(x2,W-SM); y2=Math.min(y2,H-SM);
+  const w=x2-x, h=y2-y; if(w<=0||h<=0) return '';
   return `<image x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" preserveAspectRatio="xMidYMid meet" xlink:href="${src}" href="${src}" style="mix-blend-mode:multiply"/>`;
 }
 
@@ -1144,11 +1188,28 @@ function sImageBox(styleKey,b,W,H){
    the Kirile / Saperavi / PET-NAT side-caption device from the boards. */
 function sRot(t,x,H,o){
   if(!t)return '';
-  const s0=o.caps?up(String(t)):String(t); let sz=Math.max(o.size,MIN7);   // 7pt floor (house rule)
-  const wpx=measure(s0,sz,o.f,o.w||400,false,sz*(o.tr||0)), maxL=H-2*SM;
-  if(wpx>maxL)sz=Math.max(MIN7,sz*maxL/wpx);
-  const cy=H/2, ls=o.tr?` letter-spacing="${(sz*(o.tr||0)).toFixed(2)}"`:'';
-  return `<text transform="rotate(-90 ${x.toFixed(1)} ${cy.toFixed(1)})" x="${x.toFixed(1)}" y="${cy.toFixed(1)}" font-family="${o.f}" font-weight="${o.w||400}" font-size="${sz.toFixed(1)}" text-anchor="middle" fill="${o.fill}"${ls}>${esc(s0)}</text>`;
+  const one=(str,px)=>{
+    const s0=o.caps?up(String(str)):String(str); let sz=Math.max(o.size,MIN7);
+    const maxL=H-2*SM;
+    let wpx=measure(s0,sz,o.f,o.w||400,false,sz*(o.tr||0))+sz*(o.tr||0);
+    if(wpx>maxL)sz=Math.max(MIN7,sz*maxL/wpx);
+    const still=measure(s0,sz,o.f,o.w||400,false,sz*(o.tr||0))+sz*(o.tr||0);
+    if(still>maxL+1)return null;   // even 7pt does not fit the height
+    const cy=H/2, ls=o.tr?` letter-spacing="${(sz*(o.tr||0)).toFixed(2)}"`:'';
+    return `<text transform="rotate(-90 ${px.toFixed(1)} ${cy.toFixed(1)})" x="${px.toFixed(1)}" y="${cy.toFixed(1)}" font-family="${o.f}" font-weight="${o.w||400}" font-size="${sz.toFixed(1)}" text-anchor="middle" fill="${o.fill}"${ls}>${esc(s0)}</text>`;
+  };
+  const whole=one(t,x);
+  if(whole!==null)return whole;
+  // hard-rule conflict (7pt floor vs label height): split at separators into
+  // a second column stacked toward the label centre
+  const sepM=String(t).match(/\s[\/\u00b7]\s/);
+  const parts=sepM?String(t).split(sepM[0]):[String(t)];
+  if(parts.length<2)return '';
+  const mid=Math.ceil(parts.length/2);
+  const colGap=Math.max(o.size,MIN7)*1.35*(o.inward===-1?-1:1);
+  const a=one(parts.slice(0,mid).join(sepM[0]),x);
+  const b=one(parts.slice(mid).join(sepM[0]),x+colGap);
+  return (a||'')+(b||'');
 }
 function sFlow(items,x,y0,a){
   let svg='', y=y0;
@@ -1158,7 +1219,7 @@ function sFlow(items,x,y0,a){
     const b=sBlock(it.str,{x,top:y,maxW:it.maxW,size:it.size,min:it.min||it.size*0.6,
       f:it.f,w:it.w,fill:it.fill,a,tr:it.tr,caps:it.caps,ital:it.ital,halo:it.halo,
       lines:it.lines||1,lh:it.lh});
-    svg+=b.svg; y=b.bottom+(it.gap!=null?it.gap:0);
+    svg+=b.svg; y=b.bottom+Math.max(it.gap!=null?it.gap:0,MINGAP);
   }
   return {svg,y};
 }
@@ -1166,7 +1227,7 @@ function sFlow(items,x,y0,a){
    max widths are disjoint, so the row cannot self-overlap. */
 function sRow(cells,W,y,size){
   let svg='';
-  const zones={l:[SM,W*0.30],c:[W*0.34,W*0.32],r:[W*0.70,W*0.30-SM]};
+  const zones={l:[SM,W*0.30-SM],c:[W*0.35,W*0.30],r:[W*0.70+MINGAP,W*0.30-SM-MINGAP]};
   for(const c of cells){
     if(!c||!c.str)continue;
     const [zx,zw]=zones[c.a];
@@ -1194,35 +1255,32 @@ function styleTraditional(d,order,seed,twMM,thMM){
   const EG=SF.ebg, PF=SF.playfair, CI=F.cormorant;
   let body='';
   if(variant===0){ // Gewürztraminer board: framed, oval vignette, blackletter hero
-    const o1=SM*0.5,o2=SM*0.72;
+    const o1=SM+2,o2=SM+11;
     body+=`<rect x="${o1}" y="${o1}" width="${(W-2*o1).toFixed(1)}" height="${(H-2*o1).toFixed(1)}" fill="none" stroke="${ACC}" stroke-width="${Math.max(1,H*0.003).toFixed(1)}"/>`
         +`<rect x="${o2}" y="${o2}" width="${(W-2*o2).toFixed(1)}" height="${(H-2*o2).toFixed(1)}" fill="none" stroke="${INK}" stroke-width="1"/>`;
     body+=sImageBox('traditional',BOX,W,H);
-    body+=sFlow([
-      {str:f.wine,size:H*0.115,f:HP?HP[0]:(SF.grenze),w:HP?HP[1]:(600),fill:ACC,maxW:cW*0.9,gap:H*0.012,pre:H*0.42,caps:capsFor(HP,false)},
-      {str:f.producer,size:H*0.033,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,true),tr:0.24,maxW:cW*0.78,gap:H*0.012},
-      {str:f.appellation,size:H*0.044,f:F2?F2[0]:(CI),w:F2?F2[1]:(600),fill:INK,ital:true,maxW:cW*0.68,gap:0,caps:capsFor(F2,false)}],cx,SM,'c').svg;
-    body+=stackUp([
-      {str:f.special,size:H*0.026,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,tr:0,caps:capsFor(F3,false)},
-      {str:f.grape,size:H*0.030,f:F2?F2[0]:(EG),w:F2?F2[1]:(600),fill:INK,caps:capsFor(F2,false)},
-      {str:[f.region,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.028,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:INK,caps:capsFor(F3,false)},
-      {str:[f.classification,desc].filter(Boolean).join(' \u00b7 '),size:H*0.025,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)},
-      {str:alc,size:H*0.023,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-2,H*0.007,'c',cW*0.85).svg;
-  }else if(variant===1){ // La Couspaude board: everything centred, vignette mid
+    const st=stackUp([
+      {str:f.producer,size:H*0.033,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,true),tr:0.22},
+      {str:f.appellation,size:H*0.042,f:F2?F2[0]:(CI),w:F2?F2[1]:(600),fill:INK,ital:true,caps:capsFor(F2,false)},
+      {str:[f.grape,f.special].filter(Boolean).join(' \u00b7 '),size:H*0.028,f:F2?F2[0]:(EG),w:F2?F2[1]:(600),fill:INK,caps:capsFor(F2,false)},
+      {str:[f.region,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.027,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:INK,caps:capsFor(F3,false)},
+      {str:[f.classification,desc,alc].filter(Boolean).join(' \u00b7 '),size:H*0.023,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-4,H*0.007,'c',cW*0.84);
+    body+=st.svg;
+    body+=fitHero(f.wine,cx,BOX[3]*H+MINGAP,st.topY,{size:H*0.115,maxW:cW*0.88,f:HP?HP[0]:(SF.grenze),w:HP?HP[1]:(600),fill:ACC,caps:capsFor(HP,false)}).svg;
+  }else if(variant===1){ // La Couspaude board: centred, vignette mid, stacked data
     body+=sFlow([
       {str:f.producer,size:H*0.032,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:SUB,caps:capsFor(F3,true),tr:0.34,maxW:cW*0.72,gap:H*0.012,pre:H*0.012},
       {str:f.wine,size:H*0.092,f:HP?HP[0]:(PF),w:HP?HP[1]:(700),fill:ACC,caps:capsFor(HP,true),maxW:cW*0.94,gap:0}],cx,SM,'c').svg;
     body+=sImageBox('traditional',BOX,W,H);
-    body+=sFlow([
-      {str:f.vintage,size:H*0.046,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:INK,maxW:cW*0.3,gap:H*0.012,pre:H*0.615,caps:capsFor(F3,false)},
-      {str:f.classification,size:H*0.037,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,true),tr:0.14,maxW:cW*0.8,gap:H*0.010},
-      {str:f.appellation,size:H*0.037,f:F2?F2[0]:(EG),w:F2?F2[1]:(500),fill:INK,caps:capsFor(F2,true),tr:0.14,maxW:cW*0.8,gap:H*0.012},
-      {str:f.grape,size:H*0.028,f:F2?F2[0]:(EG),w:F2?F2[1]:(400),fill:SUB,maxW:cW*0.7,gap:0,caps:capsFor(F2,false)}],cx,SM,'c').svg;
     body+=stackUp([
+      {str:f.vintage,size:H*0.044,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,false)},
+      {str:f.classification,size:H*0.035,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,true),tr:0.14},
+      {str:f.appellation,size:H*0.035,f:F2?F2[0]:(EG),w:F2?F2[1]:(500),fill:INK,caps:capsFor(F2,true),tr:0.14},
+      {str:f.grape,size:H*0.028,f:F2?F2[0]:(EG),w:F2?F2[1]:(400),fill:SUB,caps:capsFor(F2,false)},
       {str:[f.region,f.special].filter(Boolean).join(' \u00b7 '),size:H*0.025,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)},
-      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.023,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-2,H*0.007,'c',cW*0.8).svg;
+      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.023,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-4,H*0.007,'c',cW*0.8).svg;
   }else if(variant===2){ // Mittelwihr board: red letterpress, emblem, all centred
-    const o2=SM*0.6;
+    const o2=SM+2;
     body+=`<rect x="${o2}" y="${o2}" width="${(W-2*o2).toFixed(1)}" height="${(H-2*o2).toFixed(1)}" fill="none" stroke="${ACC}" stroke-width="${Math.max(1,H*0.0025).toFixed(1)}"/>`;
     body+=sBlock(f.appellation,{x:cx,top:SM+H*0.012,maxW:cW*0.8,size:H*0.040,min:H*0.028,f:SF.archivo,w:500,fill:ACC,a:'c',caps:true,tr:0.32}).svg;
     body+=sImageBox('traditional',BOX,W,H);
@@ -1235,30 +1293,29 @@ function styleTraditional(d,order,seed,twMM,thMM){
       {str:[f.vintage,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.025,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:INK,caps:capsFor(F3,false)},
       {str:[f.special,desc].filter(Boolean).join(' \u00b7 '),size:H*0.023,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)},
       {str:alc,size:H*0.022,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-H*0.01,H*0.007,'c',cW*0.8).svg;
-  }else if(variant===3){ // Kirile board: portrait, script signature, VERTICAL side text
+  }else if(variant===3){ // Kirile board: portrait, script signature, side verticals
     body+=sImageBox('traditional',BOX,W,H);
-    body+=sFlow([
-      {str:f.wine,size:H*0.145,f:HP?HP[0]:(F.greatVibes),w:HP?HP[1]:(400),fill:INK,maxW:cW*0.84,gap:H*0.038,pre:H*0.455,caps:capsFor(HP,false)},
-      {str:f.producer,size:H*0.029,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:SUB,caps:capsFor(F3,true),tr:0.3,maxW:cW*0.7,gap:H*0.012},
-      {str:f.appellation,size:H*0.040,f:F2?F2[0]:(CI),w:F2?F2[1]:(600),fill:ACC,ital:true,maxW:cW*0.6,gap:0,caps:capsFor(F2,false)}],cx,SM,'c').svg;
-    body+=sRot([f.region,f.vintage].filter(Boolean).join(' \u00b7 '),W-SM*0.5,H,{size:H*0.024,f:EG,w:400,fill:SUB,tr:0.08,caps:true});
-    body+=sRot([desc,alc].filter(Boolean).join(' / '),SM*0.5,H,{size:H*0.022,f:EG,w:400,fill:SUB,tr:0.06});
-    body+=stackUp([
+    body+=sRot([f.region,f.vintage].filter(Boolean).join(' \u00b7 '),W-SM-MIN7*0.55,H,{inward:-1,size:H*0.024,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,tr:0.08,caps:true});
+    body+=sRot([desc,alc].filter(Boolean).join(' / '),SM+MIN7*1.1,H,{size:H*0.022,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,tr:0.06});
+    const st=stackUp([
+      {str:f.producer,size:H*0.029,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:SUB,caps:capsFor(F3,true),tr:0.3},
+      {str:f.appellation,size:H*0.04,f:F2?F2[0]:(CI),w:F2?F2[1]:(600),fill:ACC,ital:true,caps:capsFor(F2,false)},
       {str:[f.grape,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.026,f:F2?F2[0]:(EG),w:F2?F2[1]:(400),fill:INK,caps:capsFor(F2,false)},
-      {str:f.special,size:H*0.023,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,tr:0,caps:capsFor(F3,false)}],cx,H-SM-2,H*0.007,'c',cW*0.7).svg;
+      {str:f.special,size:H*0.023,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-4,H*0.007,'c',cW*0.66);
+    body+=st.svg;
+    body+=fitHero(f.wine,cx,BOX[3]*H+MINGAP,st.topY,{size:H*0.145,maxW:cW*0.8,f:HP?HP[0]:(F.greatVibes),w:HP?HP[1]:(400),fill:INK,caps:capsFor(HP,false)}).svg;
   }else if(variant===4){ // Olive Tree board: airy engraving over tiny tracked caps
     body+=sImageBox('traditional',BOX,W,H);
-    body+=sFlow([
-      {str:f.wine,size:H*0.050,f:HP?HP[0]:(EG),w:HP?HP[1]:(500),fill:INK,caps:capsFor(HP,true),tr:0.42,maxW:cW*0.9,gap:H*0.018,pre:H*0.43},
-      {str:f.producer,size:H*0.027,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,true),tr:0.34,maxW:cW*0.7,gap:H*0.02},
-      {str:f.appellation,size:H*0.036,f:F2?F2[0]:(CI),w:F2?F2[1]:(600),fill:ACC,ital:true,maxW:cW*0.6,gap:0,caps:capsFor(F2,false)}],cx,SM,'c').svg;
-    body+=stackUp([
+    const st=stackUp([
+      {str:f.producer,size:H*0.027,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,true),tr:0.34},
+      {str:f.appellation,size:H*0.036,f:F2?F2[0]:(CI),w:F2?F2[1]:(600),fill:ACC,ital:true,caps:capsFor(F2,false)},
       {str:[f.grape,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.027,f:F2?F2[0]:(EG),w:F2?F2[1]:(500),fill:INK,caps:capsFor(F2,false)},
       {str:[f.region,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.024,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)},
-      {str:f.special,size:H*0.023,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)},
-      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-2,H*0.007,'c',cW*0.8).svg;
+      {str:[f.special,desc,alc].filter(Boolean).join(' \u00b7 '),size:H*0.022,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-4,H*0.007,'c',cW*0.8);
+    body+=st.svg;
+    body+=fitHero(f.wine,cx,BOX[3]*H+MINGAP,st.topY,{size:H*0.050,maxW:cW*0.9,f:HP?HP[0]:(EG),w:HP?HP[1]:(500),fill:INK,caps:capsFor(HP,true),tr:0.42}).svg;
   }else{ // Margaux/Ausone boards: framed, pure centred type
-    const o=SM*0.55,i2=SM*0.8;
+    const o=SM+2,i2=SM+11;
     body+=`<rect x="${o}" y="${o}" width="${(W-2*o).toFixed(1)}" height="${(H-2*o).toFixed(1)}" fill="none" stroke="${ACC}" stroke-width="${(H*0.004).toFixed(1)}"/>`
         +`<rect x="${i2}" y="${i2}" width="${(W-2*i2).toFixed(1)}" height="${(H-2*i2).toFixed(1)}" fill="none" stroke="${INK}" stroke-width="1"/>`;
     body+=sFlow([
@@ -1316,7 +1373,7 @@ function styleContempX(f,W,H,seed,twMM,thMM,fv){
       {str:f.wine,size:H*0.068,f:HP?HP[0]:(SF.marcellus),w:HP?HP[1]:(400),fill:INK,caps:capsFor(HP,true),tr:0.26,maxW:cW*0.9,gap:H*0.016,pre:H*0.46},
       {str:desc,size:H*0.040,f:F3?F3[0]:(SF.fraunces),w:F3?F3[1]:(500),fill:SCH.acc,ital:true,maxW:cW*0.6,gap:H*0.016,caps:capsFor(F3,false)},
       {str:f.appellation,size:H*0.034,f:F2?F2[0]:(SF.jost),w:F2?F2[1]:(500),fill:SUB,maxW:cW*0.7,gap:0,caps:capsFor(F2,false)}],cx,SM,'c').svg;
-    body+=sRot([f.region,f.vintage].filter(Boolean).join(' \u00b7 '),W-SM*0.5,H,{size:H*0.023,f:SF.jost,w:400,fill:SUB,tr:0.1,caps:true});
+    body+=sRot([f.region,f.vintage].filter(Boolean).join(' \u00b7 '),W-SM-MIN7*0.55,H,{inward:-1,inward:-1,size:H*0.023,f:SF.jost,w:400,fill:SUB,tr:0.1,caps:true});
     body+=stackUp([
       {str:f.producer,size:H*0.028,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(600),fill:INK,tr:0.14,caps:capsFor(F3,false)},
       {str:[f.grape,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.025,f:F2?F2[0]:(SF.jost),w:F2?F2[1]:(400),fill:SUB,caps:capsFor(F2,false)},
@@ -1326,7 +1383,7 @@ function styleContempX(f,W,H,seed,twMM,thMM,fv){
       let asz=H*0.042; const R=W*0.42;
       const aw=measure(up(f.producer||''),asz,SF.jost,500,false,asz*0.34);
       if(aw>R*1.55)asz=Math.max(MIN7,asz*R*1.55/aw);
-      body+=sArcText(f.producer,cx,SM+H*0.01,R,{f:SF.jost,w:500,size:asz,fill:INK,tr:0.34,caps:true});
+      body+=sArcText(f.producer,cx,SM+asz*0.85,R,{f:SF.jost,w:500,size:asz,fill:INK,tr:0.34,caps:true});
     })();
     body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
@@ -1383,7 +1440,7 @@ function styleFlora(f,W,H,seed,twMM,thMM,fv){
       let asz=H*0.05; const R=W*0.40;
       const aw=measure(up(f.wine||''),asz,SF.imfell,400,false,asz*0.16);
       if(aw>R*1.55)asz=Math.max(MIN7,asz*R*1.55/aw);
-      body+=sArcText(f.wine,cx,SM+H*0.005,R,{f:SF.imfell,w:400,size:asz,fill:INK,tr:0.16,caps:true});
+      body+=sArcText(f.wine,cx,SM+asz*0.85,R,{f:SF.imfell,w:400,size:asz,fill:INK,tr:0.16,caps:true});
     })();
     body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
@@ -1422,7 +1479,7 @@ function styleFlora(f,W,H,seed,twMM,thMM,fv){
       {str:f.grape,size:H*0.030,f:F2?F2[0]:(SF.jost),w:F2?F2[1]:(500),fill:INK,maxW:W*0.34,gap:H*0.010,caps:capsFor(F2,false)},
       {str:f.classification,size:H*0.027,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,maxW:W*0.34,gap:H*0.010,caps:capsFor(F3,false)},
       {str:f.vintage,size:H*0.046,f:F3?F3[0]:(SF.fraunces),w:F3?F3[1]:(600),fill:ACC,maxW:W*0.3,gap:0,caps:capsFor(F3,false)}],W*0.60,SM,'l').svg;
-    body+=sRot(reg,W-SM*0.5,H,{size:H*0.023,f:SF.jost,w:400,fill:SUB,tr:0.1,caps:true});
+    body+=sRot(reg,W-SM-MIN7*0.55,H,{inward:-1,size:H*0.023,f:SF.jost,w:400,fill:SUB,tr:0.1,caps:true});
     body+=sBlock([desc,alc].filter(Boolean).join(' / '),{x:SM,top:H-SM-H*0.024,maxW:W*0.6,size:H*0.022,min:H*0.018,f:SF.jost,w:400,fill:SUB,a:'l'}).svg;
   }
   return sWrap(W,H,twMM,thMM,BG,body);
@@ -1523,35 +1580,35 @@ function styleMinimal(f,W,H,seed,twMM,thMM,fv){
       {str:f.producer,size:H*0.030,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(300),fill:SUB,caps:capsFor(F3,true),tr:0.45,maxW:cW*0.7,gap:H*0.02,pre:H*0.02},
       {str:f.wine,size:H*0.085,f:HP?HP[0]:(SF.archivo),w:HP?HP[1]:(MS.panel?600:300),fill:INK,caps:capsFor(HP,true),tr:0.28,maxW:cW*0.94,gap:H*0.018,pre:H*0.42},
       {str:f.appellation,size:H*0.04,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(400),fill:SUB,maxW:cW*0.6,gap:0,caps:capsFor(F2,false)}],cx,SM,'c').svg;
-    body+=sFlow([
-      {str:line1,size:H*0.026,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.8,gap:H*0.008,pre:H*0.855-SM,caps:capsFor(F3,false)},
-      {str:line2,size:H*0.026,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.8,gap:0,caps:capsFor(F3,false)}],cx,SM,'c').svg;
+    body+=stackUp([
+      {str:line1,size:H*0.026,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)},
+      {str:line2,size:H*0.026,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-4,H*0.008,'c',cW*0.8).svg;
   }else if(variant===1){ // left column, mark right (Society / blue-square boards)
     body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
       {str:f.producer,size:H*0.03,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(300),fill:SUB,caps:capsFor(F3,true),tr:0.4,maxW:W*0.44,gap:H*0.05,pre:H*0.04},
       {str:f.wine,size:H*0.07,f:HP?HP[0]:(SF.archivo),w:HP?HP[1]:(400),fill:INK,caps:capsFor(HP,true),tr:0.2,lines:2,lh:1.15,maxW:W*0.46,gap:H*0.02},
       {str:f.appellation,size:H*0.036,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(400),fill:SUB,maxW:W*0.44,gap:0,caps:capsFor(F2,false)}],SM,SM,'l').svg;
-    body+=sFlow([
-      {str:line1,size:H*0.025,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.9,gap:H*0.008,pre:H*0.855-SM,caps:capsFor(F3,false)},
-      {str:line2,size:H*0.025,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.9,gap:0,caps:capsFor(F3,false)}],SM,SM,'l').svg;
+    body+=stackUp([
+      {str:line1,size:H*0.025,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)},
+      {str:line2,size:H*0.025,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],SM,H-SM-4,H*0.008,'l',cW*0.9).svg;
   }else if(variant===2){ // hero IS the mark: oversized single word, nothing else near it
     body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
       {str:f.producer,size:H*0.028,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(300),fill:SUB,caps:capsFor(F3,true),tr:0.45,maxW:cW*0.7,gap:H*0.05,pre:H*0.05},
       {str:f.wine,size:H*0.12,f:HP?HP[0]:(SF.archivo),w:HP?HP[1]:(300),fill:INK,caps:capsFor(HP,true),tr:0.12,maxW:cW*0.96,gap:H*0.02},
       {str:f.appellation,size:H*0.038,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(400),fill:SUB,maxW:cW*0.6,gap:0,caps:capsFor(F2,false)}],cx,SM,'c').svg;
-    body+=sFlow([
-      {str:line1,size:H*0.025,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.85,gap:H*0.008,pre:H*0.87-SM,caps:capsFor(F3,false)},
-      {str:line2,size:H*0.025,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.85,gap:0,caps:capsFor(F3,false)}],cx,SM,'c').svg;
+    body+=stackUp([
+      {str:line1,size:H*0.025,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)},
+      {str:line2,size:H*0.025,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-4,H*0.008,'c',cW*0.85).svg;
   }else if(variant===4){ // handwritten scrawl hero across the silence (Valdez board)
     body+=sBlock(f.producer,{x:W-SM,top:SM,maxW:W*0.5,size:H*0.028,min:H*0.02,f:SF.archivo,w:300,fill:SUB,a:'r',caps:true,tr:0.4}).svg;
     body+=sFlow([
       {str:f.wine,size:H*0.16,f:HP?HP[0]:(SF.caveat),w:HP?HP[1]:(700),fill:INK,maxW:cW*0.94,gap:H*0.02,pre:H*0.34,caps:capsFor(HP,false)},
       {str:f.appellation,size:H*0.036,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(400),fill:SUB,maxW:cW*0.6,gap:0,caps:capsFor(F2,false)}],cx,SM,'c').svg;
-    body+=sFlow([
-      {str:line1,size:H*0.025,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.85,gap:H*0.008,pre:H*0.87-SM,caps:capsFor(F3,false)},
-      {str:line2,size:H*0.025,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.85,gap:0,caps:capsFor(F3,false)}],W-SM,SM,'r').svg;
+    body+=stackUp([
+      {str:line1,size:H*0.025,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)},
+      {str:line2,size:H*0.025,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],W-SM,H-SM-4,H*0.008,'r',cW*0.85).svg;
   }else{ // caps corner top-left, mark at the foot (mountain boards)
     body+=sFlow([
       {str:f.producer,size:H*0.028,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(300),fill:SUB,caps:capsFor(F3,true),tr:0.4,maxW:W*0.6,gap:H*0.022,pre:H*0.02},
@@ -1585,13 +1642,13 @@ function stylePunk(f,W,H,seed,twMM,thMM){
   let body='';
   if(variant===0){ // naive drawing centre stage, marker name below (wine-club boards)
     body+=sImageBox('punk',BOX,W,H);
-    body+=sFlow([
-      {str:f.wine,size:H*0.105,f:HP?HP[0]:(SF.marker),w:HP?HP[1]:(400),fill:INK,maxW:cW*0.94,gap:H*0.03,pre:H*0.53,caps:capsFor(HP,false)},
-      {str:[f.appellation,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.045,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(700),fill:AC,caps:capsFor(F2,true),tr:0.04,maxW:cW*0.8,gap:H*0.016},
-      {str:[f.grape,f.classification].filter(Boolean).join(' / '),size:H*0.03,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(500),fill:INK,maxW:cW*0.85,gap:0,caps:capsFor(F2,false)}],cx,SM,'c').svg;
-    body+=stackUp([
-      {str:f.producer,size:H*0.034,f:F3?F3[0]:(SF.marker),w:F3?F3[1]:(400),fill:AC,caps:capsFor(F3,false)},
-      {str:[reg,desc,alc].filter(Boolean).join(' / '),size:H*0.023,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,false)}],cx,H-SM-2,H*0.008,'c',cW*0.85).svg;
+    const st=stackUp([
+      {str:[f.appellation,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.042,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(700),fill:AC,caps:capsFor(F2,true),tr:0.04},
+      {str:[f.grape,f.classification].filter(Boolean).join(' / '),size:H*0.028,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(500),fill:INK,caps:capsFor(F2,false)},
+      {str:f.producer,size:H*0.031,f:F3?F3[0]:(SF.marker),w:F3?F3[1]:(400),fill:AC,caps:capsFor(F3,false)},
+      {str:[reg,desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,false)}],cx,H-SM-4,H*0.008,'c',cW*0.88);
+    body+=st.svg;
+    body+=fitHero(f.wine,cx,BOX[3]*H+MINGAP,st.topY,{size:H*0.105,maxW:cW*0.92,f:HP?HP[0]:(SF.marker),w:HP?HP[1]:(400),fill:INK,caps:capsFor(HP,false)}).svg;
   }else if(variant===1){ // poster type: giant condensed caps stacked (RAW POWER board)
     body+=sImageBox('punk',BOX,W,H);
     body+=sFlow([
@@ -1600,7 +1657,7 @@ function stylePunk(f,W,H,seed,twMM,thMM){
       {str:f.appellation,size:H*0.05,f:F2?F2[0]:(SF.marker),w:F2?F2[1]:(400),fill:INK,maxW:W*0.5,gap:H*0.02,caps:capsFor(F2,false)},
       {str:[f.grape,f.classification].filter(Boolean).join(' / '),size:H*0.03,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(600),fill:INK,maxW:W*0.5,gap:H*0.012,caps:capsFor(F2,false)},
       {str:[reg,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.028,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,maxW:W*0.5,gap:0,caps:capsFor(F3,false)}],SM,SM,'l').svg;
-    body+=sBlock([desc,alc].filter(Boolean).join(' / '),{x:SM,top:rowY,maxW:W*0.5,size:H*0.024,min:H*0.02,f:SF.archivo,w:500,fill:INK,a:'l'}).svg;
+    body+=sBlock([desc,alc].filter(Boolean).join(' / '),{x:SM,top:H-SM-4,fromBottom:true,maxW:W*0.5,size:H*0.024,min:H*0.02,f:SF.archivo,w:500,fill:INK,a:'l',caps:capsFor(F3,false)}).svg;
   }else if(variant===2){ // handwritten title corner, figure right (Say When board)
     body+=sBlock(f.wine,{x:SM,top:SM,maxW:cW*0.9,size:H*0.08,min:H*0.05,f:HP?HP[0]:(SF.caveat),w:HP?HP[1]:(700),fill:AC,a:'l',caps:true}).svg;
     body+=sImageBox('punk',BOX,W,H);
@@ -1614,20 +1671,20 @@ function stylePunk(f,W,H,seed,twMM,thMM){
       {str:reg,size:H*0.024,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,false)},
       {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,false)}],SM,H-SM-2,H*0.008,'l',W*0.4).svg;
   }else if(variant===3){ // rotated side caps, riso figure centre (PET-NAT / SUR512 boards)
-    body+=sRot(f.producer,SM+H*0.028,H,{size:H*0.034,f:SF.anton,w:400,fill:AC,tr:0.14,caps:true});
+    body+=sRot(f.producer,SM+Math.max(H*0.034,MIN7)*1.1,H,{size:H*0.034,f:SF.anton,w:400,fill:AC,tr:0.14,caps:true});
     body+=sImageBox('punk',BOX,W,H);
-    body+=sFlow([
-      {str:f.wine,size:H*0.10,f:HP?HP[0]:(SF.marker),w:HP?HP[1]:(400),fill:INK,maxW:cW*0.86,gap:H*0.02,pre:H*0.61,caps:capsFor(HP,false)},
-      {str:[f.appellation,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.04,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(700),fill:AC,caps:capsFor(F2,true),tr:0.04,maxW:cW*0.8,gap:0}],cx+H*0.02,SM,'c').svg;
-    body+=stackUp([
+    const st=stackUp([
+      {str:[f.appellation,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.04,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(700),fill:AC,caps:capsFor(F2,true),tr:0.04},
       {str:[f.grape,f.classification].filter(Boolean).join(' / '),size:H*0.026,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(500),fill:INK,caps:capsFor(F2,false)},
-      {str:[reg,desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,false)}],cx+H*0.02,H-SM-2,H*0.008,'c',cW*0.8).svg;
+      {str:[reg,desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,false)}],cx+H*0.02,H-SM-4,H*0.008,'c',cW*0.8);
+    body+=st.svg;
+    body+=fitHero(f.wine,cx+H*0.02,BOX[3]*H+MINGAP,st.topY,{size:H*0.10,maxW:cW*0.84,f:HP?HP[0]:(SF.marker),w:HP?HP[1]:(400),fill:INK,caps:capsFor(HP,false)}).svg;
   }else if(variant===4){ // arched hand-lettering ring over the figure (Silvaner board)
     (function(){
       let asz=H*0.055; const R=W*0.40;
       const aw=measure(String(f.producer||''),asz,SF.caveat,600,false,asz*0.06);
       if(aw>R*1.55)asz=Math.max(MIN7,asz*R*1.55/aw);
-      body+=sArcText(f.producer,cx,SM,R,{f:SF.caveat,w:600,size:asz,fill:AC,tr:0.06});
+      body+=sArcText(f.producer,cx,SM+asz*0.9,R,{f:SF.caveat,w:600,size:asz,fill:AC,tr:0.06});
     })();
     body+=sImageBox('punk',BOX,W,H);
     body+=sFlow([
@@ -1639,13 +1696,13 @@ function stylePunk(f,W,H,seed,twMM,thMM){
       {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,false)}],cx,H-SM-2,H*0.008,'c',cW*0.8).svg;
   }else{ // riso band top, loud knockout hero below (poster boards)
     body+=sImageBox('punk',BOX,W,H);
-    body+=sFlow([
-      {str:f.wine,size:H*0.13,f:HP?HP[0]:(SF.anton),w:HP?HP[1]:(400),fill:INK,caps:capsFor(HP,true),maxW:cW*0.95,gap:H*0.018,pre:H*0.43},
-      {str:[f.appellation,f.vintage].filter(Boolean).join('  \u00b7  '),size:H*0.045,f:F2?F2[0]:(SF.marker),w:F2?F2[1]:(400),fill:AC,maxW:cW*0.8,gap:H*0.016,caps:capsFor(F2,false)},
-      {str:[f.grape,f.classification,reg].filter(Boolean).join(' / '),size:H*0.028,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(500),fill:INK,maxW:cW*0.9,gap:0,caps:capsFor(F2,false)}],cx,SM,'c').svg;
-    body+=stackUp([
-      {str:f.producer,size:H*0.032,f:F3?F3[0]:(SF.marker),w:F3?F3[1]:(400),fill:INK,caps:capsFor(F3,false)},
-      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,false)}],cx,H-SM-2,H*0.008,'c',cW*0.8).svg;
+    const st=stackUp([
+      {str:[f.appellation,f.vintage].filter(Boolean).join('  \u00b7  '),size:H*0.042,f:F2?F2[0]:(SF.marker),w:F2?F2[1]:(400),fill:AC,caps:capsFor(F2,false)},
+      {str:[f.grape,f.classification,reg].filter(Boolean).join(' / '),size:H*0.026,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(500),fill:INK,caps:capsFor(F2,false)},
+      {str:[f.producer,desc,alc].filter(Boolean).join(' \u00b7 '),size:H*0.024,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,false)}],cx,H-SM-4,H*0.008,'c',cW*0.9);
+    body+=st.svg;
+    body+=fitHero(f.wine,cx,BOX[3]*H+MINGAP,st.topY,{size:H*0.13,maxW:cW*0.94,f:HP?HP[0]:(SF.anton),w:HP?HP[1]:(400),fill:INK,caps:capsFor(HP,true)}).svg;
+
   }
   return sWrap(W,H,twMM,thMM,BG,body);
 }

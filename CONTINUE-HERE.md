@@ -154,6 +154,25 @@ band + orange full ground, flora diagonal accent band, premium charcoal
 variant, artistic near-black riso ground. Text-only comps may still use a
 bold single-colour ground, e.g. the minimalist red panel.)
 
+## 5-HARD-RULES (2026-08-15) — mechanical constraints, verifier-enforced
+
+Owner's hard rules, implemented in the ENGINE and proven by
+tests/parity/check-hard-rules.mjs (renders 3 sizes × 8 seeds × 3 styles,
+measures INK geometry via canvas metrics — quantized, upright-measured,
+latin-ext-probed so goldens stay byte-stable):
+1. 5mm margin — nothing crosses it (frames moved inside, sImageBox clamps,
+   sRot verticals positioned inside; sRot splits into two columns when the
+   7pt floor cannot fit the height).
+2. 7pt font floor (sBlock/sRot/sArcText clamp).
+3. ≥1mm between text blocks — TUNABLE in the admin Hard Rules tab
+   (settings/hard-rules → hints.__hardRules.minGapMM → engine MINGAP).
+Geometry now uses REAL ink extents (inkVA): sBlock top/bottom are visible
+edges, stackUp is bottom-anchored (fromBottom), fitHero squeezes heroes
+between artwork and stack. Several comps restructured to bottom-anchored
+stacks. The verifier also flags any composition that crashes into the
+error fallback. Admin UI compacted; tabs renamed (Image Refs/Rules/Play,
+Layout Refs/Play, Fonts, Hard Rules, Generations, Users).
+
 ## 5-RESTART (2026-08-14, branch Popika_Label&Image_Generation) — READ FIRST
 
 Owner reset: previous layout/image guideline eras were compounding

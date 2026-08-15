@@ -146,6 +146,30 @@ export async function getLayoutProfiles(): Promise<Record<string, LayoutProfile>
   return Object.fromEntries(rows.map((r) => [r.style, r]));
 }
 
+/* HARD RULES (owner 2026-08-15): mechanical constraints the engine enforces.
+   Fixed: 5mm margin, 7pt font floor. Tunable: minimum gap between text
+   blocks (mm) — delivered to the engine via hints.__hardRules. */
+export interface HardRules { minGapMM: number }
+const HARD_ID = "hard-rules";
+export async function getHardRules(): Promise<HardRules> {
+  try {
+    const db = await getDb();
+    const doc = (await db.collection("settings").findOne({ _id: HARD_ID } as never)) as { minGapMM?: number } | null;
+    const v = Number(doc?.minGapMM);
+    return { minGapMM: isFinite(v) && v >= 0 && v <= 5 ? v : 1 };
+  } catch {
+    return { minGapMM: 1 };
+  }
+}
+export async function saveHardRules(r: HardRules): Promise<void> {
+  const db = await getDb();
+  await db.collection("settings").updateOne(
+    { _id: HARD_ID } as never,
+    { $set: { minGapMM: r.minGapMM, updatedAt: new Date() } },
+    { upsert: true }
+  );
+}
+
 const RULES_ID = "layout-rules";
 export async function getLayoutRules(): Promise<LayoutRules> {
   try {
@@ -486,10 +510,10 @@ export async function layoutWeights(): Promise<Record<string, number[]>> {
     Hero-font pool = fonts approved in the Fonts playground ∪ the derived
     profile fonts, minus anything net-rejected — verdicts apply immediately. */
 export async function buildLayoutHints(): Promise<Record<string, unknown>> {
-  const [profiles, weights, fonts, casePrefs, POOL] = await Promise.all([
-    getLayoutProfiles(), layoutWeights(), fontScores(), getCasePrefs(), fullFontPool(),
+  const [profiles, weights, fonts, casePrefs, POOL, hard] = await Promise.all([
+    getLayoutProfiles(), layoutWeights(), fontScores(), getCasePrefs(), fullFontPool(), getHardRules(),
   ]);
-  const hints: Record<string, unknown> = {};
+  const hints: Record<string, unknown> = { __hardRules: { minGapMM: hard.minGapMM } };
   for (const style of LAYOUT_STYLES) {
     const prof = profiles[style];
     const mix = (a: string, b: string, t: number) => {
