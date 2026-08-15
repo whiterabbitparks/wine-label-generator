@@ -842,7 +842,7 @@ function sFields(d){const j=(a,s)=>a.map(x=>String(x==null?'':x).trim()).filter(
     accent:lcAccent(d)};}
 function sWrap(W,H,twMM,thMM,bg,body,defs){
   return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W.toFixed(1)} ${H.toFixed(1)}" width="${twMM}mm" height="${thMM}mm">`
-    +`<defs><style><![CDATA[@import url('${FONTS_URL}');]]></style>${defs||''}</defs>`
+    +`<defs><style><![CDATA[@import url('${FONTS_URL}');${EXTRA_FONTS_URL?`@import url('${EXTRA_FONTS_URL}');`:''}]]></style>${defs||''}</defs>`
     +`<rect x="${(-SBLEED)}" y="${(-SBLEED)}" width="${(W+2*SBLEED).toFixed(1)}" height="${(H+2*SBLEED).toFixed(1)}" fill="${bg}"/>`
     +body+`</svg>`;}
 /* fit+wrap a string; returns {svg,bottom,size,nlines}. `top` = top of the text box (baseline ≈ top+0.80*size). */
@@ -971,7 +971,44 @@ function styleZones(seed){
    the seeded pick lands on (rejected comps fade, approved appear more).
    Without hints everything renders from the built-ins (goldens). */
 let STYLE_HINTS={};
-function setStyleHints(h){STYLE_HINTS=(h&&typeof h==='object')?h:{};}
+function setStyleHints(h){STYLE_HINTS=(h&&typeof h==='object')?h:{};refreshHintFonts();}
+/* Curated fonts may be ANY Google font, not just the built-in set: collect
+   every family the hints reference that FONTS_URL doesn't already load,
+   build a second css2 URL for them, inject it page-level and embed it in
+   every exported SVG (sWrap). No hints → empty → output byte-identical. */
+let EXTRA_FONTS_URL='';
+function refreshHintFonts(){
+  const fams={};
+  for(const k in STYLE_HINTS){
+    const e=STYLE_HINTS[k]||{};
+    [e.heroFonts,e.secondaryFonts,e.smallFonts].forEach(function(list){
+      if(!Array.isArray(list))return;
+      list.forEach(function(f){
+        if(!Array.isArray(f)||!f[0])return;
+        const m=String(f[0]).match(/'([^']+)'/); if(!m)return;
+        const nm=m[1], pl=nm.replace(/ /g,'+');
+        if(FONTS_URL.indexOf('family='+pl+':')>=0||FONTS_URL.indexOf('family='+pl+'&')>=0)return;
+        (fams[nm]=fams[nm]||{})[+f[1]||400]=1;
+      });
+    });
+  }
+  const names=Object.keys(fams);
+  EXTRA_FONTS_URL=names.length
+    ? 'https://fonts.googleapis.com/css2?'+names.map(function(n){
+        const ws=Object.keys(fams[n]).map(Number).sort(function(a,b){return a-b;});
+        const one400=ws.length===1&&ws[0]===400;   // single regular: no axis (many display fonts have none)
+        return 'family='+n.replace(/ /g,'+')+(one400?'':(':wght@'+ws.join(';')));
+      }).join('&')+'&display=swap'
+    : '';
+  if(typeof document!=='undefined'){
+    let el=document.getElementById('__lblfonts_x');
+    if(EXTRA_FONTS_URL){
+      if(!el){el=document.createElement('style');el.id='__lblfonts_x';document.head.appendChild(el);}
+      el.textContent="@import url('"+EXTRA_FONTS_URL+"');";
+      names.forEach(function(n){Object.keys(fams[n]).forEach(function(w){try{document.fonts.load(w+" 40px '"+n+"'");}catch(e){}});});
+    }else if(el)el.remove();
+  }
+}
 
 /* COMBINATORIAL VARIETY (owner, 2026-08-14): composition, palette and hero
    font are INDEPENDENT seeded picks, so every new seed is a fresh

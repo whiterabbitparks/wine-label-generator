@@ -1131,19 +1131,23 @@ function LayoutPlaygroundTab() {
   );
 }
 
-/* ============ FONTS PLAYGROUND (owner request 2026-08-15) ============
-   Three ROLES per style — Main (wine name) / Secondary (appellation, grape) /
-   Small (all remaining print) — each with its own approve/reject pool, plus
-   an UPPERCASE/lowercase preference per role. Everything applies to customer
-   labels immediately via /api/layout-hints. */
+/* ============ FONTS PLAYGROUND (owner, 2026-08-15) ============
+   Style-aware catalog: each style only shows fonts of its kind (Traditional →
+   classic serif/vintage; Contemporary → modern sans/display; Punk →
+   handwritten/brush/graffiti). Deck UX: 12 unrated candidates at a time,
+   "Show new fonts" deals more, rejected fonts never come back. Approved
+   fonts live in the pool section with their own Aa/AA case switch. */
 
-interface FontRow { family: string; weight: number; label: string }
+interface FontRow { family: string; weight: number; label: string; styles: string[] }
 type FontRole = "hero" | "secondary" | "small";
 const ROLE_DEFS: { key: FontRole; name: string; hint: string; size: number }[] = [
   { key: "hero", name: "Main text", hint: "the wine name — the biggest word on the label", size: 30 },
   { key: "secondary", name: "Secondary", hint: "appellation and grape variety", size: 22 },
   { key: "small", name: "Small print", hint: "region, vintage, classification, alcohol…", size: 15 },
 ];
+const DECK = 12;
+const fontKey = (f: FontRow) => `${f.family}@${f.weight}`;
+const gfName = (f: FontRow) => (f.family.match(/'([^']+)'/) || [])[1] || "";
 
 function FontsTab() {
   const [style, setStyle] = useState("traditional");
@@ -1152,29 +1156,41 @@ function FontsTab() {
   const [pool, setPool] = useState<FontRow[]>([]);
   const [scores, setScores] = useState<Record<string, Record<FontRole, Record<string, number>>>>({});
   const [casePrefs, setCasePrefs] = useState<Record<string, Partial<Record<FontRole, Record<string, string | null>>>>>({});
-  const [fontsReady, setFontsReady] = useState(false);
+  const [deckStart, setDeckStart] = useState(0);
 
   useEffect(() => {
     fetch("/api/admin/font-feedback").then((r) => r.json()).then((b) => {
       setPool(b.pool || []); setScores(b.scores || {}); setCasePrefs(b.casePrefs || {});
     });
-    const w = window as unknown as { LabelEngine?: { FONTS_URL: string } };
-    const attach = (url: string) => {
-      if (!document.getElementById("__adminFonts")) {
-        const l = document.createElement("link");
-        l.id = "__adminFonts"; l.rel = "stylesheet"; l.href = url;
-        document.head.appendChild(l);
-      }
-      setFontsReady(true);
-    };
-    if (w.LabelEngine) attach(w.LabelEngine.FONTS_URL);
-    else {
-      const sc = document.createElement("script");
-      sc.src = "/engine/label-engine.js";
-      sc.onload = () => attach((window as unknown as { LabelEngine: { FONTS_URL: string } }).LabelEngine.FONTS_URL);
-      document.body.appendChild(sc);
-    }
   }, []);
+  useEffect(() => { setDeckStart(0); }, [style, role]);
+
+  const per = scores[style]?.[role] || {};
+  const score = (f: FontRow) => per[fontKey(f)] ?? 0;
+  const approved = pool.filter((f) => score(f) > 0);
+  const relevant = pool.filter((f) => f.styles.includes(style));
+  const candidates = relevant.filter((f) => score(f) === 0);
+  const bannedCount = relevant.filter((f) => score(f) < 0).length;
+  const deck = candidates.slice(deckStart, deckStart + DECK);
+  const visible = [...approved, ...deck];
+
+  // load Google fonts for everything visible (any catalog font, not just built-ins)
+  useEffect(() => {
+    if (!visible.length) return;
+    const fams: Record<string, Set<number>> = {};
+    visible.forEach((f) => {
+      const n = gfName(f); if (!n) return;
+      (fams[n] ||= new Set()).add(f.weight);
+    });
+    const url = "https://fonts.googleapis.com/css2?" + Object.entries(fams).map(([n, ws]) => {
+      const list = [...ws].sort((a, b) => a - b);
+      const one400 = list.length === 1 && list[0] === 400;
+      return "family=" + n.replace(/ /g, "+") + (one400 ? "" : ":wght@" + list.join(";"));
+    }).join("&") + "&display=swap";
+    let l = document.getElementById("__adminFontsDyn") as HTMLLinkElement | null;
+    if (!l) { l = document.createElement("link"); l.id = "__adminFontsDyn"; l.rel = "stylesheet"; document.head.appendChild(l); }
+    if (l.href !== url) l.href = url;
+  }, [visible.map(fontKey).join("|")]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function verdict(f: FontRow, v: "approve" | "reject") {
     const r = await fetch("/api/admin/font-feedback", {
@@ -1183,7 +1199,6 @@ function FontsTab() {
     });
     if (r.ok) setScores((await r.json()).scores || {});
   }
-
   async function setCase(f: FontRow, pref: "upper" | null) {
     const r = await fetch("/api/admin/font-case", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -1191,30 +1206,56 @@ function FontsTab() {
     });
     if (r.ok) setCasePrefs((await r.json()).casePrefs || {});
   }
+  const caseOf = (f: FontRow) =>
+    (casePrefs[style]?.[role] || {})[fontKey(f).replace(/\./g, "·")] ?? null;
 
   const roleDef = ROLE_DEFS.find((r) => r.key === role)!;
-  const per = scores[style]?.[role] || {};
-  const score = (f: FontRow) => per[`${f.family}@${f.weight}`] ?? 0;
-  const status = (n: number): [string, string] =>
-    n > 0 ? ["in the pool ✓", "#5a6b3b"] : n < 0 ? ["banned ✕", "#a03030"] : ["unrated", "#8a887e"];
-  const caseOf = (f: FontRow) =>
-    (casePrefs[style]?.[role] || {})[`${f.family}@${f.weight}`.replace(/\./g, "·")] ?? null;
+  const base = sample || "Château Margaux";
+
+  function card(f: FontRow, inPool: boolean) {
+    return (
+      <div key={fontKey(f)} style={{ border: inPool ? "2px solid #5a6b3b" : "1px solid #bbb", background: "#fff", padding: "10px 14px" }}>
+        <div style={{ fontFamily: f.family, fontWeight: f.weight, fontSize: roleDef.size * 1.15, lineHeight: 1.25, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis", opacity: caseOf(f) === "upper" ? 1 : 0.35 }}>
+          {base.toUpperCase()}
+        </div>
+        <div style={{ fontFamily: f.family, fontWeight: f.weight, fontSize: roleDef.size, lineHeight: 1.25, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis", color: "#333", opacity: caseOf(f) === "upper" ? 0.35 : 1 }}>
+          {base}
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 11, color: "#8a887e", flex: 1 }}>{f.label}</span>
+          {inPool ? (
+            <>
+              <span style={{ display: "inline-flex", border: "1px solid #888", borderRadius: 5, overflow: "hidden" }} title="Case for this font on final labels">
+                <button onClick={() => setCase(f, null)}
+                  style={{ font: "inherit", fontSize: 12, padding: "2px 8px", border: "none", cursor: "pointer",
+                    background: caseOf(f) !== "upper" ? "#5a6b3b" : "#fff", color: caseOf(f) !== "upper" ? "#fff" : "#4a4a42" }}>Aa</button>
+                <button onClick={() => setCase(f, "upper")}
+                  style={{ font: "inherit", fontSize: 12, padding: "2px 8px", border: "none", cursor: "pointer",
+                    background: caseOf(f) === "upper" ? "#5a6b3b" : "#fff", color: caseOf(f) === "upper" ? "#fff" : "#4a4a42" }}>AA</button>
+              </span>
+              <button style={{ ...S.btnGhost, padding: "3px 10px", fontSize: 12, color: "#a03030", borderColor: "#a03030" }}
+                onClick={() => verdict(f, "reject")}>Remove</button>
+            </>
+          ) : (
+            <>
+              <button style={{ ...S.btnGhost, padding: "3px 10px", fontSize: 12 }} onClick={() => verdict(f, "approve")}>Approve</button>
+              <button style={{ ...S.btnGhost, padding: "3px 10px", fontSize: 12, color: "#a03030", borderColor: "#a03030" }} onClick={() => verdict(f, "reject")}>Reject</button>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
-      <p style={{ fontSize: 14, color: "#4a4a42" }}>
-        Judge fonts per <b>role</b>: a face can be perfect for the wine name and wrong for small
-        print. Approvals join that role&rsquo;s pool on real labels immediately; net-rejected fonts
-        never appear in that role. The case preference applies to the whole role on final layouts.
-      </p>
-      <div style={{ display: "flex", gap: 12, alignItems: "center", margin: "14px 0", flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 12, alignItems: "center", margin: "0 0 6px", flexWrap: "wrap" }}>
         <select value={style} onChange={(e) => setStyle(e.target.value)} style={{ ...S.input, width: 180 }}>
           {STYLE_DEFS.map(([k, n]) => <option key={k} value={k}>{n}</option>)}
         </select>
         <div style={{ display: "flex", border: "1px solid #5a6b3b", borderRadius: 6, overflow: "hidden" }}>
           {ROLE_DEFS.map((r) => (
-            <button key={r.key} onClick={() => setRole(r.key)}
-              title={r.hint}
+            <button key={r.key} onClick={() => setRole(r.key)} title={r.hint}
               style={{ font: "inherit", fontSize: 13, padding: "8px 14px", border: "none", cursor: "pointer",
                 background: role === r.key ? "#5a6b3b" : "transparent", color: role === r.key ? "#fff" : "#5a6b3b" }}>
               {r.name}
@@ -1224,42 +1265,46 @@ function FontsTab() {
         <input style={{ ...S.input, width: 240 }} value={sample} placeholder="sample text"
           onChange={(e) => setSample(e.target.value)} />
       </div>
-      <p style={{ fontSize: 13, color: "#4a4a42", margin: "0 0 14px" }}>
-        Judging <b>{roleDef.name}</b> — {roleDef.hint}. Each font has its own case switch:
-        <b> Aa</b> standard grammar (as the winemaker writes it, the default) · <b>AA</b> always
-        UPPERCASE for this font. The active line in the preview is highlighted.
+      <p style={{ fontSize: 13, color: "#4a4a42", margin: "0 0 16px" }}>
+        Judging <b>{roleDef.name}</b> ({roleDef.hint}) for <b>{style}</b>. Candidates match this
+        style&rsquo;s character. <b>Aa</b> = standard grammar (default) · <b>AA</b> = always uppercase
+        for that font; the active case is highlighted.
       </p>
-      {!fontsReady && <p style={{ color: "#8a887e" }}>Loading fonts…</p>}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        {pool.map((f) => {
-          const n = score(f); const [txt, col] = status(n);
-          const base = sample || "Château Margaux";
-          return (
-            <div key={`${f.family}@${f.weight}`} style={{ border: "1px solid #bbb", background: "#fff", padding: "10px 14px" }}>
-              <div style={{ fontFamily: f.family, fontWeight: f.weight, fontSize: roleDef.size * 1.15, lineHeight: 1.25, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis", opacity: caseOf(f) === "upper" ? 1 : 0.35 }}>
-                {base.toUpperCase()}
-              </div>
-              <div style={{ fontFamily: f.family, fontWeight: f.weight, fontSize: roleDef.size, lineHeight: 1.25, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis", color: "#333", opacity: caseOf(f) === "upper" ? 0.35 : 1 }}>
-                {base}
-              </div>
-              <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6, flexWrap: "wrap" }}>
-                <span style={{ fontSize: 11, color: "#8a887e", flex: 1 }}>{f.label}</span>
-                <span style={{ fontSize: 11, color: col, border: `1px solid ${col}`, borderRadius: 4, padding: "1px 7px" }}>{txt}</span>
-                <span style={{ display: "inline-flex", border: "1px solid #888", borderRadius: 5, overflow: "hidden" }} title="Case for this font on final labels">
-                  <button onClick={() => setCase(f, null)}
-                    style={{ font: "inherit", fontSize: 12, padding: "2px 8px", border: "none", cursor: "pointer",
-                      background: caseOf(f) !== "upper" ? "#5a6b3b" : "#fff", color: caseOf(f) !== "upper" ? "#fff" : "#4a4a42" }}>Aa</button>
-                  <button onClick={() => setCase(f, "upper")}
-                    style={{ font: "inherit", fontSize: 12, padding: "2px 8px", border: "none", cursor: "pointer",
-                      background: caseOf(f) === "upper" ? "#5a6b3b" : "#fff", color: caseOf(f) === "upper" ? "#fff" : "#4a4a42" }}>AA</button>
-                </span>
-                <button style={{ ...S.btnGhost, padding: "3px 10px", fontSize: 12 }} onClick={() => verdict(f, "approve")}>Approve</button>
-                <button style={{ ...S.btnGhost, padding: "3px 10px", fontSize: 12, color: "#a03030", borderColor: "#a03030" }} onClick={() => verdict(f, "reject")}>Reject</button>
-              </div>
-            </div>
-          );
-        })}
+
+      <h2 style={{ fontSize: 15, letterSpacing: ".04em", margin: "18px 0 8px" }}>
+        In the pool — appearing on labels ({approved.length})
+      </h2>
+      {approved.length ? (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          {approved.map((f) => card(f, true))}
+        </div>
+      ) : (
+        <p style={{ fontSize: 13, color: "#8a887e" }}>
+          Nothing approved yet for this role — labels use the derived layout language / designed fonts until you approve some.
+        </p>
+      )}
+
+      <div style={{ display: "flex", alignItems: "baseline", gap: 14, margin: "26px 0 8px", flexWrap: "wrap" }}>
+        <h2 style={{ fontSize: 15, letterSpacing: ".04em", margin: 0 }}>New candidates</h2>
+        <span style={{ fontSize: 12, color: "#8a887e" }}>
+          {candidates.length} unrated · {bannedCount} rejected (never shown again)
+        </span>
+        <button style={{ ...S.btnGhost, padding: "5px 14px", fontSize: 13 }}
+          disabled={candidates.length <= DECK}
+          onClick={() => setDeckStart((deckStart + DECK) % Math.max(1, candidates.length))}>
+          Show new fonts →
+        </button>
       </div>
+      {deck.length ? (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          {deck.map((f) => card(f, false))}
+        </div>
+      ) : (
+        <p style={{ fontSize: 13, color: "#8a887e" }}>
+          You&rsquo;ve rated every candidate for this style and role. Tell Claude to extend the
+          catalog if you want more options.
+        </p>
+      )}
     </div>
   );
 }
