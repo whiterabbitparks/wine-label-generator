@@ -1132,24 +1132,32 @@ function LayoutPlaygroundTab() {
 }
 
 /* ============ FONTS PLAYGROUND (owner request 2026-08-15) ============
-   Every free font the engine can render, shown as the wine name. Approve →
-   the font JOINS that style's hero-font pool on real labels; net-rejected →
-   it never appears. Applies immediately via /api/layout-hints. */
+   Three ROLES per style — Main (wine name) / Secondary (appellation, grape) /
+   Small (all remaining print) — each with its own approve/reject pool, plus
+   an UPPERCASE/lowercase preference per role. Everything applies to customer
+   labels immediately via /api/layout-hints. */
 
 interface FontRow { family: string; weight: number; label: string }
+type FontRole = "hero" | "secondary" | "small";
+const ROLE_DEFS: { key: FontRole; name: string; hint: string; size: number }[] = [
+  { key: "hero", name: "Main text", hint: "the wine name — the biggest word on the label", size: 30 },
+  { key: "secondary", name: "Secondary", hint: "appellation and grape variety", size: 22 },
+  { key: "small", name: "Small print", hint: "region, vintage, classification, alcohol…", size: 15 },
+];
 
 function FontsTab() {
   const [style, setStyle] = useState("traditional");
+  const [role, setRole] = useState<FontRole>("hero");
   const [sample, setSample] = useState("Château Margaux");
   const [pool, setPool] = useState<FontRow[]>([]);
-  const [scores, setScores] = useState<Record<string, Record<string, number>>>({});
+  const [scores, setScores] = useState<Record<string, Record<FontRole, Record<string, number>>>>({});
+  const [casePrefs, setCasePrefs] = useState<Record<string, Partial<Record<FontRole, string | null>>>>({});
   const [fontsReady, setFontsReady] = useState(false);
 
   useEffect(() => {
     fetch("/api/admin/font-feedback").then((r) => r.json()).then((b) => {
-      setPool(b.pool || []); setScores(b.scores || {});
+      setPool(b.pool || []); setScores(b.scores || {}); setCasePrefs(b.casePrefs || {});
     });
-    // load the same Google-fonts stylesheet the label engine uses
     const w = window as unknown as { LabelEngine?: { FONTS_URL: string } };
     const attach = (url: string) => {
       if (!document.getElementById("__adminFonts")) {
@@ -1171,37 +1179,75 @@ function FontsTab() {
   async function verdict(f: FontRow, v: "approve" | "reject") {
     const r = await fetch("/api/admin/font-feedback", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ style, family: f.family, weight: f.weight, verdict: v }),
+      body: JSON.stringify({ style, role, family: f.family, weight: f.weight, verdict: v }),
     });
     if (r.ok) setScores((await r.json()).scores || {});
   }
 
-  const per = scores[style] || {};
+  async function setCase(pref: "upper" | "lower" | null) {
+    const r = await fetch("/api/admin/font-case", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ style, role, pref }),
+    });
+    if (r.ok) setCasePrefs((await r.json()).casePrefs || {});
+  }
+
+  const roleDef = ROLE_DEFS.find((r) => r.key === role)!;
+  const per = scores[style]?.[role] || {};
   const score = (f: FontRow) => per[`${f.family}@${f.weight}`] ?? 0;
   const status = (n: number): [string, string] =>
     n > 0 ? ["in the pool ✓", "#5a6b3b"] : n < 0 ? ["banned ✕", "#a03030"] : ["unrated", "#8a887e"];
+  const curCase = casePrefs[style]?.[role] ?? null;
 
   return (
     <div>
       <p style={{ fontSize: 14, color: "#4a4a42" }}>
-        Approve a font and it joins <b>{style}</b>&rsquo;s hero-font pool on real labels immediately;
-        reject it and it never appears for that style. Unrated fonts follow the derived layout language.
+        Judge fonts per <b>role</b>: a face can be perfect for the wine name and wrong for small
+        print. Approvals join that role&rsquo;s pool on real labels immediately; net-rejected fonts
+        never appear in that role. The case preference applies to the whole role on final layouts.
       </p>
       <div style={{ display: "flex", gap: 12, alignItems: "center", margin: "14px 0", flexWrap: "wrap" }}>
-        <select value={style} onChange={(e) => setStyle(e.target.value)} style={{ ...S.input, width: 200 }}>
+        <select value={style} onChange={(e) => setStyle(e.target.value)} style={{ ...S.input, width: 180 }}>
           {STYLE_DEFS.map(([k, n]) => <option key={k} value={k}>{n}</option>)}
         </select>
-        <input style={{ ...S.input, width: 280 }} value={sample} placeholder="sample text"
+        <div style={{ display: "flex", border: "1px solid #5a6b3b", borderRadius: 6, overflow: "hidden" }}>
+          {ROLE_DEFS.map((r) => (
+            <button key={r.key} onClick={() => setRole(r.key)}
+              title={r.hint}
+              style={{ font: "inherit", fontSize: 13, padding: "8px 14px", border: "none", cursor: "pointer",
+                background: role === r.key ? "#5a6b3b" : "transparent", color: role === r.key ? "#fff" : "#5a6b3b" }}>
+              {r.name}
+            </button>
+          ))}
+        </div>
+        <input style={{ ...S.input, width: 240 }} value={sample} placeholder="sample text"
           onChange={(e) => setSample(e.target.value)} />
+      </div>
+      <div style={{ display: "flex", gap: 10, alignItems: "center", margin: "0 0 14px", flexWrap: "wrap" }}>
+        <span style={{ fontSize: 13, color: "#4a4a42" }}>
+          <b>{roleDef.name}</b> ({roleDef.hint}) — preferred case:
+        </span>
+        {([["upper", "UPPERCASE"], ["lower", "As written"], [null, "Let the design decide"]] as const).map(([v, lbl]) => (
+          <button key={String(v)} onClick={() => setCase(v)}
+            style={{ font: "inherit", fontSize: 12, padding: "5px 12px", borderRadius: 6, cursor: "pointer",
+              border: `1px solid ${curCase === v ? "#5a6b3b" : "#bbb"}`,
+              background: curCase === v ? "#5a6b3b" : "#fff", color: curCase === v ? "#fff" : "#4a4a42" }}>
+            {lbl}
+          </button>
+        ))}
       </div>
       {!fontsReady && <p style={{ color: "#8a887e" }}>Loading fonts…</p>}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         {pool.map((f) => {
           const n = score(f); const [txt, col] = status(n);
+          const base = sample || "Château Margaux";
           return (
             <div key={`${f.family}@${f.weight}`} style={{ border: "1px solid #bbb", background: "#fff", padding: "10px 14px" }}>
-              <div style={{ fontFamily: f.family, fontWeight: f.weight, fontSize: 30, lineHeight: 1.25, minHeight: 42, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
-                {sample || "Château Margaux"}
+              <div style={{ fontFamily: f.family, fontWeight: f.weight, fontSize: roleDef.size * 1.15, lineHeight: 1.25, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
+                {base.toUpperCase()}
+              </div>
+              <div style={{ fontFamily: f.family, fontWeight: f.weight, fontSize: roleDef.size, lineHeight: 1.25, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis", color: "#333" }}>
+                {base}
               </div>
               <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6, flexWrap: "wrap" }}>
                 <span style={{ fontSize: 11, color: "#8a887e", flex: 1 }}>{f.label}</span>
