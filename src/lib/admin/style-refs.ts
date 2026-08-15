@@ -242,18 +242,28 @@ async function visionFetch(init: RequestInit): Promise<Response> {
      (the subject always comes from the winemaker's brief);
    - 6-8 art directions per style so consecutive generations differ visibly;
    - the same boards also yield layout palettes (light grounds only). */
-export async function analyzeStyle(style: string): Promise<StyleProfile> {
-  const key = process.env.OPENAI_API_KEY;
-  if (!key) throw new Error("OPENAI_API_KEY is not set — analysis needs the vision model");
-  const refs = await listRefs(style);
-  if (!refs.length) throw new Error("upload at least one reference image first");
+/* CLUSTER-FIRST derivation (owner GO, 2026-08-15). The old one-pass analysis
+   over 12 low-res refs with a small model produced generic art-school
+   category language ("bold color blocks", "soft washes") — identical across
+   styles, and prompts written in stock language produce stock images. Now:
+   PASS 1 (all refs, low detail): group the board into 3-6 clusters of shared
+   visual language, each anchored to specific reference images.
+   PASS 2 (per cluster, HIGH detail, ≤4 refs): describe THAT cluster alone as
+   one art direction in concrete process language — banned-vocabulary list
+   keeps it specific — explicitly distinct from directions already derived.
+   PASS 3 (text): cross-style distinctness audit rewrites anything that
+   overlaps another style's directions. */
 
-  const images = refs
-    .slice(0, 12)
-    .map((r) => refDataUrl(r))
-    .filter(Boolean) as string[];
+const GENERIC_BAN =
+  "BANNED VOCABULARY (too generic, forbidden anywhere): bold, clean, playful, " +
+  "dynamic, whimsical, hand-drawn feel, minimalistic, elegant, timeless, " +
+  "eye-catching, modern twist, seamless, tactile, evoke, aesthetic. " +
+  "Instead name REAL processes, tools and materials: e.g. copperplate " +
+  "engraving with burin hatching, riso two-pass overprint with misregistration, " +
+  "dry-brush gouache on cold-press paper, chinagraph pencil, linocut with " +
+  "gouge chatter, rapidograph contour, screenprint with 45lpi halftone.";
 
-  const model = process.env.OPENAI_VISION_MODEL || "gpt-4o-mini";
+async function visionJSON(key: string, model: string, system: string, user: unknown[]): Promise<Record<string, unknown>> {
   const res = await visionFetch({
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
@@ -261,101 +271,136 @@ export async function analyzeStyle(style: string): Promise<StyleProfile> {
       model,
       response_format: { type: "json_object" },
       messages: [
-        {
-          role: "system",
-          content:
-            "You are an art director building a wine-label illustration system. " +
-            "Study the reference images as ONE style board and distill its VISUAL LANGUAGE. " +
-            "Return strict JSON: " +
-            '{"summary": string (2-3 sentences on the shared artistic language), ' +
-            '"charter": string (60-120 words, ONE dense paragraph of the board\'s shared visual DNA, ' +
-            "written as a direct instruction to an illustrator: line quality and stroke character, " +
-            "texture and surface, shading technique, how colour/ink is applied, the printing or tool " +
-            "feel, degree of abstraction vs realism, how negative space is used, characteristic " +
-            "imperfections. Pure technique — no subjects, no objects, no scenes), " +
-            '"variants": [6-8 items, each {"label": short name, ' +
-            '"language": a SELF-CONTAINED 40-70 word paragraph, written as a direct instruction to an ' +
-            "illustrator, describing this direction's complete visual language: medium and tool, line " +
-            "quality, texture, shading, how ink/colour is applied, degree of abstraction, negative " +
-            "space, characteristic imperfections. Each variant mirrors ONE distinct cluster of images " +
-            "on the board and must be SO different from the other variants that a viewer would assume " +
-            'different artists made them, ' +
-            '"medium": short technique summary of the same direction (one phrase), ' +
-            '"composition": compositional doctrine phrase (framing, density, scale — never a specific scene), ' +
-            '"mood": mood phrase, ' +
-            '"palette": the ink/colour treatment (e.g. single sepia ink, red+black duotone)}], ' +
-            '"layout": {"palettes": [3-5 items, each {"bg": hex, "ink": hex, "acc": hex} — real colour ' +
-            "chords observed on the boards for label grounds, text ink and one accent; bg must always be " +
-            "a light paper-like colour, ink dark], " +
-            '"type": {"display": the dominant display-type character of the boards, one of ' +
-            '"serif"|"sans"|"condensed"|"slab"|"script"|"poster"|"mono"|"elegant", ' +
-            '"case": dominant lettering case "caps"|"lower"|"mixed"}, ' +
-            '"composition": {"alignment": dominant text alignment on the boards ' +
-            '"centered"|"left"|"mixed"}}. ' +
-            "CRITICAL RULES: the references are a STYLE reference only, never a content reference. " +
-            "Do NOT name, describe or allude to any specific subject, object, animal, plant, figure, " +
-            "building, landscape, scene, symbol or distinctive shape that appears in them — in ANY " +
-            "field, including labels. Labels must be 2-4 word names of the TECHNIQUE or treatment " +
-            '(good: "Fine Crosshatch Engraving", "Loose Ink Wash", "Flat Riso Duotone"; bad: "Olive ' +
-            'Tree", "Village Scene"). If a draft phrase names anything depictable, replace it with ' +
-            "the technique it demonstrates. Every phrase must be fully subject-agnostic and reusable " +
-            "for ANY subject, which is supplied separately. " +
-            "The variants must SPAN THE DIVERSITY of the board — different techniques, inks, textures, " +
-            "line qualities and compositional densities you actually observe, not invented ones, and " +
-            "must be clearly DISTINCT from one another so consecutive generations look different. " +
-            "Phrases must work inside an image-generation prompt and assume a pure white background.",
-        },
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text:
-                `Style: ${style}. Derive the profile from these references. ` +
-                "Remember: describe technique and treatment only — no nouns for anything depicted.",
-            },
-            // low detail: style language + palette chords survive the 512px
-            // downscale, and 12 boards stay far under the vision TPM budget
-            ...images.map((url) => ({ type: "image_url" as const, image_url: { url, detail: "low" as const } })),
-          ],
-        },
+        { role: "system", content: system },
+        { role: "user", content: user },
       ],
     }),
   });
-  if (!res.ok) throw new Error(`vision analysis failed: ${res.status} ${(await res.text()).slice(0, 300)}`);
+  if (!res.ok) throw new Error(`vision call failed: ${res.status} ${(await res.text()).slice(0, 300)}`);
   const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-  const parsed = JSON.parse(json.choices?.[0]?.message?.content || "{}") as {
-    summary?: string;
-    charter?: string;
-    variants?: Partial<StyleVariant>[];
-    layout?: { palettes?: unknown; type?: unknown; composition?: unknown };
-  };
-  const variants: StyleVariant[] = (parsed.variants || [])
-    .filter((v) => v && v.medium && v.composition && v.mood)
-    .slice(0, 10)
-    .map((v, i) => ({
-      key: `auto-${i + 1}`,
-      label: String(v.label || `Variant ${i + 1}`).slice(0, 60),
-      medium: String(v.medium).slice(0, 400),
-      composition: String(v.composition).slice(0, 400),
-      mood: String(v.mood).slice(0, 300),
-      palette: String(v.palette || "").slice(0, 200),
-      language: String((v as { language?: string }).language || "").slice(0, 900),
-    }));
-  if (!variants.length) throw new Error("analysis returned no usable variants");
+  return JSON.parse(json.choices?.[0]?.message?.content || "{}");
+}
 
-  const palettes = sanitizePalettes(parsed.layout?.palettes);
-  const type = sanitizeLayoutType(parsed.layout?.type);
-  const composition = sanitizeComposition(parsed.layout?.composition);
+export async function analyzeStyle(style: string): Promise<StyleProfile> {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) throw new Error("OPENAI_API_KEY is not set — analysis needs the vision model");
+  const refs = await listRefs(style);
+  if (!refs.length) throw new Error("upload at least one reference image first");
+  const model = process.env.OPENAI_VISION_MODEL || "gpt-4o";
+
+  const capped = refs.slice(0, 24);
+  const urls = capped.map((r) => refDataUrl(r));
+
+  // ---- PASS 1: cluster the board ----
+  const p1user: unknown[] = [
+    { type: "text", text: `Style "${style}": ${capped.length} wine-label reference images follow, each preceded by its number.` },
+  ];
+  urls.forEach((u, i) => {
+    if (!u) return;
+    p1user.push({ type: "text", text: `IMAGE ${i + 1}:` });
+    p1user.push({ type: "image_url", image_url: { url: u, detail: "low" } });
+  });
+  const p1 = await visionJSON(key, model,
+    "You are a printmaking connoisseur sorting a wine-label reference board. " +
+    "Group the numbered images into 3-6 CLUSTERS purely by shared visual/technical " +
+    "language (same printing process, ink handling, line character) — NEVER by " +
+    "subject matter. Every image belongs to exactly one cluster. Return strict JSON: " +
+    '{"clusters":[{"name": 2-4 word technique name, "images":[numbers], ' +
+    '"hint": one sentence on what technically unites them}], ' +
+    '"notes": 2 sentences on the board as a whole}. ' + GENERIC_BAN,
+    p1user);
+  let clusters = (Array.isArray(p1.clusters) ? p1.clusters : []) as { name?: string; images?: number[]; hint?: string }[];
+  clusters = clusters.filter((c) => Array.isArray(c.images) && c.images.length).slice(0, 8);
+  if (!clusters.length) clusters = [{ name: "whole board", images: capped.map((_, i) => i + 1), hint: "" }];
+
+  // ---- PASS 2: one rich direction per cluster (high detail) ----
+  const variants: StyleVariant[] = [];
+  for (const [ci, cl] of clusters.entries()) {
+    const clUrls = (cl.images || [])
+      .map((n) => urls[n - 1])
+      .filter(Boolean)
+      .slice(0, 4) as string[];
+    if (!clUrls.length) continue;
+    const done = variants.map((v) => `"${v.label}": ${v.language?.slice(0, 90)}`).join("\n");
+    const p2user: unknown[] = [
+      { type: "text", text: `Cluster "${cl.name || "untitled"}" (${cl.hint || ""}) — these images only:` },
+      ...clUrls.map((u) => ({ type: "image_url", image_url: { url: u, detail: "high" as const } })),
+    ];
+    const p2 = await visionJSON(key, model,
+      "You are a master printmaker describing ONE art direction from the attached " +
+      "reference images so another artist could reproduce the TECHNIQUE exactly. " +
+      "Return strict JSON: " +
+      '{"label": 2-4 word technique name, ' +
+      '"language": 60-100 words of concrete process instruction — the exact ' +
+      "process/tool (engraving, riso, linocut, gouache, marker…), line weight " +
+      "behaviour, how ink sits on paper, halftone/hatching character, colour " +
+      "application, registration flaws, texture of edges, what the eye notices " +
+      "first. Written as imperative instructions. NEVER mention any depicted " +
+      "subject, object, animal, figure or scene — technique only, reusable for " +
+      "any subject, " +
+      '"palette": exact ink/colour treatment seen (e.g. "single oxblood ink", "tomato red + cobalt riso"), ' +
+      '"composition": framing/density doctrine (never a scene), ' +
+      '"mood": 4-6 words}. ' +
+      GENERIC_BAN +
+      (done ? " ALREADY-DERIVED directions for this style — yours must be UNMISTAKABLY different from all of them:\n" + done : "") +
+      " The artwork will be generated on a pure white background; do not mention backgrounds.",
+      p2user);
+    if (p2.language) {
+      variants.push({
+        key: `auto-${ci + 1}`,
+        label: String(p2.label || cl.name || `Direction ${ci + 1}`).slice(0, 60),
+        medium: String(p2.label || "").slice(0, 400),
+        composition: String(p2.composition || "").slice(0, 400),
+        mood: String(p2.mood || "").slice(0, 300),
+        palette: String(p2.palette || "").slice(0, 200),
+        language: String(p2.language).slice(0, 900),
+      });
+    }
+  }
+  if (!variants.length) throw new Error("analysis returned no usable directions");
+
+  // ---- PASS 3: cross-style distinctness audit (text only) ----
+  try {
+    const others = await getProfiles();
+    const foreign = Object.values(others)
+      .filter((pr) => pr.style !== style && pr.variants?.length)
+      .flatMap((pr) => pr.variants.map((v) => `[${pr.style}] ${v.label}: ${(v.language || v.medium || "").slice(0, 90)}`));
+    if (foreign.length) {
+      const audit = await visionJSON(key, model,
+        "You audit art directions for a 3-style wine label system. The NEW directions " +
+        "below must be unmistakably different from the OTHER STYLES' directions — no " +
+        "shared signature technique vocabulary (if two directions both say 'stippling' " +
+        "or 'ink wash', a blind reader could not tell the styles apart). Rewrite ONLY " +
+        "the new directions that overlap, pushing them toward what makes THIS style's " +
+        "references unique; keep the rest byte-identical. Return strict JSON " +
+        '{"variants":[{"label","language","palette","composition","mood"} in the same order]}. ' +
+        GENERIC_BAN,
+        [{ type: "text", text:
+          `NEW (${style}):\n` + variants.map((v) => `${v.label}: ${v.language}`).join("\n\n") +
+          `\n\nOTHER STYLES:\n` + foreign.join("\n") }]);
+      const rewritten = (Array.isArray(audit.variants) ? audit.variants : []) as Partial<StyleVariant>[];
+      if (rewritten.length === variants.length) {
+        rewritten.forEach((r, i) => {
+          if (r.language) variants[i].language = String(r.language).slice(0, 900);
+          if (r.label) variants[i].label = String(r.label).slice(0, 60);
+          if (r.palette) variants[i].palette = String(r.palette).slice(0, 200);
+          if (r.composition) variants[i].composition = String(r.composition).slice(0, 400);
+          if (r.mood) variants[i].mood = String(r.mood).slice(0, 300);
+        });
+      }
+    }
+  } catch { /* audit is best-effort — clustered directions stand on their own */ }
+
   const profile: StyleProfile = {
     style,
-    summary: String(parsed.summary || "").slice(0, 1000),
-    charter: String(parsed.charter || "").slice(0, 1200),
+    summary: String(p1.notes || "").slice(0, 1000),
+    charter: "",   // per-direction language leads prompts; no shared charter to flatten them
     variants,
-    layout: palettes.length || type || composition ? { palettes, type, composition } : null,
+    layout: null,
     refCount: refs.length,
     analyzedAt: new Date(),
   };
+
   const db = await getDb();
   await db
     .collection("styleProfiles")

@@ -154,6 +154,24 @@ band + orange full ground, flora diagonal accent band, premium charcoal
 variant, artistic near-black riso ground. Text-only comps may still use a
 bold single-colour ground, e.g. the minimalist red panel.)
 
+## 5-IMAGES-V2 (2026-08-15) — cluster-first derivation, anti-AI prompting
+
+Owner: images looked generic-AI and identical across styles. Root cause:
+one-pass analysis of 12 low-res refs with gpt-4o-mini produced art-school
+category language shared by all styles. Fix (style-refs.ts analyzeStyle):
+PASS 1 clusters the whole board (≤24 refs, low detail) by technical
+language; PASS 2 derives ONE direction per cluster from ≤4 refs at HIGH
+detail with a banned-generic-vocabulary list (real processes only:
+burin, riso, linocut…); PASS 3 text audit rewrites anything overlapping
+other styles' directions. Default vision model now gpt-4o
+(OPENAI_VISION_MODEL overrides). Charter retired (empty) — per-direction
+language leads prompts. prompt.ts: ANALOG demand appended to every
+prompt + ANTI_AI_NEGATIVE appended to every negative (both hard-coded
+outside admin template, like WHITE_BG). All 3 styles re-derived live:
+traditional 4 directions (copperplate/wood engraving/litho-stipple/navy
+linocut), contemporary 7, punk 6. Pending experiment (owner to judge
+current results first): single reference image as technique anchor.
+
 ## 5-HARD-RULES (2026-08-15) — mechanical constraints, verifier-enforced
 
 Owner's hard rules, implemented in the ENGINE and proven by

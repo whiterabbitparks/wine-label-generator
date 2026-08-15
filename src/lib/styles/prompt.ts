@@ -69,6 +69,16 @@ const TEMPLATE_DEFAULT =
 const WHITE_BG =
   " The artwork is isolated on a clean, solid, pure white background — no background colour, no paper texture, no gradients, no vignette, no cast shadows.";
 
+/* Anti-generic guard (owner GO, 2026-08-15): the image model's default
+   aesthetic is polished digital illustration — exactly what the owner calls
+   "stock/clipart AI images". Every prompt demands analog process artifacts,
+   and the negative list bans the default look. Hard-coded outside the
+   admin-editable template, like WHITE_BG. */
+const ANALOG =
+  " This must look like a REAL artwork made with physical tools and printed by a real process — visible ink behaviour, plate/press artifacts, slight imperfections of the human hand. Never a digital illustration.";
+export const ANTI_AI_NEGATIVE =
+  "generic digital illustration, vector clipart, flat corporate illustration, smooth airbrush shading, 3D render, glossy highlights, plastic sheen, stock art composition, cartoon mascot, concept-art polish, perfect symmetry, default AI aesthetic";
+
 function subjectFrom(vision: string, d: Record<string, string>): string {
   const v = (vision || "").trim();
   if (v) return v;
@@ -146,6 +156,7 @@ export function buildStylePrompt(
     .replace("{reference}", reference)
     .replace("{rules}", rules)
     .concat(inkTreatment)
+    .concat(ANALOG)
     .concat(WHITE_BG)
     .replace(/\s+/g, " ")
     .trim();
@@ -169,7 +180,7 @@ export function buildStyleJob(
   charter?: string | null
 ): GenerationJob {
   // negative = global avoid-list + this style's avoid-list + owner-rejected traits
-  const negParts = [art.negative, art.perStyle?.[style.key]?.negative?.trim()].filter(Boolean);
+  const negParts = [art.negative, art.perStyle?.[style.key]?.negative?.trim(), ANTI_AI_NEGATIVE].filter(Boolean);
   if (fb?.avoid?.length) negParts.push(fb.avoid.join(", "));
   return {
     prompt: buildStylePrompt(style, sub, brief, art, fb, charter),

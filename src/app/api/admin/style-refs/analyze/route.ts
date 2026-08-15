@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requestIsAuthenticated } from "@/lib/admin/session";
 import { analyzeStyle } from "@/lib/admin/style-refs";
 
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 export async function POST(req: Request) {
   if (!(await requestIsAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
