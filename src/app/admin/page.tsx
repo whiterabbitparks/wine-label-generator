@@ -1151,7 +1151,7 @@ function FontsTab() {
   const [sample, setSample] = useState("Château Margaux");
   const [pool, setPool] = useState<FontRow[]>([]);
   const [scores, setScores] = useState<Record<string, Record<FontRole, Record<string, number>>>>({});
-  const [casePrefs, setCasePrefs] = useState<Record<string, Partial<Record<FontRole, string | null>>>>({});
+  const [casePrefs, setCasePrefs] = useState<Record<string, Partial<Record<FontRole, Record<string, string | null>>>>>({});
   const [fontsReady, setFontsReady] = useState(false);
 
   useEffect(() => {
@@ -1184,10 +1184,10 @@ function FontsTab() {
     if (r.ok) setScores((await r.json()).scores || {});
   }
 
-  async function setCase(pref: "upper" | "lower" | null) {
+  async function setCase(f: FontRow, pref: "upper" | null) {
     const r = await fetch("/api/admin/font-case", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ style, role, pref }),
+      body: JSON.stringify({ style, role, family: f.family, weight: f.weight, pref }),
     });
     if (r.ok) setCasePrefs((await r.json()).casePrefs || {});
   }
@@ -1197,7 +1197,8 @@ function FontsTab() {
   const score = (f: FontRow) => per[`${f.family}@${f.weight}`] ?? 0;
   const status = (n: number): [string, string] =>
     n > 0 ? ["in the pool ✓", "#5a6b3b"] : n < 0 ? ["banned ✕", "#a03030"] : ["unrated", "#8a887e"];
-  const curCase = casePrefs[style]?.[role] ?? null;
+  const caseOf = (f: FontRow) =>
+    (casePrefs[style]?.[role] || {})[`${f.family}@${f.weight}`.replace(/\./g, "·")] ?? null;
 
   return (
     <div>
@@ -1223,19 +1224,11 @@ function FontsTab() {
         <input style={{ ...S.input, width: 240 }} value={sample} placeholder="sample text"
           onChange={(e) => setSample(e.target.value)} />
       </div>
-      <div style={{ display: "flex", gap: 10, alignItems: "center", margin: "0 0 14px", flexWrap: "wrap" }}>
-        <span style={{ fontSize: 13, color: "#4a4a42" }}>
-          <b>{roleDef.name}</b> ({roleDef.hint}) — preferred case:
-        </span>
-        {([["upper", "UPPERCASE"], ["lower", "As written"], [null, "Let the design decide"]] as const).map(([v, lbl]) => (
-          <button key={String(v)} onClick={() => setCase(v)}
-            style={{ font: "inherit", fontSize: 12, padding: "5px 12px", borderRadius: 6, cursor: "pointer",
-              border: `1px solid ${curCase === v ? "#5a6b3b" : "#bbb"}`,
-              background: curCase === v ? "#5a6b3b" : "#fff", color: curCase === v ? "#fff" : "#4a4a42" }}>
-            {lbl}
-          </button>
-        ))}
-      </div>
+      <p style={{ fontSize: 13, color: "#4a4a42", margin: "0 0 14px" }}>
+        Judging <b>{roleDef.name}</b> — {roleDef.hint}. Each font has its own case switch:
+        <b> Aa</b> standard grammar (as the winemaker writes it, the default) · <b>AA</b> always
+        UPPERCASE for this font. The active line in the preview is highlighted.
+      </p>
       {!fontsReady && <p style={{ color: "#8a887e" }}>Loading fonts…</p>}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         {pool.map((f) => {
@@ -1243,15 +1236,23 @@ function FontsTab() {
           const base = sample || "Château Margaux";
           return (
             <div key={`${f.family}@${f.weight}`} style={{ border: "1px solid #bbb", background: "#fff", padding: "10px 14px" }}>
-              <div style={{ fontFamily: f.family, fontWeight: f.weight, fontSize: roleDef.size * 1.15, lineHeight: 1.25, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
+              <div style={{ fontFamily: f.family, fontWeight: f.weight, fontSize: roleDef.size * 1.15, lineHeight: 1.25, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis", opacity: caseOf(f) === "upper" ? 1 : 0.35 }}>
                 {base.toUpperCase()}
               </div>
-              <div style={{ fontFamily: f.family, fontWeight: f.weight, fontSize: roleDef.size, lineHeight: 1.25, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis", color: "#333" }}>
+              <div style={{ fontFamily: f.family, fontWeight: f.weight, fontSize: roleDef.size, lineHeight: 1.25, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis", color: "#333", opacity: caseOf(f) === "upper" ? 0.35 : 1 }}>
                 {base}
               </div>
               <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 6, flexWrap: "wrap" }}>
                 <span style={{ fontSize: 11, color: "#8a887e", flex: 1 }}>{f.label}</span>
                 <span style={{ fontSize: 11, color: col, border: `1px solid ${col}`, borderRadius: 4, padding: "1px 7px" }}>{txt}</span>
+                <span style={{ display: "inline-flex", border: "1px solid #888", borderRadius: 5, overflow: "hidden" }} title="Case for this font on final labels">
+                  <button onClick={() => setCase(f, null)}
+                    style={{ font: "inherit", fontSize: 12, padding: "2px 8px", border: "none", cursor: "pointer",
+                      background: caseOf(f) !== "upper" ? "#5a6b3b" : "#fff", color: caseOf(f) !== "upper" ? "#fff" : "#4a4a42" }}>Aa</button>
+                  <button onClick={() => setCase(f, "upper")}
+                    style={{ font: "inherit", fontSize: 12, padding: "2px 8px", border: "none", cursor: "pointer",
+                      background: caseOf(f) === "upper" ? "#5a6b3b" : "#fff", color: caseOf(f) === "upper" ? "#fff" : "#4a4a42" }}>AA</button>
+                </span>
                 <button style={{ ...S.btnGhost, padding: "3px 10px", fontSize: 12 }} onClick={() => verdict(f, "approve")}>Approve</button>
                 <button style={{ ...S.btnGhost, padding: "3px 10px", fontSize: 12, color: "#a03030", borderColor: "#a03030" }} onClick={() => verdict(f, "reject")}>Reject</button>
               </div>

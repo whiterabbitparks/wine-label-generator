@@ -245,25 +245,27 @@ export async function fontScores(): Promise<Record<string, Record<FontRole, Reco
   return out;
 }
 
-/* Case preference per style+role: upper | lower | null (follow the design). */
-export type CasePref = "upper" | "lower" | null;
+/* Case preference PER FONT within a style+role (owner, 2026-08-15): default
+   null = standard grammar (text as the winemaker wrote it); "upper" forces
+   UPPERCASE for that font only. Keyed "family@weight". */
+export type CasePref = "upper" | null;
 const CASE_ID = "layout-caseprefs";
-export async function getCasePrefs(): Promise<Record<string, Record<FontRole, CasePref>>> {
+export async function getCasePrefs(): Promise<Record<string, Partial<Record<FontRole, Record<string, CasePref>>>>> {
   try {
     const db = await getDb();
     const doc = (await db.collection("settings").findOne({ _id: CASE_ID } as never)) as
-      | ({ prefs?: Record<string, Record<FontRole, CasePref>> } & Record<string, unknown>)
+      | ({ prefs?: Record<string, Partial<Record<FontRole, Record<string, CasePref>>>> } & Record<string, unknown>)
       | null;
     return doc?.prefs || {};
   } catch {
     return {};
   }
 }
-export async function setCasePref(style: string, role: FontRole, pref: CasePref): Promise<void> {
+export async function setCasePref(style: string, role: FontRole, fontKey: string, pref: CasePref): Promise<void> {
   const db = await getDb();
   await db.collection("settings").updateOne(
     { _id: CASE_ID } as never,
-    { $set: { [`prefs.${style}.${role}`]: pref, updatedAt: new Date() } },
+    { $set: { [`prefs.${style}.${role}.${fontKey.replace(/\./g, "·")}`]: pref, updatedAt: new Date() } },
     { upsert: true }
   );
 }
@@ -331,24 +333,26 @@ export async function buildLayoutHints(): Promise<Record<string, unknown>> {
     if (prof?.palettes?.length)
       entry.palettes = prof.palettes.map((p) => ({ bg: p.bg, ink: p.ink, sub: mix(p.ink, p.bg, 0.45), acc: p.acc }));
     const byRole = fonts[style] || { hero: {}, secondary: {}, small: {} };
+    // every pool entry is [family, weight, case] — case is that FONT's own
+    // switch (null = standard grammar, "upper" = force caps), owner 2026-08-15
+    const caseOf = (role: FontRole, fam: string, w: number): CasePref =>
+      (casePrefs[style]?.[role] || {})[`${fam}@${w}`.replace(/\./g, "·")] ?? null;
     // hero: approved ∪ (derived minus net-rejected); secondary/small: approved-only pools
     const heroScores = byRole.hero || {};
     const approvedHero = FONT_POOL.filter((f) => (heroScores[`${f.family}@${f.weight}`] ?? 0) > 0)
-      .map((f) => [f.family, f.weight] as [string, number]);
+      .map((f) => [f.family, f.weight, caseOf("hero", f.family, f.weight)] as [string, number, CasePref]);
     const derivedKept = (prof?.heroFonts || []).filter(
       (f) => (heroScores[`${f[0]}@${f[1]}`] ?? 0) >= 0 &&
         !approvedHero.some((a) => a[0] === f[0] && a[1] === f[1])
-    );
+    ).map((f) => [f[0], f[1], caseOf("hero", f[0], f[1])] as [string, number, CasePref]);
     const heroPool = [...approvedHero, ...derivedKept];
     if (heroPool.length) entry.heroFonts = heroPool;
     for (const [role, key] of [["secondary", "secondaryFonts"], ["small", "smallFonts"]] as const) {
       const sc = byRole[role] || {};
       const pool = FONT_POOL.filter((f) => (sc[`${f.family}@${f.weight}`] ?? 0) > 0)
-        .map((f) => [f.family, f.weight] as [string, number]);
+        .map((f) => [f.family, f.weight, caseOf(role, f.family, f.weight)] as [string, number, CasePref]);
       if (pool.length) entry[key] = pool;
     }
-    const cp = casePrefs[style];
-    if (cp && Object.values(cp).some(Boolean)) entry.casePrefs = cp;
     const w = weights[style];
     if (w && w.some((x) => x !== 1)) entry.weights = w;
     if (Object.keys(entry).length) hints[style] = entry;

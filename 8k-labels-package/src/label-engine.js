@@ -1057,19 +1057,18 @@ function rolePick(seed,saltKey,hintKey,role){
   const list=h&&(role==='secondary'?h.secondaryFonts:h.smallFonts);
   if(!Array.isArray(list)||!list.length)return null;
   const f=list[sPick(seed,(STYLE_SALT[saltKey]||0)*7+(role==='secondary'?5:6),list.length)];
-  return (Array.isArray(f)&&f.length>=2)?[String(f[0]),+f[1]||400]:null;
+  // 3rd element = this font's case switch ('upper' or null = standard grammar)
+  return (Array.isArray(f)&&f.length>=2)?[String(f[0]),+f[1]||400,f[2]||null]:null;
 }
-function caseFlag(hintKey,role,designed){
-  const h=STYLE_HINTS[hintKey], c=h&&h.casePrefs&&h.casePrefs[role];
-  if(c==='upper')return true;
-  if(c==='lower')return false;
-  return designed;
+function capsFor(picked,designed){
+  if(!picked||picked.length<3)return designed;   // designed font: keep the design
+  return picked[2]==='upper';                    // curated font: standard unless switched
 }
 function heroPick(seed,key,variant,hintKey){
   const h=STYLE_HINTS[hintKey||key], hf=h&&h.heroFonts;
   if(Array.isArray(hf)&&hf.length){
     const f=hf[sPick(seed,(STYLE_SALT[key]||0)*7+3+variant,hf.length)];
-    if(Array.isArray(f)&&f.length>=2)return [String(f[0]),+f[1]||400];
+    if(Array.isArray(f)&&f.length>=2)return [String(f[0]),+f[1]||400,f[2]||null];
   }
   const list=(HERO_ALTS[key]||[])[variant]||[];
   if(!list.length)return null;
@@ -1157,77 +1156,77 @@ function styleTraditional(d,order,seed,twMM,thMM){
         +`<rect x="${o2}" y="${o2}" width="${(W-2*o2).toFixed(1)}" height="${(H-2*o2).toFixed(1)}" fill="none" stroke="${INK}" stroke-width="1"/>`;
     body+=sImageBox('traditional',BOX,W,H);
     body+=sFlow([
-      {str:f.wine,size:H*0.115,f:HP?HP[0]:(SF.grenze),w:HP?HP[1]:(600),fill:ACC,maxW:cW*0.9,gap:H*0.012,pre:H*0.42,caps:caseFlag('traditional','hero',false)},
-      {str:f.producer,size:H*0.033,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:INK,caps:caseFlag('traditional','small',true),tr:0.24,maxW:cW*0.78,gap:H*0.012},
-      {str:f.appellation,size:H*0.044,f:F2?F2[0]:(CI),w:F2?F2[1]:(600),fill:INK,ital:true,maxW:cW*0.68,gap:0,caps:caseFlag('traditional','secondary',false)}],cx,SM,'c').svg;
+      {str:f.wine,size:H*0.115,f:HP?HP[0]:(SF.grenze),w:HP?HP[1]:(600),fill:ACC,maxW:cW*0.9,gap:H*0.012,pre:H*0.42,caps:capsFor(HP,false)},
+      {str:f.producer,size:H*0.033,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,true),tr:0.24,maxW:cW*0.78,gap:H*0.012},
+      {str:f.appellation,size:H*0.044,f:F2?F2[0]:(CI),w:F2?F2[1]:(600),fill:INK,ital:true,maxW:cW*0.68,gap:0,caps:capsFor(F2,false)}],cx,SM,'c').svg;
     body+=stackUp([
-      {str:f.special,size:H*0.026,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,tr:0,caps:caseFlag('traditional','small',false)},
-      {str:f.grape,size:H*0.030,f:F2?F2[0]:(EG),w:F2?F2[1]:(600),fill:INK,caps:caseFlag('traditional','secondary',false)},
-      {str:[f.region,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.028,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:INK,caps:caseFlag('traditional','small',false)},
-      {str:[f.classification,desc].filter(Boolean).join(' \u00b7 '),size:H*0.025,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:caseFlag('traditional','small',false)},
-      {str:alc,size:H*0.023,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:caseFlag('traditional','small',false)}],cx,H-SM-2,H*0.007,'c',cW*0.85).svg;
+      {str:f.special,size:H*0.026,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,tr:0,caps:capsFor(F3,false)},
+      {str:f.grape,size:H*0.030,f:F2?F2[0]:(EG),w:F2?F2[1]:(600),fill:INK,caps:capsFor(F2,false)},
+      {str:[f.region,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.028,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:INK,caps:capsFor(F3,false)},
+      {str:[f.classification,desc].filter(Boolean).join(' \u00b7 '),size:H*0.025,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)},
+      {str:alc,size:H*0.023,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-2,H*0.007,'c',cW*0.85).svg;
   }else if(variant===1){ // La Couspaude board: everything centred, vignette mid
     body+=sFlow([
-      {str:f.producer,size:H*0.032,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:SUB,caps:caseFlag('traditional','small',true),tr:0.34,maxW:cW*0.72,gap:H*0.012,pre:H*0.012},
-      {str:f.wine,size:H*0.092,f:HP?HP[0]:(PF),w:HP?HP[1]:(700),fill:ACC,caps:caseFlag('traditional','hero',true),maxW:cW*0.94,gap:0}],cx,SM,'c').svg;
+      {str:f.producer,size:H*0.032,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:SUB,caps:capsFor(F3,true),tr:0.34,maxW:cW*0.72,gap:H*0.012,pre:H*0.012},
+      {str:f.wine,size:H*0.092,f:HP?HP[0]:(PF),w:HP?HP[1]:(700),fill:ACC,caps:capsFor(HP,true),maxW:cW*0.94,gap:0}],cx,SM,'c').svg;
     body+=sImageBox('traditional',BOX,W,H);
     body+=sFlow([
-      {str:f.vintage,size:H*0.046,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:INK,maxW:cW*0.3,gap:H*0.012,pre:H*0.615,caps:caseFlag('traditional','small',false)},
-      {str:f.classification,size:H*0.037,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:INK,caps:caseFlag('traditional','small',true),tr:0.14,maxW:cW*0.8,gap:H*0.010},
-      {str:f.appellation,size:H*0.037,f:F2?F2[0]:(EG),w:F2?F2[1]:(500),fill:INK,caps:caseFlag('traditional','secondary',true),tr:0.14,maxW:cW*0.8,gap:H*0.012},
-      {str:f.grape,size:H*0.028,f:F2?F2[0]:(EG),w:F2?F2[1]:(400),fill:SUB,maxW:cW*0.7,gap:0,caps:caseFlag('traditional','secondary',false)}],cx,SM,'c').svg;
+      {str:f.vintage,size:H*0.046,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:INK,maxW:cW*0.3,gap:H*0.012,pre:H*0.615,caps:capsFor(F3,false)},
+      {str:f.classification,size:H*0.037,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,true),tr:0.14,maxW:cW*0.8,gap:H*0.010},
+      {str:f.appellation,size:H*0.037,f:F2?F2[0]:(EG),w:F2?F2[1]:(500),fill:INK,caps:capsFor(F2,true),tr:0.14,maxW:cW*0.8,gap:H*0.012},
+      {str:f.grape,size:H*0.028,f:F2?F2[0]:(EG),w:F2?F2[1]:(400),fill:SUB,maxW:cW*0.7,gap:0,caps:capsFor(F2,false)}],cx,SM,'c').svg;
     body+=stackUp([
-      {str:[f.region,f.special].filter(Boolean).join(' \u00b7 '),size:H*0.025,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:caseFlag('traditional','small',false)},
-      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.023,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:caseFlag('traditional','small',false)}],cx,H-SM-2,H*0.007,'c',cW*0.8).svg;
+      {str:[f.region,f.special].filter(Boolean).join(' \u00b7 '),size:H*0.025,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)},
+      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.023,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-2,H*0.007,'c',cW*0.8).svg;
   }else if(variant===2){ // Mittelwihr board: red letterpress, emblem, all centred
     const o2=SM*0.6;
     body+=`<rect x="${o2}" y="${o2}" width="${(W-2*o2).toFixed(1)}" height="${(H-2*o2).toFixed(1)}" fill="none" stroke="${ACC}" stroke-width="${Math.max(1,H*0.0025).toFixed(1)}"/>`;
     body+=sBlock(f.appellation,{x:cx,top:SM+H*0.012,maxW:cW*0.8,size:H*0.040,min:H*0.028,f:SF.archivo,w:500,fill:ACC,a:'c',caps:true,tr:0.32}).svg;
     body+=sImageBox('traditional',BOX,W,H);
     body+=sFlow([
-      {str:f.wine,size:H*0.115,f:HP?HP[0]:(SF.archivo),w:HP?HP[1]:(800),fill:ACC,caps:caseFlag('traditional','hero',true),tr:0.05,maxW:cW*0.92,gap:H*0.014,pre:H*0.38},
-      {str:f.producer,size:H*0.031,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:INK,caps:caseFlag('traditional','small',true),tr:0.22,maxW:cW*0.78,gap:H*0.012},
-      {str:f.grape,size:H*0.030,f:F2?F2[0]:(EG),w:F2?F2[1]:(600),fill:INK,caps:caseFlag('traditional','secondary',true),tr:0.10,maxW:cW*0.7,gap:0}],cx,SM,'c').svg;
+      {str:f.wine,size:H*0.115,f:HP?HP[0]:(SF.archivo),w:HP?HP[1]:(800),fill:ACC,caps:capsFor(HP,true),tr:0.05,maxW:cW*0.92,gap:H*0.014,pre:H*0.38},
+      {str:f.producer,size:H*0.031,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,true),tr:0.22,maxW:cW*0.78,gap:H*0.012},
+      {str:f.grape,size:H*0.030,f:F2?F2[0]:(EG),w:F2?F2[1]:(600),fill:INK,caps:capsFor(F2,true),tr:0.10,maxW:cW*0.7,gap:0}],cx,SM,'c').svg;
     body+=stackUp([
-      {str:f.region,size:H*0.028,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:ACC,caps:caseFlag('traditional','small',true),tr:0.18},
-      {str:[f.vintage,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.025,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:INK,caps:caseFlag('traditional','small',false)},
-      {str:[f.special,desc].filter(Boolean).join(' \u00b7 '),size:H*0.023,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:caseFlag('traditional','small',false)},
-      {str:alc,size:H*0.022,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:caseFlag('traditional','small',false)}],cx,H-SM-H*0.01,H*0.007,'c',cW*0.8).svg;
+      {str:f.region,size:H*0.028,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:ACC,caps:capsFor(F3,true),tr:0.18},
+      {str:[f.vintage,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.025,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:INK,caps:capsFor(F3,false)},
+      {str:[f.special,desc].filter(Boolean).join(' \u00b7 '),size:H*0.023,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)},
+      {str:alc,size:H*0.022,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-H*0.01,H*0.007,'c',cW*0.8).svg;
   }else if(variant===3){ // Kirile board: portrait, script signature, VERTICAL side text
     body+=sImageBox('traditional',BOX,W,H);
     body+=sFlow([
-      {str:f.wine,size:H*0.145,f:HP?HP[0]:(F.greatVibes),w:HP?HP[1]:(400),fill:INK,maxW:cW*0.84,gap:H*0.038,pre:H*0.455,caps:caseFlag('traditional','hero',false)},
-      {str:f.producer,size:H*0.029,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:SUB,caps:caseFlag('traditional','small',true),tr:0.3,maxW:cW*0.7,gap:H*0.012},
-      {str:f.appellation,size:H*0.040,f:F2?F2[0]:(CI),w:F2?F2[1]:(600),fill:ACC,ital:true,maxW:cW*0.6,gap:0,caps:caseFlag('traditional','secondary',false)}],cx,SM,'c').svg;
+      {str:f.wine,size:H*0.145,f:HP?HP[0]:(F.greatVibes),w:HP?HP[1]:(400),fill:INK,maxW:cW*0.84,gap:H*0.038,pre:H*0.455,caps:capsFor(HP,false)},
+      {str:f.producer,size:H*0.029,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:SUB,caps:capsFor(F3,true),tr:0.3,maxW:cW*0.7,gap:H*0.012},
+      {str:f.appellation,size:H*0.040,f:F2?F2[0]:(CI),w:F2?F2[1]:(600),fill:ACC,ital:true,maxW:cW*0.6,gap:0,caps:capsFor(F2,false)}],cx,SM,'c').svg;
     body+=sRot([f.region,f.vintage].filter(Boolean).join(' \u00b7 '),W-SM*0.5,H,{size:H*0.024,f:EG,w:400,fill:SUB,tr:0.08,caps:true});
     body+=sRot([desc,alc].filter(Boolean).join(' / '),SM*0.5,H,{size:H*0.022,f:EG,w:400,fill:SUB,tr:0.06});
     body+=stackUp([
-      {str:[f.grape,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.026,f:F2?F2[0]:(EG),w:F2?F2[1]:(400),fill:INK,caps:caseFlag('traditional','secondary',false)},
-      {str:f.special,size:H*0.023,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,tr:0,caps:caseFlag('traditional','small',false)}],cx,H-SM-2,H*0.007,'c',cW*0.7).svg;
+      {str:[f.grape,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.026,f:F2?F2[0]:(EG),w:F2?F2[1]:(400),fill:INK,caps:capsFor(F2,false)},
+      {str:f.special,size:H*0.023,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,tr:0,caps:capsFor(F3,false)}],cx,H-SM-2,H*0.007,'c',cW*0.7).svg;
   }else if(variant===4){ // Olive Tree board: airy engraving over tiny tracked caps
     body+=sImageBox('traditional',BOX,W,H);
     body+=sFlow([
-      {str:f.wine,size:H*0.050,f:HP?HP[0]:(EG),w:HP?HP[1]:(500),fill:INK,caps:caseFlag('traditional','hero',true),tr:0.42,maxW:cW*0.9,gap:H*0.018,pre:H*0.43},
-      {str:f.producer,size:H*0.027,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:caseFlag('traditional','small',true),tr:0.34,maxW:cW*0.7,gap:H*0.02},
-      {str:f.appellation,size:H*0.036,f:F2?F2[0]:(CI),w:F2?F2[1]:(600),fill:ACC,ital:true,maxW:cW*0.6,gap:0,caps:caseFlag('traditional','secondary',false)}],cx,SM,'c').svg;
+      {str:f.wine,size:H*0.050,f:HP?HP[0]:(EG),w:HP?HP[1]:(500),fill:INK,caps:capsFor(HP,true),tr:0.42,maxW:cW*0.9,gap:H*0.018,pre:H*0.43},
+      {str:f.producer,size:H*0.027,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,true),tr:0.34,maxW:cW*0.7,gap:H*0.02},
+      {str:f.appellation,size:H*0.036,f:F2?F2[0]:(CI),w:F2?F2[1]:(600),fill:ACC,ital:true,maxW:cW*0.6,gap:0,caps:capsFor(F2,false)}],cx,SM,'c').svg;
     body+=stackUp([
-      {str:[f.grape,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.027,f:F2?F2[0]:(EG),w:F2?F2[1]:(500),fill:INK,caps:caseFlag('traditional','secondary',false)},
-      {str:[f.region,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.024,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:caseFlag('traditional','small',false)},
-      {str:f.special,size:H*0.023,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:caseFlag('traditional','small',false)},
-      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:caseFlag('traditional','small',false)}],cx,H-SM-2,H*0.007,'c',cW*0.8).svg;
+      {str:[f.grape,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.027,f:F2?F2[0]:(EG),w:F2?F2[1]:(500),fill:INK,caps:capsFor(F2,false)},
+      {str:[f.region,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.024,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)},
+      {str:f.special,size:H*0.023,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)},
+      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-2,H*0.007,'c',cW*0.8).svg;
   }else{ // Margaux/Ausone boards: framed, pure centred type
     const o=SM*0.55,i2=SM*0.8;
     body+=`<rect x="${o}" y="${o}" width="${(W-2*o).toFixed(1)}" height="${(H-2*o).toFixed(1)}" fill="none" stroke="${ACC}" stroke-width="${(H*0.004).toFixed(1)}"/>`
         +`<rect x="${i2}" y="${i2}" width="${(W-2*i2).toFixed(1)}" height="${(H-2*i2).toFixed(1)}" fill="none" stroke="${INK}" stroke-width="1"/>`;
     body+=sFlow([
-      {str:f.vintage,size:H*0.045,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:INK,maxW:cW*0.3,gap:H*0.02,pre:H*0.06,caps:caseFlag('traditional','small',false)},
-      {str:f.producer,size:H*0.04,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:SUB,caps:caseFlag('traditional','small',true),tr:0.3,maxW:cW*0.72,gap:H*0.05},
-      {str:f.wine,size:H*0.13,f:HP?HP[0]:(PF),w:HP?HP[1]:(700),fill:ACC,caps:caseFlag('traditional','hero',true),lines:2,lh:1.02,maxW:cW*0.8,gap:H*0.02},
-      {str:f.appellation,size:H*0.055,f:F2?F2[0]:(CI),w:F2?F2[1]:(600),fill:INK,ital:true,maxW:cW*0.6,gap:H*0.03,caps:caseFlag('traditional','secondary',false)},
-      {str:f.classification,size:H*0.037,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.7,gap:H*0.012,caps:caseFlag('traditional','small',false)},
-      {str:f.grape,size:H*0.037,f:F2?F2[0]:(EG),w:F2?F2[1]:(700),fill:INK,caps:caseFlag('traditional','secondary',true),tr:0.08,maxW:cW*0.7,gap:H*0.012},
-      {str:[f.region,f.special].filter(Boolean).join(' \u00b7 '),size:H*0.03,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.7,gap:H*0.012,caps:caseFlag('traditional','small',false)},
-      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.027,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.7,gap:0,caps:caseFlag('traditional','small',false)}],cx,SM,'c').svg;
+      {str:f.vintage,size:H*0.045,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:INK,maxW:cW*0.3,gap:H*0.02,pre:H*0.06,caps:capsFor(F3,false)},
+      {str:f.producer,size:H*0.04,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:SUB,caps:capsFor(F3,true),tr:0.3,maxW:cW*0.72,gap:H*0.05},
+      {str:f.wine,size:H*0.13,f:HP?HP[0]:(PF),w:HP?HP[1]:(700),fill:ACC,caps:capsFor(HP,true),lines:2,lh:1.02,maxW:cW*0.8,gap:H*0.02},
+      {str:f.appellation,size:H*0.055,f:F2?F2[0]:(CI),w:F2?F2[1]:(600),fill:INK,ital:true,maxW:cW*0.6,gap:H*0.03,caps:capsFor(F2,false)},
+      {str:f.classification,size:H*0.037,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.7,gap:H*0.012,caps:capsFor(F3,false)},
+      {str:f.grape,size:H*0.037,f:F2?F2[0]:(EG),w:F2?F2[1]:(700),fill:INK,caps:capsFor(F2,true),tr:0.08,maxW:cW*0.7,gap:H*0.012},
+      {str:[f.region,f.special].filter(Boolean).join(' \u00b7 '),size:H*0.03,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.7,gap:H*0.012,caps:capsFor(F3,false)},
+      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.027,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.7,gap:0,caps:capsFor(F3,false)}],cx,SM,'c').svg;
   }
   return sWrap(W,H,twMM,thMM,BG,body);
 }
@@ -1253,32 +1252,32 @@ function styleContempX(f,W,H,seed,twMM,thMM,fv){
     body+=sBlock(f.vintage,{x:W-SM,top:SM,maxW:W*0.26,size:H*0.030,min:H*0.022,f:SF.jost,w:500,fill:SUB,a:'r'}).svg;
     body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
-      {str:f.wine,size:H*0.082,f:HP?HP[0]:(SF.archivo),w:HP?HP[1]:(800),fill:INK,caps:caseFlag('contemporary','hero',true),maxW:cW*0.9,gap:H*0.014,pre:H*0.645},
-      {str:[f.appellation,f.grape].filter(Boolean).join(' \u00b7 '),size:H*0.033,f:F2?F2[0]:(SF.jost),w:F2?F2[1]:(500),fill:SUB,maxW:cW*0.8,gap:H*0.010,caps:caseFlag('contemporary','secondary',false)},
-      {str:[f.classification,reg].filter(Boolean).join(' \u00b7 '),size:H*0.026,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.85,gap:H*0.008,caps:caseFlag('contemporary','small',false)},
-      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.024,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.85,gap:0,caps:caseFlag('contemporary','small',false)}],SM,SM,'l').svg;
+      {str:f.wine,size:H*0.082,f:HP?HP[0]:(SF.archivo),w:HP?HP[1]:(800),fill:INK,caps:capsFor(HP,true),maxW:cW*0.9,gap:H*0.014,pre:H*0.645},
+      {str:[f.appellation,f.grape].filter(Boolean).join(' \u00b7 '),size:H*0.033,f:F2?F2[0]:(SF.jost),w:F2?F2[1]:(500),fill:SUB,maxW:cW*0.8,gap:H*0.010,caps:capsFor(F2,false)},
+      {str:[f.classification,reg].filter(Boolean).join(' \u00b7 '),size:H*0.026,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.85,gap:H*0.008,caps:capsFor(F3,false)},
+      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.024,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.85,gap:0,caps:capsFor(F3,false)}],SM,SM,'l').svg;
   }else if(variant===1){ // ñor board: giant lowercase serif, tiny corner data
     body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
-      {str:f.wine.toLowerCase(),size:H*0.20,f:HP?HP[0]:(SF.fraunces),w:HP?HP[1]:(600),fill:SCH.acc,maxW:cW*0.96,gap:H*0.014,pre:H*0.37,caps:caseFlag('contemporary','hero',false)},
-      {str:f.appellation,size:H*0.042,f:F2?F2[0]:(SF.jost),w:F2?F2[1]:(500),fill:INK,maxW:cW*0.7,gap:0,caps:caseFlag('contemporary','secondary',false)}],cx,SM,'c').svg;
+      {str:f.wine.toLowerCase(),size:H*0.20,f:HP?HP[0]:(SF.fraunces),w:HP?HP[1]:(600),fill:SCH.acc,maxW:cW*0.96,gap:H*0.014,pre:H*0.37,caps:capsFor(HP,false)},
+      {str:f.appellation,size:H*0.042,f:F2?F2[0]:(SF.jost),w:F2?F2[1]:(500),fill:INK,maxW:cW*0.7,gap:0,caps:capsFor(F2,false)}],cx,SM,'c').svg;
     body+=stackUp([
-      {str:f.producer,size:H*0.028,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(600),fill:INK,tr:0.12,caps:caseFlag('contemporary','small',false)},
-      {str:[f.region,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.024,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,caps:caseFlag('contemporary','small',false)}],SM+cW*0.28,H-SM-2,H*0.007,'l',cW*0.55).svg;
+      {str:f.producer,size:H*0.028,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(600),fill:INK,tr:0.12,caps:capsFor(F3,false)},
+      {str:[f.region,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.024,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],SM+cW*0.28,H-SM-2,H*0.007,'l',cW*0.55).svg;
     body+=stackUp([
-      {str:[f.grape,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.026,f:F2?F2[0]:(SF.jost),w:F2?F2[1]:(500),fill:INK,caps:caseFlag('contemporary','secondary',false)},
-      {str:[f.special,desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,caps:caseFlag('contemporary','small',false)}],W-SM,H-SM-2,H*0.007,'r',cW*0.45).svg;
+      {str:[f.grape,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.026,f:F2?F2[0]:(SF.jost),w:F2?F2[1]:(500),fill:INK,caps:capsFor(F2,false)},
+      {str:[f.special,desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],W-SM,H-SM-2,H*0.007,'r',cW*0.45).svg;
   }else if(variant===2){ // Saperavi board: motif top, letterspaced caps, vertical side data
     body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
-      {str:f.wine,size:H*0.068,f:HP?HP[0]:(SF.marcellus),w:HP?HP[1]:(400),fill:INK,caps:caseFlag('contemporary','hero',true),tr:0.26,maxW:cW*0.9,gap:H*0.016,pre:H*0.46},
-      {str:desc,size:H*0.040,f:F3?F3[0]:(SF.fraunces),w:F3?F3[1]:(500),fill:SCH.acc,ital:true,maxW:cW*0.6,gap:H*0.016,caps:caseFlag('contemporary','small',false)},
-      {str:f.appellation,size:H*0.034,f:F2?F2[0]:(SF.jost),w:F2?F2[1]:(500),fill:SUB,maxW:cW*0.7,gap:0,caps:caseFlag('contemporary','secondary',false)}],cx,SM,'c').svg;
+      {str:f.wine,size:H*0.068,f:HP?HP[0]:(SF.marcellus),w:HP?HP[1]:(400),fill:INK,caps:capsFor(HP,true),tr:0.26,maxW:cW*0.9,gap:H*0.016,pre:H*0.46},
+      {str:desc,size:H*0.040,f:F3?F3[0]:(SF.fraunces),w:F3?F3[1]:(500),fill:SCH.acc,ital:true,maxW:cW*0.6,gap:H*0.016,caps:capsFor(F3,false)},
+      {str:f.appellation,size:H*0.034,f:F2?F2[0]:(SF.jost),w:F2?F2[1]:(500),fill:SUB,maxW:cW*0.7,gap:0,caps:capsFor(F2,false)}],cx,SM,'c').svg;
     body+=sRot([f.region,f.vintage].filter(Boolean).join(' \u00b7 '),W-SM*0.5,H,{size:H*0.023,f:SF.jost,w:400,fill:SUB,tr:0.1,caps:true});
     body+=stackUp([
-      {str:f.producer,size:H*0.028,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(600),fill:INK,tr:0.14,caps:caseFlag('contemporary','small',false)},
-      {str:[f.grape,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.025,f:F2?F2[0]:(SF.jost),w:F2?F2[1]:(400),fill:SUB,caps:caseFlag('contemporary','secondary',false)},
-      {str:[f.special,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,caps:caseFlag('contemporary','small',false)}],cx,H-SM-2,H*0.007,'c',cW*0.75).svg;
+      {str:f.producer,size:H*0.028,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(600),fill:INK,tr:0.14,caps:capsFor(F3,false)},
+      {str:[f.grape,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.025,f:F2?F2[0]:(SF.jost),w:F2?F2[1]:(400),fill:SUB,caps:capsFor(F2,false)},
+      {str:[f.special,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-2,H*0.007,'c',cW*0.75).svg;
   }else if(variant===3){ // Wine People board: arched ring, script sign-off, centre stack
     (function(){
       let asz=H*0.042; const R=W*0.42;
@@ -1288,30 +1287,30 @@ function styleContempX(f,W,H,seed,twMM,thMM,fv){
     })();
     body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
-      {str:f.wine,size:H*0.08,f:HP?HP[0]:(SF.archivo),w:HP?HP[1]:(700),fill:INK,caps:caseFlag('contemporary','hero',true),tr:0.08,maxW:cW*0.9,gap:H*0.014,pre:H*0.555},
-      {str:f.appellation,size:H*0.05,f:F2?F2[0]:(SF.caveat),w:F2?F2[1]:(600),fill:SCH.acc,maxW:cW*0.7,gap:0,caps:caseFlag('contemporary','secondary',false)}],cx,SM,'c').svg;
+      {str:f.wine,size:H*0.08,f:HP?HP[0]:(SF.archivo),w:HP?HP[1]:(700),fill:INK,caps:capsFor(HP,true),tr:0.08,maxW:cW*0.9,gap:H*0.014,pre:H*0.555},
+      {str:f.appellation,size:H*0.05,f:F2?F2[0]:(SF.caveat),w:F2?F2[1]:(600),fill:SCH.acc,maxW:cW*0.7,gap:0,caps:capsFor(F2,false)}],cx,SM,'c').svg;
     body+=stackUp([
-      {str:[f.grape,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.026,f:F2?F2[0]:(SF.jost),w:F2?F2[1]:(500),fill:INK,caps:caseFlag('contemporary','secondary',false)},
-      {str:[f.classification,reg].filter(Boolean).join(' \u00b7 '),size:H*0.024,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,caps:caseFlag('contemporary','small',false)},
-      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,caps:caseFlag('contemporary','small',false)}],cx,H-SM-2,H*0.007,'c',cW*0.8).svg;
+      {str:[f.grape,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.026,f:F2?F2[0]:(SF.jost),w:F2?F2[1]:(500),fill:INK,caps:capsFor(F2,false)},
+      {str:[f.classification,reg].filter(Boolean).join(' \u00b7 '),size:H*0.024,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)},
+      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-2,H*0.007,'c',cW*0.8).svg;
   }else if(variant===4){ // horizon boards: wide field, quiet centred data
     body+=sBlock(f.producer,{x:SM,top:SM,maxW:W*0.5,size:H*0.030,min:H*0.022,f:SF.archivo,w:600,fill:INK,a:'l',caps:true,tr:0.18}).svg;
     body+=sBlock(f.vintage,{x:W-SM,top:SM,maxW:W*0.26,size:H*0.030,min:H*0.022,f:SF.jost,w:500,fill:INK,a:'r'}).svg;
     body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
-      {str:f.wine,size:H*0.09,f:HP?HP[0]:(SF.archivo),w:HP?HP[1]:(800),fill:INK,caps:caseFlag('contemporary','hero',true),maxW:cW*0.92,gap:H*0.014,pre:H*0.575},
-      {str:[f.appellation,f.grape].filter(Boolean).join(' \u00b7 '),size:H*0.036,f:F2?F2[0]:(SF.jost),w:F2?F2[1]:(500),fill:SUB,maxW:cW*0.85,gap:0,caps:caseFlag('contemporary','secondary',false)}],cx,SM,'c').svg;
+      {str:f.wine,size:H*0.09,f:HP?HP[0]:(SF.archivo),w:HP?HP[1]:(800),fill:INK,caps:capsFor(HP,true),maxW:cW*0.92,gap:H*0.014,pre:H*0.575},
+      {str:[f.appellation,f.grape].filter(Boolean).join(' \u00b7 '),size:H*0.036,f:F2?F2[0]:(SF.jost),w:F2?F2[1]:(500),fill:SUB,maxW:cW*0.85,gap:0,caps:capsFor(F2,false)}],cx,SM,'c').svg;
     body+=stackUp([
-      {str:[f.classification,reg].filter(Boolean).join(' \u00b7 '),size:H*0.024,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,caps:caseFlag('contemporary','small',false)},
-      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,caps:caseFlag('contemporary','small',false)}],cx,H-SM-2,H*0.007,'c',cW*0.8).svg;
+      {str:[f.classification,reg].filter(Boolean).join(' \u00b7 '),size:H*0.024,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)},
+      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-2,H*0.007,'c',cW*0.8).svg;
   }else{ // Finca Collado board: script signature, small motif, quiet stack
     body+=sBlock(f.producer,{x:cx,top:SM,maxW:cW*0.8,size:H*0.062,min:H*0.04,f:SF.caveat,w:600,fill:SCH.acc,a:'c'}).svg;
     body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
-      {str:f.wine,size:H*0.07,f:HP?HP[0]:(SF.archivo),w:HP?HP[1]:(600),fill:INK,caps:caseFlag('contemporary','hero',true),tr:0.12,maxW:cW*0.9,gap:H*0.014,pre:H*0.625},
-      {str:[f.appellation,f.vintage].filter(Boolean).join('  \u00b7  '),size:H*0.034,f:F2?F2[0]:(SF.jost),w:F2?F2[1]:(500),fill:SUB,maxW:cW*0.8,gap:H*0.010,caps:caseFlag('contemporary','secondary',false)},
-      {str:[f.grape,f.classification,reg].filter(Boolean).join(' / '),size:H*0.026,f:F2?F2[0]:(SF.jost),w:F2?F2[1]:(400),fill:SUB,maxW:cW*0.9,gap:H*0.008,caps:caseFlag('contemporary','secondary',false)},
-      {str:[desc,alc].filter(Boolean).join('  \u00b7  '),size:H*0.024,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.9,gap:0,caps:caseFlag('contemporary','small',false)}],cx,SM,'c').svg;
+      {str:f.wine,size:H*0.07,f:HP?HP[0]:(SF.archivo),w:HP?HP[1]:(600),fill:INK,caps:capsFor(HP,true),tr:0.12,maxW:cW*0.9,gap:H*0.014,pre:H*0.625},
+      {str:[f.appellation,f.vintage].filter(Boolean).join('  \u00b7  '),size:H*0.034,f:F2?F2[0]:(SF.jost),w:F2?F2[1]:(500),fill:SUB,maxW:cW*0.8,gap:H*0.010,caps:capsFor(F2,false)},
+      {str:[f.grape,f.classification,reg].filter(Boolean).join(' / '),size:H*0.026,f:F2?F2[0]:(SF.jost),w:F2?F2[1]:(400),fill:SUB,maxW:cW*0.9,gap:H*0.008,caps:capsFor(F2,false)},
+      {str:[desc,alc].filter(Boolean).join('  \u00b7  '),size:H*0.024,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.9,gap:0,caps:capsFor(F3,false)}],cx,SM,'c').svg;
   }
   return sWrap(W,H,twMM,thMM,SCH.bg,body);
 }
@@ -1331,11 +1330,11 @@ function styleFlora(f,W,H,seed,twMM,thMM,fv){
   if(variant===0){ // Hermit Ram board: huge beast, tight centred title block under it
     body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
-      {str:f.wine,size:H*0.072,f:HP?HP[0]:(SF.fraunces),w:HP?HP[1]:(700),fill:INK,caps:caseFlag('contemporary','hero',true),maxW:cW*0.92,gap:H*0.012,pre:H*0.575},
-      {str:[f.appellation,f.vintage].filter(Boolean).join('  \u00b7  '),size:H*0.034,f:F2?F2[0]:(SF.ebg),w:F2?F2[1]:(500),fill:ACC,caps:caseFlag('contemporary','secondary',true),tr:0.16,maxW:cW*0.8,gap:H*0.010},
-      {str:[f.grape,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.028,f:F2?F2[0]:(SF.ebg),w:F2?F2[1]:(400),fill:INK,ital:true,maxW:cW*0.8,gap:H*0.010,caps:caseFlag('contemporary','secondary',false)},
-      {str:reg,size:H*0.025,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.8,gap:H*0.008,caps:caseFlag('contemporary','small',false)},
-      {str:[f.producer,desc,alc].filter(Boolean).join(' \u00b7 '),size:H*0.022,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.88,gap:0,caps:caseFlag('contemporary','small',false)}],cx,SM,'c').svg;
+      {str:f.wine,size:H*0.072,f:HP?HP[0]:(SF.fraunces),w:HP?HP[1]:(700),fill:INK,caps:capsFor(HP,true),maxW:cW*0.92,gap:H*0.012,pre:H*0.575},
+      {str:[f.appellation,f.vintage].filter(Boolean).join('  \u00b7  '),size:H*0.034,f:F2?F2[0]:(SF.ebg),w:F2?F2[1]:(500),fill:ACC,caps:capsFor(F2,true),tr:0.16,maxW:cW*0.8,gap:H*0.010},
+      {str:[f.grape,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.028,f:F2?F2[0]:(SF.ebg),w:F2?F2[1]:(400),fill:INK,ital:true,maxW:cW*0.8,gap:H*0.010,caps:capsFor(F2,false)},
+      {str:reg,size:H*0.025,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.8,gap:H*0.008,caps:capsFor(F3,false)},
+      {str:[f.producer,desc,alc].filter(Boolean).join(' \u00b7 '),size:H*0.022,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.88,gap:0,caps:capsFor(F3,false)}],cx,SM,'c').svg;
   }else if(variant===1){ // Elephant in the Room board: arched stamped caps over the beast
     (function(){
       let asz=H*0.05; const R=W*0.40;
@@ -1345,41 +1344,41 @@ function styleFlora(f,W,H,seed,twMM,thMM,fv){
     })();
     body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
-      {str:f.appellation,size:H*0.046,f:F2?F2[0]:(SF.imfell),w:F2?F2[1]:(400),fill:INK,caps:caseFlag('contemporary','secondary',true),tr:0.1,maxW:cW*0.85,gap:H*0.012,pre:H*0.585},
-      {str:f.vintage,size:H*0.038,f:F3?F3[0]:(SF.imfell),w:F3?F3[1]:(400),fill:ACC,maxW:cW*0.3,gap:H*0.010,caps:caseFlag('contemporary','small',false)},
-      {str:[f.grape,f.classification].filter(Boolean).join(' / '),size:H*0.028,f:F2?F2[0]:(SF.jost),w:F2?F2[1]:(400),fill:SUB,maxW:cW*0.85,gap:0,caps:caseFlag('contemporary','secondary',false)}],cx,SM,'c').svg;
+      {str:f.appellation,size:H*0.046,f:F2?F2[0]:(SF.imfell),w:F2?F2[1]:(400),fill:INK,caps:capsFor(F2,true),tr:0.1,maxW:cW*0.85,gap:H*0.012,pre:H*0.585},
+      {str:f.vintage,size:H*0.038,f:F3?F3[0]:(SF.imfell),w:F3?F3[1]:(400),fill:ACC,maxW:cW*0.3,gap:H*0.010,caps:capsFor(F3,false)},
+      {str:[f.grape,f.classification].filter(Boolean).join(' / '),size:H*0.028,f:F2?F2[0]:(SF.jost),w:F2?F2[1]:(400),fill:SUB,maxW:cW*0.85,gap:0,caps:capsFor(F2,false)}],cx,SM,'c').svg;
     body+=stackUp([
-      {str:f.producer,size:H*0.027,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(600),fill:INK,tr:0.16,caps:caseFlag('contemporary','small',false)},
-      {str:[reg,desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,caps:caseFlag('contemporary','small',false)}],cx,H-SM-2,H*0.007,'c',cW*0.85).svg;
+      {str:f.producer,size:H*0.027,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(600),fill:INK,tr:0.16,caps:capsFor(F3,false)},
+      {str:[reg,desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-2,H*0.007,'c',cW*0.85).svg;
   }else if(variant===2){ // Chico Malo board: beast top, huge brush hero, gold-ish producer at foot
     body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
-      {str:f.wine,size:H*0.125,f:HP?HP[0]:(SF.caveat),w:HP?HP[1]:(700),fill:INK,maxW:cW*0.9,gap:H*0.016,pre:H*0.385,caps:caseFlag('contemporary','hero',false)},
-      {str:desc,size:H*0.030,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:ACC,caps:caseFlag('contemporary','small',true),tr:0.2,maxW:cW*0.7,gap:H*0.014},
-      {str:[f.appellation,f.grape].filter(Boolean).join(' \u00b7 '),size:H*0.028,f:F2?F2[0]:(SF.jost),w:F2?F2[1]:(400),fill:SUB,maxW:cW*0.85,gap:0,caps:caseFlag('contemporary','secondary',false)}],cx,SM,'c').svg;
+      {str:f.wine,size:H*0.125,f:HP?HP[0]:(SF.caveat),w:HP?HP[1]:(700),fill:INK,maxW:cW*0.9,gap:H*0.016,pre:H*0.385,caps:capsFor(HP,false)},
+      {str:desc,size:H*0.030,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:ACC,caps:capsFor(F3,true),tr:0.2,maxW:cW*0.7,gap:H*0.014},
+      {str:[f.appellation,f.grape].filter(Boolean).join(' \u00b7 '),size:H*0.028,f:F2?F2[0]:(SF.jost),w:F2?F2[1]:(400),fill:SUB,maxW:cW*0.85,gap:0,caps:capsFor(F2,false)}],cx,SM,'c').svg;
     body+=stackUp([
-      {str:f.producer,size:H*0.032,f:F3?F3[0]:(SF.fraunces),w:F3?F3[1]:(600),fill:ACC,caps:caseFlag('contemporary','small',false)},
-      {str:[f.classification,reg].filter(Boolean).join(' \u00b7 '),size:H*0.024,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,caps:caseFlag('contemporary','small',false)},
-      {str:[f.vintage,alc].filter(Boolean).join('  \u00b7  '),size:H*0.023,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(500),fill:INK,caps:caseFlag('contemporary','small',false)}],cx,H-SM-2,H*0.007,'c',cW*0.8).svg;
+      {str:f.producer,size:H*0.032,f:F3?F3[0]:(SF.fraunces),w:F3?F3[1]:(600),fill:ACC,caps:capsFor(F3,false)},
+      {str:[f.classification,reg].filter(Boolean).join(' \u00b7 '),size:H*0.024,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)},
+      {str:[f.vintage,alc].filter(Boolean).join('  \u00b7  '),size:H*0.023,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,false)}],cx,H-SM-2,H*0.007,'c',cW*0.8).svg;
   }else if(variant===3){ // Hugh Hamilton board: tiny creature, italic aside, airy
     body+=sBlock(f.producer,{x:SM,top:SM,maxW:W*0.5,size:H*0.028,min:H*0.02,f:SF.archivo,w:600,fill:INK,a:'l',caps:true,tr:0.3}).svg;
     body+=sBlock(f.vintage,{x:W-SM,top:SM,maxW:W*0.26,size:H*0.028,min:H*0.02,f:SF.jost,w:500,fill:SUB,a:'r'}).svg;
     body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
-      {str:f.wine,size:H*0.052,f:HP?HP[0]:(SF.fraunces),w:HP?HP[1]:(600),fill:INK,caps:caseFlag('contemporary','hero',true),tr:0.3,maxW:cW*0.9,gap:H*0.014,pre:H*0.53},
-      {str:f.appellation,size:H*0.040,f:F2?F2[0]:(F.cormorant),w:F2?F2[1]:(600),fill:ACC,ital:true,maxW:cW*0.65,gap:0,caps:caseFlag('contemporary','secondary',false)}],cx,SM,'c').svg;
+      {str:f.wine,size:H*0.052,f:HP?HP[0]:(SF.fraunces),w:HP?HP[1]:(600),fill:INK,caps:capsFor(HP,true),tr:0.3,maxW:cW*0.9,gap:H*0.014,pre:H*0.53},
+      {str:f.appellation,size:H*0.040,f:F2?F2[0]:(F.cormorant),w:F2?F2[1]:(600),fill:ACC,ital:true,maxW:cW*0.65,gap:0,caps:capsFor(F2,false)}],cx,SM,'c').svg;
     body+=stackUp([
-      {str:[f.grape,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.026,f:F2?F2[0]:(SF.jost),w:F2?F2[1]:(500),fill:INK,caps:caseFlag('contemporary','secondary',false)},
-      {str:[reg,desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,caps:caseFlag('contemporary','small',false)}],cx,H-SM-2,H*0.007,'c',cW*0.8).svg;
+      {str:[f.grape,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.026,f:F2?F2[0]:(SF.jost),w:F2?F2[1]:(500),fill:INK,caps:capsFor(F2,false)},
+      {str:[reg,desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-2,H*0.007,'c',cW*0.8).svg;
   }else{ // Aleria/Tarosi boards: beast left, script hero right, vertical edge caps
     body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
-      {str:f.producer,size:H*0.028,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(600),fill:SUB,caps:caseFlag('contemporary','small',true),tr:0.24,maxW:W*0.34,gap:H*0.02,pre:H*0.08},
-      {str:f.wine,size:H*0.125,f:HP?HP[0]:(F.italianno),w:HP?HP[1]:(400),fill:INK,maxW:W*0.36,gap:H*0.016,caps:caseFlag('contemporary','hero',false)},
-      {str:f.appellation,size:H*0.040,f:F2?F2[0]:(F.cormorant),w:F2?F2[1]:(600),fill:ACC,ital:true,maxW:W*0.34,gap:H*0.014,caps:caseFlag('contemporary','secondary',false)},
-      {str:f.grape,size:H*0.030,f:F2?F2[0]:(SF.jost),w:F2?F2[1]:(500),fill:INK,maxW:W*0.34,gap:H*0.010,caps:caseFlag('contemporary','secondary',false)},
-      {str:f.classification,size:H*0.027,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,maxW:W*0.34,gap:H*0.010,caps:caseFlag('contemporary','small',false)},
-      {str:f.vintage,size:H*0.046,f:F3?F3[0]:(SF.fraunces),w:F3?F3[1]:(600),fill:ACC,maxW:W*0.3,gap:0,caps:caseFlag('contemporary','small',false)}],W*0.60,SM,'l').svg;
+      {str:f.producer,size:H*0.028,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(600),fill:SUB,caps:capsFor(F3,true),tr:0.24,maxW:W*0.34,gap:H*0.02,pre:H*0.08},
+      {str:f.wine,size:H*0.125,f:HP?HP[0]:(F.italianno),w:HP?HP[1]:(400),fill:INK,maxW:W*0.36,gap:H*0.016,caps:capsFor(HP,false)},
+      {str:f.appellation,size:H*0.040,f:F2?F2[0]:(F.cormorant),w:F2?F2[1]:(600),fill:ACC,ital:true,maxW:W*0.34,gap:H*0.014,caps:capsFor(F2,false)},
+      {str:f.grape,size:H*0.030,f:F2?F2[0]:(SF.jost),w:F2?F2[1]:(500),fill:INK,maxW:W*0.34,gap:H*0.010,caps:capsFor(F2,false)},
+      {str:f.classification,size:H*0.027,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:SUB,maxW:W*0.34,gap:H*0.010,caps:capsFor(F3,false)},
+      {str:f.vintage,size:H*0.046,f:F3?F3[0]:(SF.fraunces),w:F3?F3[1]:(600),fill:ACC,maxW:W*0.3,gap:0,caps:capsFor(F3,false)}],W*0.60,SM,'l').svg;
     body+=sRot(reg,W-SM*0.5,H,{size:H*0.023,f:SF.jost,w:400,fill:SUB,tr:0.1,caps:true});
     body+=sBlock([desc,alc].filter(Boolean).join(' / '),{x:SM,top:H-SM-H*0.024,maxW:W*0.6,size:H*0.022,min:H*0.018,f:SF.jost,w:400,fill:SUB,a:'l'}).svg;
   }
@@ -1404,56 +1403,56 @@ function stylePremium(f,W,H,seed,twMM,thMM,fv){
   if(variant===0){ // Sinegal board: tiny emblem, huge tracked caps, silence
     body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
-      {str:f.wine,size:H*0.065,f:HP?HP[0]:(SF.cinzel),w:HP?HP[1]:(600),fill:INK,caps:caseFlag('contemporary','hero',true),tr:0.30,maxW:cW*0.94,gap:H*0.024,pre:H*0.30},
-      {str:f.vintage,size:H*0.038,f:F3?F3[0]:(SF.cinzel),w:F3?F3[1]:(500),fill:gold,tr:0.24,maxW:cW*0.4,gap:H*0.022,caps:caseFlag('contemporary','small',false)},
-      {str:f.appellation,size:H*0.036,f:F2?F2[0]:(F.cormorant),w:F2?F2[1]:(600),fill:SUB,ital:true,maxW:cW*0.6,gap:0,caps:caseFlag('contemporary','secondary',false)}],cx,SM,'c').svg;
+      {str:f.wine,size:H*0.065,f:HP?HP[0]:(SF.cinzel),w:HP?HP[1]:(600),fill:INK,caps:capsFor(HP,true),tr:0.30,maxW:cW*0.94,gap:H*0.024,pre:H*0.30},
+      {str:f.vintage,size:H*0.038,f:F3?F3[0]:(SF.cinzel),w:F3?F3[1]:(500),fill:gold,tr:0.24,maxW:cW*0.4,gap:H*0.022,caps:capsFor(F3,false)},
+      {str:f.appellation,size:H*0.036,f:F2?F2[0]:(F.cormorant),w:F2?F2[1]:(600),fill:SUB,ital:true,maxW:cW*0.6,gap:0,caps:capsFor(F2,false)}],cx,SM,'c').svg;
     body+=stackUp([
-      {str:[f.grape,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.026,f:F2?F2[0]:(SF.cinzel),w:F2?F2[1]:(500),fill:SUB,tr:0.08,caps:caseFlag('contemporary','secondary',false)},
-      {str:[f.producer,reg].filter(Boolean).join(' \u00b7 '),size:H*0.024,f:F3?F3[0]:(F.ebg),w:F3?F3[1]:(400),fill:SUB,caps:caseFlag('contemporary','small',false)},
-      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(F.ebg),w:F3?F3[1]:(400),fill:SUB,caps:caseFlag('contemporary','small',false)}],cx,H-SM-2,H*0.008,'c',cW*0.85).svg;
+      {str:[f.grape,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.026,f:F2?F2[0]:(SF.cinzel),w:F2?F2[1]:(500),fill:SUB,tr:0.08,caps:capsFor(F2,false)},
+      {str:[f.producer,reg].filter(Boolean).join(' \u00b7 '),size:H*0.024,f:F3?F3[0]:(F.ebg),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)},
+      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(F.ebg),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-2,H*0.008,'c',cW*0.85).svg;
   }else if(variant===1){ // Ram's Gate board: data sheet, emblem at the foot
     body+=sFlow([
-      {str:f.wine,size:H*0.062,f:HP?HP[0]:(SF.cinzel),w:HP?HP[1]:(600),fill:INK,caps:caseFlag('contemporary','hero',true),tr:0.14,maxW:cW*0.92,gap:H*0.016,pre:H*0.015},
-      {str:desc,size:H*0.032,f:F3?F3[0]:(SF.cinzel),w:F3?F3[1]:(500),fill:RED,caps:caseFlag('contemporary','small',true),tr:0.14,maxW:cW*0.7,gap:H*0.018},
-      {str:f.appellation,size:H*0.030,f:F2?F2[0]:(F.ebg),w:F2?F2[1]:(500),fill:INK,caps:caseFlag('contemporary','secondary',true),tr:0.26,maxW:cW*0.8,gap:H*0.018}],cx,SM,'c').svg;
+      {str:f.wine,size:H*0.062,f:HP?HP[0]:(SF.cinzel),w:HP?HP[1]:(600),fill:INK,caps:capsFor(HP,true),tr:0.14,maxW:cW*0.92,gap:H*0.016,pre:H*0.015},
+      {str:desc,size:H*0.032,f:F3?F3[0]:(SF.cinzel),w:F3?F3[1]:(500),fill:RED,caps:capsFor(F3,true),tr:0.14,maxW:cW*0.7,gap:H*0.018},
+      {str:f.appellation,size:H*0.030,f:F2?F2[0]:(F.ebg),w:F2?F2[1]:(500),fill:INK,caps:capsFor(F2,true),tr:0.26,maxW:cW*0.8,gap:H*0.018}],cx,SM,'c').svg;
     body+=`<line x1="${(cx-cW*0.22).toFixed(1)}" y1="${(H*0.30).toFixed(1)}" x2="${(cx+cW*0.22).toFixed(1)}" y2="${(H*0.30).toFixed(1)}" stroke="${gold}" stroke-width="${Math.max(1,H*0.003).toFixed(1)}"/>`;
     body+=sFlow([
-      {str:[f.vintage,f.grape].filter(Boolean).join('   \u00b7   '),size:H*0.030,f:F2?F2[0]:(F.ebg),w:F2?F2[1]:(500),fill:INK,maxW:cW*0.8,gap:H*0.012,pre:H*0.255,caps:caseFlag('contemporary','secondary',false)},
-      {str:f.classification,size:H*0.027,f:F3?F3[0]:(F.ebg),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.8,gap:H*0.010,caps:caseFlag('contemporary','small',false)},
-      {str:reg,size:H*0.025,f:F3?F3[0]:(F.ebg),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.8,gap:H*0.010,caps:caseFlag('contemporary','small',false)},
-      {str:[f.producer,alc].filter(Boolean).join('   \u00b7   '),size:H*0.023,f:F3?F3[0]:(F.ebg),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.8,gap:0,caps:caseFlag('contemporary','small',false)}],cx,SM,'c').svg;
+      {str:[f.vintage,f.grape].filter(Boolean).join('   \u00b7   '),size:H*0.030,f:F2?F2[0]:(F.ebg),w:F2?F2[1]:(500),fill:INK,maxW:cW*0.8,gap:H*0.012,pre:H*0.255,caps:capsFor(F2,false)},
+      {str:f.classification,size:H*0.027,f:F3?F3[0]:(F.ebg),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.8,gap:H*0.010,caps:capsFor(F3,false)},
+      {str:reg,size:H*0.025,f:F3?F3[0]:(F.ebg),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.8,gap:H*0.010,caps:capsFor(F3,false)},
+      {str:[f.producer,alc].filter(Boolean).join('   \u00b7   '),size:H*0.023,f:F3?F3[0]:(F.ebg),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.8,gap:0,caps:capsFor(F3,false)}],cx,SM,'c').svg;
     body+=sImageBox('contemporary',BOX,W,H);
   }else if(variant===2){ // Juan Campinún board: crest, copperplate script, RIOJA caps
     body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
-      {str:f.wine,size:H*0.14,f:HP?HP[0]:(F.monteCarlo),w:HP?HP[1]:(400),fill:INK,maxW:cW*0.92,gap:H*0.026,pre:H*0.285,caps:caseFlag('contemporary','hero',false)},
-      {str:f.producer,size:H*0.028,f:F3?F3[0]:(SF.cinzel),w:F3?F3[1]:(500),fill:SUB,caps:caseFlag('contemporary','small',true),tr:0.3,maxW:cW*0.72,gap:H*0.014},
-      {str:f.appellation,size:H*0.034,f:F2?F2[0]:(F.cormorant),w:F2?F2[1]:(600),fill:SUB,ital:true,maxW:cW*0.6,gap:H*0.014,caps:caseFlag('contemporary','secondary',false)},
-      {str:[f.grape,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.026,f:F2?F2[0]:(SF.cinzel),w:F2?F2[1]:(500),fill:SUB,tr:0.08,maxW:cW*0.85,gap:H*0.014,caps:caseFlag('contemporary','secondary',false)},
-      {str:f.region,size:H*0.035,f:F3?F3[0]:(SF.cinzel),w:F3?F3[1]:(500),fill:INK,caps:caseFlag('contemporary','small',true),tr:0.14,maxW:cW*0.7,gap:0}],cx,SM,'c').svg;
+      {str:f.wine,size:H*0.14,f:HP?HP[0]:(F.monteCarlo),w:HP?HP[1]:(400),fill:INK,maxW:cW*0.92,gap:H*0.026,pre:H*0.285,caps:capsFor(HP,false)},
+      {str:f.producer,size:H*0.028,f:F3?F3[0]:(SF.cinzel),w:F3?F3[1]:(500),fill:SUB,caps:capsFor(F3,true),tr:0.3,maxW:cW*0.72,gap:H*0.014},
+      {str:f.appellation,size:H*0.034,f:F2?F2[0]:(F.cormorant),w:F2?F2[1]:(600),fill:SUB,ital:true,maxW:cW*0.6,gap:H*0.014,caps:capsFor(F2,false)},
+      {str:[f.grape,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.026,f:F2?F2[0]:(SF.cinzel),w:F2?F2[1]:(500),fill:SUB,tr:0.08,maxW:cW*0.85,gap:H*0.014,caps:capsFor(F2,false)},
+      {str:f.region,size:H*0.035,f:F3?F3[0]:(SF.cinzel),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,true),tr:0.14,maxW:cW*0.7,gap:0}],cx,SM,'c').svg;
     body+=stackUp([
-      {str:[f.vintage,f.special].filter(Boolean).join(' \u00b7 '),size:H*0.030,f:F3?F3[0]:(SF.cinzel),w:F3?F3[1]:(500),fill:gold,caps:caseFlag('contemporary','small',false)},
-      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(F.ebg),w:F3?F3[1]:(400),fill:SUB,caps:caseFlag('contemporary','small',false)}],cx,H-SM-2,H*0.008,'c',cW*0.7).svg;
+      {str:[f.vintage,f.special].filter(Boolean).join(' \u00b7 '),size:H*0.030,f:F3?F3[0]:(SF.cinzel),w:F3?F3[1]:(500),fill:gold,caps:capsFor(F3,false)},
+      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(F.ebg),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-2,H*0.008,'c',cW*0.7).svg;
   }else if(variant===3){ // 1780 board: giant gold numerals, tiny producer + mark above
     body+=sBlock(f.producer,{x:cx,top:SM,maxW:cW*0.7,size:H*0.027,min:H*0.02,f:SF.cinzel,w:500,fill:SUB,a:'c',caps:true,tr:0.3}).svg;
     body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
-      {str:f.vintage,size:H*0.23,f:F3?F3[0]:(SF.cinzel),w:F3?F3[1]:(600),fill:gold,maxW:cW*0.8,gap:H*0.02,pre:H*0.245,caps:caseFlag('contemporary','small',false)},
-      {str:f.wine,size:H*0.052,f:HP?HP[0]:(SF.cinzel),w:HP?HP[1]:(600),fill:INK,caps:caseFlag('contemporary','hero',true),tr:0.12,maxW:cW*0.9,gap:H*0.016,},
-      {str:f.appellation,size:H*0.033,f:F2?F2[0]:(F.cormorant),w:F2?F2[1]:(600),fill:SUB,ital:true,maxW:cW*0.6,gap:0,caps:caseFlag('contemporary','secondary',false)}],cx,SM,'c').svg;
+      {str:f.vintage,size:H*0.23,f:F3?F3[0]:(SF.cinzel),w:F3?F3[1]:(600),fill:gold,maxW:cW*0.8,gap:H*0.02,pre:H*0.245,caps:capsFor(F3,false)},
+      {str:f.wine,size:H*0.052,f:HP?HP[0]:(SF.cinzel),w:HP?HP[1]:(600),fill:INK,caps:capsFor(HP,true),tr:0.12,maxW:cW*0.9,gap:H*0.016,},
+      {str:f.appellation,size:H*0.033,f:F2?F2[0]:(F.cormorant),w:F2?F2[1]:(600),fill:SUB,ital:true,maxW:cW*0.6,gap:0,caps:capsFor(F2,false)}],cx,SM,'c').svg;
     body+=stackUp([
-      {str:[f.grape,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.025,f:F2?F2[0]:(SF.cinzel),w:F2?F2[1]:(500),fill:SUB,tr:0.06,caps:caseFlag('contemporary','secondary',false)},
-      {str:reg,size:H*0.024,f:F3?F3[0]:(F.ebg),w:F3?F3[1]:(400),fill:SUB,caps:caseFlag('contemporary','small',false)},
-      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.021,f:F3?F3[0]:(F.ebg),w:F3?F3[1]:(400),fill:SUB,caps:caseFlag('contemporary','small',false)}],cx,H-SM-2,H*0.008,'c',cW*0.8).svg;
+      {str:[f.grape,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.025,f:F2?F2[0]:(SF.cinzel),w:F2?F2[1]:(500),fill:SUB,tr:0.06,caps:capsFor(F2,false)},
+      {str:reg,size:H*0.024,f:F3?F3[0]:(F.ebg),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)},
+      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.021,f:F3?F3[0]:(F.ebg),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-2,H*0.008,'c',cW*0.8).svg;
   }else{ // Implicit board: gold mark centre, extreme tracked caps beneath
     body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
-      {str:f.wine,size:H*0.058,f:HP?HP[0]:(SF.cinzel),w:HP?HP[1]:(600),fill:INK,caps:caseFlag('contemporary','hero',true),tr:0.44,maxW:cW*0.96,gap:H*0.02,pre:H*0.545},
-      {str:f.producer,size:H*0.026,f:F3?F3[0]:(SF.cinzel),w:F3?F3[1]:(500),fill:SUB,caps:caseFlag('contemporary','small',true),tr:0.5,maxW:cW*0.8,gap:0}],cx,SM,'c').svg;
+      {str:f.wine,size:H*0.058,f:HP?HP[0]:(SF.cinzel),w:HP?HP[1]:(600),fill:INK,caps:capsFor(HP,true),tr:0.44,maxW:cW*0.96,gap:H*0.02,pre:H*0.545},
+      {str:f.producer,size:H*0.026,f:F3?F3[0]:(SF.cinzel),w:F3?F3[1]:(500),fill:SUB,caps:capsFor(F3,true),tr:0.5,maxW:cW*0.8,gap:0}],cx,SM,'c').svg;
     body+=stackUp([
-      {str:[f.appellation,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.026,f:F2?F2[0]:(F.cormorant),w:F2?F2[1]:(600),fill:SUB,tr:0,caps:caseFlag('contemporary','secondary',false)},
-      {str:[f.grape,f.classification,reg].filter(Boolean).join(' \u00b7 '),size:H*0.022,f:F2?F2[0]:(F.ebg),w:F2?F2[1]:(400),fill:SUB,caps:caseFlag('contemporary','secondary',false)},
-      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.021,f:F3?F3[0]:(F.ebg),w:F3?F3[1]:(400),fill:SUB,caps:caseFlag('contemporary','small',false)}],cx,H-SM-2,H*0.008,'c',cW*0.85).svg;
+      {str:[f.appellation,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.026,f:F2?F2[0]:(F.cormorant),w:F2?F2[1]:(600),fill:SUB,tr:0,caps:capsFor(F2,false)},
+      {str:[f.grape,f.classification,reg].filter(Boolean).join(' \u00b7 '),size:H*0.022,f:F2?F2[0]:(F.ebg),w:F2?F2[1]:(400),fill:SUB,caps:capsFor(F2,false)},
+      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.021,f:F3?F3[0]:(F.ebg),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-2,H*0.008,'c',cW*0.85).svg;
   }
   return sWrap(W,H,twMM,thMM,BG,body,defs);
 }
@@ -1478,45 +1477,45 @@ function styleMinimal(f,W,H,seed,twMM,thMM,fv){
   if(variant===0||variant===3){ // centred: tiny mark high, airy stack (dot/blob boards + colour panel)
     if(!MS.panel) body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
-      {str:f.producer,size:H*0.030,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(300),fill:SUB,caps:caseFlag('contemporary','small',true),tr:0.45,maxW:cW*0.7,gap:H*0.02,pre:H*0.02},
-      {str:f.wine,size:H*0.085,f:HP?HP[0]:(SF.archivo),w:HP?HP[1]:(MS.panel?600:300),fill:INK,caps:caseFlag('contemporary','hero',true),tr:0.28,maxW:cW*0.94,gap:H*0.018,pre:H*0.42},
-      {str:f.appellation,size:H*0.04,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(400),fill:SUB,maxW:cW*0.6,gap:0,caps:caseFlag('contemporary','secondary',false)}],cx,SM,'c').svg;
+      {str:f.producer,size:H*0.030,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(300),fill:SUB,caps:capsFor(F3,true),tr:0.45,maxW:cW*0.7,gap:H*0.02,pre:H*0.02},
+      {str:f.wine,size:H*0.085,f:HP?HP[0]:(SF.archivo),w:HP?HP[1]:(MS.panel?600:300),fill:INK,caps:capsFor(HP,true),tr:0.28,maxW:cW*0.94,gap:H*0.018,pre:H*0.42},
+      {str:f.appellation,size:H*0.04,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(400),fill:SUB,maxW:cW*0.6,gap:0,caps:capsFor(F2,false)}],cx,SM,'c').svg;
     body+=sFlow([
-      {str:line1,size:H*0.026,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.8,gap:H*0.008,pre:H*0.855-SM,caps:caseFlag('contemporary','small',false)},
-      {str:line2,size:H*0.026,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.8,gap:0,caps:caseFlag('contemporary','small',false)}],cx,SM,'c').svg;
+      {str:line1,size:H*0.026,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.8,gap:H*0.008,pre:H*0.855-SM,caps:capsFor(F3,false)},
+      {str:line2,size:H*0.026,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.8,gap:0,caps:capsFor(F3,false)}],cx,SM,'c').svg;
   }else if(variant===1){ // left column, mark right (Society / blue-square boards)
     body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
-      {str:f.producer,size:H*0.03,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(300),fill:SUB,caps:caseFlag('contemporary','small',true),tr:0.4,maxW:W*0.44,gap:H*0.05,pre:H*0.04},
-      {str:f.wine,size:H*0.07,f:HP?HP[0]:(SF.archivo),w:HP?HP[1]:(400),fill:INK,caps:caseFlag('contemporary','hero',true),tr:0.2,lines:2,lh:1.15,maxW:W*0.46,gap:H*0.02},
-      {str:f.appellation,size:H*0.036,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(400),fill:SUB,maxW:W*0.44,gap:0,caps:caseFlag('contemporary','secondary',false)}],SM,SM,'l').svg;
+      {str:f.producer,size:H*0.03,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(300),fill:SUB,caps:capsFor(F3,true),tr:0.4,maxW:W*0.44,gap:H*0.05,pre:H*0.04},
+      {str:f.wine,size:H*0.07,f:HP?HP[0]:(SF.archivo),w:HP?HP[1]:(400),fill:INK,caps:capsFor(HP,true),tr:0.2,lines:2,lh:1.15,maxW:W*0.46,gap:H*0.02},
+      {str:f.appellation,size:H*0.036,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(400),fill:SUB,maxW:W*0.44,gap:0,caps:capsFor(F2,false)}],SM,SM,'l').svg;
     body+=sFlow([
-      {str:line1,size:H*0.025,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.9,gap:H*0.008,pre:H*0.855-SM,caps:caseFlag('contemporary','small',false)},
-      {str:line2,size:H*0.025,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.9,gap:0,caps:caseFlag('contemporary','small',false)}],SM,SM,'l').svg;
+      {str:line1,size:H*0.025,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.9,gap:H*0.008,pre:H*0.855-SM,caps:capsFor(F3,false)},
+      {str:line2,size:H*0.025,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.9,gap:0,caps:capsFor(F3,false)}],SM,SM,'l').svg;
   }else if(variant===2){ // hero IS the mark: oversized single word, nothing else near it
     body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
-      {str:f.producer,size:H*0.028,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(300),fill:SUB,caps:caseFlag('contemporary','small',true),tr:0.45,maxW:cW*0.7,gap:H*0.05,pre:H*0.05},
-      {str:f.wine,size:H*0.12,f:HP?HP[0]:(SF.archivo),w:HP?HP[1]:(300),fill:INK,caps:caseFlag('contemporary','hero',true),tr:0.12,maxW:cW*0.96,gap:H*0.02},
-      {str:f.appellation,size:H*0.038,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(400),fill:SUB,maxW:cW*0.6,gap:0,caps:caseFlag('contemporary','secondary',false)}],cx,SM,'c').svg;
+      {str:f.producer,size:H*0.028,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(300),fill:SUB,caps:capsFor(F3,true),tr:0.45,maxW:cW*0.7,gap:H*0.05,pre:H*0.05},
+      {str:f.wine,size:H*0.12,f:HP?HP[0]:(SF.archivo),w:HP?HP[1]:(300),fill:INK,caps:capsFor(HP,true),tr:0.12,maxW:cW*0.96,gap:H*0.02},
+      {str:f.appellation,size:H*0.038,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(400),fill:SUB,maxW:cW*0.6,gap:0,caps:capsFor(F2,false)}],cx,SM,'c').svg;
     body+=sFlow([
-      {str:line1,size:H*0.025,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.85,gap:H*0.008,pre:H*0.87-SM,caps:caseFlag('contemporary','small',false)},
-      {str:line2,size:H*0.025,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.85,gap:0,caps:caseFlag('contemporary','small',false)}],cx,SM,'c').svg;
+      {str:line1,size:H*0.025,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.85,gap:H*0.008,pre:H*0.87-SM,caps:capsFor(F3,false)},
+      {str:line2,size:H*0.025,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.85,gap:0,caps:capsFor(F3,false)}],cx,SM,'c').svg;
   }else if(variant===4){ // handwritten scrawl hero across the silence (Valdez board)
     body+=sBlock(f.producer,{x:W-SM,top:SM,maxW:W*0.5,size:H*0.028,min:H*0.02,f:SF.archivo,w:300,fill:SUB,a:'r',caps:true,tr:0.4}).svg;
     body+=sFlow([
-      {str:f.wine,size:H*0.16,f:HP?HP[0]:(SF.caveat),w:HP?HP[1]:(700),fill:INK,maxW:cW*0.94,gap:H*0.02,pre:H*0.34,caps:caseFlag('contemporary','hero',false)},
-      {str:f.appellation,size:H*0.036,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(400),fill:SUB,maxW:cW*0.6,gap:0,caps:caseFlag('contemporary','secondary',false)}],cx,SM,'c').svg;
+      {str:f.wine,size:H*0.16,f:HP?HP[0]:(SF.caveat),w:HP?HP[1]:(700),fill:INK,maxW:cW*0.94,gap:H*0.02,pre:H*0.34,caps:capsFor(HP,false)},
+      {str:f.appellation,size:H*0.036,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(400),fill:SUB,maxW:cW*0.6,gap:0,caps:capsFor(F2,false)}],cx,SM,'c').svg;
     body+=sFlow([
-      {str:line1,size:H*0.025,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.85,gap:H*0.008,pre:H*0.87-SM,caps:caseFlag('contemporary','small',false)},
-      {str:line2,size:H*0.025,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.85,gap:0,caps:caseFlag('contemporary','small',false)}],W-SM,SM,'r').svg;
+      {str:line1,size:H*0.025,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.85,gap:H*0.008,pre:H*0.87-SM,caps:capsFor(F3,false)},
+      {str:line2,size:H*0.025,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.85,gap:0,caps:capsFor(F3,false)}],W-SM,SM,'r').svg;
   }else{ // caps corner top-left, mark at the foot (mountain boards)
     body+=sFlow([
-      {str:f.producer,size:H*0.028,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(300),fill:SUB,caps:caseFlag('contemporary','small',true),tr:0.4,maxW:W*0.6,gap:H*0.022,pre:H*0.02},
-      {str:f.wine,size:H*0.052,f:HP?HP[0]:(SF.archivo),w:HP?HP[1]:(500),fill:INK,caps:caseFlag('contemporary','hero',true),tr:0.22,lines:2,lh:1.12,maxW:W*0.6,gap:H*0.016},
-      {str:f.appellation,size:H*0.034,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(400),fill:SUB,maxW:W*0.6,gap:H*0.018,caps:caseFlag('contemporary','secondary',false)},
-      {str:line1,size:H*0.025,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,maxW:W*0.6,gap:H*0.008,caps:caseFlag('contemporary','small',false)},
-      {str:line2,size:H*0.025,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,maxW:W*0.6,gap:0,caps:caseFlag('contemporary','small',false)}],SM,SM,'l').svg;
+      {str:f.producer,size:H*0.028,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(300),fill:SUB,caps:capsFor(F3,true),tr:0.4,maxW:W*0.6,gap:H*0.022,pre:H*0.02},
+      {str:f.wine,size:H*0.052,f:HP?HP[0]:(SF.archivo),w:HP?HP[1]:(500),fill:INK,caps:capsFor(HP,true),tr:0.22,lines:2,lh:1.12,maxW:W*0.6,gap:H*0.016},
+      {str:f.appellation,size:H*0.034,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(400),fill:SUB,maxW:W*0.6,gap:H*0.018,caps:capsFor(F2,false)},
+      {str:line1,size:H*0.025,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,maxW:W*0.6,gap:H*0.008,caps:capsFor(F3,false)},
+      {str:line2,size:H*0.025,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(400),fill:SUB,maxW:W*0.6,gap:0,caps:capsFor(F3,false)}],SM,SM,'l').svg;
     body+=sImageBox('contemporary',BOX,W,H);
   }
   return sWrap(W,H,twMM,thMM,MS.bg,body);
@@ -1544,42 +1543,42 @@ function stylePunk(f,W,H,seed,twMM,thMM){
   if(variant===0){ // naive drawing centre stage, marker name below (wine-club boards)
     body+=sImageBox('punk',BOX,W,H);
     body+=sFlow([
-      {str:f.wine,size:H*0.105,f:HP?HP[0]:(SF.marker),w:HP?HP[1]:(400),fill:INK,maxW:cW*0.94,gap:H*0.03,pre:H*0.53,caps:caseFlag('punk','hero',false)},
-      {str:[f.appellation,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.045,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(700),fill:AC,caps:caseFlag('punk','secondary',true),tr:0.04,maxW:cW*0.8,gap:H*0.016},
-      {str:[f.grape,f.classification].filter(Boolean).join(' / '),size:H*0.03,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(500),fill:INK,maxW:cW*0.85,gap:0,caps:caseFlag('punk','secondary',false)}],cx,SM,'c').svg;
+      {str:f.wine,size:H*0.105,f:HP?HP[0]:(SF.marker),w:HP?HP[1]:(400),fill:INK,maxW:cW*0.94,gap:H*0.03,pre:H*0.53,caps:capsFor(HP,false)},
+      {str:[f.appellation,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.045,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(700),fill:AC,caps:capsFor(F2,true),tr:0.04,maxW:cW*0.8,gap:H*0.016},
+      {str:[f.grape,f.classification].filter(Boolean).join(' / '),size:H*0.03,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(500),fill:INK,maxW:cW*0.85,gap:0,caps:capsFor(F2,false)}],cx,SM,'c').svg;
     body+=stackUp([
-      {str:f.producer,size:H*0.034,f:F3?F3[0]:(SF.marker),w:F3?F3[1]:(400),fill:AC,caps:caseFlag('punk','small',false)},
-      {str:[reg,desc,alc].filter(Boolean).join(' / '),size:H*0.023,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,caps:caseFlag('punk','small',false)}],cx,H-SM-2,H*0.008,'c',cW*0.85).svg;
+      {str:f.producer,size:H*0.034,f:F3?F3[0]:(SF.marker),w:F3?F3[1]:(400),fill:AC,caps:capsFor(F3,false)},
+      {str:[reg,desc,alc].filter(Boolean).join(' / '),size:H*0.023,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,false)}],cx,H-SM-2,H*0.008,'c',cW*0.85).svg;
   }else if(variant===1){ // poster type: giant condensed caps stacked (RAW POWER board)
     body+=sImageBox('punk',BOX,W,H);
     body+=sFlow([
-      {str:f.producer,size:H*0.045,f:F3?F3[0]:(SF.marker),w:F3?F3[1]:(400),fill:INK,maxW:W*0.5,gap:H*0.045,pre:H*0.04,caps:caseFlag('punk','small',false)},
-      {str:f.wine,size:H*0.17,f:HP?HP[0]:(SF.anton),w:HP?HP[1]:(400),fill:INK,caps:caseFlag('punk','hero',true),lines:2,lh:0.95,maxW:W*0.52,gap:H*0.025},
-      {str:f.appellation,size:H*0.05,f:F2?F2[0]:(SF.marker),w:F2?F2[1]:(400),fill:INK,maxW:W*0.5,gap:H*0.02,caps:caseFlag('punk','secondary',false)},
-      {str:[f.grape,f.classification].filter(Boolean).join(' / '),size:H*0.03,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(600),fill:INK,maxW:W*0.5,gap:H*0.012,caps:caseFlag('punk','secondary',false)},
-      {str:[reg,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.028,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,maxW:W*0.5,gap:0,caps:caseFlag('punk','small',false)}],SM,SM,'l').svg;
+      {str:f.producer,size:H*0.045,f:F3?F3[0]:(SF.marker),w:F3?F3[1]:(400),fill:INK,maxW:W*0.5,gap:H*0.045,pre:H*0.04,caps:capsFor(F3,false)},
+      {str:f.wine,size:H*0.17,f:HP?HP[0]:(SF.anton),w:HP?HP[1]:(400),fill:INK,caps:capsFor(HP,true),lines:2,lh:0.95,maxW:W*0.52,gap:H*0.025},
+      {str:f.appellation,size:H*0.05,f:F2?F2[0]:(SF.marker),w:F2?F2[1]:(400),fill:INK,maxW:W*0.5,gap:H*0.02,caps:capsFor(F2,false)},
+      {str:[f.grape,f.classification].filter(Boolean).join(' / '),size:H*0.03,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(600),fill:INK,maxW:W*0.5,gap:H*0.012,caps:capsFor(F2,false)},
+      {str:[reg,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.028,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,maxW:W*0.5,gap:0,caps:capsFor(F3,false)}],SM,SM,'l').svg;
     body+=sBlock([desc,alc].filter(Boolean).join(' / '),{x:SM,top:rowY,maxW:W*0.5,size:H*0.024,min:H*0.02,f:SF.archivo,w:500,fill:INK,a:'l'}).svg;
   }else if(variant===2){ // handwritten title corner, figure right (Say When board)
     body+=sBlock(f.wine,{x:SM,top:SM,maxW:cW*0.9,size:H*0.08,min:H*0.05,f:HP?HP[0]:(SF.caveat),w:HP?HP[1]:(700),fill:AC,a:'l',caps:true}).svg;
     body+=sImageBox('punk',BOX,W,H);
     body+=sFlow([
-      {str:f.appellation,size:H*0.045,f:F2?F2[0]:(SF.marker),w:F2?F2[1]:(400),fill:INK,maxW:W*0.26,gap:H*0.02,pre:H*0.16,caps:caseFlag('punk','secondary',false)},
-      {str:f.grape,size:H*0.03,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(500),fill:INK,maxW:W*0.26,gap:H*0.012,caps:caseFlag('punk','secondary',false)},
-      {str:f.classification,size:H*0.028,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,maxW:W*0.26,gap:H*0.012,caps:caseFlag('punk','small',false)},
-      {str:f.vintage,size:H*0.05,f:F3?F3[0]:(SF.marker),w:F3?F3[1]:(400),fill:INK,maxW:W*0.26,gap:0,caps:caseFlag('punk','small',false)}],SM,SM,'l').svg;
+      {str:f.appellation,size:H*0.045,f:F2?F2[0]:(SF.marker),w:F2?F2[1]:(400),fill:INK,maxW:W*0.26,gap:H*0.02,pre:H*0.16,caps:capsFor(F2,false)},
+      {str:f.grape,size:H*0.03,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(500),fill:INK,maxW:W*0.26,gap:H*0.012,caps:capsFor(F2,false)},
+      {str:f.classification,size:H*0.028,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,maxW:W*0.26,gap:H*0.012,caps:capsFor(F3,false)},
+      {str:f.vintage,size:H*0.05,f:F3?F3[0]:(SF.marker),w:F3?F3[1]:(400),fill:INK,maxW:W*0.26,gap:0,caps:capsFor(F3,false)}],SM,SM,'l').svg;
     body+=stackUp([
-      {str:f.producer,size:H*0.032,f:F3?F3[0]:(SF.marker),w:F3?F3[1]:(400),fill:INK,caps:caseFlag('punk','small',false)},
-      {str:reg,size:H*0.024,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,caps:caseFlag('punk','small',false)},
-      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,caps:caseFlag('punk','small',false)}],SM,H-SM-2,H*0.008,'l',W*0.4).svg;
+      {str:f.producer,size:H*0.032,f:F3?F3[0]:(SF.marker),w:F3?F3[1]:(400),fill:INK,caps:capsFor(F3,false)},
+      {str:reg,size:H*0.024,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,false)},
+      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,false)}],SM,H-SM-2,H*0.008,'l',W*0.4).svg;
   }else if(variant===3){ // rotated side caps, riso figure centre (PET-NAT / SUR512 boards)
     body+=sRot(f.producer,SM+H*0.028,H,{size:H*0.034,f:SF.anton,w:400,fill:AC,tr:0.14,caps:true});
     body+=sImageBox('punk',BOX,W,H);
     body+=sFlow([
-      {str:f.wine,size:H*0.10,f:HP?HP[0]:(SF.marker),w:HP?HP[1]:(400),fill:INK,maxW:cW*0.86,gap:H*0.02,pre:H*0.61,caps:caseFlag('punk','hero',false)},
-      {str:[f.appellation,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.04,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(700),fill:AC,caps:caseFlag('punk','secondary',true),tr:0.04,maxW:cW*0.8,gap:0}],cx+H*0.02,SM,'c').svg;
+      {str:f.wine,size:H*0.10,f:HP?HP[0]:(SF.marker),w:HP?HP[1]:(400),fill:INK,maxW:cW*0.86,gap:H*0.02,pre:H*0.61,caps:capsFor(HP,false)},
+      {str:[f.appellation,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.04,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(700),fill:AC,caps:capsFor(F2,true),tr:0.04,maxW:cW*0.8,gap:0}],cx+H*0.02,SM,'c').svg;
     body+=stackUp([
-      {str:[f.grape,f.classification].filter(Boolean).join(' / '),size:H*0.026,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(500),fill:INK,caps:caseFlag('punk','secondary',false)},
-      {str:[reg,desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,caps:caseFlag('punk','small',false)}],cx+H*0.02,H-SM-2,H*0.008,'c',cW*0.8).svg;
+      {str:[f.grape,f.classification].filter(Boolean).join(' / '),size:H*0.026,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(500),fill:INK,caps:capsFor(F2,false)},
+      {str:[reg,desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,false)}],cx+H*0.02,H-SM-2,H*0.008,'c',cW*0.8).svg;
   }else if(variant===4){ // arched hand-lettering ring over the figure (Silvaner board)
     (function(){
       let asz=H*0.055; const R=W*0.40;
@@ -1589,21 +1588,21 @@ function stylePunk(f,W,H,seed,twMM,thMM){
     })();
     body+=sImageBox('punk',BOX,W,H);
     body+=sFlow([
-      {str:f.wine,size:H*0.10,f:HP?HP[0]:(SF.marker),w:HP?HP[1]:(400),fill:INK,maxW:cW*0.92,gap:H*0.018,pre:H*0.605,caps:caseFlag('punk','hero',false)},
-      {str:[f.appellation,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.045,f:F2?F2[0]:(SF.caveat),w:F2?F2[1]:(600),fill:AC,maxW:cW*0.8,gap:H*0.014,caps:caseFlag('punk','secondary',false)},
-      {str:[f.grape,f.classification].filter(Boolean).join(' / '),size:H*0.028,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(500),fill:INK,maxW:cW*0.85,gap:0,caps:caseFlag('punk','secondary',false)}],cx,SM,'c').svg;
+      {str:f.wine,size:H*0.10,f:HP?HP[0]:(SF.marker),w:HP?HP[1]:(400),fill:INK,maxW:cW*0.92,gap:H*0.018,pre:H*0.605,caps:capsFor(HP,false)},
+      {str:[f.appellation,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.045,f:F2?F2[0]:(SF.caveat),w:F2?F2[1]:(600),fill:AC,maxW:cW*0.8,gap:H*0.014,caps:capsFor(F2,false)},
+      {str:[f.grape,f.classification].filter(Boolean).join(' / '),size:H*0.028,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(500),fill:INK,maxW:cW*0.85,gap:0,caps:capsFor(F2,false)}],cx,SM,'c').svg;
     body+=stackUp([
-      {str:reg,size:H*0.024,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,caps:caseFlag('punk','small',false)},
-      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,caps:caseFlag('punk','small',false)}],cx,H-SM-2,H*0.008,'c',cW*0.8).svg;
+      {str:reg,size:H*0.024,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,false)},
+      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,false)}],cx,H-SM-2,H*0.008,'c',cW*0.8).svg;
   }else{ // riso band top, loud knockout hero below (poster boards)
     body+=sImageBox('punk',BOX,W,H);
     body+=sFlow([
-      {str:f.wine,size:H*0.13,f:HP?HP[0]:(SF.anton),w:HP?HP[1]:(400),fill:INK,caps:caseFlag('punk','hero',true),maxW:cW*0.95,gap:H*0.018,pre:H*0.43},
-      {str:[f.appellation,f.vintage].filter(Boolean).join('  \u00b7  '),size:H*0.045,f:F2?F2[0]:(SF.marker),w:F2?F2[1]:(400),fill:AC,maxW:cW*0.8,gap:H*0.016,caps:caseFlag('punk','secondary',false)},
-      {str:[f.grape,f.classification,reg].filter(Boolean).join(' / '),size:H*0.028,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(500),fill:INK,maxW:cW*0.9,gap:0,caps:caseFlag('punk','secondary',false)}],cx,SM,'c').svg;
+      {str:f.wine,size:H*0.13,f:HP?HP[0]:(SF.anton),w:HP?HP[1]:(400),fill:INK,caps:capsFor(HP,true),maxW:cW*0.95,gap:H*0.018,pre:H*0.43},
+      {str:[f.appellation,f.vintage].filter(Boolean).join('  \u00b7  '),size:H*0.045,f:F2?F2[0]:(SF.marker),w:F2?F2[1]:(400),fill:AC,maxW:cW*0.8,gap:H*0.016,caps:capsFor(F2,false)},
+      {str:[f.grape,f.classification,reg].filter(Boolean).join(' / '),size:H*0.028,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(500),fill:INK,maxW:cW*0.9,gap:0,caps:capsFor(F2,false)}],cx,SM,'c').svg;
     body+=stackUp([
-      {str:f.producer,size:H*0.032,f:F3?F3[0]:(SF.marker),w:F3?F3[1]:(400),fill:INK,caps:caseFlag('punk','small',false)},
-      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,caps:caseFlag('punk','small',false)}],cx,H-SM-2,H*0.008,'c',cW*0.8).svg;
+      {str:f.producer,size:H*0.032,f:F3?F3[0]:(SF.marker),w:F3?F3[1]:(400),fill:INK,caps:capsFor(F3,false)},
+      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,false)}],cx,H-SM-2,H*0.008,'c',cW*0.8).svg;
   }
   return sWrap(W,H,twMM,thMM,BG,body);
 }
