@@ -926,6 +926,10 @@ function LayoutTab() {
         Upload <b>layout</b> references per style (full labels whose layout you like — typography and
         colour are what gets analysed). &ldquo;Derive layout language&rdquo; extracts the palettes and
         hero-font pool the engine will actually use. Rules below are handed to the analysis.
+        <br /><span style={{ color: "#8a887e" }}>Note: rules steer the derived language (colours,
+        type). Hard geometry rules — sizes, margins, spacing — must be built into the engine: tell
+        Claude and it becomes code. Already enforced mechanically: <b>no text below 7pt</b>, no
+        overlaps, light grounds.</span>
       </p>
       {err && <p style={{ color: "#a03030" }}>{err}</p>}
       {STYLE_DEFS.map(([key, name]) => {

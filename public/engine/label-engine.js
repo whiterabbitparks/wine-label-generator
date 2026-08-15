@@ -847,8 +847,13 @@ function sWrap(W,H,twMM,thMM,bg,body,defs){
     +body+`</svg>`;}
 /* fit+wrap a string; returns {svg,bottom,size,nlines}. `top` = top of the text box (baseline ≈ top+0.80*size). */
 function sBlock(str,o){if(!str)return {svg:'',bottom:o.top,size:0,nlines:0};
-  const s0=o.caps?up(str):str, trAbs=o.tr?o.size*o.tr:0, maxLines=o.lines||1;
-  const fit=wrapFit(s0,o.maxW,o.size,o.min||o.size,maxLines,o.f,o.w||400,!!o.ital,trAbs);
+  // HOUSE RULE: nothing on a label may print below 7pt (owner). Every style
+  // text path funnels through sBlock, so both the requested size and the
+  // shrink floor are clamped here — small-print lines that computed below
+  // 7pt on small labels now render at exactly 7pt.
+  const reqSize=Math.max(o.size,MIN7), reqMin=Math.max(o.min||o.size,MIN7);
+  const s0=o.caps?up(str):str, trAbs=o.tr?reqSize*o.tr:0, maxLines=o.lines||1;
+  const fit=wrapFit(s0,o.maxW,reqSize,reqMin,maxLines,o.f,o.w||400,!!o.ital,trAbs);
   const sz=fit.size, lh=(o.lh||1.16)*sz, anchor=o.a==='l'?'start':o.a==='r'?'end':'middle', base=o.top+sz*0.80;
   const ls=trAbs?` letter-spacing="${trAbs.toFixed(2)}"`:'', it=o.ital?' font-style="italic"':'';
   const halo=o.halo?` stroke="#ffffff" stroke-width="${(sz*0.14).toFixed(1)}" stroke-linejoin="round" style="paint-order:stroke"`:'';
@@ -1120,9 +1125,10 @@ function sArcText(str,cx,topBaseY,R,o){
   const cyc=topBaseY+R, span=1.9;
   const x1=cx-R*Math.sin(span/2), y1=cyc-R*Math.cos(span/2);
   const x2=cx+R*Math.sin(span/2);
-  const ls=o.tr?` letter-spacing="${(o.size*o.tr).toFixed(2)}"`:'';
+  const asz=Math.max(o.size,MIN7);   // 7pt floor (house rule)
+  const ls=o.tr?` letter-spacing="${(asz*o.tr).toFixed(2)}"`:'';
   return `<defs><path id="${id}" d="M ${x1.toFixed(1)} ${y1.toFixed(1)} A ${R.toFixed(1)} ${R.toFixed(1)} 0 0 1 ${x2.toFixed(1)} ${y1.toFixed(1)}"/></defs>`
-    +`<text font-family="${o.f}" font-weight="${o.w||400}" font-size="${o.size.toFixed(1)}" fill="${o.fill}"${ls}>`
+    +`<text font-family="${o.f}" font-weight="${o.w||400}" font-size="${asz.toFixed(1)}" fill="${o.fill}"${ls}>`
     +`<textPath href="#${id}" startOffset="50%" text-anchor="middle">${esc(o.caps?up(str):str)}</textPath></text>`;
 }
 /* Draw the style's artwork centred in its composition's FREE AREA. No masks,
@@ -1139,7 +1145,7 @@ function sImageBox(styleKey,b,W,H){
    the Kirile / Saperavi / PET-NAT side-caption device from the boards. */
 function sRot(t,x,H,o){
   if(!t)return '';
-  const s0=o.caps?up(String(t)):String(t); let sz=o.size;
+  const s0=o.caps?up(String(t)):String(t); let sz=Math.max(o.size,MIN7);   // 7pt floor (house rule)
   const wpx=measure(s0,sz,o.f,o.w||400,false,sz*(o.tr||0)), maxL=H-2*SM;
   if(wpx>maxL)sz=Math.max(MIN7,sz*maxL/wpx);
   const cy=H/2, ls=o.tr?` letter-spacing="${(sz*(o.tr||0)).toFixed(2)}"`:'';
