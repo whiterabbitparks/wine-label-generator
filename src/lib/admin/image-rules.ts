@@ -189,3 +189,22 @@ export function wantsText(vision: string | undefined): boolean {
     String(vision || "")
   );
 }
+
+/* Subject focus (owner, 2026-08-15): "gorilla in chokha" must yield ONE
+   gorilla in a chokha — not a crowd with a gorilla in it. Unless the story
+   itself asks for multiple figures, a dynamic rule pins the generation (and
+   the verified check) to exactly the stated subject. */
+export function wantsCrowd(vision: string | undefined): boolean {
+  return /\b(people|crowd|villagers|family|families|friends|dancers|dancing|feast|supra|banquet|group|couple|guests|harvesters|workers|men|women|children|figures|musicians|procession|celebration|everyone|together)\b/i.test(
+    String(vision || "")
+  );
+}
+export function subjectFocusRule(subject: string): CompiledRule {
+  const s = subject.slice(0, 160);
+  return {
+    src: "stay focused on the subject (built-in)",
+    positive: `Depict EXACTLY this and nothing else animate: ${s}. One single subject, dominant in the frame; no additional people, human figures, animals or characters of any kind.`,
+    negative: "extra people, background figures, crowd, bystanders, additional characters, additional animals",
+    check: `The intended subject is: "${s}". Does the image contain any people, human figures, animals or characters that are NOT part of that subject (e.g. bystanders, a crowd, extra animals)?`,
+  };
+}

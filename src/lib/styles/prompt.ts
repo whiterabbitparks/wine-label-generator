@@ -52,7 +52,7 @@ const COMP_SHAPES = [
   "wide panoramic frieze",
   "tall arched niche composition",
   "circular medallion",
-  "asymmetric arrangement with one dominant mass and scattered small elements",
+  "asymmetric arrangement with one dominant mass and a few quiet inanimate accents",
 ];
 export function pickCompShape(styleKey: string, subKey: string, vision: string, seed: number): string {
   const h = [...(styleKey + subKey + vision)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, (seed || 0) + 7);
@@ -96,7 +96,7 @@ const ANALOG =
 export const ANTI_AI_NEGATIVE =
   "generic digital illustration, vector clipart, flat corporate illustration, smooth airbrush shading, 3D render, glossy highlights, plastic sheen, stock art composition, cartoon mascot, concept-art polish, perfect symmetry, default AI aesthetic";
 
-function subjectFrom(vision: string, d: Record<string, string>): string {
+export function subjectFrom(vision: string, d: Record<string, string>): string {
   const v = (vision || "").trim();
   if (v) return v;
   // no story? build one from the wine facts the winemaker DID fill in
@@ -126,7 +126,12 @@ export function buildStylePrompt(
   checked?: string[]
 ): string {
   const d = brief.data || {};
-  const subject = subjectFrom(brief.vision || "", d);
+  let subject = subjectFrom(brief.vision || "", d);
+  // subject exclusivity (owner 2026-08-15): four words of subject must not
+  // drown in two hundred words of technique — weld the focus to the subject
+  const crowdish = /\b(people|crowd|villagers|family|families|friends|dancers|dancing|feast|supra|banquet|group|couple|guests|harvesters|workers|men|women|children|figures|musicians|procession|celebration|everyone|together)\b/i;
+  if (!crowdish.test(brief.vision || ""))
+    subject += " — the one and only subject, dominant in the frame, depicted alone with no additional people, figures or animals";
 
   const ctx: string[] = [];
   if (d.wineColorName) ctx.push(`${String(d.wineColorName).toLowerCase()} wine`);
