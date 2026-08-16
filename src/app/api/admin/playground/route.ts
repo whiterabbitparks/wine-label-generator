@@ -7,7 +7,7 @@ import { loadConfig, DEFAULT_CONFIG } from "@/lib/admin/config-store";
 import { providerName, generateImageWithRetry } from "@/lib/image-provider";
 import { getImageStorage } from "@/lib/image-storage";
 import { logGeneration } from "@/lib/admin/generation-log";
-import { getProfiles, listRefs } from "@/lib/admin/style-refs";
+import { getProfiles, listRefs, getCardSeen, markCardsSeen } from "@/lib/admin/style-refs";
 import { getImageRules, ruleLines, verifyImage } from "@/lib/admin/image-rules";
 import { feedbackAggregates } from "@/lib/admin/feedback";
 
@@ -49,19 +49,20 @@ export async function POST(req: Request) {
   } catch {}
   const rules = ruleLines(await getImageRules().catch(() => ({ global: '', perStyle: {} })), style.key);
 
-  // BENCH (owner 2026-08-15): unrated cards first — the playground's job is
-  // rating coverage, not mirroring customers. One rejection retires a card
-  // (weight <= 0.55); 'includeRejected' reviews retired cards so an approve
-  // can revive them. No duplicates within a batch unless cards run out.
+  // BENCH ROTATION (owner 2026-08-15): every round must show NEW reference
+  // cards — the least recently shown come first (never-shown before all),
+  // so successive rounds walk the entire board before any card repeats.
+  // Rejected cards (weight <= 0.55) stay retired unless 'includeRejected'.
   const entries = variants.map((v) => ({ v, w: weights[v.key] ?? 1, rated: weights[v.key] !== undefined }));
   const rejectedE = entries.filter((e) => e.w <= 0.55);
   const activeE = entries.filter((e) => e.w > 0.55);
-  const shuffle = <T,>(arr: T[]) => arr.map((x) => [Math.random(), x] as const).sort((p, q) => p[0] - q[0]).map((p) => p[1]);
-  let benchE = body.includeRejected
-    ? shuffle(entries)
-    : [...shuffle(activeE.filter((e) => !e.rated)), ...shuffle(activeE.filter((e) => e.rated))];
-  if (!benchE.length) benchE = shuffle(entries);
+  const seen = await getCardSeen(style.key);
+  const order = (list: typeof entries) =>
+    [...list].sort((x, y) => (seen[x.v.key] ?? 0) - (seen[y.v.key] ?? 0) || Math.random() - 0.5);
+  let benchE = body.includeRejected ? order(entries) : order(activeE);
+  if (!benchE.length) benchE = order(entries);
   const picks = Array.from({ length: count }, (_, n) => benchE[n % benchE.length].v);
+  await markCardsSeen(style.key, [...new Set(picks.map((p) => p.key))]);
   const benchStats = {
     total: entries.length,
     active: activeE.length,

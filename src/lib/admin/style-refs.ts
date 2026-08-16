@@ -355,3 +355,26 @@ export async function analyzeStyle(style: string, force = false): Promise<StyleP
     .updateOne({ style }, { $set: profile }, { upsert: true });
   return profile;
 }
+
+/* Round-rotation memory (owner, 2026-08-15): each playground round must move
+   on to NEW reference cards — the least recently shown come first, so
+   successive rounds walk the whole board before any card repeats. */
+export async function getCardSeen(style: string): Promise<Record<string, number>> {
+  try {
+    const db = await getDb();
+    const rows = await db.collection("cardSeen").find({ style }, { projection: { _id: 0 } }).toArray();
+    return Object.fromEntries(rows.map((r) => [String(r.key), new Date(r.at as Date).getTime()]));
+  } catch {
+    return {};
+  }
+}
+export async function markCardsSeen(style: string, keys: string[]): Promise<void> {
+  if (!keys.length) return;
+  try {
+    const db = await getDb();
+    const at = new Date();
+    await db.collection("cardSeen").bulkWrite(
+      keys.map((key) => ({ updateOne: { filter: { style, key }, update: { $set: { style, key, at } }, upsert: true } }))
+    );
+  } catch {}
+}
