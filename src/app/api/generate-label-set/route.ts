@@ -8,7 +8,7 @@ import { getImageStorage } from "@/lib/image-storage";
 import { logGeneration } from "@/lib/admin/generation-log";
 import { getProfiles, layoutHintsFrom, type StyleProfile } from "@/lib/admin/style-refs";
 import { feedbackAggregates, weightedPick, type StyleFeedbackAggregate } from "@/lib/admin/feedback";
-import { getImageRules, ruleLines, verifyImage } from "@/lib/admin/image-rules";
+import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, wantsText } from "@/lib/admin/image-rules";
 
 /* POST /api/generate-label-set — the generation orchestrator.
 
@@ -175,6 +175,7 @@ export async function POST(req: Request) {
           // charter = the board's visual DNA; older profiles (pre-charter) fall
           // back to their summary so the boards still lead the prompt
           const rules = ruleLines(imageRules, style.key);
+          if (!wantsText(brief.vision)) rules.push(NO_TEXT_RULE);
           const job = buildStyleJob(style, sub, brief, art, fbLines, prof?.charter || prof?.summary, rules.map((r) => r.positive));
           const ruleNeg = rules.map((r) => r.negative).filter(Boolean).join(", ");
           if (ruleNeg) job.negative = job.negative ? job.negative + ", " + ruleNeg : ruleNeg;

@@ -169,3 +169,23 @@ export async function verifyImage(
     return { ok: true, violations: [] };   // the check must never block generation
   }
 }
+
+/* Built-in hard rule (owner, 2026-08-15): artwork never contains text,
+   glyphs or numbers — UNLESS the winemaker's story explicitly asks for
+   lettering. Joins the same compiled pipeline (prompt clause, avoid-list,
+   verified check with retry) but lives in code, not the editable doc. */
+export const NO_TEXT_RULE: CompiledRule = {
+  src: "never generate texts, glyphs or numbers (built-in)",
+  positive:
+    "The artwork is pure imagery with no text of any kind — no letters, words, numerals, glyphs, monograms, inscriptions, signatures or typographic marks.",
+  negative: "text, letters, words, numbers, typography, inscription, signature, watermark, gibberish lettering",
+  check:
+    "Does the image contain any readable or pseudo-readable text, letters, numerals, glyphs or typographic marks (including AI gibberish lettering)? Purely decorative non-alphabetic patterns do not count.",
+};
+
+/** Does the winemaker's story explicitly ask for lettering? */
+export function wantsText(vision: string | undefined): boolean {
+  return /\b(text|letter|lettering|word|writing|written|inscription|sign\s+say|says|saying|glyph|number|digit|numeral|typograph|caption|monogram|slogan|motto)\b/i.test(
+    String(vision || "")
+  );
+}

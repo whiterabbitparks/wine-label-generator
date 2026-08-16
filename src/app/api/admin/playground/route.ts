@@ -8,7 +8,7 @@ import { providerName, generateImageWithRetry } from "@/lib/image-provider";
 import { getImageStorage } from "@/lib/image-storage";
 import { logGeneration } from "@/lib/admin/generation-log";
 import { getProfiles, listRefs, getCardSeen, markCardsSeen } from "@/lib/admin/style-refs";
-import { getImageRules, ruleLines, verifyImage } from "@/lib/admin/image-rules";
+import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, wantsText } from "@/lib/admin/image-rules";
 import { feedbackAggregates } from "@/lib/admin/feedback";
 
 /* POST /api/admin/playground — owner's test bench for the refinement loop.
@@ -48,6 +48,7 @@ export async function POST(req: Request) {
     refUrls = Object.fromEntries((await listRefs(style.key)).map((r) => [r.id, r.url]));
   } catch {}
   const rules = ruleLines(await getImageRules().catch(() => ({ global: '', perStyle: {} })), style.key);
+  if (!wantsText(vision)) rules.push(NO_TEXT_RULE);
 
   // BENCH ROTATION (owner 2026-08-15): every round must show NEW reference
   // cards — the least recently shown come first (never-shown before all),
