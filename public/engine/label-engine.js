@@ -1188,7 +1188,22 @@ function sImageBox(styleKey,b,W,H){
   let x=b[0]*W, y=b[1]*H, x2=b[2]*W, y2=b[3]*H;
   x=Math.max(x,SM); y=Math.max(y,SM); x2=Math.min(x2,W-SM); y2=Math.min(y2,H-SM);
   const w=x2-x, h=y2-y; if(w<=0||h<=0) return '';
-  return `<image x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" preserveAspectRatio="xMidYMid meet" xlink:href="${src}" href="${src}" style="mix-blend-mode:multiply"/>`;
+  /* HOUSE RULE (owner 2026-08-16): artwork fills ~80% of its free area.
+     Plain contain letterboxes the 1.6:1 artwork (often only ~55% of the
+     box), so the drawn rect grows — kept at the artwork ratio, centred on
+     the box — until its area is 80% of the free area. Never smaller than
+     contain, never past the 5mm hard margins. Artwork edges dissolve into
+     white (prompt rule) and multiply-blend, so the mild overflow beyond
+     the box stays visually quiet. */
+  const R=1.6;                                    // generated artwork is 1024x640
+  let mw,mh; if(w/h>R){mh=h;mw=h*R;}else{mw=w;mh=w/R;}
+  const s=Math.sqrt(0.8*w*h/(mw*mh));
+  if(s>1){mw*=s;mh*=s;}
+  if(mw>W-2*SM){mw=W-2*SM;mh=mw/R;}
+  if(mh>H-2*SM){mh=H-2*SM;mw=mh*R;}
+  const ix=Math.min(Math.max(x+w/2-mw/2,SM),W-SM-mw);
+  const iy=Math.min(Math.max(y+h/2-mh/2,SM),H-SM-mh);
+  return `<image x="${ix.toFixed(1)}" y="${iy.toFixed(1)}" width="${mw.toFixed(1)}" height="${mh.toFixed(1)}" preserveAspectRatio="xMidYMid meet" xlink:href="${src}" href="${src}" style="mix-blend-mode:multiply"/>`;
 }
 
 /* Vertical text along a label edge (rotated -90°), shrunk to fit the height —

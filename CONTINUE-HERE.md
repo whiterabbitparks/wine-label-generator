@@ -154,6 +154,17 @@ band + orange full ground, flora diagonal accent band, premium charcoal
 variant, artistic near-black riso ground. Text-only comps may still use a
 bold single-colour ground, e.g. the minimalist red panel.)
 
+## 5-LAYOUTS-V5 (2026-08-16) — artwork fills 80% of its free area
+
+**Standing rule (owner, 2026-08-16): layout artwork fills ~80% of its free
+area.** sImageBox no longer plain-contains the 1.6:1 artwork (which
+letterboxed it to ~55% of many boxes): the drawn rect grows at the
+artwork ratio, centred on the box, until its area is 80% of the free
+area — never smaller than contain, never past the 5mm margins (clamped;
+verified for all comps). Overflow beyond the box is visually quiet
+because artwork edges dissolve into white and multiply-blend. Goldens
+unaffected (no artwork in golden renders).
+
 ## 5-UI-V2 (2026-08-16) — white/grey theme, B&W uncropped covers
 
 Owner redesign of the configurator shell (all in build.js theme block +
