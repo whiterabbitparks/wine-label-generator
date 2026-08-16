@@ -1,13 +1,29 @@
 import { getDb } from "@/lib/db";
 
 /* VERIFIED image rules (owner, 2026-08-15): plain-English rules that
-   actually work — every generated image is CHECKED against them by a vision
-   model; violators are regenerated once with the broken rules emphasised.
-   One rule per line, global + per style. */
+   actually work. On SAVE each rule is COMPILED once by a text model into
+   three forms: a positive prompt clause (image models paint toward
+   positives, not away from negatives), avoid-keywords for the negative
+   list, and a precise check question with disambiguation (so e.g.
+   engraving hatching is not mistaken for "ornament"). Every generated
+   image is checked; violators regenerate with the broken rules prepended. */
+
+export interface CompiledRule {
+  /** the owner's original line — shown in violations */
+  src: string;
+  /** positive phrasing injected into every prompt */
+  positive: string;
+  /** comma-separable avoid keywords for the negative list */
+  negative: string;
+  /** precise yes/no violation question for the verifier */
+  check: string;
+}
 
 export interface ImageRules {
   global: string;
   perStyle: Record<string, string>;
+  compiledGlobal?: CompiledRule[];
+  compiledPerStyle?: Record<string, CompiledRule[]>;
 }
 
 const DOC_ID = "image-hard-rules";
@@ -16,40 +32,97 @@ const STYLES = ["traditional", "contemporary", "punk"];
 export async function getImageRules(): Promise<ImageRules> {
   try {
     const db = await getDb();
-    const doc = (await db.collection("settings").findOne({ _id: DOC_ID } as never)) as
-      | { global?: string; perStyle?: Record<string, string> }
-      | null;
-    return { global: doc?.global || "", perStyle: doc?.perStyle || {} };
+    const doc = (await db.collection("settings").findOne({ _id: DOC_ID } as never)) as ImageRules | null;
+    return {
+      global: doc?.global || "",
+      perStyle: doc?.perStyle || {},
+      compiledGlobal: doc?.compiledGlobal || [],
+      compiledPerStyle: doc?.compiledPerStyle || {},
+    };
   } catch {
     return { global: "", perStyle: {} };
   }
 }
 
-export async function saveImageRules(rules: ImageRules): Promise<void> {
+function rawLines(text: string): string[] {
+  return String(text || "").split("\n").map((l) => l.trim()).filter((l) => l.length > 2);
+}
+
+/** Compile plain-English rules into prompt/negative/check forms (one call). */
+async function compileRules(lines: string[]): Promise<CompiledRule[]> {
+  const fallback = lines.map((src) => ({ src, positive: src, negative: "", check: `Does the image break this rule: "${src}"?` }));
+  if (!lines.length) return [];
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) return fallback;
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: process.env.OPENAI_VISION_MODEL || "gpt-4o",
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content:
+              "You compile an art director's plain-English image rules for a generation pipeline. " +
+              "For EACH rule return three forms: " +
+              "positive — rephrase as what SHOULD be painted (image models follow positives; " +
+              'e.g. "no ornaments on qvevri" → "any qvevri is a plain, smooth, undecorated clay vessel with a simple silhouette and no handles"); ' +
+              "negative — 3-6 comma-separated avoid-keywords; " +
+              "check — one precise yes-means-VIOLATED question for a vision inspector, with " +
+              "disambiguation so legitimate technique is not misread (e.g. engraving hatching or " +
+              "shading lines on a surface are NOT ornament; only deliberate decorative patterns, " +
+              "carvings, reliefs or attached parts count). " +
+              'Return strict JSON {"rules":[{"src","positive","negative","check"}]} in the same order.',
+          },
+          { role: "user", content: lines.map((l, i) => `${i + 1}. ${l}`).join("\n") },
+        ],
+      }),
+    });
+    if (!res.ok) return fallback;
+    const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+    const parsed = JSON.parse(json.choices?.[0]?.message?.content || "{}") as { rules?: Partial<CompiledRule>[] };
+    const rules = Array.isArray(parsed.rules) ? parsed.rules : [];
+    if (rules.length !== lines.length) return fallback;
+    return rules.map((r, i) => ({
+      src: lines[i],
+      positive: String(r.positive || lines[i]).slice(0, 400),
+      negative: String(r.negative || "").slice(0, 200),
+      check: String(r.check || `Does the image break this rule: "${lines[i]}"?`).slice(0, 400),
+    }));
+  } catch {
+    return fallback;
+  }
+}
+
+export async function saveImageRules(rules: Pick<ImageRules, "global" | "perStyle">): Promise<void> {
+  const global = String(rules.global || "").slice(0, 3000);
+  const perStyle = Object.fromEntries(STYLES.map((s) => [s, String(rules.perStyle?.[s] || "").slice(0, 3000)]));
+  const compiledGlobal = await compileRules(rawLines(global));
+  const compiledPerStyle: Record<string, CompiledRule[]> = {};
+  for (const s of STYLES) compiledPerStyle[s] = await compileRules(rawLines(perStyle[s]));
   const db = await getDb();
   await db.collection("settings").updateOne(
     { _id: DOC_ID } as never,
-    { $set: {
-        global: String(rules.global || "").slice(0, 3000),
-        perStyle: Object.fromEntries(STYLES.map((s) => [s, String(rules.perStyle?.[s] || "").slice(0, 3000)])),
-        updatedAt: new Date(),
-      } },
+    { $set: { global, perStyle, compiledGlobal, compiledPerStyle, updatedAt: new Date() } },
     { upsert: true }
   );
 }
 
-/** The rule list checked for one style: global lines + that style's lines. */
-export function ruleLines(rules: ImageRules, style: string): string[] {
-  return [rules.global, rules.perStyle?.[style] || ""]
-    .flatMap((t) => String(t).split("\n"))
-    .map((l) => l.trim())
-    .filter((l) => l.length > 2);
+/** Compiled rule list applying to one style: global + that style's rules. */
+export function ruleLines(rules: ImageRules, style: string): CompiledRule[] {
+  const g = rules.compiledGlobal?.length ? rules.compiledGlobal : rawLines(rules.global).map((src) => ({ src, positive: src, negative: "", check: `Does the image break this rule: "${src}"?` }));
+  const p = rules.compiledPerStyle?.[style]?.length
+    ? rules.compiledPerStyle[style]
+    : rawLines(rules.perStyle?.[style] || "").map((src) => ({ src, positive: src, negative: "", check: `Does the image break this rule: "${src}"?` }));
+  return [...g, ...p];
 }
 
-/** Vision check of one generated image against the owner's rules. */
+/** Vision check against the compiled rules; violations carry the reason. */
 export async function verifyImage(
   imageDataUrl: string,
-  rules: string[]
+  rules: CompiledRule[]
 ): Promise<{ ok: boolean; violations: string[] }> {
   if (!rules.length) return { ok: true, violations: [] };
   const key = process.env.OPENAI_API_KEY;
@@ -66,16 +139,15 @@ export async function verifyImage(
           {
             role: "system",
             content:
-              "You inspect a generated wine-label artwork against the owner's rules. " +
-              "Rules may be phrased as generation instructions ('always draw X without Y') — " +
-              "treat each as a constraint the IMAGE must satisfy. " +
-              "Judge ONLY what is visibly in the image; when uncertain, the rule passes. " +
-              "Return strict JSON {\"violations\": [the exact text of each BROKEN rule]} — empty array if all pass.",
+              "You inspect a generated wine-label artwork. For each numbered question, " +
+              "answer whether the VIOLATION it describes is clearly visible in the image. " +
+              "When uncertain, answer no (the rule passes). " +
+              'Return strict JSON {"violations":[{"n": question number, "reason": one short sentence naming what you see}]} — empty array if none.',
           },
           {
             role: "user",
             content: [
-              { type: "text", text: "RULES:\n" + rules.map((r, i) => `${i + 1}. ${r}`).join("\n") },
+              { type: "text", text: rules.map((r, i) => `${i + 1}. ${r.check}`).join("\n") },
               { type: "image_url", image_url: { url: imageDataUrl, detail: "low" } },
             ],
           },
@@ -84,10 +156,14 @@ export async function verifyImage(
     });
     if (!res.ok) return { ok: true, violations: [] };
     const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-    const parsed = JSON.parse(json.choices?.[0]?.message?.content || "{}") as { violations?: unknown };
+    const parsed = JSON.parse(json.choices?.[0]?.message?.content || "{}") as { violations?: { n?: number; reason?: string }[] };
     const violations = (Array.isArray(parsed.violations) ? parsed.violations : [])
-      .map((v) => String(v).slice(0, 200))
-      .slice(0, 8);
+      .map((v) => {
+        const r = rules[(Number(v?.n) || 0) - 1];
+        return r ? `${r.src}${v?.reason ? ` — ${String(v.reason).slice(0, 140)}` : ""}` : null;
+      })
+      .filter(Boolean)
+      .slice(0, 8) as string[];
     return { ok: violations.length === 0, violations };
   } catch {
     return { ok: true, violations: [] };   // the check must never block generation

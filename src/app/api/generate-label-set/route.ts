@@ -175,7 +175,9 @@ export async function POST(req: Request) {
           // charter = the board's visual DNA; older profiles (pre-charter) fall
           // back to their summary so the boards still lead the prompt
           const rules = ruleLines(imageRules, style.key);
-          const job = buildStyleJob(style, sub, brief, art, fbLines, prof?.charter || prof?.summary, rules);
+          const job = buildStyleJob(style, sub, brief, art, fbLines, prof?.charter || prof?.summary, rules.map((r) => r.positive));
+          const ruleNeg = rules.map((r) => r.negative).filter(Boolean).join(", ");
+          if (ruleNeg) job.negative = job.negative ? job.negative + ", " + ruleNeg : ruleNeg;
           const started = Date.now();
           try {
             let imageDataUrl = await generateImageWithRetry(job);

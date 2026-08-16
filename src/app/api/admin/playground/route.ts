@@ -59,13 +59,27 @@ export async function POST(req: Request) {
   // two retire it from customer generation as well
   const active = ranked.filter((v) => (weights[v.key] ?? 1) > 0.55);
   const bench = (active.length ? active : ranked);
+  // weighted RANDOM sampling without replacement — every reference's card
+  // rotates through the bench instead of the same top-weighted few
+  const pool = [...bench];
+  const picks: typeof bench = [];
+  for (let n = 0; n < count; n++) {
+    if (!pool.length) pool.push(...bench);
+    const ws = pool.map((v) => Math.max(0.05, weights[v.key] ?? 1));
+    let r = Math.random() * ws.reduce((a, b) => a + b, 0);
+    let idx = 0;
+    for (let j = 0; j < pool.length; j++) { r -= ws[j]; if (r <= 0) { idx = j; break; } }
+    picks.push(pool.splice(idx, 1)[0]);
+  }
 
   const provider = providerName();
   const brief: LabelBrief = { vision, data: {}, seed: 0, zones: null };
   const results = await Promise.all(
     Array.from({ length: count }, async (_, i) => {
-      const sub = { ...bench[i % bench.length] };
-      const job = buildStyleJob(style, sub, brief, art, undefined, charter, rules);
+      const sub = { ...picks[i % picks.length] };
+      const job = buildStyleJob(style, sub, brief, art, undefined, charter, rules.map((r) => r.positive));
+      const ruleNeg = rules.map((r) => r.negative).filter(Boolean).join(", ");
+      if (ruleNeg) job.negative = job.negative ? job.negative + ", " + ruleNeg : ruleNeg;
       const started = Date.now();
       try {
         let dataUrl = await generateImageWithRetry(job);
