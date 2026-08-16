@@ -100,7 +100,7 @@ const RAW_CATALOG: StyleDef[] = [
     ],
     focus: {
       guidance:
-        "Compose the main subject fully inside a central horizontal band or oval in the upper half of the image; toward every edge the scene must dissolve into quiet, expendable surroundings (sky, mist, ground) that can fade away without losing anything important.",
+        "Keep the main subject fully inside the upper half of the image; toward every edge the scene must dissolve into quiet, expendable surroundings (sky, mist, ground) that can fade away without losing anything important.",
       clearZone: [0.05, 0.6, 0.9, 0.38],
     },
     treatment: MULTIPLY,

@@ -40,18 +40,35 @@ export interface LabelBrief {
 /* Turn a zone spec into compositional language: the model paints the subject
    inside the focal area and lets only expendable surroundings spread outward,
    dissolving into pure white — the renderer applies no masks. */
-function zoneSentence(z: ZoneSpec, aspect?: string): string {
+/* Composition shapes rotate (owner 2026-08-15: 'not all ovals — improvise'):
+   the box geometry gives position and size, but the SHAPE of the composition
+   is a seeded pick from a printerly vocabulary. Oval survives as one voice
+   among many, not the default. */
+const COMP_SHAPES = [
+  "free-form vignette whose edges dissolve irregularly into the white",
+  "rectangular plate composition with softly squared corners",
+  "oval cameo vignette",
+  "open composition with no enclosing shape — the subject's own silhouette defines the form",
+  "wide panoramic frieze",
+  "tall arched niche composition",
+  "circular medallion",
+  "asymmetric arrangement with one dominant mass and scattered small elements",
+];
+export function pickCompShape(styleKey: string, subKey: string, vision: string, seed: number): string {
+  const h = [...(styleKey + subKey + vision)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, (seed || 0) + 7);
+  return COMP_SHAPES[h % COMP_SHAPES.length];
+}
+
+function zoneSentence(z: ZoneSpec, aspect: string | undefined, compShape: string): string {
   const [x0, y0, x1, y1] = z.focal;
   const cy = (y0 + y1) / 2, w = x1 - x0, h = y1 - y0, area = w * h;
   const vert = cy < 0.38 ? "upper" : cy > 0.62 ? "lower" : "central";
   const horiz = x1 <= 0.5 ? " left" : x0 >= 0.5 ? " right" : "";
   const size = area > 0.45 ? "large" : area < 0.1 ? "small, emblem-like" : "medium-sized";
-  const shapeWord =
-    z.shape === "band" ? "wide horizontal band" : z.shape === "rounded" ? "soft panel" : "oval area";
   const frame =
     aspect === "portrait" ? " The frame is tall." : aspect === "landscape" ? " The frame is wide." : "";
   return (
-    ` Compose the main subject as a ${size} ${shapeWord} in the ${vert}${horiz} part of the frame;` +
+    ` Compose the main subject as a ${size} ${compShape} in the ${vert}${horiz} part of the frame;` +
     ` every important element stays fully inside that area.` +
     ` Outside it, only quiet, expendable surroundings may continue, growing sparser until the scene` +
     ` dissolves completely into the pure white background well before the edges.${frame}`
@@ -119,11 +136,11 @@ export function buildStylePrompt(
   const context = ctx.length ? `Context: ${ctx.join("; ")}. ` : "";
 
   const zone = brief.zones?.[style.key];
+  const compShape = pickCompShape(style.key, sub.key || "", brief.vision || "", brief.seed || 0);
   const focus = zone
-    ? zoneSentence(zone, brief.aspect)
-    : style.focus?.guidance
-      ? ` ${style.focus.guidance}`
-      : "";
+    ? zoneSentence(zone, brief.aspect, compShape)
+    : (style.focus?.guidance ? ` ${style.focus.guidance}` : "") +
+      ` Compose the subject as a ${compShape}.`;
   const reference = brief.reference
     ? " Match the composition of the uploaded reference sketch."
     : "";
