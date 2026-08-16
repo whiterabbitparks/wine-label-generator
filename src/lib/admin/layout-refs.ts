@@ -467,10 +467,23 @@ export async function setCasePref(style: string, role: FontRole, fontKey: string
   );
 }
 
-/* ---- layout refinement feedback: approve/reject a rendered composition ---- */
+/* ---- layout refinement feedback: approve/reject a rendered LOOK ----
+   A look (owner 2026-08-16) = the exact combination the admin judged: the
+   card's render seed + the pick-relevant hint arrays active at that moment
+   (palettes / role fonts). Storing them FROZEN means an approved look
+   reproduces byte-for-byte forever, immune to later board re-derivations
+   or font-pool changes. Legacy docs without a seed remain comp-level. */
+export interface LookHints {
+  palettes?: unknown[];
+  heroFonts?: unknown[];
+  secondaryFonts?: unknown[];
+  smallFonts?: unknown[];
+}
 export interface LayoutFeedbackDoc {
   style: string;
   variant: number;
+  seed?: number;
+  hints?: LookHints;
   verdict: "approve" | "reject";
   comment: string;
   createdAt: Date;
@@ -479,12 +492,31 @@ export async function addLayoutFeedback(fb: Omit<LayoutFeedbackDoc, "createdAt">
   const db = await getDb();
   await db.collection("layoutFeedback").insertOne({ ...fb, createdAt: new Date() });
 }
-/** Remove a comp from the approved set (owner 2026-08-16): delete its whole
-    feedback history so its weight returns to neutral 1 — cleanly out of the
-    approved-only pool without counting as a rejection. */
-export async function clearLayoutFeedback(style: string, variant: number): Promise<void> {
+/** Remove from the selected set: with a seed, only that LOOK's history goes;
+    without, the comp's whole history (legacy cards). Never a rejection. */
+export async function clearLayoutFeedback(style: string, variant: number, seed?: number): Promise<void> {
   const db = await getDb();
-  await db.collection("layoutFeedback").deleteMany({ style, variant });
+  await db.collection("layoutFeedback").deleteMany(
+    seed === undefined ? { style, variant } : { style, variant, seed }
+  );
+}
+/** Approved LOOKS per style — last verdict per (style, seed) wins. */
+export async function approvedLooks(): Promise<Record<string, { variant: number; seed: number; hints?: LookHints }[]>> {
+  const db = await getDb();
+  const rows = await db
+    .collection<LayoutFeedbackDoc>("layoutFeedback")
+    .find({ seed: { $exists: true } }, { projection: { _id: 0 } })
+    .sort({ createdAt: 1 })
+    .toArray();
+  const last: Record<string, LayoutFeedbackDoc> = {};
+  for (const r of rows) last[`${r.style}#${r.seed}`] = r;
+  const out: Record<string, { variant: number; seed: number; hints?: LookHints }[]> = {};
+  for (const r of Object.values(last)) {
+    if (r.verdict !== "approve") continue;
+    (out[r.style] = out[r.style] || []).push({ variant: r.variant, seed: r.seed!, hints: r.hints });
+  }
+  for (const k of Object.keys(out)) out[k].sort((a, b) => a.variant - b.variant || a.seed - b.seed);
+  return out;
 }
 /** Recent plain-English comments from the layout playground — steer the next
     "Derive layout language" run and are surfaced in admin. */
@@ -527,8 +559,8 @@ export async function layoutWeights(): Promise<Record<string, number[]>> {
     Hero-font pool = fonts approved in the Fonts playground ∪ the derived
     profile fonts, minus anything net-rejected — verdicts apply immediately. */
 export async function buildLayoutHints(): Promise<Record<string, unknown>> {
-  const [profiles, weights, fonts, casePrefs, POOL, hard] = await Promise.all([
-    getLayoutProfiles(), layoutWeights(), fontScores(), getCasePrefs(), fullFontPool(), getHardRules(),
+  const [profiles, weights, fonts, casePrefs, POOL, hard, looks] = await Promise.all([
+    getLayoutProfiles(), layoutWeights(), fontScores(), getCasePrefs(), fullFontPool(), getHardRules(), approvedLooks().catch(() => ({})),
   ]);
   const hints: Record<string, unknown> = { __hardRules: { minGapMM: hard.minGapMM, artFillPct: hard.artFillPct } };
   for (const style of LAYOUT_STYLES) {
@@ -560,15 +592,23 @@ export async function buildLayoutHints(): Promise<Record<string, unknown>> {
         .map((f) => [f.family, f.weight, caseOf(role, f.family, f.weight)] as [string, number, CasePref]);
       if (pool.length) entry[key] = pool;
     }
-    // APPROVED-ONLY compositions (owner 2026-08-16): once any comp is
-    // net-approved (weight > 1), every non-approved comp gets EXACTLY 0 —
-    // the engine treats 0 as "never render". With no approvals yet, the
-    // old soft behaviour stays (rejected comps fade, unrated appear).
-    const w = weights[style];
-    if (w) {
-      const anyApproved = w.some((x) => x > 1);
-      const finalW = anyApproved ? w.map((x) => (x > 1 ? x : 0)) : w;
-      if (finalW.some((x) => x !== 1)) entry.weights = finalW;
+    // APPROVED LOOKS dominate (owner 2026-08-16): once a style has approved
+    // looks, customers get ONLY those exact combinations — the engine
+    // renders each look under its frozen hints + seed, so the weights
+    // transform below is irrelevant for that style. Without looks, the
+    // legacy comp-level gating stands: any comp approved (weight > 1) →
+    // every non-approved comp gets EXACTLY 0 ("never render"); with no
+    // approvals at all, the old soft behaviour (rejected comps fade).
+    const styleLooks = (looks as Record<string, { variant: number; seed: number; hints?: LookHints }[]>)[style];
+    if (styleLooks?.length) {
+      entry.looks = styleLooks.map((L) => ({ variant: L.variant, seed: L.seed, ...(L.hints || {}) }));
+    } else {
+      const w = weights[style];
+      if (w) {
+        const anyApproved = w.some((x) => x > 1);
+        const finalW = anyApproved ? w.map((x) => (x > 1 ? x : 0)) : w;
+        if (finalW.some((x) => x !== 1)) entry.weights = finalW;
+      }
     }
     if (Object.keys(entry).length) hints[style] = entry;
   }

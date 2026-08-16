@@ -1110,7 +1110,8 @@ const PLAY_DATA = {
   wineColorName: "Red", wineType: "Still Wine", alcohol: "12.5", volume: "750",
 };
 
-interface LayoutCard { seed: number; variant: number; svg: string; st?: string; dead?: number; done?: "approve" | "reject" }
+interface LookArrays { palettes?: unknown[]; heroFonts?: unknown[]; secondaryFonts?: unknown[]; smallFonts?: unknown[] }
+interface LayoutCard { seed: number; variant: number; svg: string; st?: string; look?: LookArrays; legacy?: boolean; dead?: number; done?: "approve" | "reject" }
 
 /* the "★ Selected" pseudo-style in the Layout Play dropdown (like Fonts) */
 const SEL_STYLE = "__selected";
@@ -1151,7 +1152,6 @@ function LayoutPlaygroundTab() {
   const [cards, setCards] = useState<LayoutCard[]>([]);
   const [busy, setBusy] = useState(false);
   const [engineReady, setEngineReady] = useState(false);
-  const [reviewAll, setReviewAll] = useState(false);
   const [weights, setWeights] = useState<Record<string, number[]>>({});
   const [notes, setNotes] = useState<Record<number, string>>({});
   const [approved, setApproved] = useState<LayoutCard[] | null>(null);
@@ -1175,17 +1175,21 @@ function LayoutPlaygroundTab() {
         renderStyleOptions: (d: unknown, o: null, opts: { widthMM: number; heightMM: number; seed: number }) => { style: string; svg: string }[];
       };
     };
-    // render under the SAME hints customers get — including your feedback
-    // weights, so excluded comps genuinely never appear here either.
-    // "Review every composition" strips the weights (and ONLY the weights)
-    // so zero-weight comps can still be audited and re-approved.
+    // EXPLORATION MODE, always (owner 2026-08-16): rolls strip the weights
+    // and looks so every composition and fresh font/colour combination can
+    // appear — otherwise approvals lock the playground into re-showing only
+    // already-approved material (the loop that hid new comps). What
+    // customers actually see lives in "★ Selected layouts".
+    let lookArrays: LookArrays = {};
     try {
       const [h, fw] = await Promise.all([
         fetch("/api/layout-hints").then((r) => r.json()),
         fetch("/api/admin/layout-feedback").then((r) => r.json()),
       ]);
-      const hints = (h.hints || {}) as Record<string, { weights?: number[] }>;
-      if (reviewAll) for (const k of Object.keys(hints)) delete hints[k]?.weights;
+      const hints = (h.hints || {}) as Record<string, LookArrays & { weights?: number[]; looks?: unknown[] }>;
+      for (const k of Object.keys(hints)) { delete hints[k]?.weights; delete hints[k]?.looks; }
+      const hs = hints[style] || {};
+      lookArrays = { palettes: hs.palettes, heroFonts: hs.heroFonts, secondaryFonts: hs.secondaryFonts, smallFonts: hs.smallFonts };
       w.LabelEngine.setStyleHints(hints);
       setWeights(fw.weights || {});
     } catch {}
@@ -1201,11 +1205,7 @@ function LayoutPlaygroundTab() {
     while (next.length < 8 && guard++ < 300) {
       const seed = 1 + Math.floor(Math.random() * 100000);
       const variant = w.LabelEngine.variantFor(style, seed);
-      // "Review every composition" forces distinct comps (weights ignored, for
-      // auditing); the default samples exactly like customer traffic, so a
-      // rejected comp shows up about as rarely as customers would see it
-      if (reviewAll && seen.has(variant) && guard < 250) continue;
-      if (!reviewAll && seen.has(variant) && guard < 40) continue; // light dedupe only
+      if (seen.has(variant) && guard < 250) continue; // distinct comps per roll
       seen.add(variant);
       wImgs.__LABEL_IMGS__ = { traditional: PX, contemporary: PX, punk: PX };
       const artOpts = w.LabelEngine.renderStyleOptions(PLAY_DATA, null, { widthMM: 110, heightMM: 80, seed });
@@ -1213,15 +1213,15 @@ function LayoutPlaygroundTab() {
       const opts = w.LabelEngine.renderStyleOptions(PLAY_DATA, null, { widthMM: 110, heightMM: 80, seed });
       const entry = opts.find((o) => o.style === style);
       const artEntry = artOpts.find((o) => o.style === style);
-      if (entry) next.push({ seed, variant, svg: entry.svg, dead: artEntry ? deadBandPct(artEntry.svg) : 0 });
+      if (entry) next.push({ seed, variant, svg: entry.svg, look: lookArrays, dead: artEntry ? deadBandPct(artEntry.svg) : 0 });
     }
     setCards(next); setBusy(false);
   }
 
-  /* "★ Selected layouts" gallery (owner 2026-08-16): its own dropdown entry
-     like the Fonts tab — every selected comp of EVERY style, grouped, never
-     mixed with fresh rolls. A comp is selected when its LAST verdict is
-     approve. Cards are found by sweeping seeds with weights stripped. */
+  /* "★ Selected layouts" gallery (owner 2026-08-16): every approved LOOK of
+     every style, reproduced EXACTLY (the engine renders each under its
+     frozen hints + seed). Legacy comp-level approvals (made before looks
+     existed) still show, labelled — they pin the arrangement only. */
   async function showApproved() {
     setBusy(true); setApproved(null);
     const w = window as unknown as {
@@ -1238,24 +1238,35 @@ function LayoutPlaygroundTab() {
         fetch("/api/admin/layout-feedback").then((r) => r.json()),
       ]);
       setWeights(fw.weights || {});
-      const hints = (h.hints || {}) as Record<string, { weights?: number[] }>;
-      for (const k of Object.keys(hints)) delete hints[k]?.weights;
-      w.LabelEngine.setStyleHints(hints);
       await w.LabelEngine.ensureFonts();
       const all: LayoutCard[] = [];
+      const looksMap = (fw.looks || {}) as Record<string, { variant: number; seed: number; hints?: LookArrays }[]>;
       for (const [st] of STYLE_DEFS) {
-        const wts: number[] = (fw.weights?.[st] || []) as number[];
-        const wanted = wts.map((v, i) => (v > 1 ? i : -1)).filter((i) => i >= 0);
-        if (!wanted.length) continue;
-        const found = new Map<number, LayoutCard>();
-        for (let seed = 1; seed <= 4000 && found.size < wanted.length; seed++) {
-          const v = w.LabelEngine.variantFor(st, seed);
-          if (!wanted.includes(v) || found.has(v)) continue;
-          const opts = w.LabelEngine.renderStyleOptions(PLAY_DATA, null, { widthMM: 110, heightMM: 80, seed });
+        // exact approved looks: render one at a time under pinned hints
+        for (const L of looksMap[st] || []) {
+          w.LabelEngine.setStyleHints({ [st]: { looks: [{ variant: L.variant, seed: L.seed, ...(L.hints || {}) }] } });
+          const opts = w.LabelEngine.renderStyleOptions(PLAY_DATA, null, { widthMM: 110, heightMM: 80, seed: 1 });
           const entry = opts.find((o) => o.style === st);
-          if (entry) found.set(v, { seed, variant: v, svg: entry.svg, st });
+          if (entry) all.push({ seed: L.seed, variant: L.variant, svg: entry.svg, st });
         }
-        all.push(...[...found.values()].sort((a, b) => a.variant - b.variant));
+        // legacy comp-level approvals (no seed stored): arrangement only
+        const wts: number[] = (fw.weights?.[st] || []) as number[];
+        const wanted = wts.map((v, i) => (v > 1 ? i : -1)).filter((i) => i >= 0)
+          .filter((i) => !(looksMap[st] || []).some((L) => L.variant === i));
+        if (wanted.length) {
+          const hints = JSON.parse(JSON.stringify(h.hints || {})) as Record<string, { weights?: number[]; looks?: unknown[] }>;
+          for (const k of Object.keys(hints)) { delete hints[k]?.weights; delete hints[k]?.looks; }
+          w.LabelEngine.setStyleHints(hints);
+          const found = new Map<number, LayoutCard>();
+          for (let seed = 1; seed <= 4000 && found.size < wanted.length; seed++) {
+            const v = w.LabelEngine.variantFor(st, seed);
+            if (!wanted.includes(v) || found.has(v)) continue;
+            const opts = w.LabelEngine.renderStyleOptions(PLAY_DATA, null, { widthMM: 110, heightMM: 80, seed });
+            const entry = opts.find((o) => o.style === st);
+            if (entry) found.set(v, { seed, variant: v, svg: entry.svg, st, legacy: true });
+          }
+          all.push(...[...found.values()].sort((a, b) => a.variant - b.variant));
+        }
       }
       setApproved(all);
     } catch { setApproved([]); }
@@ -1268,24 +1279,26 @@ function LayoutPlaygroundTab() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [engineReady, style]);
 
-  /* Remove = clear the comp's whole feedback history (back to unrated) —
-     out of the selected set without counting as a rejection. */
-  async function removeApproved(st: string, variant: number) {
+  /* Remove = clear that LOOK's history (or the whole comp for legacy cards)
+     — out of the selected set without counting as a rejection. */
+  async function removeApproved(st: string, variant: number, seed?: number) {
     const r = await fetch("/api/admin/layout-feedback", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ style: st, variant, verdict: "clear" }),
+      body: JSON.stringify({ style: st, variant, verdict: "clear", ...(seed !== undefined ? { seed } : {}) }),
     });
     if (r.ok) {
       setWeights((await r.json()).weights || {});
-      setApproved((a) => (a ? a.filter((c) => !(c.st === st && c.variant === variant)) : a));
+      setApproved((a) => (a ? a.filter((c) => !(c.st === st && c.variant === variant && (seed === undefined || c.seed === seed))) : a));
     }
   }
 
+  /* a verdict judges the complete LOOK: seed + the hint arrays it rendered
+     under ride along and are frozen server-side (owner 2026-08-16) */
   async function verdict(i: number, v: "approve" | "reject") {
     const c = cards[i];
     const r = await fetch("/api/admin/layout-feedback", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ style, variant: c.variant, verdict: v, comment: notes[i] || "" }),
+      body: JSON.stringify({ style, variant: c.variant, seed: c.seed, hints: c.look || {}, verdict: v, comment: notes[i] || "" }),
     });
     if (r.ok) setWeights((await r.json()).weights || {});
     setCards(cards.map((x, j) => (j === i ? { ...x, done: v } : x)));
@@ -1294,12 +1307,13 @@ function LayoutPlaygroundTab() {
   return (
     <div>
       <p style={{ fontSize: 14, color: "#4a4a42" }}>
-        Renders real layouts (free — no image generation) with your current layout language applied.
-        Approve what looks right, reject what doesn&apos;t. Once you have approved any composition
-        for a style, customers see ONLY approved compositions (and only your selected fonts).
-        Takes effect immediately. Comments steer the next colour/font derivation — to move
-        elements around inside a composition, write the change as a comment and ask Claude to
-        apply it in the engine.
+        Renders real layouts (free — no image generation). Every card is a complete LOOK —
+        arrangement + fonts + colours together — and approving it saves exactly that look.
+        Once a style has any selected look, customers get ONLY the selected looks (see
+        &quot;★ Selected layouts&quot; in the dropdown). Rolls here always explore fresh
+        combinations, so there is always something new to approve. Rejecting a card only
+        rejects that look, not the arrangement. To move elements inside a composition,
+        write the change as a comment and ask Claude to apply it in the engine.
       </p>
       <div style={{ display: "flex", gap: 12, alignItems: "center", margin: "14px 0" }}>
         <select value={style} onChange={(e) => { setStyle(e.target.value); setApproved(null); }} style={{ ...S.input, width: 220 }}>
@@ -1307,15 +1321,9 @@ function LayoutPlaygroundTab() {
           <option value={SEL_STYLE}>★ Selected layouts</option>
         </select>
         {style !== SEL_STYLE && (
-          <>
-            <button style={S.btn} disabled={!engineReady || busy} onClick={roll}>
-              {busy ? "Rendering…" : engineReady ? "Render 8 layouts" : "Loading engine…"}
-            </button>
-            <label style={{ fontSize: 13, color: "#4a4a42", display: "flex", gap: 6, alignItems: "center" }}>
-              <input type="checkbox" checked={reviewAll} onChange={(e) => setReviewAll(e.target.checked)} />
-              Review every composition (ignore my feedback)
-            </label>
-          </>
+          <button style={S.btn} disabled={!engineReady || busy} onClick={roll}>
+            {busy ? "Rendering…" : engineReady ? "Render 8 layouts" : "Loading engine…"}
+          </button>
         )}
         {style === SEL_STYLE && (
           <button style={S.btnGhost} disabled={!engineReady || busy} onClick={showApproved}>
@@ -1336,16 +1344,22 @@ function LayoutPlaygroundTab() {
           </h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
             {approved.map((c) => (
-              <div key={"ap" + c.st + c.variant} style={{ border: "2px solid #5a6b3b", background: "#fff", padding: 8 }}>
+              <div key={"ap" + c.st + c.variant + "s" + c.seed} style={{ border: "2px solid #5a6b3b", background: "#fff", padding: 8 }}>
                 <div style={{ width: "100%" }} dangerouslySetInnerHTML={{ __html: c.svg.replace(/width="110mm" height="80mm"/, 'width="100%" height="auto"') }} />
                 <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center" }}>
                   <b style={{ fontSize: 12 }}>{(STYLE_DEFS.find(([k]) => k === c.st) || [, c.st])[1]}</b>
                   <span style={{ fontSize: 11, color: "#8a887e" }}>comp #{c.variant + 1}</span>
                   <b style={{ color: "#5a6b3b", fontSize: 12 }}>Selected ✓</b>
+                  {c.legacy && (
+                    <span title="Approved before looks existed — pins the arrangement only; fonts and colours still rotate."
+                      style={{ fontSize: 11, color: "#a06010", border: "1px solid #a06010", padding: "1px 6px" }}>
+                      arrangement only
+                    </span>
+                  )}
                   <button
                     style={{ ...S.btnGhost, padding: "4px 12px", marginLeft: "auto", color: "#a03030", borderColor: "#a03030" }}
-                    title="Take this layout out of the selected set (history cleared — not counted as a rejection)"
-                    onClick={() => removeApproved(c.st!, c.variant)}>
+                    title="Take this look out of the selected set (history cleared — not counted as a rejection)"
+                    onClick={() => removeApproved(c.st!, c.variant, c.legacy ? undefined : c.seed)}>
                     Remove ✕
                   </button>
                 </div>

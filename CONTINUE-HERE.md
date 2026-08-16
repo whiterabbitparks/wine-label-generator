@@ -222,6 +222,40 @@ never stood a chance. Fixes:
   approve → 2 (selected), reject → 0.4, unrated → 1. Approved-only
   transform unchanged (weight > 1). Roll cards use layoutBadge
   (selected / rejected / unrated), not the image-side weightBadge.
+
+## 5-LOOKS (2026-08-16, same day, latest) — approvals are complete LOOKS
+
+Owner diagnosis: 101 verdicts had hit only 13 distinct comps and only 4
+were last-verdict-approved. Two causes: (1) default rolls sampled under
+customer weights, so once anything was approved the playground looped on
+already-approved comps; (2) he judges complete looks (arrangement + font
++ colours) but the system recorded naked skeletons, so he'd reject a comp
+whose outfit was wrong. Owner decision: **approve LOOKS.**
+- A look = the card's render seed + the FROZEN pick-relevant hint arrays
+  (palettes / heroFonts / secondaryFonts / smallFonts) active when judged.
+  Frozen means approved looks reproduce byte-for-byte forever, immune to
+  later board re-derivations or font-pool changes (PROVEN: direct render
+  vs via-look render identical for all 3 styles).
+- Engine: `withLook(key,seed,fn)` wraps each style in renderStyleOptions —
+  hints.looks present → seeded pick of ONE look per session, style renders
+  with the look's own seed under its frozen hints (swap+restore). No looks
+  → previous behaviour; no hints → byte-identical (goldens 72/72 kept).
+- Server: layoutFeedback docs carry {seed, hints}; approvedLooks() = last
+  verdict per (style, seed); buildLayoutHints: a style with looks sends
+  entry.looks and SKIPS the weights transform (looks dominate); styles
+  without looks keep legacy comp-level gating. layout-feedback API:
+  GET returns {weights, looks}; POST accepts seed+hints (sanitized) and
+  verdict clear deletes per-look (with seed) or per-comp (without).
+- Playground: rolls ALWAYS explore (weights+looks stripped; distinct comps
+  per roll; "Review every composition" checkbox removed — ★ Selected shows
+  the customer set instead). Verdicts ride with seed+hints. ★ Selected
+  renders every approved look EXACTLY + legacy comp approvals labelled
+  "arrangement only"; Remove clears per-look.
+NEXT (owner-approved plan): clean-slate wipe of reference boards (image +
+layout), derived profiles/cards and ALL feedback (with local backup);
+owner re-uploads curated references, fresh derivation, refinement rounds
+start clean under the looks model. KEEP: hard rules, font selections,
+image rules, all code-side built-ins.
 NOTE: cached customer sets generated before this ship may still show oval
 artwork until regenerated (new story/seed or server restart clears the
 in-memory cache).

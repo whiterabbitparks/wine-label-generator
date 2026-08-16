@@ -1812,15 +1812,36 @@ const STYLE_LIST=[
   {key:'contemporary',name:'Contemporary'},
   {key:'punk',name:'Punk'}
 ];
+/* APPROVED LOOKS (owner 2026-08-16): a look = the exact combination the
+   admin approved in the Layout playground — its render seed plus the hint
+   arrays (palettes / role fonts) that were active at approval time. When a
+   style carries hints.looks, customers get ONLY those exact combinations:
+   one look is a seeded pick per session, and the style renders with the
+   look's own seed under its FROZEN hint arrays — reproducing the approved
+   card byte-for-byte no matter how the pools or boards change later.
+   Without looks the previous behaviour (weights / soft mode) stands, and
+   without hints at all the path is byte-identical (goldens). */
+function withLook(key,seed,fn){
+  const h=STYLE_HINTS[key], looks=h&&h.looks;
+  if(!Array.isArray(looks)||!looks.length)return fn(seed);
+  const L=looks[sPick(seed,(STYLE_SALT[key]||0)*7+9,looks.length)]||looks[0];
+  const frozen={};
+  ['palettes','heroFonts','secondaryFonts','smallFonts'].forEach(function(k2){
+    if(Array.isArray(L[k2])&&L[k2].length)frozen[k2]=L[k2];
+  });
+  const prev=STYLE_HINTS[key];
+  STYLE_HINTS[key]=frozen;
+  try{return fn(+L.seed||0);}finally{STYLE_HINTS[key]=prev;}
+}
 function renderStyleOptions(d,order,opts){
   opts=opts||{}; const seed=opts.seed|0;
   const twMM=Math.max(30,(+opts.widthMM||110)), thMM=Math.max(30,(+opts.heightMM||80));
   const W=twMM*10, H=thMM*10, f=sFields(d);
   return STYLE_LIST.map(st=>{let svg;
     try{
-      if(st.key==='traditional') svg=styleTraditional(d,order,seed,twMM,thMM);
-      else if(st.key==='contemporary') svg=styleContemporary(f,W,H,seed,twMM,thMM);
-      else svg=stylePunk(f,W,H,seed,twMM,thMM);
+      if(st.key==='traditional') svg=withLook('traditional',seed,s2=>styleTraditional(d,order,s2,twMM,thMM));
+      else if(st.key==='contemporary') svg=withLook('contemporary',seed,s2=>styleContemporary(f,W,H,s2,twMM,thMM));
+      else svg=withLook('punk',seed,s2=>stylePunk(f,W,H,s2,twMM,thMM));
     }catch(e){ svg=sWrap(W,H,twMM,thMM,'#f4f2ec',`<text x="${(W/2).toFixed(1)}" y="${(H/2).toFixed(1)}" text-anchor="middle" font-family="${SF.jost}" font-size="${(14*PT_U).toFixed(1)}" fill="#a33">${esc(st.name)}</text>`); }
     return {name:st.name,rank:st.key,style:st.key,desc:st.name,svg};
   });
