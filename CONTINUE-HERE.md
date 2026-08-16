@@ -154,6 +154,25 @@ band + orange full ground, flora diagonal accent band, premium charcoal
 variant, artistic near-black riso ground. Text-only comps may still use a
 bold single-colour ground, e.g. the minimalist red panel.)
 
+## 5-LAYOUTS-V2 (2026-08-16) — one hint source; no frames ever
+
+**Standing rule (owner, 2026-08-16): NO frames or borders on any layout.**
+The Traditional comps that copied framed boards (variants 0 Gewürztraminer,
+2 Mittelwihr, 5 Margaux/Ausone) now render frameless; goldens re-baselined
+(only those rects diffed). Short divider rules (e.g. the premium gold line)
+are not frames and stay.
+
+**Bug fix — "web layouts don't match the Layout playground":** layout hints
+had TWO sources. Boot + playground fetched `/api/layout-hints`
+(buildLayoutHints — board palettes, approved fonts+case, comp weights,
+minGap). But every artwork generation returned `layoutHints` built by the
+OLD `layoutHintsFrom(imageProfiles)` (palettes only), and page.tsx fed that
+to `setStyleHints`, which replaces hints WHOLESALE — wiping fonts, weights
+and the gap rule the moment a customer generated artwork. Now
+generate-label-set returns `await buildLayoutHints()` (fresh even on cache
+hits) and `layoutHintsFrom` is deleted. ONE source of truth; web ≡
+playground.
+
 ## 5-IMAGES-V4 (2026-08-15) — refinement-loop semantics, final form
 
 **Standing rule (owner, 2026-08-15): a rejection NEVER devalues the

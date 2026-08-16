@@ -187,38 +187,11 @@ export function sanitizeComposition(raw: unknown): LayoutComposition | null {
   return a === "centered" || a === "left" || a === "mixed" ? { alignment: a } : null;
 }
 
-export interface StyleLayoutHints {
-  palettes: { bg: string; ink: string; sub: string; acc: string }[];
-  type?: LayoutType | null;
-  composition?: LayoutComposition | null;
-}
-
-/** Layout hints for the client SVG engine: per-style palette chords (with a
-    muted secondary ink computed by blending ink toward the ground) plus the
-    boards' typography character and composition preference. */
-export function layoutHintsFrom(
-  profiles: Record<string, StyleProfile>
-): Record<string, StyleLayoutHints> {
-  const mix = (a: string, b: string, t: number) => {
-    const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16);
-    const ch = (sh: number) =>
-      Math.round(((pa >> sh) & 255) * (1 - t) + ((pb >> sh) & 255) * t);
-    return (
-      "#" + [16, 8, 0].map((sh) => ch(sh).toString(16).padStart(2, "0")).join("").toUpperCase()
-    );
-  };
-  const out: Record<string, StyleLayoutHints> = {};
-  for (const [style, prof] of Object.entries(profiles)) {
-    const pals = prof.layout?.palettes;
-    if (!pals?.length) continue;
-    out[style] = {
-      palettes: pals.map((p) => ({ bg: p.bg, ink: p.ink, sub: mix(p.ink, p.bg, 0.45), acc: p.acc })),
-      type: prof.layout?.type ?? null,
-      composition: prof.layout?.composition ?? null,
-    };
-  }
-  return out;
-}
+/* NOTE (2026-08-16): the old layoutHintsFrom() derivation (layout hints from
+   the IMAGE reference profiles) is gone. Layout hints have exactly ONE
+   source — buildLayoutHints() in layout-refs.ts, the admin Layout system —
+   served by /api/layout-hints AND returned by generate-label-set, so the
+   web and the Layout playground always render under identical hints. */
 
 /* chat/completions with 429 retry — the vision TPM window resets within a
    minute and the error message names its own wait time. */

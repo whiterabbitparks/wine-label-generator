@@ -6,7 +6,8 @@ import { loadConfig, DEFAULT_CONFIG } from "@/lib/admin/config-store";
 import { providerName, generateImageWithRetry } from "@/lib/image-provider";
 import { getImageStorage } from "@/lib/image-storage";
 import { logGeneration } from "@/lib/admin/generation-log";
-import { getProfiles, layoutHintsFrom, type StyleProfile } from "@/lib/admin/style-refs";
+import { getProfiles, type StyleProfile } from "@/lib/admin/style-refs";
+import { buildLayoutHints } from "@/lib/admin/layout-refs";
 import { feedbackAggregates, weightedPick, type StyleFeedbackAggregate } from "@/lib/admin/feedback";
 import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, wantsText, subjectFocusRule, wantsCrowd } from "@/lib/admin/image-rules";
 import { subjectFrom } from "@/lib/styles/prompt";
@@ -51,8 +52,8 @@ interface SetResult {
   provider: string;
   images: Record<string, SetEntry>;
   errors: Record<string, string>;
-  /** derived per-style layout palettes for the client SVG engine */
-  layoutHints: ReturnType<typeof layoutHintsFrom>;
+  /** the curated Layout-system hints for the client SVG engine */
+  layoutHints: Record<string, unknown>;
 }
 
 declare global {
@@ -121,7 +122,13 @@ export async function POST(req: Request) {
   try {
     [profiles, feedback] = await Promise.all([getProfiles(), feedbackAggregates()]);
   } catch {}
-  const layoutHints = layoutHintsFrom(profiles);
+  // Layout hints MUST be the same ones /api/layout-hints serves (the curated
+  // Layout system: board palettes, approved fonts, comp weights, hard rules).
+  // The engine's setStyleHints replaces hints wholesale, so sending anything
+  // thinner here (the old image-profile derivation) silently wiped the
+  // admin's layout language after every generation — the "web layouts don't
+  // match the playground" bug (owner, 2026-08-16).
+  const layoutHints = await buildLayoutHints().catch(() => ({} as Record<string, unknown>));
   const imageRules = await getImageRules().catch(() => ({ global: "", perStyle: {} }));
 
   const key = createHash("sha256")
@@ -140,7 +147,7 @@ export async function POST(req: Request) {
   if (hit) {
     const body =
       JSON.stringify({ type: "progress", done: 6, total: 6 }) + "\n" +
-      JSON.stringify({ type: "result", ...hit, cached: true }) + "\n";
+      JSON.stringify({ type: "result", ...hit, layoutHints, cached: true }) + "\n";
     return new Response(enc.encode(body), { headers: NDJSON });
   }
 

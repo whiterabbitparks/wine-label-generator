@@ -1254,10 +1254,9 @@ function styleTraditional(d,order,seed,twMM,thMM){
   const alc=f.alc, desc=(f.descriptor||'').replace(/,/g,'');
   const EG=SF.ebg, PF=SF.playfair, CI=F.cormorant;
   let body='';
-  if(variant===0){ // Gewürztraminer board: framed, oval vignette, blackletter hero
-    const o1=SM+2,o2=SM+11;
-    body+=`<rect x="${o1}" y="${o1}" width="${(W-2*o1).toFixed(1)}" height="${(H-2*o1).toFixed(1)}" fill="none" stroke="${ACC}" stroke-width="${Math.max(1,H*0.003).toFixed(1)}"/>`
-        +`<rect x="${o2}" y="${o2}" width="${(W-2*o2).toFixed(1)}" height="${(H-2*o2).toFixed(1)}" fill="none" stroke="${INK}" stroke-width="1"/>`;
+  /* HOUSE RULE (owner 2026-08-16): NO frames or border rules on any layout —
+     the board comps that had them (variants 0, 2, 5) render frameless. */
+  if(variant===0){ // Gewürztraminer board: oval vignette, blackletter hero
     body+=sImageBox('traditional',BOX,W,H);
     const st=stackUp([
       {str:f.producer,size:H*0.033,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,true),tr:0.22},
@@ -1280,8 +1279,6 @@ function styleTraditional(d,order,seed,twMM,thMM){
       {str:[f.region,f.special].filter(Boolean).join(' \u00b7 '),size:H*0.025,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)},
       {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.023,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-4,H*0.007,'c',cW*0.8).svg;
   }else if(variant===2){ // Mittelwihr board: red letterpress, emblem, all centred
-    const o2=SM+2;
-    body+=`<rect x="${o2}" y="${o2}" width="${(W-2*o2).toFixed(1)}" height="${(H-2*o2).toFixed(1)}" fill="none" stroke="${ACC}" stroke-width="${Math.max(1,H*0.0025).toFixed(1)}"/>`;
     body+=sBlock(f.appellation,{x:cx,top:SM+H*0.012,maxW:cW*0.8,size:H*0.040,min:H*0.028,f:SF.archivo,w:500,fill:ACC,a:'c',caps:true,tr:0.32}).svg;
     body+=sImageBox('traditional',BOX,W,H);
     body+=sFlow([
@@ -1314,10 +1311,7 @@ function styleTraditional(d,order,seed,twMM,thMM){
       {str:[f.special,desc,alc].filter(Boolean).join(' \u00b7 '),size:H*0.022,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-4,H*0.007,'c',cW*0.8);
     body+=st.svg;
     body+=fitHero(f.wine,cx,BOX[3]*H+MINGAP,st.topY,{size:H*0.050,maxW:cW*0.9,f:HP?HP[0]:(EG),w:HP?HP[1]:(500),fill:INK,caps:capsFor(HP,true),tr:0.42}).svg;
-  }else{ // Margaux/Ausone boards: framed, pure centred type
-    const o=SM+2,i2=SM+11;
-    body+=`<rect x="${o}" y="${o}" width="${(W-2*o).toFixed(1)}" height="${(H-2*o).toFixed(1)}" fill="none" stroke="${ACC}" stroke-width="${(H*0.004).toFixed(1)}"/>`
-        +`<rect x="${i2}" y="${i2}" width="${(W-2*i2).toFixed(1)}" height="${(H-2*i2).toFixed(1)}" fill="none" stroke="${INK}" stroke-width="1"/>`;
+  }else{ // Margaux/Ausone boards: pure centred type
     body+=sFlow([
       {str:f.vintage,size:H*0.045,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:INK,maxW:cW*0.3,gap:H*0.02,pre:H*0.06,caps:capsFor(F3,false)},
       {str:f.producer,size:H*0.04,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:SUB,caps:capsFor(F3,true),tr:0.3,maxW:cW*0.72,gap:H*0.05},
