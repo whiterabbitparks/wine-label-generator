@@ -1092,11 +1092,18 @@ let STYLE_HINTS={};
    (units of 0.1mm; default 1mm; tunable from the admin Hard Rules panel via
    hints.__hardRules). The 5mm margin (SM) and 7pt floor (MIN7) are fixed. */
 let MINGAP=10;
+let LOOKS_ONLY=false;
 function setStyleHints(h){
   STYLE_HINTS=(h&&typeof h==='object')?h:{};
   const hr=STYLE_HINTS.__hardRules;
   MINGAP=(hr&&isFinite(+hr.minGapMM)&&+hr.minGapMM>=0)?Math.round(+hr.minGapMM*10):10;
   ARTFILL=(hr&&isFinite(+hr.artFillPct)&&+hr.artFillPct>=30&&+hr.artFillPct<=100)?+hr.artFillPct/100:0.85;
+  /* HOUSE RULE (owner 2026-08-16): customers see ONLY approved looks — a
+     style with none renders a quiet "being curated" card, never a random
+     unapproved layout. Test rigs (__SEED0__ pinned) are exempt so parity
+     and e2e stay deterministic regardless of curation state. */
+  LOOKS_ONLY=STYLE_HINTS.__looksOnly===true;
+  delete STYLE_HINTS.__looksOnly;
   delete STYLE_HINTS.__hardRules;
   refreshHintFonts();
 }
@@ -1838,9 +1845,14 @@ function renderStyleOptions(d,order,opts){
   opts=opts||{}; const seed=opts.seed|0;
   const twMM=Math.max(30,(+opts.widthMM||110)), thMM=Math.max(30,(+opts.heightMM||80));
   const W=twMM*10, H=thMM*10, f=sFields(d);
+  const testRig=(typeof window!=='undefined'&&typeof window.__SEED0__==='number');
   return STYLE_LIST.map(st=>{let svg;
+    const hs=STYLE_HINTS[st.key];
+    const hasLooks=!!(hs&&Array.isArray(hs.looks)&&hs.looks.length);
     try{
-      if(st.key==='traditional') svg=withLook('traditional',seed,s2=>styleTraditional(d,order,s2,twMM,thMM));
+      if(LOOKS_ONLY&&!hasLooks&&!testRig)
+        svg=sWrap(W,H,twMM,thMM,'#FFFFFF',`<text x="${(W/2).toFixed(1)}" y="${(H/2).toFixed(1)}" text-anchor="middle" font-family="${SF.jost}" font-size="${(10*PT_U).toFixed(1)}" fill="#8a887e">${esc(st.name+' — designs are being curated')}</text>`);
+      else if(st.key==='traditional') svg=withLook('traditional',seed,s2=>styleTraditional(d,order,s2,twMM,thMM));
       else if(st.key==='contemporary') svg=withLook('contemporary',seed,s2=>styleContemporary(f,W,H,s2,twMM,thMM));
       else svg=withLook('punk',seed,s2=>stylePunk(f,W,H,s2,twMM,thMM));
     }catch(e){ svg=sWrap(W,H,twMM,thMM,'#f4f2ec',`<text x="${(W/2).toFixed(1)}" y="${(H/2).toFixed(1)}" text-anchor="middle" font-family="${SF.jost}" font-size="${(14*PT_U).toFixed(1)}" fill="#a33">${esc(st.name)}</text>`); }

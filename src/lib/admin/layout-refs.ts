@@ -562,7 +562,9 @@ export async function buildLayoutHints(): Promise<Record<string, unknown>> {
   const [profiles, weights, fonts, casePrefs, POOL, hard, looks] = await Promise.all([
     getLayoutProfiles(), layoutWeights(), fontScores(), getCasePrefs(), fullFontPool(), getHardRules(), approvedLooks().catch(() => ({})),
   ]);
-  const hints: Record<string, unknown> = { __hardRules: { minGapMM: hard.minGapMM, artFillPct: hard.artFillPct } };
+  // __looksOnly (owner 2026-08-16): customers NEVER see unapproved layouts —
+  // a style without approved looks renders the engine's "being curated" card.
+  const hints: Record<string, unknown> = { __looksOnly: true, __hardRules: { minGapMM: hard.minGapMM, artFillPct: hard.artFillPct } };
   for (const style of LAYOUT_STYLES) {
     const prof = profiles[style];
     const mix = (a: string, b: string, t: number) => {

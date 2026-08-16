@@ -1187,6 +1187,7 @@ function LayoutPlaygroundTab() {
         fetch("/api/admin/layout-feedback").then((r) => r.json()),
       ]);
       const hints = (h.hints || {}) as Record<string, LookArrays & { weights?: number[]; looks?: unknown[] }>;
+      delete (hints as Record<string, unknown>).__looksOnly; // the playground may see everything
       for (const k of Object.keys(hints)) { delete hints[k]?.weights; delete hints[k]?.looks; }
       const hs = hints[style] || {};
       lookArrays = { palettes: hs.palettes, heroFonts: hs.heroFonts, secondaryFonts: hs.secondaryFonts, smallFonts: hs.smallFonts };
@@ -1255,6 +1256,7 @@ function LayoutPlaygroundTab() {
           .filter((i) => !(looksMap[st] || []).some((L) => L.variant === i));
         if (wanted.length) {
           const hints = JSON.parse(JSON.stringify(h.hints || {})) as Record<string, { weights?: number[]; looks?: unknown[] }>;
+          delete (hints as Record<string, unknown>).__looksOnly;
           for (const k of Object.keys(hints)) { delete hints[k]?.weights; delete hints[k]?.looks; }
           w.LabelEngine.setStyleHints(hints);
           const found = new Map<number, LayoutCard>();

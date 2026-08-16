@@ -251,11 +251,22 @@ whose outfit was wrong. Owner decision: **approve LOOKS.**
   the customer set instead). Verdicts ride with seed+hints. ★ Selected
   renders every approved look EXACTLY + legacy comp approvals labelled
   "arrangement only"; Remove clears per-look.
-NEXT (owner-approved plan): clean-slate wipe of reference boards (image +
-layout), derived profiles/cards and ALL feedback (with local backup);
-owner re-uploads curated references, fresh derivation, refinement rounds
-start clean under the looks model. KEEP: hard rules, font selections,
-image rules, all code-side built-ins.
+DONE same day: clean-slate wipe executed (styleRefs 64, layoutRefs 36,
+profiles, all 219 feedback docs → backed up in `data/_backup-2026-08-16/`,
+ref image files moved there too). KEPT: fontFeedback, settings (hard
+rules / image rules / catalog / case prefs), users, generated-images.
+Boards are empty until the owner re-uploads and re-derives.
+
+**LOOKS-ONLY GATE (owner 2026-08-16, after seeing unapproved layouts on
+the page post-wipe): customers NEVER see unapproved layouts — no
+fallback.** buildLayoutHints always sends `__looksOnly:true`; the engine
+(setStyleHints → LOOKS_ONLY) renders a quiet white "STYLE — designs are
+being curated" card for any style without approved looks. Exemptions:
+test rigs with `window.__SEED0__` pinned (parity/e2e/captures) render
+normally, and the admin Layout playground strips the flag so the owner
+can always see everything. editor-embed refetches /api/layout-hints on
+every "Layout alternatives" press (window.__8kRefreshHints), so admin
+approvals reach an open customer page without a reload.
 NOTE: cached customer sets generated before this ship may still show oval
 artwork until regenerated (new story/seed or server restart clears the
 in-memory cache).

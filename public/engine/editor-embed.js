@@ -203,7 +203,7 @@ function withArtwork(btn,go){var gen=window.EightKImageGen;
    and hero font per style, so presses never replay a fixed cycle. The
    artwork is untouched. __SEED0__ pins the sequence for parity/tests. */
 function newSeed(){return (typeof window.__SEED0__==='number')?window.__SEED0__:(1+Math.floor(Math.random()*100000));}
-function mkRegen(){var rb=document.createElement('button');rb.type='button';rb.className='eng-regen';rb.textContent='Layout alternatives';rb.addEventListener('click',function(){var b=this;withArtwork(b,function(){altMode=null;baseSeed=(typeof window.__SEED0__==='number')?baseSeed+2:newSeed();seedHist=seedHist.slice(0,seedHistIdx+1);seedHist.push(baseSeed);seedHistIdx=seedHist.length-1;selIdx=-1;paint();});});return rb;}
+function mkRegen(){var rb=document.createElement('button');rb.type='button';rb.className='eng-regen';rb.textContent='Layout alternatives';rb.addEventListener('click',function(){var b=this;if(window.__8kRefreshHints)window.__8kRefreshHints();withArtwork(b,function(){altMode=null;baseSeed=(typeof window.__SEED0__==='number')?baseSeed+2:newSeed();seedHist=seedHist.slice(0,seedHistIdx+1);seedHist.push(baseSeed);seedHistIdx=seedHist.length-1;selIdx=-1;paint();});});return rb;}
 function ensureExtras(){var reveal=document.getElementById('frontReveal');if(!reveal)return;
   var oldNote=document.getElementById('engStyleNote');if(oldNote)oldNote.remove();
   var oldTop=document.getElementById('engRegenTop');if(oldTop)oldTop.remove();
@@ -320,10 +320,13 @@ function boot(){
 window.EightKEditor={getData:getLabelData,repaint:function(){if(shown&&window.LabelEngine){window.LabelEngine.ensureFonts().then(function(){paint();});}}};
 document.addEventListener('8kRepaint',function(){window.EightKEditor.repaint();});
 /* ADMIN LAYOUT HINTS (owner, 2026-08-14 restart): the /admin Layout section
-   curates palettes, hero fonts and composition weights per style; this is the
-   ONLY external influence on layout rendering. Fetched once at boot; offline
-   and parity runs skip it so goldens/captures stay deterministic. */
-if(typeof window!=='undefined'&&!window.__PARITY_OFFLINE__&&typeof fetch==='function'){
+   curates the approved looks per style; this is the ONLY external influence
+   on layout rendering. Fetched at boot AND refetched on every "Layout
+   alternatives" press (owner 2026-08-16: admin approvals must reach the page
+   without a reload). Offline and parity runs skip it so goldens/captures
+   stay deterministic. */
+function refreshLayoutHints(){
+  if(typeof window==='undefined'||window.__PARITY_OFFLINE__||typeof fetch!=='function')return;
   try{
     fetch('/api/layout-hints').then(function(r){return r&&r.ok?r.json():null;}).then(function(j){
       if(j&&j.hints&&window.LabelEngine&&window.LabelEngine.setStyleHints){
@@ -333,6 +336,8 @@ if(typeof window!=='undefined'&&!window.__PARITY_OFFLINE__&&typeof fetch==='func
     }).catch(function(){});
   }catch(e){}
 }
+refreshLayoutHints();
+window.__8kRefreshHints=refreshLayoutHints;
 if(document.readyState!=='loading')boot();else document.addEventListener('DOMContentLoaded',boot);
 })();
 
