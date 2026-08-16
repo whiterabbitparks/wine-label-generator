@@ -1,8 +1,14 @@
-/* HARD-RULES VERIFIER (owner rules, 2026-08-15). Renders every style across
-   seeds and label sizes with full demo data and measures the ACTUAL geometry:
+/* HARD-RULES VERIFIER (owner rules, 2026-08-15/16). Renders every style
+   across seeds and label sizes with full demo data and measures the ACTUAL
+   geometry:
      1. 5mm margin  — no visual element crosses it (background rect excluded);
      2. 7pt floor   — no font-size below 7pt;
-     3. 1mm text gap — no two text blocks closer than 1mm.
+     3. 1mm text gap — no two text blocks closer than 1mm;
+     4. ≤3 typefaces — no label uses more than 3 font FAMILIES (weights and
+        italics of one family count as one). Checked unhinted AND under
+        tracer hints (one distinctive family per role, faces the comps never
+        use as designed fallbacks) — a 4th family under tracer hints means a
+        hard-coded face is bypassing the hero/secondary/small role system.
    Text is measured as INK (canvas actualBoundingBox*), the same metric the
    engine positions by — DOM boxes include font leading and would misreport.
    Run: node tests/parity/check-hard-rules.mjs */
@@ -82,6 +88,9 @@ const failures = await page.evaluate(({ DATA, SIZES, SEEDS }) => {
         if (o.svg.includes('fill="#a33"')) out.push(tag + ': COMPOSITION CRASHED (error fallback rendered)');
         for (const m of o.svg.matchAll(/font-size="([\d.]+)"/g))
           if (+m[1] < MIN7 - 0.05) out.push(`${tag}: font ${(+m[1] / U).toFixed(2)}pt < 7pt`);
+        const fams = new Set([...o.svg.matchAll(/font-family="([^"]+)"/g)]
+          .map((m) => (m[1].match(/'([^']+)'/) || [, m[1].split(',')[0].trim()])[1]));
+        if (fams.size > 3) out.push(`${tag}: ${fams.size} font families (max 3) — ${[...fams].join(' · ')}`);
         host.innerHTML = o.svg;
         const svg = host.querySelector('svg');
         const sr = svg.getBoundingClientRect();
@@ -123,6 +132,30 @@ const failures = await page.evaluate(({ DATA, SIZES, SEEDS }) => {
       }
     }
   }
+  /* pass 2 — tracer hints: any designed family that still shows through is a
+     hard-coded face bypassing the role picks (Girassol/Felipa/Estonia are
+     never used as designed faces in the 3-style comps). Seeds sweep far
+     enough to land on every comp of every style. */
+  const TRACER = {};
+  for (const s of ['traditional', 'contemporary', 'punk'])
+    TRACER[s] = { heroFonts: [["'Girassol', serif", 400, null]],
+                  secondaryFonts: [["'Felipa', cursive", 400, null]],
+                  smallFonts: [["'Estonia', cursive", 400, null]] };
+  window.LabelEngine.setStyleHints(TRACER);
+  const seenV = new Set();
+  for (let seed = 0; seed < 300; seed++) {
+    const opts = window.LabelEngine.renderStyleOptions(DATA, null, { widthMM: 110, heightMM: 80, seed });
+    for (const o of opts) {
+      const vk = o.style + ':' + window.LabelEngine.variantFor(o.style, seed);
+      if (seenV.has(vk)) continue;
+      seenV.add(vk);
+      const fams = new Set([...o.svg.matchAll(/font-family="([^"]+)"/g)]
+        .map((m) => (m[1].match(/'([^']+)'/) || [, m[1].split(',')[0].trim()])[1]));
+      if (fams.size > 3)
+        out.push(`${o.style} comp#${window.LabelEngine.variantFor(o.style, seed) + 1} (hinted): ${fams.size} font families (max 3) — ${[...fams].join(' · ')}`);
+    }
+  }
+  window.LabelEngine.setStyleHints({});
   return out;
 }, { DATA, SIZES, SEEDS });
 
@@ -133,4 +166,4 @@ if (uniq.length) {
   uniq.slice(0, 40).forEach((f) => console.error('  ' + f));
   process.exit(1);
 }
-console.log(`HARD RULES: PASS (margin 5mm · fonts ≥7pt · text gap ≥1mm) across ${SIZES.length} sizes × ${SEEDS.length} seeds × 3 styles`);
+console.log(`HARD RULES: PASS (margin 5mm · fonts ≥7pt · text gap ≥1mm · ≤3 typefaces) across ${SIZES.length} sizes × ${SEEDS.length} seeds × 3 styles`);

@@ -154,6 +154,27 @@ band + orange full ground, flora diagonal accent band, premium charcoal
 variant, artistic near-black riso ground. Text-only comps may still use a
 bold single-colour ground, e.g. the minimalist red panel.)
 
+## 5-LAYOUTS-V4 (2026-08-16) — hard rule: max 3 typefaces per label
+
+**Standing rule (owner, 2026-08-16): no label uses more than 3 font
+FAMILIES** (weights/italics of one family count as one). Implementation:
+- Every text element in every comp routes through the hero/secondary/small
+  role picks (HP/F2/F3) — the hard-coded faces that bypassed the curated
+  pools (sBlock/sRot/sArcText calls in ~12 comps) now take the role pick
+  with their old face as the designed fallback (unhinted output unchanged
+  for those).
+- Comps whose DESIGNED fallbacks mixed 4-5 families were collapsed to ≤3:
+  contempX v2 (producer archivo→jost), flora v2 (producer fraunces→
+  archivo), flora v3 (producer archivo→jost), flora v4 (producer archivo→
+  jost, vintage fraunces→cormorant), premium v0/v2/v3/v4 (appellation
+  cormorant→EB Garamond italic 500). Goldens re-baselined (1 comp diff).
+- check-hard-rules.mjs now enforces ≤3 families in BOTH modes: unhinted,
+  and under tracer hints (Girassol/Felipa/Estonia — faces no comp uses as
+  designed fallbacks) where any designed family showing through = a
+  role-bypass. Sweeps 300 seeds to hit every comp.
+- Since each role picks ONE font per label render, curated pools of any
+  size still yield ≤3 families per label.
+
 ## 5-LAYOUTS-V3 (2026-08-16) — approved-only fonts & compositions
 
 **Standing rule (owner, 2026-08-16): customers get ONLY selected fonts and

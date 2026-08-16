@@ -56,6 +56,8 @@ John/Doe), MongoDB Atlas db `8k-labels`.
 - No frames or borders on any layout (2026-08-16).
 - Customers get ONLY admin-selected fonts and ONLY approved layout comps
   (once any comp is approved for a style) (2026-08-16).
+- Max 3 font families per label; every text element must route through the
+  hero/secondary/small role picks — never hard-code a face (2026-08-16).
 - Layout hints have ONE source: buildLayoutHints() (layout-refs.ts) — never
   derive layout hints from image profiles or send thinner hints anywhere.
 - Alcohol/volume always "N% Alc. by Vol. / N mL".
