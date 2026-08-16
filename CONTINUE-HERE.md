@@ -154,6 +154,28 @@ band + orange full ground, flora diagonal accent band, premium charcoal
 variant, artistic near-black riso ground. Text-only comps may still use a
 bold single-colour ground, e.g. the minimalist red panel.)
 
+## 5-UI-V2 (2026-08-16) — white/grey theme, B&W uncropped covers
+
+Owner redesign of the configurator shell (all in build.js theme block +
+configurator-base.html; label engine untouched, goldens unchanged):
+- **White & grey UI** replaces the beige era: page/inputs/active tab
+  #FFFFFF, inactive tabs #E3E3E1 (hover #D4D4D2), stale preview button
+  #DCDCDA. Black 2px lines stay. (CLAUDE.md UI rule updated.)
+- **Covers**: grayscale(1) filter on all [data-cover=hero] images; the
+  hero container no longer hard-codes an aspect ratio or max-height — it
+  takes the image's own ratio, so covers are NEVER cropped/zoomed. NOTE:
+  the three embedded cover assets (HERO_SRC/HERO_BACK_SRC/HERO_BOTTLE_SRC
+  in configurator-base.html, data URLs) are themselves tight 1800×657
+  crops — the owner's fuller-scene reference needs replacement assets
+  dropped into those constants.
+- **Type**: menu links, tab titles and big buttons 19px → 13.3px (−30%);
+  logo wordmark stays 19px; section titles (.section-head h2) now match
+  tab titles at 13.3px.
+- **Your Vision** section head has id=visionHead; its underline is
+  removed (other section underlines stay).
+- **Pricing gate**: #frontReveal .pricing is hidden until a specific
+  front label is selected (selIdx >= 0, toggled in editor-embed paint()).
+
 ## 5-LAYOUTS-V4 (2026-08-16) — hard rule: max 3 typefaces per label
 
 **Standing rule (owner, 2026-08-16): no label uses more than 3 font

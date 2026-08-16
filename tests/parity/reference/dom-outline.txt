@@ -28,7 +28,7 @@ body  "               "
     button.tab-btn  "Bottle & Marketing Images"
   main  "         "
     div#panel-front.panel.active  "            "
-      div.section-head
+      div#visionHead.section-head
         h2  "Your Vision"
           span.info  "?"
       textarea#visionText
@@ -722,119 +722,11 @@ body  "               "
         div.gallery-item
           div.gallery-placeholder
             img
-          div.gallery-caption  "Minimalist"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Marketing Images"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Marketing Images"
-        div.gallery-item
-          div.gallery-placeholder
-            img
           div.gallery-caption  "Traditional / Heritage"
         div.gallery-item
           div.gallery-placeholder
             img
-          div.gallery-caption  "Marketing Images"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Traditional / Heritage"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Marketing Images"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Artistic / Punk"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Artistic / Punk"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Flora & Fauna"
-        div.gallery-item
-          div.gallery-placeholder
-            img
           div.gallery-caption  "Minimalist"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Artistic / Punk"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Contemporary"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Contemporary"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Premium"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Flora & Fauna"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Marketing Images"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Flora & Fauna"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Flora & Fauna"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Flora & Fauna"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Artistic / Punk"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Marketing Images"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Marketing Images"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Artistic / Punk"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Premium"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Contemporary"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Minimalist"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Minimalist"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Premium"
         div.gallery-item
           div.gallery-placeholder
             img
@@ -850,7 +742,143 @@ body  "               "
         div.gallery-item
           div.gallery-placeholder
             img
+          div.gallery-caption  "Flora & Fauna"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Premium"
+        div.gallery-item
+          div.gallery-placeholder
+            img
           div.gallery-caption  "Traditional / Heritage"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Minimalist"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Marketing Images"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Marketing Images"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Contemporary"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Minimalist"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Marketing Images"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Flora & Fauna"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Marketing Images"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Contemporary"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Traditional / Heritage"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Marketing Images"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Traditional / Heritage"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Artistic / Punk"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Contemporary"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Contemporary"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Artistic / Punk"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Artistic / Punk"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Premium"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Marketing Images"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Premium"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Minimalist"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Premium"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Flora & Fauna"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Premium"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Marketing Images"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Artistic / Punk"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Minimalist"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Artistic / Punk"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Minimalist"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Marketing Images"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Contemporary"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Premium"
         div.gallery-item
           div.gallery-placeholder
             img
@@ -862,39 +890,11 @@ body  "               "
         div.gallery-item
           div.gallery-placeholder
             img
-          div.gallery-caption  "Contemporary"
+          div.gallery-caption  "Flora & Fauna"
         div.gallery-item
           div.gallery-placeholder
             img
-          div.gallery-caption  "Premium"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Minimalist"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Premium"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Contemporary"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Traditional / Heritage"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Minimalist"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Premium"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Marketing Images"
+          div.gallery-caption  "Flora & Fauna"
     div#panel-about.panel  [HIDDEN]  "   "
       div.section-head
         h2  "About Us"

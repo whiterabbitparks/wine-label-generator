@@ -267,6 +267,8 @@ function paint(){if(!window.LabelEngine)return;shown=true;var d=getLabelData();v
     row.addEventListener('click',function(){selIdx=i;paint();});
     cell.appendChild(box);cell.appendChild(row);if(dlk)cell.appendChild(dlk);grid.appendChild(cell);
   });
+  // price list only appears once a specific label is selected (owner 2026-08-16)
+  var pr=document.querySelector('#frontReveal .pricing');if(pr)pr.style.display=(selIdx>=0)?'':'none';
   // once labels exist, the "Front Label Previews" button is replaced by "Other options" (both sit before the grid)
   var pv=document.getElementById('frontPreviewBtn');if(pv)pv.style.display='';   // stays visible; the 'stale' class greys it until new input
   var eb=document.getElementById('engRegen');if(eb)eb.style.display='block';

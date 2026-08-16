@@ -61,5 +61,8 @@ John/Doe), MongoDB Atlas db `8k-labels`.
 - Layout hints have ONE source: buildLayoutHints() (layout-refs.ts) — never
   derive layout hints from image profiles or send thinner hints anywhere.
 - Alcohol/volume always "N% Alc. by Vol. / N mL".
-- UI: Special Elite only (self-hosted), #ede3d6 ground, all-black 2px lines.
+- UI: Special Elite only (self-hosted), WHITE ground + grey accents
+  (#E3E3E1 tabs; beige era ended 2026-08-16), all-black 2px lines.
+- Cover images: black & white (grayscale filter), never cropped — the hero
+  takes the uploaded image's own aspect ratio (2026-08-16).
 - DEMO_FILL=true in editor-embed.js is TEMPORARY — revert before launch.
