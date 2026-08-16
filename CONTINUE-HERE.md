@@ -163,11 +163,14 @@ configurator-base.html; label engine untouched, goldens unchanged):
   #DCDCDA. Black 2px lines stay. (CLAUDE.md UI rule updated.)
 - **Covers**: grayscale(1) filter on all [data-cover=hero] images; the
   hero container no longer hard-codes an aspect ratio or max-height — it
-  takes the image's own ratio, so covers are NEVER cropped/zoomed. NOTE:
-  the three embedded cover assets (HERO_SRC/HERO_BACK_SRC/HERO_BOTTLE_SRC
-  in configurator-base.html, data URLs) are themselves tight 1800×657
-  crops — the owner's fuller-scene reference needs replacement assets
-  dropped into those constants.
+  takes the image's own ratio. The REAL cropper was the cover parallax:
+  updateParallax() set an inline `scale(1.35)` (inline style beats the
+  theme's transform:none), zooming every cover and cutting the sides.
+  PARALLAX_SCALE is now 1 (scale 1 also clamps the translateY buffer to
+  0, so the handler is a harmless no-op). Covers fit the window width
+  exactly, full scene visible. The three embedded assets (HERO_SRC/
+  HERO_BACK_SRC/HERO_BOTTLE_SRC in configurator-base.html) are 1800×657
+  full-scene engravings — they were never the problem.
 - **Type**: menu links, tab titles and big buttons 19px → 13.3px (−30%);
   logo wordmark stays 19px; section titles (.section-head h2) now match
   tab titles at 13.3px.

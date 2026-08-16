@@ -1190,7 +1190,10 @@ if(logoHomeEl){
 
 // ---------- Cover image parallax (per-image, based on its own viewport position) ----------
 const parallaxImgs = Array.from(document.querySelectorAll('.hero-photo'));
-const PARALLAX_SCALE = 1.35;
+/* owner 2026-08-16: covers must fit the window width exactly — no zoom, no
+   side cropping. Scale 1 also clamps the translateY offset to 0, so the
+   parallax handler becomes a no-op without touching its wiring. */
+const PARALLAX_SCALE = 1;
 function updateParallax(){
   parallaxImgs.forEach(img=>{
     const parent = img.parentElement;
