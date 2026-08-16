@@ -21,7 +21,7 @@ export const maxDuration = 300;
 export async function POST(req: Request) {
   if (!(await requestIsAuthenticated()))
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  let body: { style?: string; vision?: string; count?: number };
+  let body: { style?: string; vision?: string; count?: number; includeRejected?: boolean };
   try {
     body = await req.json();
   } catch {
@@ -49,29 +49,25 @@ export async function POST(req: Request) {
   } catch {}
   const rules = ruleLines(await getImageRules().catch(() => ({ global: '', perStyle: {} })), style.key);
 
-  // the bench mirrors what customers get: directions ordered by learned
-  // weight, retired ones (two+ rejections) shown only when nothing else is
-  // left — each card reports its status so the learning is visible
-  const ranked = [...variants].sort(
-    (a, b) => (weights[b.key] ?? 1) - (weights[a.key] ?? 1)
-  );
-  // one rejection (weight 0.5) removes a style card from the bench;
-  // two retire it from customer generation as well
-  const active = ranked.filter((v) => (weights[v.key] ?? 1) > 0.55);
-  const bench = (active.length ? active : ranked);
-  // weighted RANDOM sampling without replacement — every reference's card
-  // rotates through the bench instead of the same top-weighted few
-  const pool = [...bench];
-  const picks: typeof bench = [];
-  for (let n = 0; n < count; n++) {
-    if (!pool.length) pool.push(...bench);
-    const ws = pool.map((v) => Math.max(0.05, weights[v.key] ?? 1));
-    let r = Math.random() * ws.reduce((a, b) => a + b, 0);
-    let idx = 0;
-    for (let j = 0; j < pool.length; j++) { r -= ws[j]; if (r <= 0) { idx = j; break; } }
-    picks.push(pool.splice(idx, 1)[0]);
-  }
-
+  // BENCH (owner 2026-08-15): unrated cards first — the playground's job is
+  // rating coverage, not mirroring customers. One rejection retires a card
+  // (weight <= 0.55); 'includeRejected' reviews retired cards so an approve
+  // can revive them. No duplicates within a batch unless cards run out.
+  const entries = variants.map((v) => ({ v, w: weights[v.key] ?? 1, rated: weights[v.key] !== undefined }));
+  const rejectedE = entries.filter((e) => e.w <= 0.55);
+  const activeE = entries.filter((e) => e.w > 0.55);
+  const shuffle = <T,>(arr: T[]) => arr.map((x) => [Math.random(), x] as const).sort((p, q) => p[0] - q[0]).map((p) => p[1]);
+  let benchE = body.includeRejected
+    ? shuffle(entries)
+    : [...shuffle(activeE.filter((e) => !e.rated)), ...shuffle(activeE.filter((e) => e.rated))];
+  if (!benchE.length) benchE = shuffle(entries);
+  const picks = Array.from({ length: count }, (_, n) => benchE[n % benchE.length].v);
+  const benchStats = {
+    total: entries.length,
+    active: activeE.length,
+    unrated: activeE.filter((e) => !e.rated).length,
+    rejected: rejectedE.length,
+  };
   const provider = providerName();
   const brief: LabelBrief = { vision, data: {}, seed: 0, zones: null };
   const results = await Promise.all(
@@ -131,5 +127,5 @@ export async function POST(req: Request) {
       }
     })
   );
-  return NextResponse.json({ provider, style: style.key, results });
+  return NextResponse.json({ provider, style: style.key, benchStats, results });
 }

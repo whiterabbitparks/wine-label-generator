@@ -502,6 +502,8 @@ function PlaygroundTab() {
   const [judged, setJudged] = useState<Record<number, "up" | "down">>({});
   const [comments, setComments] = useState<Record<number, string>>({});
   const [history, setHistory] = useState<FeedbackRow[]>([]);
+  const [includeRejected, setIncludeRejected] = useState(false);
+  const [benchStats, setBenchStats] = useState<{ total: number; active: number; unrated: number; rejected: number } | null>(null);
 
   const loadHistory = useCallback(async (st: string) => {
     const r = await fetch("/api/admin/feedback?style=" + st).then((r) => r.json());
@@ -522,11 +524,12 @@ function PlaygroundTab() {
       const r = await fetch("/api/admin/playground", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ style, vision: story, count }),
+        body: JSON.stringify({ style, vision: story, count, includeRejected }),
       });
       const body = await r.json();
       if (!r.ok) throw new Error(body.error || String(r.status));
       setResults(body.results || []);
+      setBenchStats(body.benchStats || null);
       setStatus("done — judge each result below; verdicts refine future generations");
     } catch (e) {
       setStatus("failed: " + (e instanceof Error ? e.message : String(e)));
@@ -587,7 +590,17 @@ function PlaygroundTab() {
           <button style={S.btn} onClick={generate} disabled={busy}>
             {busy ? "Generating…" : "Generate test batch"}
           </button>
+          <label style={{ fontSize: 12, color: "#4a4a42", display: "flex", gap: 6, alignItems: "center" }}>
+            <input type="checkbox" checked={includeRejected} onChange={(e) => setIncludeRejected(e.target.checked)} />
+            review rejected cards (approve to revive)
+          </label>
         </div>
+        {benchStats && (
+          <p style={{ fontSize: 12, color: benchStats.active <= 3 ? "#a06a30" : "#6b6a60", margin: "8px 0 0" }}>
+            {benchStats.total} style cards for this style: {benchStats.active} active ({benchStats.unrated} still unrated) · {benchStats.rejected} rejected.
+            {benchStats.active <= 3 && " Few cards remain — upload more references for this style, or review rejected cards to revive some."}
+          </p>
+        )}
         <label style={S.label}>Test story (optional — a default vineyard scene is used when empty)</label>
         <textarea
           style={{ ...S.input, minHeight: 48 }}
