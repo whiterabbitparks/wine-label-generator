@@ -40,18 +40,19 @@ export interface LabelBrief {
 /* Turn a zone spec into compositional language: the model paints the subject
    inside the focal area and lets only expendable surroundings spread outward,
    dissolving into pure white — the renderer applies no masks. */
-/* Composition shapes rotate (owner 2026-08-15: 'not all ovals — improvise'):
-   the box geometry gives position and size, but the SHAPE of the composition
-   is a seeded pick from a printerly vocabulary. Oval survives as one voice
-   among many, not the default. */
+/* Composition shapes rotate. Owner 2026-08-16 (supersedes 'not all ovals'):
+   NO enclosing geometry of any kind — no oval cameos, circular medallions,
+   rectangular plates or arched niches; those read as frames on the label.
+   Variety now comes from the ARRANGEMENT of the open composition; every
+   voice dissolves freely into the white. */
 const COMP_SHAPES = [
-  "free-form vignette whose edges dissolve irregularly into the white",
-  "rectangular plate composition with softly squared corners",
-  "oval cameo vignette",
-  "open composition with no enclosing shape — the subject's own silhouette defines the form",
-  "wide panoramic frieze",
-  "tall arched niche composition",
-  "circular medallion",
+  "free-form composition whose edges dissolve irregularly into the white",
+  "open composition — the subject's own silhouette defines the form",
+  "wide panoramic sweep that fades out at both ends",
+  "tall column-like arrangement dissolving at top and bottom",
+  "diagonal sweep across the picture, trailing off into the white",
+  "loose constellation of elements with generous white space between them",
+  "single centred mass with fine details trailing outward into the white",
   "asymmetric arrangement with one dominant mass and a few quiet inanimate accents",
 ];
 export function pickCompShape(styleKey: string, subKey: string, vision: string, seed: number): string {
@@ -71,7 +72,9 @@ function zoneSentence(z: ZoneSpec, aspect: string | undefined, compShape: string
     ` Compose the main subject as a ${size} ${compShape} in the ${vert}${horiz} part of the frame;` +
     ` every important element stays fully inside that area.` +
     ` Outside it, only quiet, expendable surroundings may continue, growing sparser until the scene` +
-    ` dissolves completely into the pure white background well before the edges.${frame}`
+    ` dissolves completely into the pure white background well before the edges.` +
+    ` The composition is NEVER enclosed: no frame, border, outline, oval, medallion, cartouche or` +
+    ` solid geometric shape around it — its edges stay open and dissolve into the white.${frame}`
   );
 }
 

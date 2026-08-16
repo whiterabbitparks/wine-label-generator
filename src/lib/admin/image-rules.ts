@@ -141,8 +141,11 @@ export async function verifyImage(
             content:
               "You inspect a generated wine-label artwork. For each numbered question, " +
               "answer whether the VIOLATION it describes is clearly visible in the image. " +
-              "When uncertain, answer no (the rule passes). " +
-              'Return strict JSON {"violations":[{"n": question number, "reason": one short sentence naming what you see}]} — empty array if none.',
+              "List a question ONLY when you can point at the violating content actually " +
+              "PRESENT in the image; if the content a question asks about is absent, that " +
+              "rule PASSES — absence is never a violation. When uncertain, answer no (the " +
+              "rule passes). " +
+              'Return strict JSON {"violations":[{"n": question number, "reason": one short sentence naming the violating content you SEE}]} — empty array if none.',
           },
           {
             role: "user",
@@ -160,7 +163,15 @@ export async function verifyImage(
     const violations = (Array.isArray(parsed.violations) ? parsed.violations : [])
       .map((v) => {
         const r = rules[(Number(v?.n) || 0) - 1];
-        return r ? `${r.src}${v?.reason ? ` — ${String(v.reason).slice(0, 140)}` : ""}` : null;
+        if (!r) return null;
+        const reason = String(v?.reason || "").slice(0, 140);
+        // MISFIRE GUARD (owner report 2026-08-16): the inspector sometimes
+        // lists a violation whose own reason describes ABSENCE ("the image
+        // does not contain any people") — a self-contradiction. Absence is
+        // never a violation; drop those.
+        if (/\b(does not|doesn't|do not)\s+(contain|have|show|include)|\bno\s+(visible|readable|people|text|figures|animals)\b|\babsent\b|\bnone\s+(present|visible)\b/i.test(reason))
+          return null;
+        return `${r.src}${reason ? ` — ${reason}` : ""}`;
       })
       .filter(Boolean)
       .slice(0, 8) as string[];
@@ -188,12 +199,13 @@ export const NO_TEXT_RULE: CompiledRule = {
    label layouts are frameless by rule, and a drawn border would smuggle a
    frame back in). Code-side like NO_TEXT_RULE; applies to every generation. */
 export const NO_BORDER_RULE: CompiledRule = {
-  src: "never draw a frame or border around the artwork (built-in)",
+  src: "never enclose the artwork in a frame, border, oval or any shape (built-in)",
   positive:
-    "The scene is completely open and unframed: its edges dissolve softly into the pure white background with no enclosing frame, border, outline box, cartouche, medallion edge, keyline or decorative band around the composition.",
-  negative: "frame, border, outline box, cartouche, enclosing line, decorative band, vignette edge, rounded rectangle frame",
+    "The scene is completely open and unframed: its edges dissolve softly into the pure white background. There is no enclosing frame, border, outline box, oval, circle, cameo, medallion, cartouche, keyline, decorative band or any geometric shape that contains the composition.",
+  negative:
+    "frame, border, outline box, oval frame, circular medallion, cameo, cartouche, enclosing line, decorative band, vignette boundary, rounded rectangle frame, enclosing shape",
   check:
-    "Is the composition enclosed by a drawn frame, border, outline, cartouche or decorative band around its perimeter? An arched or circular SUBJECT (e.g. a window or medallion inside the scene) does not count — only a line or band that frames the whole artwork.",
+    "Is the composition contained inside ANY enclosing form — a drawn frame, border, outline, band, OR a solid/shaded oval, circle, cameo, medallion, arch or rectangle whose edge bounds the whole artwork? A small object of that shape INSIDE an open scene does not count; a shape that contains the composition does.",
 };
 
 /** Does the winemaker's story explicitly ask for lettering? */
@@ -218,6 +230,6 @@ export function subjectFocusRule(subject: string): CompiledRule {
     src: "stay focused on the subject (built-in)",
     positive: `Depict EXACTLY this and nothing else animate: ${s}. One single subject, dominant in the frame; no additional people, human figures, animals or characters of any kind.`,
     negative: "extra people, background figures, crowd, bystanders, additional characters, additional animals",
-    check: `The intended subject is: "${s}". Does the image contain any people, human figures, animals or characters that are NOT part of that subject (e.g. bystanders, a crowd, extra animals)?`,
+    check: `The intended subject is: "${s}". Does the image contain EXTRA people, human figures, animals or characters beyond that subject (e.g. bystanders, a crowd, additional animals)? Answer yes ONLY if such extra figures are visibly present. The subject being absent, abstract or stylised is NOT a violation of this rule.`,
   };
 }

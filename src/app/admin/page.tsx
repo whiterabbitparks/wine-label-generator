@@ -1139,6 +1139,7 @@ function LayoutPlaygroundTab() {
   const [reviewAll, setReviewAll] = useState(false);
   const [weights, setWeights] = useState<Record<string, number[]>>({});
   const [notes, setNotes] = useState<Record<number, string>>({});
+  const [approved, setApproved] = useState<LayoutCard[] | null>(null);
 
   useEffect(() => {
     const w = window as unknown as { LabelEngine?: { ensureFonts: () => Promise<void> } };
@@ -1202,6 +1203,45 @@ function LayoutPlaygroundTab() {
     setCards(next); setBusy(false);
   }
 
+  /* Approved-layouts gallery (owner 2026-08-16): like the Fonts approvals —
+     one card per net-approved comp (weight > 1) of the selected style, found
+     by sweeping seeds with the weights stripped so every comp is reachable. */
+  async function showApproved() {
+    setBusy(true); setApproved(null);
+    const w = window as unknown as {
+      LabelEngine: {
+        ensureFonts: () => Promise<void>;
+        setStyleHints: (h: unknown) => void;
+        variantFor: (k: string, seed: number) => number;
+        renderStyleOptions: (d: unknown, o: null, opts: { widthMM: number; heightMM: number; seed: number }) => { style: string; svg: string }[];
+      };
+    };
+    try {
+      const [h, fw] = await Promise.all([
+        fetch("/api/layout-hints").then((r) => r.json()),
+        fetch("/api/admin/layout-feedback").then((r) => r.json()),
+      ]);
+      setWeights(fw.weights || {});
+      const wts: number[] = (fw.weights?.[style] || []) as number[];
+      const wanted = wts.map((v, i) => (v > 1 ? i : -1)).filter((i) => i >= 0);
+      if (!wanted.length) { setApproved([]); setBusy(false); return; }
+      const hints = (h.hints || {}) as Record<string, { weights?: number[] }>;
+      for (const k of Object.keys(hints)) delete hints[k]?.weights;
+      w.LabelEngine.setStyleHints(hints);
+      await w.LabelEngine.ensureFonts();
+      const found = new Map<number, LayoutCard>();
+      for (let seed = 1; seed <= 4000 && found.size < wanted.length; seed++) {
+        const v = w.LabelEngine.variantFor(style, seed);
+        if (!wanted.includes(v) || found.has(v)) continue;
+        const opts = w.LabelEngine.renderStyleOptions(PLAY_DATA, null, { widthMM: 110, heightMM: 80, seed });
+        const entry = opts.find((o) => o.style === style);
+        if (entry) found.set(v, { seed, variant: v, svg: entry.svg });
+      }
+      setApproved([...found.values()].sort((a, b) => a.variant - b.variant));
+    } catch { setApproved([]); }
+    setBusy(false);
+  }
+
   async function verdict(i: number, v: "approve" | "reject") {
     const c = cards[i];
     const r = await fetch("/api/admin/layout-feedback", {
@@ -1223,17 +1263,45 @@ function LayoutPlaygroundTab() {
         apply it in the engine.
       </p>
       <div style={{ display: "flex", gap: 12, alignItems: "center", margin: "14px 0" }}>
-        <select value={style} onChange={(e) => setStyle(e.target.value)} style={{ ...S.input, width: 220 }}>
+        <select value={style} onChange={(e) => { setStyle(e.target.value); setApproved(null); }} style={{ ...S.input, width: 220 }}>
           {STYLE_DEFS.map(([k, n]) => <option key={k} value={k}>{n}</option>)}
         </select>
         <button style={S.btn} disabled={!engineReady || busy} onClick={roll}>
           {busy ? "Rendering…" : engineReady ? "Render 8 layouts" : "Loading engine…"}
+        </button>
+        <button style={S.btnGhost} disabled={!engineReady || busy} onClick={showApproved}>
+          Show approved layouts
         </button>
         <label style={{ fontSize: 13, color: "#4a4a42", display: "flex", gap: 6, alignItems: "center" }}>
           <input type="checkbox" checked={reviewAll} onChange={(e) => setReviewAll(e.target.checked)} />
           Review every composition (ignore my feedback)
         </label>
       </div>
+      {approved && approved.length === 0 && (
+        <p style={{ fontSize: 13, color: "#8a887e" }}>
+          No approved layouts yet for this style — customers currently see every composition.
+          Approve some below and they become the ONLY ones customers get.
+        </p>
+      )}
+      {approved && approved.length > 0 && (
+        <>
+          <h3 style={{ fontSize: 14, margin: "6px 0 10px" }}>
+            Approved layouts — customers see ONLY these {approved.length} composition{approved.length > 1 ? "s" : ""}
+          </h3>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
+            {approved.map((c) => (
+              <div key={"ap" + c.variant} style={{ border: "2px solid #5a6b3b", background: "#fff", padding: 8 }}>
+                <div style={{ width: "100%" }} dangerouslySetInnerHTML={{ __html: c.svg.replace(/width="110mm" height="80mm"/, 'width="100%" height="auto"') }} />
+                <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center" }}>
+                  <span style={{ fontSize: 11, color: "#8a887e" }}>comp #{c.variant + 1}</span>
+                  {weightBadge(weights[style]?.[c.variant])}
+                  <b style={{ color: "#5a6b3b", fontSize: 12 }}>Approved ✓</b>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         {cards.map((c, i) => (
           <div key={c.seed} style={{ border: "1px solid #bbb", background: "#fff", padding: 8 }}>

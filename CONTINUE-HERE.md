@@ -189,6 +189,34 @@ cluster content on top leaving an empty band below. Rulings (owner):
    NO_TEXT_RULE as a code-side built-in (prompt positive + negative +
    vision-verified check with regenerate-once) in both generation routes.
 
+## 5-IMAGES-V5 (2026-08-16, same day, later) — no enclosing shapes at the
+SOURCE; verifier misfire guard; approved-layouts gallery
+
+Owner: ovals/borders still appearing. Root cause found: COMP_SHAPES itself
+requested "oval cameo vignette", "circular medallion", "rectangular plate",
+"arched niche" — the prompts were ASKING for enclosures, so the border rule
+never stood a chance. Fixes:
+- COMP_SHAPES rewritten (supersedes 'not all ovals'): 8 OPEN arrangements
+  (free-form, silhouette-defined, panoramic sweep, column, diagonal sweep,
+  constellation, centred mass with trailing details, asymmetric mass) —
+  variety by arrangement, never by enclosing geometry. zoneSentence welds
+  "composition is NEVER enclosed: no frame/border/oval/medallion/…" onto
+  every prompt. NO_BORDER_RULE hardened: a solid/shaded oval, circle,
+  cameo, medallion, arch or rectangle bounding the whole artwork IS a
+  violation (small shaped objects inside an open scene are not).
+- verifyImage misfire guard (owner report: "stay focused" flagged with
+  reason 'image does not contain any people' — a self-contradiction):
+  system prompt now says absence is never a violation, and a post-filter
+  DROPS any violation whose reason describes absence. subjectFocusRule
+  check clarified: only EXTRA figures violate; an absent/stylised subject
+  does not.
+- Layout Playground gained "Show approved layouts": one green-bordered
+  card per net-approved comp (weight > 1) of the selected style (found by
+  sweeping seeds with weights stripped), like the Fonts approvals view.
+NOTE: cached customer sets generated before this ship may still show oval
+artwork until regenerated (new story/seed or server restart clears the
+in-memory cache).
+
 ## 5-UI-V2 (2026-08-16) — white/grey theme, B&W uncropped covers
 
 Owner redesign of the configurator shell (all in build.js theme block +
