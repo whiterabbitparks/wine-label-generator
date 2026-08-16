@@ -148,24 +148,29 @@ export async function getLayoutProfiles(): Promise<Record<string, LayoutProfile>
 
 /* HARD RULES (owner 2026-08-15): mechanical constraints the engine enforces.
    Fixed: 5mm margin, 7pt font floor. Tunable: minimum gap between text
-   blocks (mm) — delivered to the engine via hints.__hardRules. */
-export interface HardRules { minGapMM: number }
+   blocks (mm) and artwork fill of its free area (%, owner 2026-08-16) —
+   delivered to the engine via hints.__hardRules. */
+export interface HardRules { minGapMM: number; artFillPct: number }
 const HARD_ID = "hard-rules";
 export async function getHardRules(): Promise<HardRules> {
   try {
     const db = await getDb();
-    const doc = (await db.collection("settings").findOne({ _id: HARD_ID } as never)) as { minGapMM?: number } | null;
+    const doc = (await db.collection("settings").findOne({ _id: HARD_ID } as never)) as { minGapMM?: number; artFillPct?: number } | null;
     const v = Number(doc?.minGapMM);
-    return { minGapMM: isFinite(v) && v >= 0 && v <= 5 ? v : 1 };
+    const f = Number(doc?.artFillPct);
+    return {
+      minGapMM: isFinite(v) && v >= 0 && v <= 5 ? v : 1,
+      artFillPct: isFinite(f) && f >= 30 && f <= 100 ? f : 85,
+    };
   } catch {
-    return { minGapMM: 1 };
+    return { minGapMM: 1, artFillPct: 85 };
   }
 }
 export async function saveHardRules(r: HardRules): Promise<void> {
   const db = await getDb();
   await db.collection("settings").updateOne(
     { _id: HARD_ID } as never,
-    { $set: { minGapMM: r.minGapMM, updatedAt: new Date() } },
+    { $set: { minGapMM: r.minGapMM, artFillPct: r.artFillPct, updatedAt: new Date() } },
     { upsert: true }
   );
 }
@@ -515,7 +520,7 @@ export async function buildLayoutHints(): Promise<Record<string, unknown>> {
   const [profiles, weights, fonts, casePrefs, POOL, hard] = await Promise.all([
     getLayoutProfiles(), layoutWeights(), fontScores(), getCasePrefs(), fullFontPool(), getHardRules(),
   ]);
-  const hints: Record<string, unknown> = { __hardRules: { minGapMM: hard.minGapMM } };
+  const hints: Record<string, unknown> = { __hardRules: { minGapMM: hard.minGapMM, artFillPct: hard.artFillPct } };
   for (const style of LAYOUT_STYLES) {
     const prof = profiles[style];
     const mix = (a: string, b: string, t: number) => {

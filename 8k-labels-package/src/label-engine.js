@@ -858,7 +858,84 @@ function sFields(d){const j=(a,s)=>a.map(x=>String(x==null?'':x).trim()).filter(
     alc:(function(){var n=function(v,def){var m=String(v==null?'':v).match(/(\d+(?:[.,]\d+)?)/);return m?m[1].replace(',','.'):def;};
       return n(d.alcohol,'12.5')+'% Alc. by Vol. / '+n(d.volume,'750')+' mL';})(),
     accent:lcAccent(d)};}
+/* Per-render bookkeeping for artwork placement: every text primitive records
+   its ink rect (units) while a comp draws; sWrap consumes them to place the
+   artwork. Pure bookkeeping — text output itself is untouched (goldens
+   byte-identical, and without artwork resolveArt is a no-op). */
+let INK_RECTS=[], PENDING_ART=null;
+const ART_TOKEN='<!--8KART-->';
+/* HOUSE RULE (owner 2026-08-16, supersedes the 80% rule): artwork fills
+   ~ARTFILL (default 85%, admin-tunable via hints.__hardRules.artFillPct) of
+   its free area. Artwork ALONE may cross the 5mm margin and bleed off the
+   label edge (text keeps the margin) — its edges dissolve into white and
+   multiply-blend, so the bleed is visually quiet and print-trims cleanly.
+   Placement is deferred to sWrap so every text block's ink rect is known:
+   the grown rect slides (within ±25% of the label around the box centre)
+   toward the spot overlapping the least text ink — i.e. into the label's
+   empty space — with ties resolved toward the box centre. Deterministic. */
+let ARTFILL=0.85;
+function resolveArt(body,W,H){
+  const rects=INK_RECTS; INK_RECTS=[];
+  const p=PENDING_ART; PENDING_ART=null;
+  if(body.indexOf(ART_TOKEN)<0)return body;
+  const strip=()=>body.split(ART_TOKEN).join('');
+  if(!p)return strip();
+  const R=1.6;                                    // generated artwork is 1024x640
+  const x=Math.max(p.b[0]*W,0), y=Math.max(p.b[1]*H,0),
+        x2=Math.min(p.b[2]*W,W), y2=Math.min(p.b[3]*H,H);
+  const w=x2-x, h=y2-y; if(w<=0||h<=0)return strip();
+  /* floor: plain contain in the declared box — never smaller */
+  let cw,ch; if(w/h>R){ch=h;cw=h*R;}else{cw=w;ch=w/R;}
+  const bcx=x+w/2, bcy=y+h/2;
+  /* The FREE AREA is measured, not declared: from a candidate centre the
+     rect grows at the artwork ratio until it (minus a 5%/side dissolving
+     fringe, which is pure white in real artwork) would come within MINGAP
+     of any text ink, or the rect would leave the bleed bounds. The centre
+     may slide up to 25% of the label from the box centre (grid-searched)
+     so the artwork migrates INTO empty bands instead of staying pinned
+     beside them. Final size = the reachable maximum scaled to ARTFILL of
+     its area; floor = contain-in-box. */
+  const CORE=0.05, pad=MINGAP;
+  const okAt=(cx,cy,s)=>{
+    const mw=cw*s, mh=ch*s;
+    if(cx-mw/2<-SBLEED||cx+mw/2>W+SBLEED||cy-mh/2<-SBLEED||cy+mh/2>H+SBLEED)return false;
+    const ix=cx-mw/2+mw*CORE, ix2=cx+mw/2-mw*CORE;
+    const iy=cy-mh/2+mh*CORE, iy2=cy+mh/2-mh*CORE;
+    for(const r of rects)
+      if(ix<r.x2+pad&&ix2>r.x-pad&&iy<r.y2+pad&&iy2>r.y-pad)return false;
+    return true;
+  };
+  const maxScale=(cx,cy)=>{
+    if(!okAt(cx,cy,1))return 1;
+    let lo=1, hi=Math.sqrt((W+2*SBLEED)*(H+2*SBLEED)/(cw*ch))+1;
+    for(let k=0;k<24;k++){const mid=(lo+hi)/2; if(okAt(cx,cy,mid))lo=mid; else hi=mid;}
+    return lo;
+  };
+  const N=12, spanX=0.25*W, spanY=0.25*H;
+  let bestS=maxScale(bcx,bcy), cands=[[bcx,bcy,bestS]];
+  for(let i=0;i<=N;i++)for(let j=0;j<=N;j++){
+    const cx=bcx-spanX+2*spanX*i/N, cy=bcy-spanY+2*spanY*j/N;
+    const s=maxScale(cx,cy);
+    cands.push([cx,cy,s]);
+    if(s>bestS)bestS=s;
+  }
+  /* among near-maximal spots pick the one closest to the box centre */
+  let bx=bcx, by=bcy, bd=Infinity;
+  for(const c of cands){
+    if(c[2]<bestS*0.98)continue;
+    const d=Math.hypot(c[0]-bcx,c[1]-bcy);
+    if(d<bd){bd=d;bx=c[0];by=c[1];}
+  }
+  const sF=Math.max(1,bestS*Math.sqrt(ARTFILL));
+  let mw=cw*sF, mh=ch*sF;
+  /* keep the final rect inside the bleed bounds (position only) */
+  const px=Math.min(Math.max(bx-mw/2,-SBLEED),W+SBLEED-mw);
+  const py=Math.min(Math.max(by-mh/2,-SBLEED),H+SBLEED-mh);
+  return body.split(ART_TOKEN).join(
+    `<image x="${px.toFixed(1)}" y="${py.toFixed(1)}" width="${mw.toFixed(1)}" height="${mh.toFixed(1)}" preserveAspectRatio="xMidYMid meet" xlink:href="${p.src}" href="${p.src}" style="mix-blend-mode:multiply"/>`);
+}
 function sWrap(W,H,twMM,thMM,bg,body,defs){
+  body=resolveArt(body,W,H);
   return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W.toFixed(1)} ${H.toFixed(1)}" width="${twMM}mm" height="${thMM}mm">`
     +`<defs><style><![CDATA[@import url('${FONTS_URL}');${EXTRA_FONTS_URL?`@import url('${EXTRA_FONTS_URL}');`:''}]]></style>${defs||''}</defs>`
     +`<rect x="${(-SBLEED)}" y="${(-SBLEED)}" width="${(W+2*SBLEED).toFixed(1)}" height="${(H+2*SBLEED).toFixed(1)}" fill="${bg}"/>`
@@ -881,6 +958,9 @@ function sBlock(str,o){if(!str)return {svg:'',bottom:o.top,size:0,nlines:0};
   const ls=trAbs?` letter-spacing="${trAbs.toFixed(2)}"`:'', it=o.ital?' font-style="italic"':'';
   const halo=o.halo?` stroke="#ffffff" stroke-width="${(sz*0.14).toFixed(1)}" stroke-linejoin="round" style="paint-order:stroke"`:'';
   let svg=''; fit.lines.forEach((l,i)=>{svg+=`<text x="${o.x.toFixed(1)}" y="${(base+i*lh).toFixed(1)}" font-family="${o.f}" font-weight="${o.w||400}" font-size="${sz.toFixed(1)}" text-anchor="${anchor}" fill="${o.fill||'#111'}"${ls}${it}${halo}>${esc(l)}</text>`;});
+  let wmax=0; fit.lines.forEach(l=>{const lw=measure(l,sz,o.f,o.w||400,!!o.ital,trAbs);if(lw>wmax)wmax=lw;});
+  const rx0=anchor==='middle'?o.x-wmax/2:anchor==='end'?o.x-wmax:o.x;
+  INK_RECTS.push({x:rx0,y:topY,x2:rx0+wmax,y2:botY});
   return {svg:'<g data-tb="1">'+svg+'</g>',bottom:botY,top:topY,size:sz,nlines:n};}
 /* Fit a hero between a top limit and a bottom limit, shrinking (never below
    7pt) so hard rule 3 (1mm gaps) holds against the stack beneath it. */
@@ -1015,6 +1095,7 @@ function setStyleHints(h){
   STYLE_HINTS=(h&&typeof h==='object')?h:{};
   const hr=STYLE_HINTS.__hardRules;
   MINGAP=(hr&&isFinite(+hr.minGapMM)&&+hr.minGapMM>=0)?Math.round(+hr.minGapMM*10):10;
+  ARTFILL=(hr&&isFinite(+hr.artFillPct)&&+hr.artFillPct>=30&&+hr.artFillPct<=100)?+hr.artFillPct/100:0.85;
   delete STYLE_HINTS.__hardRules;
   refreshHintFonts();
 }
@@ -1174,6 +1255,7 @@ function sArcText(str,cx,topBaseY,R,o){
   const x2=cx+R*Math.sin(span/2);
   const asz=Math.max(o.size,MIN7);   // 7pt floor (house rule)
   const ls=o.tr?` letter-spacing="${(asz*o.tr).toFixed(2)}"`:'';
+  INK_RECTS.push({x:x1-asz*0.3,y:topBaseY-asz,x2:x2+asz*0.3,y2:y1+asz*0.4});
   return `<defs><path id="${id}" d="M ${x1.toFixed(1)} ${y1.toFixed(1)} A ${R.toFixed(1)} ${R.toFixed(1)} 0 0 1 ${x2.toFixed(1)} ${y1.toFixed(1)}"/></defs>`
     +`<text font-family="${o.f}" font-weight="${o.w||400}" font-size="${asz.toFixed(1)}" fill="${o.fill}"${ls}>`
     +`<textPath href="#${id}" startOffset="50%" text-anchor="middle">${esc(o.caps?up(str):str)}</textPath></text>`;
@@ -1184,25 +1266,12 @@ function sArcText(str,cx,topBaseY,R,o){
 function sImageBox(styleKey,b,W,H){
   const m=(typeof window!=='undefined'&&window.__LABEL_IMGS__)||null;
   const src=m&&m[styleKey]; if(!src||!b) return '';
-  let x=b[0]*W, y=b[1]*H, x2=b[2]*W, y2=b[3]*H;
-  x=Math.max(x,SM); y=Math.max(y,SM); x2=Math.min(x2,W-SM); y2=Math.min(y2,H-SM);
-  const w=x2-x, h=y2-y; if(w<=0||h<=0) return '';
-  /* HOUSE RULE (owner 2026-08-16): artwork fills ~80% of its free area.
-     Plain contain letterboxes the 1.6:1 artwork (often only ~55% of the
-     box), so the drawn rect grows — kept at the artwork ratio, centred on
-     the box — until its area is 80% of the free area. Never smaller than
-     contain, never past the 5mm hard margins. Artwork edges dissolve into
-     white (prompt rule) and multiply-blend, so the mild overflow beyond
-     the box stays visually quiet. */
-  const R=1.6;                                    // generated artwork is 1024x640
-  let mw,mh; if(w/h>R){mh=h;mw=h*R;}else{mw=w;mh=w/R;}
-  const s=Math.sqrt(0.8*w*h/(mw*mh));
-  if(s>1){mw*=s;mh*=s;}
-  if(mw>W-2*SM){mw=W-2*SM;mh=mw/R;}
-  if(mh>H-2*SM){mh=H-2*SM;mw=mh*R;}
-  const ix=Math.min(Math.max(x+w/2-mw/2,SM),W-SM-mw);
-  const iy=Math.min(Math.max(y+h/2-mh/2,SM),H-SM-mh);
-  return `<image x="${ix.toFixed(1)}" y="${iy.toFixed(1)}" width="${mw.toFixed(1)}" height="${mh.toFixed(1)}" preserveAspectRatio="xMidYMid meet" xlink:href="${src}" href="${src}" style="mix-blend-mode:multiply"/>`;
+  /* Placement is DEFERRED: comps call this mid-body (paint order matters),
+     but the best position needs every text ink rect, known only once the
+     whole comp has drawn. Emit a token here; sWrap→resolveArt replaces it
+     in place, keeping the comp's paint order. */
+  PENDING_ART={src,b};
+  return ART_TOKEN;
 }
 
 /* Vertical text along a label edge (rotated -90°), shrunk to fit the height —
@@ -1217,6 +1286,7 @@ function sRot(t,x,H,o){
     const still=measure(s0,sz,o.f,o.w||400,false,sz*(o.tr||0))+sz*(o.tr||0);
     if(still>maxL+1)return null;   // even 7pt does not fit the height
     const cy=H/2, ls=o.tr?` letter-spacing="${(sz*(o.tr||0)).toFixed(2)}"`:'';
+    INK_RECTS.push({x:px-sz*0.85,y:cy-still/2,x2:px+sz*0.25,y2:cy+still/2});
     return `<text transform="rotate(-90 ${px.toFixed(1)} ${cy.toFixed(1)})" x="${px.toFixed(1)}" y="${cy.toFixed(1)}" font-family="${o.f}" font-weight="${o.w||400}" font-size="${sz.toFixed(1)}" text-anchor="middle" fill="${o.fill}"${ls}>${esc(s0)}</text>`;
   };
   const whole=one(t,x);

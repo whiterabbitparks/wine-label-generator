@@ -154,16 +154,40 @@ band + orange full ground, flora diagonal accent band, premium charcoal
 variant, artistic near-black riso ground. Text-only comps may still use a
 bold single-colour ground, e.g. the minimalist red panel.)
 
-## 5-LAYOUTS-V5 (2026-08-16) — artwork fills 80% of its free area
+## 5-LAYOUTS-V6 (2026-08-16, supersedes V5) — artwork fills 85% of its
+MEASURED free area, may bleed off the label; dead-space flags
 
-**Standing rule (owner, 2026-08-16): layout artwork fills ~80% of its free
-area.** sImageBox no longer plain-contains the 1.6:1 artwork (which
-letterboxed it to ~55% of many boxes): the drawn rect grows at the
-artwork ratio, centred on the box, until its area is 80% of the free
-area — never smaller than contain, never past the 5mm margins (clamped;
-verified for all comps). Overflow beyond the box is visually quiet
-because artwork edges dissolve into white and multiply-blend. Goldens
-unaffected (no artwork in golden renders).
+Owner reviewed V5 renders against hand-made mockups: images still too
+small (85%-of-a-small-declared-box is still small) and some comps
+cluster content on top leaving an empty band below. Rulings (owner):
+1. **Artwork alone is EXEMPT from the 5mm margin** — it may bleed to and
+   off the label edge (standard full-bleed print; edges dissolve to white
+   + multiply, so it trims cleanly). TEXT keeps the 5mm rule; the
+   verifier now exempts `<image>` and checks everything else as before.
+2. **Fill = 85% of the MEASURED free area, not the declared box.**
+   Implementation (label-engine.js): every text primitive (sBlock, sRot,
+   sArcText) records its ink rect into a per-render registry; sImageBox
+   emits a placement TOKEN (paint order preserved) and sWrap→resolveArt
+   places it once all text is known: the rect grows at the 1.6 artwork
+   ratio from the box centre — centre may slide up to 25% of the label
+   (grid-searched) so the artwork migrates INTO empty bands — until it
+   (minus a 5%/side dissolving fringe) would come within MINGAP of text
+   ink or leave the bleed bounds; final area = ARTFILL of that maximum;
+   floor = contain-in-box. Deterministic; without artwork resolveArt is
+   a no-op (goldens 72/72 untouched, no re-baseline).
+3. **ARTFILL is admin-tunable**: Hard Rules tab → "Artwork fill of its
+   free area" (30–100%, default 85) → settings/hard-rules.artFillPct →
+   hints.__hardRules → engine ARTFILL. Same pipe as minGapMM.
+4. **Dead-space flags (advisory, never failing)**: check-hard-rules.mjs
+   injects a stub artwork and reports any artwork comp keeping an empty
+   horizontal band >20% of the label height (warnings section); the
+   Layout Playground measures the same off-screen (display unchanged)
+   and badges cards "dead space N%". V6 cut the sweep's warnings from
+   10 renders to 1 (traditional comp#1 seed 4242, 22% — borderline).
+   The owner reviews flagged comps and asks for per-comp restructures.
+5. **Artwork never draws its own frame/border** — NO_BORDER_RULE joins
+   NO_TEXT_RULE as a code-side built-in (prompt positive + negative +
+   vision-verified check with regenerate-once) in both generation routes.
 
 ## 5-UI-V2 (2026-08-16) — white/grey theme, B&W uncropped covers
 

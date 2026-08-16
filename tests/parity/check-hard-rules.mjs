@@ -9,6 +9,13 @@
         tracer hints (one distinctive family per role, faces the comps never
         use as designed fallbacks) — a 4th family under tracer hints means a
         hard-coded face is bypassing the hero/secondary/small role system.
+     5. artwork bleed (owner 2026-08-16) — artwork ALONE is exempt from the
+        margin rule (it may bleed to/off the label edge); a stub artwork is
+        injected so every comp renders its <image> like production.
+   Plus a WARNING-level dead-space report (owner 2026-08-16): any artwork
+   comp that leaves an empty horizontal band taller than 20% of the label
+   is listed for the owner's review — reported, never failing the build
+   (visual balance is an art-direction call, not a mechanical rule).
    Text is measured as INK (canvas actualBoundingBox*), the same metric the
    engine positions by — DOM boxes include font leading and would misreport.
    Run: node tests/parity/check-hard-rules.mjs */
@@ -36,10 +43,15 @@ await page.addScriptTag({ content: ENGINE });
 await page.evaluate(() => window.LabelEngine.ensureFonts());
 await page.waitForTimeout(3000);
 
-const failures = await page.evaluate(({ DATA, SIZES, SEEDS }) => {
+const { failures, warnings } = await page.evaluate(({ DATA, SIZES, SEEDS }) => {
   const U = 25.4 / 72 * 10;
   const MIN7 = 7 * U, SM = 50, MINGAP = 10, EPS = 1.5;
-  const out = [];
+  const out = [], warn = [];
+  /* stub artwork (1.6:1 grey png) so every comp renders its <image> */
+  const stub = document.createElement('canvas'); stub.width = 16; stub.height = 10;
+  stub.getContext('2d').fillStyle = '#888'; stub.getContext('2d').fillRect(0, 0, 16, 10);
+  const PX = stub.toDataURL('image/png');
+  window.__LABEL_IMGS__ = { traditional: PX, contemporary: PX, punk: PX };
   const host = document.createElement('div');
   document.body.appendChild(host);
   const cv = document.createElement('canvas'); const cx2 = cv.getContext('2d');
@@ -112,7 +124,9 @@ const failures = await page.evaluate(({ DATA, SIZES, SEEDS }) => {
         for (const b of blocks)
           if (b.x < SM - EPS || b.y < SM - EPS || b.x2 > W - SM + EPS || b.y2 > H - SM + EPS)
             out.push(`${tag}: text [${b.t}] crosses margin [${(b.x / 10).toFixed(1)},${(b.y / 10).toFixed(1)},${(b.x2 / 10).toFixed(1)},${(b.y2 / 10).toFixed(1)}]mm`);
-        for (const el of svg.querySelectorAll('image,path,line,circle,rect')) {
+        /* artwork (<image>) is EXEMPT from the margin rule (owner 2026-08-16):
+           it may bleed to and off the label edge; text keeps the margin. */
+        for (const el of svg.querySelectorAll('path,line,circle,rect')) {
           if (el.closest('defs')) continue;
           if (el.tagName === 'rect' && +el.getAttribute('x') < 0) continue;
           const r = el.getBoundingClientRect(); if (!r.width && !r.height) continue;
@@ -120,6 +134,21 @@ const failures = await page.evaluate(({ DATA, SIZES, SEEDS }) => {
           const sw = +(el.getAttribute('stroke-width') || 0) / 2;
           if (u.x - sw < SM - EPS || u.y - sw < SM - EPS || u.x2 + sw > W - SM + EPS || u.y2 + sw > H - SM + EPS)
             out.push(`${tag}: <${el.tagName}> crosses margin [${(u.x / 10).toFixed(1)},${(u.y / 10).toFixed(1)},${(u.x2 / 10).toFixed(1)},${(u.y2 / 10).toFixed(1)}]mm`);
+        }
+        /* dead-space report (warning only): artwork comps leaving an empty
+           horizontal band taller than 20% of the label. The artwork counts
+           as content only in its core (inset 15%/side — edges dissolve). */
+        const im = o.svg.match(/<image x="(-?[\d.]+)" y="(-?[\d.]+)" width="([\d.]+)" height="([\d.]+)"/);
+        if (im) {
+          const iy = +im[2], ih = +im[4];
+          const spans = blocks.map((b) => [b.y, b.y2]).concat([[iy + ih * 0.15, iy + ih * 0.85]])
+            .map(([a, b2]) => [Math.max(a, SM), Math.min(b2, H - SM)]).filter(([a, b2]) => b2 > a)
+            .sort((a, b2) => a[0] - b2[0]);
+          let cur = SM, gap = 0;
+          for (const [a, b2] of spans) { if (a > cur) gap = Math.max(gap, a - cur); cur = Math.max(cur, b2); }
+          gap = Math.max(gap, H - SM - cur);
+          if (gap > 0.20 * H)
+            warn.push(`${o.style} comp#${window.LabelEngine.variantFor(o.style, seed) + 1} ${wMM}x${hMM} seed=${seed}: dead band ${(gap / 10).toFixed(0)}mm (${Math.round(gap / H * 100)}% of height)`);
         }
         for (let i = 0; i < blocks.length; i++) for (let j = i + 1; j < blocks.length; j++) {
           const a = blocks[i], b = blocks[j];
@@ -156,14 +185,19 @@ const failures = await page.evaluate(({ DATA, SIZES, SEEDS }) => {
     }
   }
   window.LabelEngine.setStyleHints({});
-  return out;
+  return { failures: out, warnings: warn };
 }, { DATA, SIZES, SEEDS });
 
 await browser.close();
+const uwarn = [...new Set(warnings)];
+if (uwarn.length) {
+  console.log(`DEAD-SPACE REVIEW (warnings, never failing): ${uwarn.length} render(s) keep an empty band >20% of the label`);
+  uwarn.slice(0, 25).forEach((w) => console.log('  ~ ' + w));
+}
 const uniq = [...new Set(failures)];
 if (uniq.length) {
   console.error(`HARD RULES: ${uniq.length} violation(s)`);
   uniq.slice(0, 40).forEach((f) => console.error('  ' + f));
   process.exit(1);
 }
-console.log(`HARD RULES: PASS (margin 5mm · fonts ≥7pt · text gap ≥1mm · ≤3 typefaces) across ${SIZES.length} sizes × ${SEEDS.length} seeds × 3 styles`);
+console.log(`HARD RULES: PASS (margin 5mm text · fonts ≥7pt · text gap ≥1mm · ≤3 typefaces · artwork bleed exempt) across ${SIZES.length} sizes × ${SEEDS.length} seeds × 3 styles`);

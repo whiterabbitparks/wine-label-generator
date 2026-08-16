@@ -8,7 +8,7 @@ import { providerName, generateImageWithRetry } from "@/lib/image-provider";
 import { getImageStorage } from "@/lib/image-storage";
 import { logGeneration } from "@/lib/admin/generation-log";
 import { getProfiles, listRefs, getCardSeen, markCardsSeen } from "@/lib/admin/style-refs";
-import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, wantsText, subjectFocusRule, wantsCrowd } from "@/lib/admin/image-rules";
+import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, NO_BORDER_RULE, wantsText, subjectFocusRule, wantsCrowd } from "@/lib/admin/image-rules";
 import { subjectFrom } from "@/lib/styles/prompt";
 import { feedbackAggregates } from "@/lib/admin/feedback";
 
@@ -54,6 +54,7 @@ export async function POST(req: Request) {
     refUrls = Object.fromEntries((await listRefs(style.key)).map((r) => [r.id, r.url]));
   } catch {}
   const rules = ruleLines(await getImageRules().catch(() => ({ global: '', perStyle: {} })), style.key);
+  rules.push(NO_BORDER_RULE);
   if (!wantsText(vision)) rules.push(NO_TEXT_RULE);
   if (!wantsCrowd(vision)) rules.push(subjectFocusRule(subjectFrom(vision, {})));
 

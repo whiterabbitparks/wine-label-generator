@@ -183,6 +183,19 @@ export const NO_TEXT_RULE: CompiledRule = {
     "Does the image contain any readable or pseudo-readable text, letters, numerals, glyphs or typographic marks (including AI gibberish lettering)? Purely decorative non-alphabetic patterns do not count.",
 };
 
+/* Built-in hard rule (owner, 2026-08-16): artwork never draws its own frame
+   or border — the scene must dissolve openly into the white ground (the
+   label layouts are frameless by rule, and a drawn border would smuggle a
+   frame back in). Code-side like NO_TEXT_RULE; applies to every generation. */
+export const NO_BORDER_RULE: CompiledRule = {
+  src: "never draw a frame or border around the artwork (built-in)",
+  positive:
+    "The scene is completely open and unframed: its edges dissolve softly into the pure white background with no enclosing frame, border, outline box, cartouche, medallion edge, keyline or decorative band around the composition.",
+  negative: "frame, border, outline box, cartouche, enclosing line, decorative band, vignette edge, rounded rectangle frame",
+  check:
+    "Is the composition enclosed by a drawn frame, border, outline, cartouche or decorative band around its perimeter? An arched or circular SUBJECT (e.g. a window or medallion inside the scene) does not count — only a line or band that frames the whole artwork.",
+};
+
 /** Does the winemaker's story explicitly ask for lettering? */
 export function wantsText(vision: string | undefined): boolean {
   return /\b(text|letter|lettering|word|writing|written|inscription|sign\s+say|says|saying|glyph|number|digit|numeral|typograph|caption|monogram|slogan|motto)\b/i.test(

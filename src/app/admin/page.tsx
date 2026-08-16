@@ -1098,7 +1098,38 @@ const PLAY_DATA = {
   wineColorName: "Red", wineType: "Still Wine", alcohol: "12.5", volume: "750",
 };
 
-interface LayoutCard { seed: number; variant: number; svg: string; done?: "approve" | "reject" }
+interface LayoutCard { seed: number; variant: number; svg: string; dead?: number; done?: "approve" | "reject" }
+
+/* Dead-space flag (owner 2026-08-16): the biggest empty horizontal band on a
+   110x80 label rendered WITH artwork (stub injected off-screen), as % of the
+   height — the same 20% rule the hard-rules verifier reports. Approximate
+   (DOM boxes, not ink) and advisory only. 0 when the comp has no artwork. */
+function deadBandPct(svgWithArt: string): number {
+  const im = svgWithArt.match(/<image x="(-?[\d.]+)" y="(-?[\d.]+)" width="([\d.]+)" height="([\d.]+)"/);
+  if (!im) return 0;
+  const host = document.createElement("div");
+  host.style.cssText = "position:absolute;left:-9999px;top:0;width:1100px";
+  host.innerHTML = svgWithArt;
+  document.body.appendChild(host);
+  try {
+    const svg = host.querySelector("svg");
+    if (!svg) return 0;
+    const sr = svg.getBoundingClientRect();
+    if (!sr.height) return 0;
+    const H = 800, SM = 50;
+    const spans: [number, number][] = [[+im[2] + +im[4] * 0.15, +im[2] + +im[4] * 0.85]];
+    svg.querySelectorAll("text").forEach((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.height) spans.push([((r.top - sr.top) / sr.height) * H, ((r.bottom - sr.top) / sr.height) * H]);
+    });
+    const cl = spans.map(([a, b]) => [Math.max(a, SM), Math.min(b, H - SM)] as [number, number])
+      .filter(([a, b]) => b > a).sort((a, b) => a[0] - b[0]);
+    let cur = SM, gap = 0;
+    for (const [a, b] of cl) { if (a > cur) gap = Math.max(gap, a - cur); cur = Math.max(cur, b); }
+    gap = Math.max(gap, H - SM - cur);
+    return Math.round((gap / H) * 100);
+  } finally { host.remove(); }
+}
 
 function LayoutPlaygroundTab() {
   const [style, setStyle] = useState("traditional");
@@ -1143,6 +1174,12 @@ function LayoutPlaygroundTab() {
       setWeights(fw.weights || {});
     } catch {}
     await w.LabelEngine.ensureFonts();
+    // stub artwork for the dead-space measurement render (display stays clean)
+    const wImgs = window as unknown as { __LABEL_IMGS__?: Record<string, string> };
+    const prevImgs = wImgs.__LABEL_IMGS__;
+    const cvs = document.createElement("canvas"); cvs.width = 16; cvs.height = 10;
+    const g = cvs.getContext("2d"); if (g) { g.fillStyle = "#888"; g.fillRect(0, 0, 16, 10); }
+    const PX = cvs.toDataURL("image/png");
     const seen = new Set<number>(); const next: LayoutCard[] = [];
     let guard = 0;
     while (next.length < 8 && guard++ < 300) {
@@ -1154,9 +1191,13 @@ function LayoutPlaygroundTab() {
       if (reviewAll && seen.has(variant) && guard < 250) continue;
       if (!reviewAll && seen.has(variant) && guard < 40) continue; // light dedupe only
       seen.add(variant);
+      wImgs.__LABEL_IMGS__ = { traditional: PX, contemporary: PX, punk: PX };
+      const artOpts = w.LabelEngine.renderStyleOptions(PLAY_DATA, null, { widthMM: 110, heightMM: 80, seed });
+      if (prevImgs) wImgs.__LABEL_IMGS__ = prevImgs; else delete wImgs.__LABEL_IMGS__;
       const opts = w.LabelEngine.renderStyleOptions(PLAY_DATA, null, { widthMM: 110, heightMM: 80, seed });
       const entry = opts.find((o) => o.style === style);
-      if (entry) next.push({ seed, variant, svg: entry.svg });
+      const artEntry = artOpts.find((o) => o.style === style);
+      if (entry) next.push({ seed, variant, svg: entry.svg, dead: artEntry ? deadBandPct(artEntry.svg) : 0 });
     }
     setCards(next); setBusy(false);
   }
@@ -1208,6 +1249,12 @@ function LayoutPlaygroundTab() {
             <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center" }}>
               <span style={{ fontSize: 11, color: "#8a887e" }}>comp #{c.variant + 1}</span>
               {weightBadge(weights[style]?.[c.variant])}
+              {(c.dead ?? 0) > 20 && (
+                <span title="With artwork, this layout keeps an empty band this tall — consider a comment asking Claude to rebalance it."
+                  style={{ fontSize: 11, color: "#a06010", border: "1px solid #a06010", padding: "1px 6px" }}>
+                  dead space {c.dead}%
+                </span>
+              )}
               {c.done ? (
                 <b style={{ color: c.done === "approve" ? "#5a6b3b" : "#a03030" }}>{c.done === "approve" ? "Approved ✓" : "Rejected ✕"}</b>
               ) : (
@@ -1428,20 +1475,21 @@ function FontsTab() {
    shown for reference; tunable ones apply to customers immediately. */
 function HardRulesTab() {
   const [minGap, setMinGap] = useState("1");
+  const [artFill, setArtFill] = useState("85");
   const [saved, setSaved] = useState("");
   useEffect(() => {
     fetch("/api/admin/hard-rules").then((r) => r.json()).then((b) => {
-      if (b.rules) setMinGap(String(b.rules.minGapMM));
+      if (b.rules) { setMinGap(String(b.rules.minGapMM)); setArtFill(String(b.rules.artFillPct ?? 85)); }
     });
   }, []);
   async function save() {
     setSaved("");
     const r = await fetch("/api/admin/hard-rules", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ minGapMM: Number(minGap) }),
+      body: JSON.stringify({ minGapMM: Number(minGap), artFillPct: Number(artFill) }),
     });
     const b = await r.json();
-    if (r.ok) { setSaved("Saved ✓ — applies to the next render"); setMinGap(String(b.rules.minGapMM)); }
+    if (r.ok) { setSaved("Saved ✓ — applies to the next render"); setMinGap(String(b.rules.minGapMM)); setArtFill(String(b.rules.artFillPct)); }
     else setSaved(b.error || "failed");
   }
   const row = { display: "flex", gap: 12, alignItems: "center", padding: "10px 0", borderBottom: "1px solid #e5e4dc", fontSize: 13 } as const;
@@ -1454,7 +1502,7 @@ function HardRulesTab() {
       </p>
       <div style={row}>
         <b style={{ width: 240 }}>Safe margin</b>
-        <span>5 mm — no element may cross it</span>
+        <span>5 mm — no text may cross it; artwork alone may bleed to the edge</span>
         <span style={{ marginLeft: "auto", color: "#8a887e", fontSize: 11 }}>fixed</span>
       </div>
       <div style={row}>
@@ -1462,11 +1510,17 @@ function HardRulesTab() {
         <span>7 pt — nothing prints smaller</span>
         <span style={{ marginLeft: "auto", color: "#8a887e", fontSize: 11 }}>fixed</span>
       </div>
-      <div style={{ ...row, borderBottom: "none" }}>
+      <div style={row}>
         <b style={{ width: 240 }}>Minimum gap between texts</b>
         <input type="number" min={0} max={5} step={0.5} value={minGap}
           onChange={(e) => setMinGap(e.target.value)}
           style={{ ...S.input, width: 90 }} /> <span>mm</span>
+      </div>
+      <div style={{ ...row, borderBottom: "none" }}>
+        <b style={{ width: 240 }}>Artwork fill of its free area</b>
+        <input type="number" min={30} max={100} step={5} value={artFill}
+          onChange={(e) => setArtFill(e.target.value)}
+          style={{ ...S.input, width: 90 }} /> <span>% — bigger = bolder artwork, may bleed off the label edge</span>
         <button style={{ ...S.btn, marginLeft: 8 }} onClick={save}>Save</button>
         {saved && <span style={{ fontSize: 12, color: saved.startsWith("Saved") ? "#5a6b3b" : "#a03030" }}>{saved}</span>}
       </div>

@@ -49,6 +49,12 @@ John/Doe), MongoDB Atlas db `8k-labels`.
 
 ## Non-negotiable design rules (full list in CONTINUE-HERE.md)
 - Artwork always on pure white background; multiply blend on labels.
+- Artwork fills ~85% of its MEASURED free area (admin-tunable artFillPct)
+  and may bleed off the label edge — artwork ALONE is exempt from the 5mm
+  margin; text never is. Artwork never contains its own frame/border
+  (NO_BORDER_RULE) (2026-08-16).
+- Owner meta-rule: before executing ANY request, advise on approach and
+  call out contradictions with existing rules — never silently resolve.
 - Layout-detail edits never regenerate artwork (only story/sketch/seed do).
 - Reference-board images NEVER go to the image model (they cause shape
   copying) — they steer only through the derived style profiles.
