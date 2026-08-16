@@ -154,6 +154,37 @@ band + orange full ground, flora diagonal accent band, premium charcoal
 variant, artistic near-black riso ground. Text-only comps may still use a
 bold single-colour ground, e.g. the minimalist red panel.)
 
+## 5-IMAGES-V4 (2026-08-15) — refinement-loop semantics, final form
+
+**Standing rule (owner, 2026-08-15): a rejection NEVER devalues the
+reference.** "The problem most of the time is how image generation
+interprets the reference, not the reference itself." Removing a reference
+from the pool = deleting it in Image Refs — nothing else. Consequences
+(supersedes the V3 weight>0.55 bench / retire mechanics):
+- feedback.ts: verdicts are `up`/`down` only ("retire" removed everywhere;
+  legacy retire docs count as rejections). Approvals boost weight (+1);
+  rejections change NOTHING in the weights — they increment
+  `cardNotes[key].rejections` instead.
+- prompt.ts: a card with rejections gets a divergence instruction early in
+  the prompt ("N earlier interpretations of this style were rejected —
+  take a clearly DIFFERENT interpretation… while keeping the reference
+  technique"), merged with any per-card fix-notes.
+- Playground bench: ALL cards always in rotation, ordered least-recently-
+  shown first (`cardSeen` Mongo collection) so successive rounds walk the
+  whole board before repeating. `includeRejected` checkbox + retire link
+  removed from the UI; stats line now total / boosted / unjudged.
+Also from this era (same day, earlier sessions):
+- keep/fix comment fields are independent of the verdict (👍 keep counted
+  even on reject, 👎 fix counted even on approve; legacy `comment` falls
+  back by verdict). Per-card notes ride in the prompt.
+- COMP_SHAPES rotation in prompt.ts — 8 composition shapes seeded per
+  style/card/story (owner: "not all ovals").
+- Built-in verified rules (image-rules.ts, code-side like WHITE_BG):
+  NO_TEXT_RULE unless the story asks for lettering (`wantsText`);
+  `subjectFocusRule` pins generation to exactly the stated subject unless
+  the story asks for a crowd (`wantsCrowd`); prompt.ts welds a
+  subject-exclusivity clause onto the subject line for the same cases.
+
 ## 5-IMAGES-V3 (2026-08-15) — PER-REFERENCE style cards + verified rules
 
 Owner: rejections kept coming back; wants each reference image remembered
@@ -166,9 +197,8 @@ verdicts (36 orphans wiped). Now:
   sticks forever. 56 cards derived (traditional 7 / contemporary 29 /
   punk 20).
 - Image Play shows the SOURCE REFERENCE thumbnail beside each generated
-  image for 1:1 judging. Bench: weight>0.55 — ONE rejection removes a
-  card from the bench, two retire it from customer generation
-  (weightedPick floor 0.05).
+  image for 1:1 judging. (Bench weight>0.55 / retire mechanics from this
+  era are SUPERSEDED by 5-IMAGES-V4: rejections no longer touch weights.)
 - VERIFIED image rules (src/lib/admin/image-rules.ts, settings/
   image-hard-rules, /api/admin/image-rules, UI section in Image Rules):
   plain-English rules, one per line, global+per-style. EVERY generated

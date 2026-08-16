@@ -114,6 +114,9 @@ export interface FeedbackLines {
   fixes?: string[];
   /** confirmed strengths of THIS exact style card */
   keeps?: string[];
+  /** how many interpretations of THIS card were rejected — even without a
+      fix-note, the next attempt must diverge from the rejected ones */
+  rejections?: number;
 }
 
 export function buildStylePrompt(
@@ -177,9 +180,13 @@ export function buildStylePrompt(
   // per-card memory (owner 2026-08-15): corrections ride EARLY in the prompt —
   // a rejection means the previous attempt failed, so the next one with this
   // same reference card must try differently
-  const corr = fb?.fixes?.length
-    ? `Corrections from earlier attempts with this exact style (a previous result was rejected — apply these and take a different approach): ${fb.fixes.join("; ")}. `
-    : "";
+  const corrBits: string[] = [];
+  if (fb?.fixes?.length) corrBits.push(`apply these corrections: ${fb.fixes.join("; ")}`);
+  if (fb?.rejections)
+    corrBits.push(
+      `${fb.rejections} earlier interpretation${fb.rejections > 1 ? "s were" : " was"} rejected for this style — take a clearly DIFFERENT interpretation this time (different treatment of the subject, composition and density) while keeping the reference technique`
+    );
+  const corr = corrBits.length ? `About earlier attempts with this exact style: ${corrBits.join(". ")}. ` : "";
   const strengths = fb?.keeps?.length ? ` Confirmed strengths to preserve: ${fb.keeps.join("; ")}.` : "";
   // admin's template still applies if customised; {focus} is new and optional
   const template = art.template?.includes("{medium}") ? withFocusSlot(art.template) : TEMPLATE_DEFAULT;

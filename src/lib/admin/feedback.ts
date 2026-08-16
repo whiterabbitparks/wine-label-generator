@@ -14,7 +14,7 @@ export interface FeedbackDoc {
   style: string;
   variantKey: string;
   variantLabel: string;
-  verdict: "up" | "down" | "retire";
+  verdict: "up" | "down";
   comment: string;
   /** what worked — honored regardless of verdict */
   keep?: string;
@@ -27,17 +27,19 @@ export interface FeedbackDoc {
 }
 
 export interface StyleFeedbackAggregate {
-  /** variantKey -> weight. Approvals boost (+1). A rejection means 'this
-      ATTEMPT failed' (owner 2026-08-15) — tiny decay (-0.15, floor 0.7),
-      the reference itself never retires from rejections. Only the explicit
-      'retire' verdict drops a card to 0.05. */
+  /** variantKey -> weight. Approvals boost (+1). Rejections carry ZERO
+      weight penalty (owner 2026-08-15): the reference never loses value —
+      the failed ATTEMPT is remembered instead (cardNotes.rejections) and
+      the next prompt for that card must take a different interpretation.
+      Removing a reference = deleting it in Image Refs, nothing else. */
   weights: Record<string, number>;
   /** distinct recent fix-notes (any verdict) — global avoid lines */
   avoid: string[];
   /** distinct recent keep-notes (any verdict) — global favour lines */
   favour: string[];
-  /** per-card memory: corrections and confirmed strengths for that exact card */
-  cardNotes: Record<string, { keeps: string[]; fixes: string[] }>;
+  /** per-card memory: corrections, confirmed strengths and how many
+      interpretations were rejected for that exact card */
+  cardNotes: Record<string, { keeps: string[]; fixes: string[]; rejections: number }>;
   latest: Date | null;
 }
 
@@ -55,7 +57,7 @@ export async function addFeedback(input: {
   style: string;
   variantKey: string;
   variantLabel: string;
-  verdict: "up" | "down" | "retire";
+  verdict: "up" | "down";
   comment?: string;
   keep?: string;
   fix?: string;
@@ -68,7 +70,7 @@ export async function addFeedback(input: {
     style: String(input.style).slice(0, 40),
     variantKey: String(input.variantKey).slice(0, 60),
     variantLabel: String(input.variantLabel).slice(0, 120),
-    verdict: input.verdict === "down" ? "down" : input.verdict === "retire" ? "retire" : "up",
+    verdict: input.verdict === "up" ? "up" : "down",
     comment: String(input.comment || "").slice(0, 500),
     keep: String(input.keep || "").slice(0, 300),
     fix: String(input.fix || "").slice(0, 300),
@@ -97,23 +99,22 @@ export async function feedbackAggregates(): Promise<Record<string, StyleFeedback
     .limit(500)
     .toArray();
   const out: Record<string, StyleFeedbackAggregate> = {};
-  const retired: Record<string, Set<string>> = {};
   for (const r of rows) {
     const agg = (out[r.style] ||= { weights: {}, avoid: [], favour: [], cardNotes: {}, latest: null });
     if (!agg.latest) agg.latest = r.createdAt; // rows arrive newest-first
-    if (r.verdict === "retire") {
-      (retired[r.style] ||= new Set()).add(r.variantKey);
+    const notes = (agg.cardNotes[r.variantKey] ||= { keeps: [], fixes: [], rejections: 0 });
+    if (r.verdict === "up") {
+      agg.weights[r.variantKey] = (agg.weights[r.variantKey] ?? 1) + 1;
     } else {
-      // approvals boost; a rejection means the ATTEMPT failed — the reference
-      // card only decays slightly (floor 0.7) and never retires by itself
-      agg.weights[r.variantKey] = (agg.weights[r.variantKey] ?? 1) + (r.verdict === "up" ? 1 : -0.15);
+      // any non-approval (incl. legacy 'retire' docs) = a rejected ATTEMPT:
+      // zero weight change, only memory of the failed interpretation
+      notes.rejections += 1;
     }
     // keep/fix notes are honored regardless of the verdict (a rejected image
     // can still have a praised element; an approved one can carry a correction).
     // Legacy rows with only `comment` fall back to the old verdict-based split.
     const keep = (r.keep || (r.verdict === "up" ? r.comment : "")).trim();
-    const fix = (r.fix || (r.verdict === "down" ? r.comment : "")).trim();
-    const notes = (agg.cardNotes[r.variantKey] ||= { keeps: [], fixes: [] });
+    const fix = (r.fix || (r.verdict !== "up" ? r.comment : "")).trim();
     if (keep) {
       if (agg.favour.length < 4 && !agg.favour.includes(keep)) agg.favour.push(keep);
       if (notes.keeps.length < 2 && !notes.keeps.includes(keep)) notes.keeps.push(keep);
@@ -123,16 +124,12 @@ export async function feedbackAggregates(): Promise<Record<string, StyleFeedback
       if (notes.fixes.length < 3 && !notes.fixes.includes(fix)) notes.fixes.push(fix);
     }
   }
-  for (const [style, agg] of Object.entries(out)) {
-    for (const k of Object.keys(agg.weights)) agg.weights[k] = Math.max(0.7, agg.weights[k]);
-    for (const k of retired[style] || []) agg.weights[k] = 0.05;   // explicit retire only
-  }
   return out;
 }
 
 /** Deterministic weighted pick — the ONE selection rule for art directions.
-    Rejected directions genuinely fade (two rejections ≈ retired at the 0.05
-    floor) instead of keeping a full slot like the old duplication pool. */
+    Approvals boost a card's share; rejections never shrink it (owner
+    2026-08-15) — a rejected ATTEMPT is remembered in cardNotes instead. */
 export function weightedPick<T extends { key: string }>(
   items: T[],
   weights: Record<string, number> | undefined,

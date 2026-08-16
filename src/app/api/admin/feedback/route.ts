@@ -23,8 +23,8 @@ export async function POST(req: Request) {
   }
   if (!STYLES.includes(String(body.style)))
     return NextResponse.json({ error: "unknown style" }, { status: 400 });
-  if (body.verdict !== "up" && body.verdict !== "down" && body.verdict !== "retire")
-    return NextResponse.json({ error: "verdict must be up, down or retire" }, { status: 400 });
+  if (body.verdict !== "up" && body.verdict !== "down")
+    return NextResponse.json({ error: "verdict must be up or down" }, { status: 400 });
   const doc = await addFeedback({
     style: String(body.style),
     variantKey: String(body.variantKey || ""),

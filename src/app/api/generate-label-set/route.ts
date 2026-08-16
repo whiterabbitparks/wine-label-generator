@@ -157,9 +157,9 @@ export async function POST(req: Request) {
           // derived variety (from the owner's reference board) wins over the
           // built-in catalog sub-styles; same seeded rotation either way
           const prof = profiles[style.key];
-          // owner feedback truly reweights the pick: approvals boost an art
-          // direction, rejections fade it toward the 0.05 floor (two
-          // rejections ≈ retired). Without feedback all directions are equal.
+          // owner feedback reweights the pick: approvals boost an art
+          // direction; rejections never demote it (owner 2026-08-15) — they
+          // only feed the per-card divergence memory in the prompt.
           const fbAgg = feedback[style.key];
           const baseVariants = prof?.variants?.length ? prof.variants : null;
           let sub;
@@ -173,7 +173,7 @@ export async function POST(req: Request) {
             sub = pickSubStyle(style, seed, i);
           }
           const notes = fbAgg?.cardNotes?.[sub.key];
-          const fbLines = fbAgg ? { avoid: fbAgg.avoid, favour: fbAgg.favour, fixes: notes?.fixes, keeps: notes?.keeps } : undefined;
+          const fbLines = fbAgg ? { avoid: fbAgg.avoid, favour: fbAgg.favour, fixes: notes?.fixes, keeps: notes?.keeps, rejections: notes?.rejections } : undefined;
           // charter = the board's visual DNA; older profiles (pre-charter) fall
           // back to their summary so the boards still lead the prompt
           const rules = ruleLines(imageRules, style.key);

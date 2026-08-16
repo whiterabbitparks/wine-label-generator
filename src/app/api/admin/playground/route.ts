@@ -22,7 +22,7 @@ export const maxDuration = 300;
 export async function POST(req: Request) {
   if (!(await requestIsAuthenticated()))
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  let body: { style?: string; vision?: string; count?: number; includeRejected?: boolean };
+  let body: { style?: string; vision?: string; count?: number };
   try {
     body = await req.json();
   } catch {
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
     style.subStyles;
   let charter: string | null = null;
   let weights: Record<string, number> = {};
-  let cardNotes: Record<string, { keeps: string[]; fixes: string[] }> = {};
+  let cardNotes: Record<string, { keeps: string[]; fixes: string[]; rejections: number }> = {};
   let globalFb: { avoid: string[]; favour: string[] } = { avoid: [], favour: [] };
   let refUrls: Record<string, string> = {};
   try {
@@ -57,25 +57,23 @@ export async function POST(req: Request) {
   if (!wantsText(vision)) rules.push(NO_TEXT_RULE);
   if (!wantsCrowd(vision)) rules.push(subjectFocusRule(subjectFrom(vision, {})));
 
-  // BENCH ROTATION (owner 2026-08-15): every round must show NEW reference
-  // cards — the least recently shown come first (never-shown before all),
-  // so successive rounds walk the entire board before any card repeats.
-  // Rejected cards (weight <= 0.55) stay retired unless 'includeRejected'.
-  const entries = variants.map((v) => ({ v, w: weights[v.key] ?? 1, rated: weights[v.key] !== undefined }));
-  const rejectedE = entries.filter((e) => e.w <= 0.55);
-  const activeE = entries.filter((e) => e.w > 0.55);
+  // BENCH ROTATION (owner 2026-08-15): references never lose value — every
+  // card always stays in rotation (removing one = deleting the reference).
+  // Rounds walk the entire board, least recently shown first, before any
+  // card repeats.
+  const entries = variants.map((v) => ({
+    v,
+    w: weights[v.key] ?? 1,
+    rated: weights[v.key] !== undefined || (cardNotes[v.key]?.rejections ?? 0) > 0,
+  }));
   const seen = await getCardSeen(style.key);
-  const order = (list: typeof entries) =>
-    [...list].sort((x, y) => (seen[x.v.key] ?? 0) - (seen[y.v.key] ?? 0) || Math.random() - 0.5);
-  let benchE = body.includeRejected ? order(entries) : order(activeE);
-  if (!benchE.length) benchE = order(entries);
+  const benchE = [...entries].sort((x, y) => (seen[x.v.key] ?? 0) - (seen[y.v.key] ?? 0) || Math.random() - 0.5);
   const picks = Array.from({ length: count }, (_, n) => benchE[n % benchE.length].v);
   await markCardsSeen(style.key, [...new Set(picks.map((p) => p.key))]);
   const benchStats = {
     total: entries.length,
-    active: activeE.length,
-    unrated: activeE.filter((e) => !e.rated).length,
-    rejected: rejectedE.length,
+    approved: entries.filter((e) => e.w > 1).length,
+    unrated: entries.filter((e) => !e.rated).length,
   };
   const provider = providerName();
   const brief: LabelBrief = { vision, data: {}, seed: 0, zones: null };
@@ -83,7 +81,7 @@ export async function POST(req: Request) {
     Array.from({ length: count }, async (_, i) => {
       const sub = { ...picks[i % picks.length] };
       const notes = cardNotes[sub.key];
-      const job = buildStyleJob(style, sub, brief, art, { ...globalFb, fixes: notes?.fixes, keeps: notes?.keeps }, charter, rules.map((r) => r.positive));
+      const job = buildStyleJob(style, sub, brief, art, { ...globalFb, fixes: notes?.fixes, keeps: notes?.keeps, rejections: notes?.rejections }, charter, rules.map((r) => r.positive));
       const ruleNeg = rules.map((r) => r.negative).filter(Boolean).join(", ");
       if (ruleNeg) job.negative = job.negative ? job.negative + ", " + ruleNeg : ruleNeg;
       const started = Date.now();

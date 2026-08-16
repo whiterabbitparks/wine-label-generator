@@ -503,8 +503,7 @@ function PlaygroundTab() {
   const [keeps, setKeeps] = useState<Record<number, string>>({});
   const [fixes, setFixes] = useState<Record<number, string>>({});
   const [history, setHistory] = useState<FeedbackRow[]>([]);
-  const [includeRejected, setIncludeRejected] = useState(false);
-  const [benchStats, setBenchStats] = useState<{ total: number; active: number; unrated: number; rejected: number } | null>(null);
+  const [benchStats, setBenchStats] = useState<{ total: number; approved: number; unrated: number } | null>(null);
 
   const loadHistory = useCallback(async (st: string) => {
     const r = await fetch("/api/admin/feedback?style=" + st).then((r) => r.json());
@@ -525,7 +524,7 @@ function PlaygroundTab() {
       const r = await fetch("/api/admin/playground", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ style, vision: story, count, includeRejected }),
+        body: JSON.stringify({ style, vision: story, count }),
       });
       const body = await r.json();
       if (!r.ok) throw new Error(body.error || String(r.status));
@@ -538,8 +537,7 @@ function PlaygroundTab() {
     setBusy(false);
   }
 
-  async function judge(i: number, verdict: "up" | "down" | "retire") {
-    if (verdict === "retire" && !confirm("Retire this reference style? It will stop appearing for customers until you revive it (review rejected → Approve).")) return;
+  async function judge(i: number, verdict: "up" | "down") {
     const res = results[i];
     if (!res || res.error) return;
     const r = await fetch("/api/admin/feedback", {
@@ -558,7 +556,7 @@ function PlaygroundTab() {
       }),
     });
     if (r.ok) {
-      setJudged({ ...judged, [i]: verdict === "retire" ? "down" : verdict });
+      setJudged({ ...judged, [i]: verdict });
       loadHistory(style);
     }
   }
@@ -567,8 +565,9 @@ function PlaygroundTab() {
     <>
       <p style={{ color: "#6b6a60", marginTop: 14 }}>
         Generate a test batch for one style — one image per art direction — then approve or reject
-        each. Approved directions appear more often in client generations; rejection comments become
-        avoid-rules, approval comments become favour-rules. All automatic from the next generation.
+        each. Approving makes a reference style appear more often. Rejecting never demotes the
+        reference — it tells the next generation with that reference to try a clearly different
+        interpretation. To remove a reference, delete it in Image Refs.
       </p>
 
       <div style={S.card}>
@@ -593,15 +592,11 @@ function PlaygroundTab() {
           <button style={S.btn} onClick={generate} disabled={busy}>
             {busy ? "Generating…" : "Generate test batch"}
           </button>
-          <label style={{ fontSize: 12, color: "#4a4a42", display: "flex", gap: 6, alignItems: "center" }}>
-            <input type="checkbox" checked={includeRejected} onChange={(e) => setIncludeRejected(e.target.checked)} />
-            review retired cards (approve to revive)
-          </label>
         </div>
         {benchStats && (
-          <p style={{ fontSize: 12, color: benchStats.active <= 3 ? "#a06a30" : "#6b6a60", margin: "8px 0 0" }}>
-            {benchStats.total} style cards for this style: {benchStats.active} active ({benchStats.unrated} still unrated) · {benchStats.rejected} retired.
-            {benchStats.active <= 3 && " Few cards remain — upload more references for this style, or review retired cards to revive some."}
+          <p style={{ fontSize: 12, color: benchStats.total <= 3 ? "#a06a30" : "#6b6a60", margin: "8px 0 0" }}>
+            {benchStats.total} style cards in rotation · {benchStats.approved} boosted by approvals · {benchStats.unrated} not yet judged.
+            {benchStats.total <= 3 && " Few cards for this style — upload more references to widen the variety."}
           </p>
         )}
         <label style={S.label}>Test story (optional — a default vineyard scene is used when empty)</label>
@@ -672,14 +667,6 @@ function PlaygroundTab() {
                       disabled={!!judged[i]}
                     >
                       {judged[i] === "down" ? "Rejected ✕" : "👎 Reject"}
-                    </button>
-                    <button
-                      style={{ ...S.linkBtn, marginLeft: "auto", color: "#a03030" }}
-                      onClick={() => judge(i, "retire")}
-                      disabled={!!judged[i]}
-                      title="Rejecting only means this attempt failed — the reference stays. Retire removes the reference style from customers entirely."
-                    >
-                      retire this reference style
                     </button>
                   </div>
                 </>
