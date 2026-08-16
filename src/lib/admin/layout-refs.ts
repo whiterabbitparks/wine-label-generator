@@ -479,6 +479,13 @@ export async function addLayoutFeedback(fb: Omit<LayoutFeedbackDoc, "createdAt">
   const db = await getDb();
   await db.collection("layoutFeedback").insertOne({ ...fb, createdAt: new Date() });
 }
+/** Remove a comp from the approved set (owner 2026-08-16): delete its whole
+    feedback history so its weight returns to neutral 1 — cleanly out of the
+    approved-only pool without counting as a rejection. */
+export async function clearLayoutFeedback(style: string, variant: number): Promise<void> {
+  const db = await getDb();
+  await db.collection("layoutFeedback").deleteMany({ style, variant });
+}
 /** Recent plain-English comments from the layout playground — steer the next
     "Derive layout language" run and are surfaced in admin. */
 export async function layoutComments(style?: string, limit = 12): Promise<{ style: string; verdict: string; comment: string }[]> {

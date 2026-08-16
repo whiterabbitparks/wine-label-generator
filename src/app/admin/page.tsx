@@ -1242,6 +1242,25 @@ function LayoutPlaygroundTab() {
     setBusy(false);
   }
 
+  /* the approved gallery loads itself — always visible on tab open */
+  useEffect(() => {
+    if (engineReady) showApproved();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [engineReady, style]);
+
+  /* Remove = clear the comp's whole feedback history (weight back to the
+     neutral 1) — out of the approved set without counting as a rejection. */
+  async function removeApproved(variant: number) {
+    const r = await fetch("/api/admin/layout-feedback", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ style, variant, verdict: "clear" }),
+    });
+    if (r.ok) {
+      setWeights((await r.json()).weights || {});
+      setApproved((a) => (a ? a.filter((c) => c.variant !== variant) : a));
+    }
+  }
+
   async function verdict(i: number, v: "approve" | "reject") {
     const c = cards[i];
     const r = await fetch("/api/admin/layout-feedback", {
@@ -1270,7 +1289,7 @@ function LayoutPlaygroundTab() {
           {busy ? "Rendering…" : engineReady ? "Render 8 layouts" : "Loading engine…"}
         </button>
         <button style={S.btnGhost} disabled={!engineReady || busy} onClick={showApproved}>
-          Show approved layouts
+          Refresh approved
         </button>
         <label style={{ fontSize: 13, color: "#4a4a42", display: "flex", gap: 6, alignItems: "center" }}>
           <input type="checkbox" checked={reviewAll} onChange={(e) => setReviewAll(e.target.checked)} />
@@ -1296,6 +1315,12 @@ function LayoutPlaygroundTab() {
                   <span style={{ fontSize: 11, color: "#8a887e" }}>comp #{c.variant + 1}</span>
                   {weightBadge(weights[style]?.[c.variant])}
                   <b style={{ color: "#5a6b3b", fontSize: 12 }}>Approved ✓</b>
+                  <button
+                    style={{ ...S.btnGhost, padding: "4px 12px", marginLeft: "auto", color: "#a03030", borderColor: "#a03030" }}
+                    title="Take this layout out of the approved set (its history is cleared — not counted as a rejection)"
+                    onClick={() => removeApproved(c.variant)}>
+                    Remove ✕
+                  </button>
                 </div>
               </div>
             ))}

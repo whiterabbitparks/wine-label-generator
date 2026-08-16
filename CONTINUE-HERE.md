@@ -210,9 +210,13 @@ never stood a chance. Fixes:
   DROPS any violation whose reason describes absence. subjectFocusRule
   check clarified: only EXTRA figures violate; an absent/stylised subject
   does not.
-- Layout Playground gained "Show approved layouts": one green-bordered
-  card per net-approved comp (weight > 1) of the selected style (found by
-  sweeping seeds with weights stripped), like the Fonts approvals view.
+- Layout Playground: the approved gallery LOADS ITSELF on tab open /
+  style change — one green-bordered card per net-approved comp
+  (weight > 1), found by sweeping seeds with weights stripped, like the
+  Fonts approvals view ("Refresh approved" re-runs it). Each card has
+  "Remove ✕" → verdict "clear" (API) → clearLayoutFeedback deletes that
+  comp's WHOLE feedback history (weight back to neutral 1) — out of the
+  approved set without counting as a rejection.
 NOTE: cached customer sets generated before this ship may still show oval
 artwork until regenerated (new story/seed or server restart clears the
 in-memory cache).
