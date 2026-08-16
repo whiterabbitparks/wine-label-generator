@@ -65,20 +65,23 @@ export async function POST(req: Request) {
   const results = await Promise.all(
     Array.from({ length: count }, async (_, i) => {
       const sub = { ...bench[i % bench.length] };
-      const job = buildStyleJob(style, sub, brief, art, undefined, charter);
+      const job = buildStyleJob(style, sub, brief, art, undefined, charter, rules);
       const started = Date.now();
       try {
         let dataUrl = await generateImageWithRetry(job);
         // VERIFIED RULES: check the image against the owner's plain-English
         // rules; a violator is regenerated once with the broken rules strict
         let check = await verifyImage(dataUrl, rules);
-        if (!check.ok) {
-          const strictJob = { ...job, prompt: job.prompt + ' STRICT NON-NEGOTIABLE REQUIREMENTS: ' + check.violations.join('; ') + '.' };
+        for (let attempt = 0; !check.ok && attempt < 2; attempt++) {
+          const strictJob = {
+            ...job,
+            prompt: 'ABSOLUTE REQUIREMENTS — a previous attempt broke these and was rejected: ' + check.violations.join('; ') + '. ' + job.prompt,
+            negative: (job.negative ? job.negative + ', ' : '') + check.violations.join(', '),
+          };
           try {
             dataUrl = await generateImageWithRetry(strictJob);
             check = await verifyImage(dataUrl, rules);
-            check.violations = check.ok ? [] : check.violations;
-          } catch {}
+          } catch { break; }
         }
         let stored = null;
         try {

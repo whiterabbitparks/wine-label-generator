@@ -101,7 +101,8 @@ export function buildStylePrompt(
   brief: LabelBrief,
   art: ArtDirectionConfig,
   fb?: FeedbackLines,
-  charter?: string | null
+  charter?: string | null,
+  checked?: string[]
 ): string {
   const d = brief.data || {};
   const subject = subjectFrom(brief.vision || "", d);
@@ -144,9 +145,12 @@ export function buildStylePrompt(
       "never replicate any existing artwork. "
     : "";
 
+  // verified rules ride at the FRONT of the prompt (image models weight early
+  // tokens most) — the same lines a vision check enforces after generation
+  const musts = checked?.length ? `Non-negotiable requirements: ${checked.join("; ")}. ` : "";
   // admin's template still applies if customised; {focus} is new and optional
   const template = art.template?.includes("{medium}") ? withFocusSlot(art.template) : TEMPLATE_DEFAULT;
-  return lead + template
+  return lead + musts + template
     .replace("{medium}", sub.medium)
     .replace("{subject}", subject)
     .replace("{context}", context)
@@ -177,13 +181,14 @@ export function buildStyleJob(
   brief: LabelBrief,
   art: ArtDirectionConfig,
   fb?: FeedbackLines,
-  charter?: string | null
+  charter?: string | null,
+  checked?: string[]
 ): GenerationJob {
   // negative = global avoid-list + this style's avoid-list + owner-rejected traits
   const negParts = [art.negative, art.perStyle?.[style.key]?.negative?.trim(), ANTI_AI_NEGATIVE].filter(Boolean);
   if (fb?.avoid?.length) negParts.push(fb.avoid.join(", "));
   return {
-    prompt: buildStylePrompt(style, sub, brief, art, fb, charter),
+    prompt: buildStylePrompt(style, sub, brief, art, fb, charter, checked),
     negative: negParts.join(", "),
     reference: brief.reference || null,
     zone: brief.zones?.[style.key] ?? null,

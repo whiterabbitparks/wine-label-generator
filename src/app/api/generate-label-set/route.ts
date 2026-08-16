@@ -125,7 +125,7 @@ export async function POST(req: Request) {
 
   const key = createHash("sha256")
     .update(JSON.stringify([brief, catalog, art, provider,
-      Object.values(profiles).map((p) => p.analyzedAt), feedback]))
+      Object.values(profiles).map((p) => p.analyzedAt), feedback, imageRules]))
     .digest("hex");
 
   // Response is an NDJSON stream: one {type:"progress"} line per completed
@@ -174,18 +174,23 @@ export async function POST(req: Request) {
           const fbLines = fbAgg ? { avoid: fbAgg.avoid, favour: fbAgg.favour } : undefined;
           // charter = the board's visual DNA; older profiles (pre-charter) fall
           // back to their summary so the boards still lead the prompt
-          const job = buildStyleJob(style, sub, brief, art, fbLines, prof?.charter || prof?.summary);
+          const rules = ruleLines(imageRules, style.key);
+          const job = buildStyleJob(style, sub, brief, art, fbLines, prof?.charter || prof?.summary, rules);
           const started = Date.now();
           try {
             let imageDataUrl = await generateImageWithRetry(job);
-            // verified rules: regenerate once when the owner's plain-English
-            // image rules are visibly broken
-            const rules = ruleLines(imageRules, style.key);
+            // verified rules: a violator regenerates once — the broken rules are
+            // PREPENDED (front of prompt = strongest attention) and added to the
+            // avoid-list, not appended at the tail where the model ignores them
             if (rules.length) {
               const check = await verifyImage(imageDataUrl, rules);
               if (!check.ok) {
                 try {
-                  imageDataUrl = await generateImageWithRetry({ ...job, prompt: job.prompt + " STRICT NON-NEGOTIABLE REQUIREMENTS: " + check.violations.join("; ") + "." });
+                  imageDataUrl = await generateImageWithRetry({
+                    ...job,
+                    prompt: "ABSOLUTE REQUIREMENTS — a previous attempt broke these and was rejected: " + check.violations.join("; ") + ". " + job.prompt,
+                    negative: (job.negative ? job.negative + ", " : "") + check.violations.join(", "),
+                  });
                 } catch {}
               }
             }

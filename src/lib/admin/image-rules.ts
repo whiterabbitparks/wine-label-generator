@@ -67,6 +67,8 @@ export async function verifyImage(
             role: "system",
             content:
               "You inspect a generated wine-label artwork against the owner's rules. " +
+              "Rules may be phrased as generation instructions ('always draw X without Y') — " +
+              "treat each as a constraint the IMAGE must satisfy. " +
               "Judge ONLY what is visibly in the image; when uncertain, the rule passes. " +
               "Return strict JSON {\"violations\": [the exact text of each BROKEN rule]} — empty array if all pass.",
           },
