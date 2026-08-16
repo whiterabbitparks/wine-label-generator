@@ -500,7 +500,8 @@ function PlaygroundTab() {
   const [status, setStatus] = useState("");
   const [results, setResults] = useState<PlayResult[]>([]);
   const [judged, setJudged] = useState<Record<number, "up" | "down">>({});
-  const [comments, setComments] = useState<Record<number, string>>({});
+  const [keeps, setKeeps] = useState<Record<number, string>>({});
+  const [fixes, setFixes] = useState<Record<number, string>>({});
   const [history, setHistory] = useState<FeedbackRow[]>([]);
   const [includeRejected, setIncludeRejected] = useState(false);
   const [benchStats, setBenchStats] = useState<{ total: number; active: number; unrated: number; rejected: number } | null>(null);
@@ -518,7 +519,7 @@ function PlaygroundTab() {
     setBusy(true);
     setResults([]);
     setJudged({});
-    setComments({});
+    setKeeps({}); setFixes({});
     setStatus("generating " + count + " test images (LIVE provider — costs money)…");
     try {
       const r = await fetch("/api/admin/playground", {
@@ -537,7 +538,8 @@ function PlaygroundTab() {
     setBusy(false);
   }
 
-  async function judge(i: number, verdict: "up" | "down") {
+  async function judge(i: number, verdict: "up" | "down" | "retire") {
+    if (verdict === "retire" && !confirm("Retire this reference style? It will stop appearing for customers until you revive it (review rejected → Approve).")) return;
     const res = results[i];
     if (!res || res.error) return;
     const r = await fetch("/api/admin/feedback", {
@@ -548,14 +550,15 @@ function PlaygroundTab() {
         variantKey: res.variantKey,
         variantLabel: res.variantLabel,
         verdict,
-        comment: comments[i] || "",
+        keep: keeps[i] || "",
+        fix: fixes[i] || "",
         imageUrl: res.imageUrl,
         prompt: res.prompt,
         story,
       }),
     });
     if (r.ok) {
-      setJudged({ ...judged, [i]: verdict });
+      setJudged({ ...judged, [i]: verdict === "retire" ? "down" : verdict });
       loadHistory(style);
     }
   }
@@ -592,13 +595,13 @@ function PlaygroundTab() {
           </button>
           <label style={{ fontSize: 12, color: "#4a4a42", display: "flex", gap: 6, alignItems: "center" }}>
             <input type="checkbox" checked={includeRejected} onChange={(e) => setIncludeRejected(e.target.checked)} />
-            review rejected cards (approve to revive)
+            review retired cards (approve to revive)
           </label>
         </div>
         {benchStats && (
           <p style={{ fontSize: 12, color: benchStats.active <= 3 ? "#a06a30" : "#6b6a60", margin: "8px 0 0" }}>
-            {benchStats.total} style cards for this style: {benchStats.active} active ({benchStats.unrated} still unrated) · {benchStats.rejected} rejected.
-            {benchStats.active <= 3 && " Few cards remain — upload more references for this style, or review rejected cards to revive some."}
+            {benchStats.total} style cards for this style: {benchStats.active} active ({benchStats.unrated} still unrated) · {benchStats.rejected} retired.
+            {benchStats.active <= 3 && " Few cards remain — upload more references for this style, or review retired cards to revive some."}
           </p>
         )}
         <label style={S.label}>Test story (optional — a default vineyard scene is used when empty)</label>
@@ -639,13 +642,22 @@ function PlaygroundTab() {
                   {res.check && res.check.ok && (
                     <p style={{ fontSize: 11, color: "#5a6b3b", margin: "6px 0 0" }}>✓ passed your image rules</p>
                   )}
-                  <input
-                    style={{ ...S.input, marginTop: 8 }}
-                    placeholder="optional comment (why good / why bad)"
-                    value={comments[i] || ""}
-                    onChange={(e) => setComments({ ...comments, [i]: e.target.value })}
-                    disabled={!!judged[i]}
-                  />
+                  <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                    <input
+                      style={{ ...S.input, fontSize: 12 }}
+                      placeholder="👍 keep: what works (counted even if you reject)"
+                      value={keeps[i] || ""}
+                      onChange={(e) => setKeeps({ ...keeps, [i]: e.target.value })}
+                      disabled={!!judged[i]}
+                    />
+                    <input
+                      style={{ ...S.input, fontSize: 12 }}
+                      placeholder="👎 fix: what to correct (counted even if you approve)"
+                      value={fixes[i] || ""}
+                      onChange={(e) => setFixes({ ...fixes, [i]: e.target.value })}
+                      disabled={!!judged[i]}
+                    />
+                  </div>
                   <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                     <button
                       style={{ ...S.btn, opacity: judged[i] && judged[i] !== "up" ? 0.4 : 1 }}
@@ -660,6 +672,14 @@ function PlaygroundTab() {
                       disabled={!!judged[i]}
                     >
                       {judged[i] === "down" ? "Rejected ✕" : "👎 Reject"}
+                    </button>
+                    <button
+                      style={{ ...S.linkBtn, marginLeft: "auto", color: "#a03030" }}
+                      onClick={() => judge(i, "retire")}
+                      disabled={!!judged[i]}
+                      title="Rejecting only means this attempt failed — the reference stays. Retire removes the reference style from customers entirely."
+                    >
+                      retire this reference style
                     </button>
                   </div>
                 </>

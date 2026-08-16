@@ -171,7 +171,8 @@ export async function POST(req: Request) {
           } else {
             sub = pickSubStyle(style, seed, i);
           }
-          const fbLines = fbAgg ? { avoid: fbAgg.avoid, favour: fbAgg.favour } : undefined;
+          const notes = fbAgg?.cardNotes?.[sub.key];
+          const fbLines = fbAgg ? { avoid: fbAgg.avoid, favour: fbAgg.favour, fixes: notes?.fixes, keeps: notes?.keeps } : undefined;
           // charter = the board's visual DNA; older profiles (pre-charter) fall
           // back to their summary so the boards still lead the prompt
           const rules = ruleLines(imageRules, style.key);

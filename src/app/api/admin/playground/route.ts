@@ -39,12 +39,17 @@ export async function POST(req: Request) {
     style.subStyles;
   let charter: string | null = null;
   let weights: Record<string, number> = {};
+  let cardNotes: Record<string, { keeps: string[]; fixes: string[] }> = {};
+  let globalFb: { avoid: string[]; favour: string[] } = { avoid: [], favour: [] };
   let refUrls: Record<string, string> = {};
   try {
     const prof = (await getProfiles())[style.key];
     if (prof?.variants?.length) variants = prof.variants;
     charter = prof?.charter || prof?.summary || null;
-    weights = (await feedbackAggregates())[style.key]?.weights || {};
+    const agg = (await feedbackAggregates())[style.key];
+    weights = agg?.weights || {};
+    cardNotes = agg?.cardNotes || {};
+    globalFb = { avoid: agg?.avoid || [], favour: agg?.favour || [] };
     refUrls = Object.fromEntries((await listRefs(style.key)).map((r) => [r.id, r.url]));
   } catch {}
   const rules = ruleLines(await getImageRules().catch(() => ({ global: '', perStyle: {} })), style.key);
@@ -75,7 +80,8 @@ export async function POST(req: Request) {
   const results = await Promise.all(
     Array.from({ length: count }, async (_, i) => {
       const sub = { ...picks[i % picks.length] };
-      const job = buildStyleJob(style, sub, brief, art, undefined, charter, rules.map((r) => r.positive));
+      const notes = cardNotes[sub.key];
+      const job = buildStyleJob(style, sub, brief, art, { ...globalFb, fixes: notes?.fixes, keeps: notes?.keeps }, charter, rules.map((r) => r.positive));
       const ruleNeg = rules.map((r) => r.negative).filter(Boolean).join(", ");
       if (ruleNeg) job.negative = job.negative ? job.negative + ", " + ruleNeg : ruleNeg;
       const started = Date.now();

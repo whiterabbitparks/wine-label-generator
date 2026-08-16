@@ -93,6 +93,10 @@ function subjectFrom(vision: string, d: Record<string, string>): string {
 export interface FeedbackLines {
   avoid: string[];
   favour: string[];
+  /** corrections learned from earlier attempts with THIS exact style card */
+  fixes?: string[];
+  /** confirmed strengths of THIS exact style card */
+  keeps?: string[];
 }
 
 export function buildStylePrompt(
@@ -148,9 +152,16 @@ export function buildStylePrompt(
   // verified rules ride at the FRONT of the prompt (image models weight early
   // tokens most) — the same lines a vision check enforces after generation
   const musts = checked?.length ? `Non-negotiable requirements: ${checked.join("; ")}. ` : "";
+  // per-card memory (owner 2026-08-15): corrections ride EARLY in the prompt —
+  // a rejection means the previous attempt failed, so the next one with this
+  // same reference card must try differently
+  const corr = fb?.fixes?.length
+    ? `Corrections from earlier attempts with this exact style (a previous result was rejected — apply these and take a different approach): ${fb.fixes.join("; ")}. `
+    : "";
+  const strengths = fb?.keeps?.length ? ` Confirmed strengths to preserve: ${fb.keeps.join("; ")}.` : "";
   // admin's template still applies if customised; {focus} is new and optional
   const template = art.template?.includes("{medium}") ? withFocusSlot(art.template) : TEMPLATE_DEFAULT;
-  return lead + musts + template
+  return lead + musts + corr + template
     .replace("{medium}", sub.medium)
     .replace("{subject}", subject)
     .replace("{context}", context)
@@ -159,6 +170,7 @@ export function buildStylePrompt(
     .replace("{focus}", focus)
     .replace("{reference}", reference)
     .replace("{rules}", rules)
+    .concat(strengths)
     .concat(inkTreatment)
     .concat(ANALOG)
     .concat(WHITE_BG)
