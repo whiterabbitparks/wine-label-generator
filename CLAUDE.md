@@ -54,6 +54,8 @@ John/Doe), MongoDB Atlas db `8k-labels`.
   copying) — they steer only through the derived style profiles.
 - No split-colour label backgrounds; no dark grounds under artwork.
 - No frames or borders on any layout (2026-08-16).
+- Customers get ONLY admin-selected fonts and ONLY approved layout comps
+  (once any comp is approved for a style) (2026-08-16).
 - Layout hints have ONE source: buildLayoutHints() (layout-refs.ts) — never
   derive layout hints from image profiles or send thinner hints anywhere.
 - Alcohol/volume always "N% Alc. by Vol. / N mL".

@@ -154,6 +154,26 @@ band + orange full ground, flora diagonal accent band, premium charcoal
 variant, artistic near-black riso ground. Text-only comps may still use a
 bold single-colour ground, e.g. the minimalist red panel.)
 
+## 5-LAYOUTS-V3 (2026-08-16) — approved-only fonts & compositions
+
+**Standing rule (owner, 2026-08-16): customers get ONLY selected fonts and
+ONLY approved layouts.**
+- Fonts: buildLayoutHints hero pool = Fonts-playground approvals only (the
+  board-derived pool no longer auto-joins; it only seeds the deck).
+  Secondary/small were already approved-only. A role with no selections
+  falls back to each comp's designed font.
+- Comps: once a style has ANY net-approved comp (weight > 1), every
+  non-approved comp is sent as weight EXACTLY 0 and the engine's
+  pickVariant treats 0 as "never render" (positive weights keep the 0.05
+  floor; all-zero → uniform fallback; no-hints path byte-identical, goldens
+  untouched). With no approvals yet the old soft fade applies.
+- Layout playground "Review every composition" strips ONLY the weights from
+  the live hints so excluded comps can still be audited and re-approved.
+- Layout comments steer the next derivation (palettes/font character on
+  re-analyze) — they do NOT move elements. Moving elements inside a comp =
+  engine code change per comp; owner writes the wish as a comment and asks
+  Claude to implement it.
+
 ## 5-LAYOUTS-V2 (2026-08-16) — one hint source; no frames ever
 
 **Standing rule (owner, 2026-08-16): NO frames or borders on any layout.**

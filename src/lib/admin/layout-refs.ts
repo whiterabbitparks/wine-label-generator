@@ -487,7 +487,9 @@ export async function layoutComments(style?: string, limit = 12): Promise<{ styl
 }
 
 /** Per-style weight arrays for the engine: approvals boost a composition,
-    rejections fade it (engine floors at 0.05 so nothing fully disappears). */
+    rejections fade it (engine floors at 0.05). These are the RAW weights;
+    buildLayoutHints applies the approved-only transform (owner 2026-08-16)
+    before anything reaches the engine. */
 export async function layoutWeights(): Promise<Record<string, number[]>> {
   const db = await getDb();
   const rows = await db
@@ -529,24 +531,30 @@ export async function buildLayoutHints(): Promise<Record<string, unknown>> {
     // switch (null = standard grammar, "upper" = force caps), owner 2026-08-15
     const caseOf = (role: FontRole, fam: string, w: number): CasePref =>
       (casePrefs[style]?.[role] || {})[`${fam}@${w}`.replace(/\./g, "·")] ?? null;
-    // hero: approved ∪ (derived minus net-rejected); secondary/small: approved-only pools
+    // ALL roles are approved-only (owner 2026-08-16: "use only selected
+    // fonts"). The board-derived hero pool no longer auto-joins the customer
+    // pool — derived fonts only seed the Fonts deck for the owner to judge.
+    // No selections for a role → the engine's designed per-comp fonts.
     const heroScores = byRole.hero || {};
     const approvedHero = POOL.filter((f) => (heroScores[`${f.family}@${f.weight}`] ?? 0) > 0)
       .map((f) => [f.family, f.weight, caseOf("hero", f.family, f.weight)] as [string, number, CasePref]);
-    const derivedKept = (prof?.heroFonts || []).filter(
-      (f) => (heroScores[`${f[0]}@${f[1]}`] ?? 0) >= 0 &&
-        !approvedHero.some((a) => a[0] === f[0] && a[1] === f[1])
-    ).map((f) => [f[0], f[1], caseOf("hero", f[0], f[1])] as [string, number, CasePref]);
-    const heroPool = [...approvedHero, ...derivedKept];
-    if (heroPool.length) entry.heroFonts = heroPool;
+    if (approvedHero.length) entry.heroFonts = approvedHero;
     for (const [role, key] of [["secondary", "secondaryFonts"], ["small", "smallFonts"]] as const) {
       const sc = byRole[role] || {};
       const pool = POOL.filter((f) => (sc[`${f.family}@${f.weight}`] ?? 0) > 0)
         .map((f) => [f.family, f.weight, caseOf(role, f.family, f.weight)] as [string, number, CasePref]);
       if (pool.length) entry[key] = pool;
     }
+    // APPROVED-ONLY compositions (owner 2026-08-16): once any comp is
+    // net-approved (weight > 1), every non-approved comp gets EXACTLY 0 —
+    // the engine treats 0 as "never render". With no approvals yet, the
+    // old soft behaviour stays (rejected comps fade, unrated appear).
     const w = weights[style];
-    if (w && w.some((x) => x !== 1)) entry.weights = w;
+    if (w) {
+      const anyApproved = w.some((x) => x > 1);
+      const finalW = anyApproved ? w.map((x) => (x > 1 ? x : 0)) : w;
+      if (finalW.some((x) => x !== 1)) entry.weights = finalW;
+    }
     if (Object.keys(entry).length) hints[style] = entry;
   }
   return hints;

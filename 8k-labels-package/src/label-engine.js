@@ -1072,9 +1072,15 @@ function pickVariant(key,seed,tags){
   const n=Array.isArray(tags)?tags.length:tags;
   const h=STYLE_HINTS[key], w=h&&h.weights;
   if(Array.isArray(w)&&w.length===n){
-    let sum=0;for(let i=0;i<n;i++)sum+=Math.max(0.05,+w[i]||0);
+    // exact 0 = admin excluded this comp entirely (approved-only mode,
+    // owner 2026-08-16); any positive weight keeps the 0.05 floor so
+    // soft-faded comps stay alive. All-zero guard: uniform fallback.
+    const wv=i=>{const x=+w[i]||0;return x<=0?0:Math.max(0.05,x);};
+    let sum=0;for(let i=0;i<n;i++)sum+=wv(i);
+    if(sum<=0)return sPick(seed,(STYLE_SALT[key]||0)*7+1,n);
     let r=sRand(seed,(STYLE_SALT[key]||0)*7+1)*sum;
-    for(let i=0;i<n;i++){r-=Math.max(0.05,+w[i]||0);if(r<=0)return i;}
+    for(let i=0;i<n;i++){r-=wv(i);if(r<=0&&wv(i)>0)return i;}
+    for(let i=n-1;i>=0;i--)if(wv(i)>0)return i;
     return n-1;
   }
   return sPick(seed,(STYLE_SALT[key]||0)*7+1,n);

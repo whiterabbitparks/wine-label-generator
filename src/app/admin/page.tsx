@@ -1129,13 +1129,17 @@ function LayoutPlaygroundTab() {
       };
     };
     // render under the SAME hints customers get — including your feedback
-    // weights, so rejected comps genuinely stop appearing here too
+    // weights, so excluded comps genuinely never appear here either.
+    // "Review every composition" strips the weights (and ONLY the weights)
+    // so zero-weight comps can still be audited and re-approved.
     try {
       const [h, fw] = await Promise.all([
         fetch("/api/layout-hints").then((r) => r.json()),
         fetch("/api/admin/layout-feedback").then((r) => r.json()),
       ]);
-      w.LabelEngine.setStyleHints(h.hints || {});
+      const hints = (h.hints || {}) as Record<string, { weights?: number[] }>;
+      if (reviewAll) for (const k of Object.keys(hints)) delete hints[k]?.weights;
+      w.LabelEngine.setStyleHints(hints);
       setWeights(fw.weights || {});
     } catch {}
     await w.LabelEngine.ensureFonts();
@@ -1171,8 +1175,11 @@ function LayoutPlaygroundTab() {
     <div>
       <p style={{ fontSize: 14, color: "#4a4a42" }}>
         Renders real layouts (free — no image generation) with your current layout language applied.
-        Approve what looks right, reject what doesn&apos;t — approved compositions appear more often
-        for customers, rejected ones fade out. Takes effect immediately.
+        Approve what looks right, reject what doesn&apos;t. Once you have approved any composition
+        for a style, customers see ONLY approved compositions (and only your selected fonts).
+        Takes effect immediately. Comments steer the next colour/font derivation — to move
+        elements around inside a composition, write the change as a comment and ask Claude to
+        apply it in the engine.
       </p>
       <div style={{ display: "flex", gap: 12, alignItems: "center", margin: "14px 0" }}>
         <select value={style} onChange={(e) => setStyle(e.target.value)} style={{ ...S.input, width: 220 }}>
