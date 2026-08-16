@@ -210,13 +210,18 @@ never stood a chance. Fixes:
   DROPS any violation whose reason describes absence. subjectFocusRule
   check clarified: only EXTRA figures violate; an absent/stylised subject
   does not.
-- Layout Playground: the approved gallery LOADS ITSELF on tab open /
-  style change — one green-bordered card per net-approved comp
-  (weight > 1), found by sweeping seeds with weights stripped, like the
-  Fonts approvals view ("Refresh approved" re-runs it). Each card has
-  "Remove ✕" → verdict "clear" (API) → clearLayoutFeedback deletes that
-  comp's WHOLE feedback history (weight back to neutral 1) — out of the
-  approved set without counting as a rejection.
+- Layout Playground: "★ Selected layouts" is its own STYLE DROPDOWN entry
+  (like Fonts) — auto-loads every selected comp of every style, grouped,
+  never mixed with fresh rolls (roll button/reviewAll hidden there). Each
+  card: style name, comp #, "Remove ✕" → verdict "clear" (API) →
+  clearLayoutFeedback deletes that comp's WHOLE feedback history (back to
+  unrated) — out of the selected set without counting as a rejection.
+- **SELECTION IS A STATE, not a vote sum** (owner bug 2026-08-16: comps he
+  approved didn't show as selected — earlier rejections had netted the
+  cumulative weight below 1). layoutWeights now: LAST verdict wins —
+  approve → 2 (selected), reject → 0.4, unrated → 1. Approved-only
+  transform unchanged (weight > 1). Roll cards use layoutBadge
+  (selected / rejected / unrated), not the image-side weightBadge.
 NOTE: cached customer sets generated before this ship may still show oval
 artwork until regenerated (new story/seed or server restart clears the
 in-memory cache).

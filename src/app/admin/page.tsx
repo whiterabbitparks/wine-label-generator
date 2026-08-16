@@ -468,6 +468,18 @@ interface PlayResult {
   error?: string;
 }
 
+/** Layout comp status — selection is a STATE (last verdict wins). */
+function layoutBadge(w: number | undefined) {
+  const v = w ?? 1;
+  const [label, color] =
+    v > 1 ? ["selected", "#5a6b3b"] : v < 1 ? ["rejected", "#a03030"] : ["unrated", "#8a887e"];
+  return (
+    <span style={{ fontSize: 11, border: `1px solid ${color}`, color, borderRadius: 4, padding: "1px 7px" }}>
+      {label}
+    </span>
+  );
+}
+
 /** Learned status of a direction/composition from its feedback weight. */
 function weightBadge(w: number | undefined) {
   const v = w ?? 1;
@@ -1098,7 +1110,10 @@ const PLAY_DATA = {
   wineColorName: "Red", wineType: "Still Wine", alcohol: "12.5", volume: "750",
 };
 
-interface LayoutCard { seed: number; variant: number; svg: string; dead?: number; done?: "approve" | "reject" }
+interface LayoutCard { seed: number; variant: number; svg: string; st?: string; dead?: number; done?: "approve" | "reject" }
+
+/* the "★ Selected" pseudo-style in the Layout Play dropdown (like Fonts) */
+const SEL_STYLE = "__selected";
 
 /* Dead-space flag (owner 2026-08-16): the biggest empty horizontal band on a
    110x80 label rendered WITH artwork (stub injected off-screen), as % of the
@@ -1203,9 +1218,10 @@ function LayoutPlaygroundTab() {
     setCards(next); setBusy(false);
   }
 
-  /* Approved-layouts gallery (owner 2026-08-16): like the Fonts approvals —
-     one card per net-approved comp (weight > 1) of the selected style, found
-     by sweeping seeds with the weights stripped so every comp is reachable. */
+  /* "★ Selected layouts" gallery (owner 2026-08-16): its own dropdown entry
+     like the Fonts tab — every selected comp of EVERY style, grouped, never
+     mixed with fresh rolls. A comp is selected when its LAST verdict is
+     approve. Cards are found by sweeping seeds with weights stripped. */
   async function showApproved() {
     setBusy(true); setApproved(null);
     const w = window as unknown as {
@@ -1222,42 +1238,46 @@ function LayoutPlaygroundTab() {
         fetch("/api/admin/layout-feedback").then((r) => r.json()),
       ]);
       setWeights(fw.weights || {});
-      const wts: number[] = (fw.weights?.[style] || []) as number[];
-      const wanted = wts.map((v, i) => (v > 1 ? i : -1)).filter((i) => i >= 0);
-      if (!wanted.length) { setApproved([]); setBusy(false); return; }
       const hints = (h.hints || {}) as Record<string, { weights?: number[] }>;
       for (const k of Object.keys(hints)) delete hints[k]?.weights;
       w.LabelEngine.setStyleHints(hints);
       await w.LabelEngine.ensureFonts();
-      const found = new Map<number, LayoutCard>();
-      for (let seed = 1; seed <= 4000 && found.size < wanted.length; seed++) {
-        const v = w.LabelEngine.variantFor(style, seed);
-        if (!wanted.includes(v) || found.has(v)) continue;
-        const opts = w.LabelEngine.renderStyleOptions(PLAY_DATA, null, { widthMM: 110, heightMM: 80, seed });
-        const entry = opts.find((o) => o.style === style);
-        if (entry) found.set(v, { seed, variant: v, svg: entry.svg });
+      const all: LayoutCard[] = [];
+      for (const [st] of STYLE_DEFS) {
+        const wts: number[] = (fw.weights?.[st] || []) as number[];
+        const wanted = wts.map((v, i) => (v > 1 ? i : -1)).filter((i) => i >= 0);
+        if (!wanted.length) continue;
+        const found = new Map<number, LayoutCard>();
+        for (let seed = 1; seed <= 4000 && found.size < wanted.length; seed++) {
+          const v = w.LabelEngine.variantFor(st, seed);
+          if (!wanted.includes(v) || found.has(v)) continue;
+          const opts = w.LabelEngine.renderStyleOptions(PLAY_DATA, null, { widthMM: 110, heightMM: 80, seed });
+          const entry = opts.find((o) => o.style === st);
+          if (entry) found.set(v, { seed, variant: v, svg: entry.svg, st });
+        }
+        all.push(...[...found.values()].sort((a, b) => a.variant - b.variant));
       }
-      setApproved([...found.values()].sort((a, b) => a.variant - b.variant));
+      setApproved(all);
     } catch { setApproved([]); }
     setBusy(false);
   }
 
-  /* the approved gallery loads itself — always visible on tab open */
+  /* the gallery loads itself when "★ Selected layouts" is chosen */
   useEffect(() => {
-    if (engineReady) showApproved();
+    if (engineReady && style === SEL_STYLE) showApproved();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [engineReady, style]);
 
-  /* Remove = clear the comp's whole feedback history (weight back to the
-     neutral 1) — out of the approved set without counting as a rejection. */
-  async function removeApproved(variant: number) {
+  /* Remove = clear the comp's whole feedback history (back to unrated) —
+     out of the selected set without counting as a rejection. */
+  async function removeApproved(st: string, variant: number) {
     const r = await fetch("/api/admin/layout-feedback", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ style, variant, verdict: "clear" }),
+      body: JSON.stringify({ style: st, variant, verdict: "clear" }),
     });
     if (r.ok) {
       setWeights((await r.json()).weights || {});
-      setApproved((a) => (a ? a.filter((c) => c.variant !== variant) : a));
+      setApproved((a) => (a ? a.filter((c) => !(c.st === st && c.variant === variant)) : a));
     }
   }
 
@@ -1284,41 +1304,48 @@ function LayoutPlaygroundTab() {
       <div style={{ display: "flex", gap: 12, alignItems: "center", margin: "14px 0" }}>
         <select value={style} onChange={(e) => { setStyle(e.target.value); setApproved(null); }} style={{ ...S.input, width: 220 }}>
           {STYLE_DEFS.map(([k, n]) => <option key={k} value={k}>{n}</option>)}
+          <option value={SEL_STYLE}>★ Selected layouts</option>
         </select>
-        <button style={S.btn} disabled={!engineReady || busy} onClick={roll}>
-          {busy ? "Rendering…" : engineReady ? "Render 8 layouts" : "Loading engine…"}
-        </button>
-        <button style={S.btnGhost} disabled={!engineReady || busy} onClick={showApproved}>
-          Refresh approved
-        </button>
-        <label style={{ fontSize: 13, color: "#4a4a42", display: "flex", gap: 6, alignItems: "center" }}>
-          <input type="checkbox" checked={reviewAll} onChange={(e) => setReviewAll(e.target.checked)} />
-          Review every composition (ignore my feedback)
-        </label>
+        {style !== SEL_STYLE && (
+          <>
+            <button style={S.btn} disabled={!engineReady || busy} onClick={roll}>
+              {busy ? "Rendering…" : engineReady ? "Render 8 layouts" : "Loading engine…"}
+            </button>
+            <label style={{ fontSize: 13, color: "#4a4a42", display: "flex", gap: 6, alignItems: "center" }}>
+              <input type="checkbox" checked={reviewAll} onChange={(e) => setReviewAll(e.target.checked)} />
+              Review every composition (ignore my feedback)
+            </label>
+          </>
+        )}
+        {style === SEL_STYLE && (
+          <button style={S.btnGhost} disabled={!engineReady || busy} onClick={showApproved}>
+            {busy ? "Loading…" : "Refresh"}
+          </button>
+        )}
       </div>
-      {approved && approved.length === 0 && (
+      {style === SEL_STYLE && approved && approved.length === 0 && !busy && (
         <p style={{ fontSize: 13, color: "#8a887e" }}>
-          No approved layouts yet for this style — customers currently see every composition.
-          Approve some below and they become the ONLY ones customers get.
+          No layouts selected yet. Pick a style, render layouts and Approve the ones you want —
+          they collect here, and customers get ONLY these.
         </p>
       )}
-      {approved && approved.length > 0 && (
+      {style === SEL_STYLE && approved && approved.length > 0 && (
         <>
           <h3 style={{ fontSize: 14, margin: "6px 0 10px" }}>
-            Approved layouts — customers see ONLY these {approved.length} composition{approved.length > 1 ? "s" : ""}
+            Selected layouts — customers see ONLY these {approved.length}
           </h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
             {approved.map((c) => (
-              <div key={"ap" + c.variant} style={{ border: "2px solid #5a6b3b", background: "#fff", padding: 8 }}>
+              <div key={"ap" + c.st + c.variant} style={{ border: "2px solid #5a6b3b", background: "#fff", padding: 8 }}>
                 <div style={{ width: "100%" }} dangerouslySetInnerHTML={{ __html: c.svg.replace(/width="110mm" height="80mm"/, 'width="100%" height="auto"') }} />
                 <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center" }}>
+                  <b style={{ fontSize: 12 }}>{(STYLE_DEFS.find(([k]) => k === c.st) || [, c.st])[1]}</b>
                   <span style={{ fontSize: 11, color: "#8a887e" }}>comp #{c.variant + 1}</span>
-                  {weightBadge(weights[style]?.[c.variant])}
-                  <b style={{ color: "#5a6b3b", fontSize: 12 }}>Approved ✓</b>
+                  <b style={{ color: "#5a6b3b", fontSize: 12 }}>Selected ✓</b>
                   <button
                     style={{ ...S.btnGhost, padding: "4px 12px", marginLeft: "auto", color: "#a03030", borderColor: "#a03030" }}
-                    title="Take this layout out of the approved set (its history is cleared — not counted as a rejection)"
-                    onClick={() => removeApproved(c.variant)}>
+                    title="Take this layout out of the selected set (history cleared — not counted as a rejection)"
+                    onClick={() => removeApproved(c.st!, c.variant)}>
                     Remove ✕
                   </button>
                 </div>
@@ -1328,7 +1355,7 @@ function LayoutPlaygroundTab() {
         </>
       )}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        {cards.map((c, i) => (
+        {style !== SEL_STYLE && cards.map((c, i) => (
           <div key={c.seed} style={{ border: "1px solid #bbb", background: "#fff", padding: 8 }}>
             <div style={{ width: "100%" }} dangerouslySetInnerHTML={{ __html: c.svg.replace(/width="110mm" height="80mm"/, 'width="100%" height="auto"') }} />
             {!c.done && (
@@ -1341,7 +1368,7 @@ function LayoutPlaygroundTab() {
             )}
             <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center" }}>
               <span style={{ fontSize: 11, color: "#8a887e" }}>comp #{c.variant + 1}</span>
-              {weightBadge(weights[style]?.[c.variant])}
+              {layoutBadge(weights[style]?.[c.variant])}
               {(c.dead ?? 0) > 20 && (
                 <span title="With artwork, this layout keeps an empty band this tall — consider a comment asking Claude to rebalance it."
                   style={{ fontSize: 11, color: "#a06010", border: "1px solid #a06010", padding: "1px 6px" }}>

@@ -498,24 +498,27 @@ export async function layoutComments(style?: string, limit = 12): Promise<{ styl
     .toArray() as Promise<{ style: string; verdict: string; comment: string }[]>;
 }
 
-/** Per-style weight arrays for the engine: approvals boost a composition,
-    rejections fade it (engine floors at 0.05). These are the RAW weights;
-    buildLayoutHints applies the approved-only transform (owner 2026-08-16)
-    before anything reaches the engine. */
+/** Per-style weight arrays for the engine. SELECTION IS A STATE, not a
+    running vote (owner bug report 2026-08-16: an approve after earlier
+    rejects nets below the bar and silently stays hidden): the comp's LAST
+    verdict wins — approve → 2 (selected), reject → 0.4 (faded in soft
+    mode, 0 in approved-only mode), unrated → 1. buildLayoutHints applies
+    the approved-only transform (weight > 1) before the engine sees it. */
 export async function layoutWeights(): Promise<Record<string, number[]>> {
   const db = await getDb();
   const rows = await db
     .collection<LayoutFeedbackDoc>("layoutFeedback")
     .find({}, { projection: { _id: 0 } })
+    .sort({ createdAt: 1 })
     .toArray();
+  const last: Record<string, Record<number, string>> = {};
+  for (const r of rows) (last[r.style] = last[r.style] || {})[r.variant] = r.verdict;
   const out: Record<string, number[]> = {};
   for (const [style, n] of Object.entries(VARIANT_COUNTS)) {
-    const w = Array(n).fill(1);
-    for (const r of rows) {
-      if (r.style !== style || r.variant < 0 || r.variant >= n) continue;
-      w[r.variant] += r.verdict === "approve" ? 1 : -0.6;
-    }
-    out[style] = w.map((x) => Math.max(0.05, x));
+    out[style] = Array.from({ length: n }, (_, i) => {
+      const v = last[style]?.[i];
+      return v === "approve" ? 2 : v === "reject" ? 0.4 : 1;
+    });
   }
   return out;
 }
