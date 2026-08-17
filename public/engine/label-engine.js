@@ -927,7 +927,11 @@ function resolveArt(body,W,H){
     const d=Math.hypot(c[0]-bcx,c[1]-bcy);
     if(d<bd){bd=d;bx=c[0];by=c[1];}
   }
-  const sF=Math.max(1,bestS*Math.sqrt(ARTFILL));
+  /* PUNK BOOST (owner 2026-08-17): punk artwork renders 30% bigger (linear)
+     in every punk comp — loud is the style; overflow dissolves to white and
+     may bleed. Capped at full-bleed so the rect never exceeds the canvas. */
+  let sF=Math.max(1,bestS*Math.sqrt(ARTFILL))*(p.st==='punk'?1.3:1);
+  sF=Math.min(sF,(W+2*SBLEED)/cw,(H+2*SBLEED)/ch);
   let mw=cw*sF, mh=ch*sF;
   /* keep the final rect inside the bleed bounds (position only) */
   const px=Math.min(Math.max(bx-mw/2,-SBLEED),W+SBLEED-mw);
@@ -1403,7 +1407,7 @@ function sImageBox(styleKey,b,W,H){
      but the best position needs every text ink rect, known only once the
      whole comp has drawn. Emit a token here; sWrap→resolveArt replaces it
      in place, keeping the comp's paint order. */
-  PENDING_ART={src,b};
+  PENDING_ART={src,b,st:styleKey};
   return ART_TOKEN;
 }
 
