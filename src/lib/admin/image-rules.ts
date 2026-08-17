@@ -267,6 +267,37 @@ export const QVEVRI_RULE: CompiledRule = {
     "If the image contains a qvevri or similar large clay wine vessel: does it have handles, ornaments, carvings or any surface decoration, OR is it shown partially buried with its body protruding from the ground? A vessel standing fully above ground with a smooth plain surface is fine. If no such vessel appears, answer no.",
 };
 
+/* Built-in dynamic rule (owner, 2026-08-17): FORMAL LANGUAGE. Outputs drift
+   toward realistic rendering (especially human figures). The gate is the
+   chosen art direction's TECHNIQUE, not the style name: engraving-family
+   techniques carry their own printmaker's realism (allowed, never
+   photographic); everything else — especially punk — must be deliberately
+   STYLIZED: simplified, exaggerated, graphic, cartoonish. */
+export function stylizationRule(styleKey: string, cardText: string): CompiledRule {
+  const realistTech = /engrav|etch|copperplate|burin|stipple|mezzotint|dry.?point|aquatint|intaglio|photoreal/i.test(
+    String(cardText || "")
+  );
+  if (realistTech)
+    return {
+      src: "print realism, never photographic (built-in)",
+      positive:
+        "Figures and faces, if any, are rendered with the print technique's own discipline — engraved line, hatching and tone — never photographic, never like a 3D render.",
+      negative: "photographic face, photorealistic skin, 3D-rendered figure",
+      check:
+        "Do any figures or faces look like a PHOTOGRAPH or 3D render rather than a hand-printed image? Realistic engraved/etched rendering with visible line work is fine — only photographic/CGI likeness counts.",
+    };
+  const punk = styleKey === "punk";
+  return {
+    src: "stylized formal language, no realism (built-in)",
+    positive:
+      `The formal language is deliberately STYLIZED, never realistic: figures, faces, animals and objects are simplified, exaggerated, graphic — bold expressive shapes over anatomical accuracy${punk ? ", with raw cartoonish energy" : ""}. No academic realism, no naturalistic shading, nothing photographic.`,
+    negative:
+      "realistic human figures, academic realism, naturalistic anatomy, realistic shading, photorealism, lifelike portrait",
+    check:
+      "Are human figures, faces or animals rendered in a realistic academic manner — naturalistic proportions, lifelike shading — instead of being deliberately stylized and simplified? If the artwork is an engraving/etching-style print, answer no; only realistic rendering in a non-engraving style counts.",
+  };
+}
+
 /** Does the winemaker's story explicitly ask for lettering? */
 export function wantsText(vision: string | undefined): boolean {
   return /\b(text|letter|lettering|word|writing|written|inscription|sign\s+say|says|saying|glyph|number|digit|numeral|typograph|caption|monogram|slogan|motto)\b/i.test(
