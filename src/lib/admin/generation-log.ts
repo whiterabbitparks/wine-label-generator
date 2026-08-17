@@ -12,6 +12,7 @@ export interface GenerationRecord {
   ok: boolean;
   durationMs: number;
   prompt: string;
+  negative?: string;
   vision: string;
   preset: string;
   hadReference: boolean;
@@ -46,7 +47,11 @@ export async function logGeneration(
     provider: meta.provider,
     ok: meta.ok,
     durationMs: meta.durationMs,
-    prompt: (job.prompt || "").slice(0, 2000),
+    // FULL prompt (owner audit 2026-08-17): the old 2000-char cap cut off the
+    // trailing "House rules"/"Avoid" sections, making the admin's own rules
+    // look absent from every logged prompt — influence must stay visible.
+    prompt: (job.prompt || "").slice(0, 12000),
+    negative: (job.negative || "").slice(0, 3000),
     vision: (job.vision || "").slice(0, 500),
     preset: job.art?.preset || "",
     hadReference: !!job.reference,

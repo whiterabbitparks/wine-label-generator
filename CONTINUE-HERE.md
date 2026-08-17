@@ -257,6 +257,32 @@ ref image files moved there too). KEPT: fontFeedback, settings (hard
 rules / image rules / catalog / case prefs), users, generated-images.
 Boards are empty until the owner re-uploads and re-derives.
 
+## 6-RULES-AUDIT (2026-08-17) — "do the admin rules actually work?"
+
+Owner challenged whether admin rules influence anything. Audit verdict:
+- WORKING: Art Direction global rules/avoid (assembled into every prompt
+  as "House rules:"/"Avoid:"), built-in rules, Hard Rules tab, derived
+  per-card art language, feedback notes. The owner's doubt came from the
+  GENERATIONS LOG capping stored prompts at 2000 chars — the trailing
+  rules sections were cut from view (not from the model). FIXED: log now
+  stores 12000 chars + the negative.
+- WIRED BUT EMPTY: verified Image Rules box (owner never wrote any) and
+  Art Direction per-style rules (doc predates the perStyle revamp).
+- WEAK/INERT: Layout Refs "Rules" — steers ONLY colour/type derivation;
+  owner's saved lines were all geometry topics (engine-enforced anyway).
+  UI note rewritten to say so honestly. Dead letter removed from the
+  owner's extra ("1:1 square" — image size is code).
+- BUG FIXED: derived card fields could smuggle enclosure language back
+  into prompts ("enclosed oval structure" seen live) — deEnclose() in
+  prompt.ts neutralizes enclosure vocabulary in medium/composition/
+  language/charter at prompt time (existing cards fixed, no re-derive).
+
+## 6-UX-JOURNEY (2026-08-17, branch UX_Tasting_Journey) — new customer
+flow preview: Calibration (swipe approved looks) → Sommelier Interview →
+Print House (staged progress) → Tasting Flight (pour away/crown) →
+Winner + tier cards (payments inert). Classic configurator kept at
+/classic on that branch; engine/admin/curation shared. Owner evaluating.
+
 ## 6-QUALITY-ROADMAP (2026-08-17) — owner-approved priority order
 
 Owner milestone review: images still read as AI; layouts lack diversity

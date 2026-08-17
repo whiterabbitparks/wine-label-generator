@@ -165,12 +165,28 @@ export function buildStylePrompt(
   if (fb?.favour?.length) ruleParts.push(`favour: ${fb.favour.join("; ")}`);
   const rules = ruleParts.length ? ` House rules: ${ruleParts.join(". ")}.` : "";
 
+  // ENCLOSURE SCRUB (owner audit 2026-08-17): the vision pass describes what
+  // it SEES on the boards, so derived card fields can smuggle enclosing
+  // shapes back in ("enclosed oval structure") and fight the no-enclosure
+  // rule later in the same prompt. Neutralize enclosure vocabulary in every
+  // derived text — existing cards get fixed without re-deriving.
+  const deEnclose = (t: string | undefined): string =>
+    String(t || "")
+      .replace(/\bencl(?:osed|osing|osure)\b/gi, "open")
+      .replace(/\boval\b/gi, "softly rounded")
+      .replace(/\bmedallion\b/gi, "central motif")
+      .replace(/\bcartouche\b/gi, "central motif")
+      .replace(/\bcameo\b/gi, "central motif")
+      .replace(/\bframed\b/gi, "open")
+      .replace(/\bframes?\b/gi, "composition")
+      .replace(/\bborders?\b/gi, "edges");
+
   // THIS art direction's own rich language LEADS the prompt (owner
   // 2026-08-14: one shared charter made every generation of a style converge
   // on a single look — each direction must speak for itself, so consecutive
   // generations look like different artists from the same board). The charter
   // is only the fallback for pre-language profiles.
-  const language = (sub as { language?: string }).language?.trim() || charter?.trim();
+  const language = deEnclose((sub as { language?: string }).language?.trim() || charter?.trim());
   const lead = language
     ? `Artistic language (follow it exactly): ${language} ` +
       "Render strictly in this artistic language, but invent an original composition — " +
@@ -194,10 +210,10 @@ export function buildStylePrompt(
   // admin's template still applies if customised; {focus} is new and optional
   const template = art.template?.includes("{medium}") ? withFocusSlot(art.template) : TEMPLATE_DEFAULT;
   return lead + musts + corr + template
-    .replace("{medium}", sub.medium)
+    .replace("{medium}", deEnclose(sub.medium))
     .replace("{subject}", subject)
     .replace("{context}", context)
-    .replace("{composition}", sub.composition)
+    .replace("{composition}", deEnclose(sub.composition))
     .replace("{mood}", sub.mood)
     .replace("{focus}", focus)
     .replace("{reference}", reference)
