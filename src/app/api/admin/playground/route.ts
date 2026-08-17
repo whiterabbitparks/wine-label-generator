@@ -8,7 +8,7 @@ import { providerName, generateImageWithRetry } from "@/lib/image-provider";
 import { getImageStorage } from "@/lib/image-storage";
 import { logGeneration } from "@/lib/admin/generation-log";
 import { getProfiles, listRefs, getCardSeen, markCardsSeen } from "@/lib/admin/style-refs";
-import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, NO_BORDER_RULE, NO_ARCHITECTURE_RULE, NEUTRAL_GEO_RULE, geographicRule, wantsBuilding, QVEVRI_RULE, mentionsQvevri, qvevriOverridden, stylizationRule, wantsText, subjectFocusRule, wantsCrowd } from "@/lib/admin/image-rules";
+import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, NO_BORDER_RULE, NO_ARCHITECTURE_RULE, NEUTRAL_GEO_RULE, geographicRule, wantsBuilding, QVEVRI_RULE, mentionsQvevri, qvevriOverridden, stylizationRule, NO_RED_DOMINANCE_RULE, wantsText, subjectFocusRule, wantsCrowd } from "@/lib/admin/image-rules";
 import { subjectFrom } from "@/lib/styles/prompt";
 import { feedbackAggregates } from "@/lib/admin/feedback";
 
@@ -90,6 +90,7 @@ export async function POST(req: Request) {
       // formal language is card-aware (owner 2026-08-17): engraving-family
       // cards keep print realism, everything else demands stylization
       const cardRules = [...rules, stylizationRule(style.key, `${(sub as { language?: string }).language || ""} ${sub.medium || ""}`)];
+      if (style.key !== "punk") cardRules.push(NO_RED_DOMINANCE_RULE); // playground briefs default to the white colour-world
       const job = buildStyleJob(style, sub, brief, art, { ...globalFb, fixes: notes?.fixes, keeps: notes?.keeps, rejections: notes?.rejections }, charter, cardRules.map((r) => r.positive));
       const ruleNeg = cardRules.map((r) => r.negative).filter(Boolean).join(", ");
       if (ruleNeg) job.negative = job.negative ? job.negative + ", " + ruleNeg : ruleNeg;

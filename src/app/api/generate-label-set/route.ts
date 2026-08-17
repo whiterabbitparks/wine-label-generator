@@ -9,7 +9,7 @@ import { logGeneration } from "@/lib/admin/generation-log";
 import { getProfiles, type StyleProfile } from "@/lib/admin/style-refs";
 import { buildLayoutHints } from "@/lib/admin/layout-refs";
 import { feedbackAggregates, weightedPick, type StyleFeedbackAggregate } from "@/lib/admin/feedback";
-import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, NO_BORDER_RULE, NO_ARCHITECTURE_RULE, NEUTRAL_GEO_RULE, geographicRule, wantsBuilding, QVEVRI_RULE, mentionsQvevri, qvevriOverridden, stylizationRule, wantsText, subjectFocusRule, wantsCrowd } from "@/lib/admin/image-rules";
+import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, NO_BORDER_RULE, NO_ARCHITECTURE_RULE, NEUTRAL_GEO_RULE, geographicRule, wantsBuilding, QVEVRI_RULE, mentionsQvevri, qvevriOverridden, stylizationRule, NO_RED_DOMINANCE_RULE, wantsText, subjectFocusRule, wantsCrowd } from "@/lib/admin/image-rules";
 import { subjectFrom } from "@/lib/styles/prompt";
 
 /* POST /api/generate-label-set — the generation orchestrator.
@@ -196,6 +196,8 @@ export async function POST(req: Request) {
           // formal language (owner 2026-08-17): keyed to the CHOSEN card's
           // technique — engraving keeps print realism, everything else stylized
           rules.push(stylizationRule(style.key, `${(sub as { language?: string }).language || ""} ${sub.medium || ""}`));
+          // dominant colour (owner 2026-08-17): red leads only on red products; punk exempt
+          if (style.key !== "punk" && !/red|ros/i.test(brief.data?.wineColorName || "")) rules.push(NO_RED_DOMINANCE_RULE);
           const job = buildStyleJob(style, sub, brief, art, fbLines, prof?.charter || prof?.summary, rules.map((r) => r.positive));
           const ruleNeg = rules.map((r) => r.negative).filter(Boolean).join(", ");
           if (ruleNeg) job.negative = job.negative ? job.negative + ", " + ruleNeg : ruleNeg;

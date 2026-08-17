@@ -175,20 +175,28 @@ export function buildStylePrompt(
     ],
     white: [
       "straw gold, olive and forest green over ivory, umber line work",
-      "pale gold, sage and warm grey with one deep bottle-green note",
-      "honey, tan and moss with dark sepia line work",
+      "pale gold, sage, cornflower and slate blue with warm grey",
+      "honey, ochre, tan and moss with dark sepia line work",
     ],
     rose: [
       "dusty pinks, coral and warm cream with charcoal line work",
       "faded rose, salmon and parchment cut with oxblood",
     ],
-    orange: ["amber, burnt orange and earth browns over warm paper"],
+    orange: ["amber, deep yellow, burnt orange and earth browns over warm paper"],
   };
   const fam = FAMILIES[kind];
   const famPick = fam[Math.abs(((brief.seed || 0) | 0) + kind.length) % fam.length];
-  const punkNote = style.key === "punk" ? " vivid, fearless colour is welcome here, full saturation allowed —" : "";
+  // DOMINANT COLOUR RULE (owner 2026-08-17): red leads only on red products;
+  // whites/ambers lead with yellows, greens, blues, browns and earth tones.
+  // PUNK is exempt from the whole colour-world constraint — free and vivid.
+  const dominance =
+    kind === "red" || kind === "rose"
+      ? " Red and wine tones may lead the palette."
+      : " Yellows, golds, greens, blues, browns and earth tones lead this image — red NEVER dominates (small red accents only).";
   const colourWorld =
-    ` Colour world:${punkNote} use as many colours as the scene wants, chosen like a deliberate printmaker's ink set in harmony: ${famPick}. Colour decisions are intentional — never garish randomness, never dull.`;
+    style.key === "punk"
+      ? " Colour world: free and fearless — any colours, full saturation welcome; deliberate and harmonious, never muddy."
+      : ` Colour world: use as many colours as the scene wants, chosen like a deliberate printmaker's ink set in harmony: ${famPick}.${dominance} Colour decisions are intentional — never garish randomness, never dull.`;
   // rules = global house rules + this style's own rules + owner-approved traits
   const ruleParts = [art.extra?.trim(), art.perStyle?.[style.key]?.rules?.trim()].filter(Boolean);
   if (fb?.favour?.length) ruleParts.push(`favour: ${fb.favour.join("; ")}`);
