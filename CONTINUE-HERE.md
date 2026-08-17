@@ -269,6 +269,18 @@ arrangement is hand-coded engine comps). Agreed plan, in order:
    the marked list (layoutRefs.buildRequest) and hand-builds each as a
    verified engine comp. Plus comp MUTATIONS (parameterized anchoring/
    scale/alignment per comp, verifier-swept) — NOT built yet.
+   **First batch DONE (2026-08-17): traditional comps 7-9** from the
+   owner's 3 marked boards — #7 Jullouville (wide engraving band, serif
+   name between two short divider rules, centred caps data), #8 Perrin
+   (emblem, tracked producer caps, blackletter name + italic appellation
+   + cuvée grouped mid), #9 Pegau (arched producer caps via sArcText —
+   baseline SM+1.25×size or the arc crosses the top margin — crest box,
+   blackletter, red accent line). Traditional pool 6→9 (STYLE_BOXES +
+   HERO_ALTS + VARIANT_COUNTS all updated; counts read from
+   STYLE_BOXES.length now). **Look pinning added with it: withLook sets
+   FORCED_V from the stored look variant (pickV consults it), because
+   pool growth remaps seed→comp and would silently change approved
+   looks.** Goldens re-baselined (mapping shift, intentional).
 3. **Provider A/B test** (Recraft / FLUX style conditioning vs gpt-image)
    — NOT started. Architecture ready via IMAGE_PROVIDER.
 4. **Generated layouts** (LLM proposes comps in engine vocabulary →

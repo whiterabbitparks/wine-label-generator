@@ -1017,7 +1017,10 @@ const STYLE_BOXES={
     [0.38,0.13,0.62,0.36],   // Mittelwihr: emblem over the red sans hero
     [0.30,0.05,0.70,0.44],   // Kirile: portrait top, script + side verticals
     [0.32,0.07,0.68,0.40],   // Olive Tree: airy engraving over tiny caps
-    null],                   // Margaux: framed pure type
+    null,                    // Margaux: framed pure type
+    [0.14,0.07,0.86,0.38],   // Jullouville (owner board 2026-08-17): wide engraving band
+    [0.36,0.05,0.64,0.29],   // Perrin: emblem over tracked caps + blackletter
+    [0.32,0.13,0.68,0.44]],  // Pegau: crest under the arched producer
   contemporaryX:[
     [0.28,0.16,0.72,0.60],   // Gotes: big motif, data bottom-left
     [0.34,0.05,0.66,0.34],   // ñor: small motif over the giant lowercase hero
@@ -1067,7 +1070,7 @@ function zoneFromBox(b){
 const C_POOL=[['contemporaryX',6],['flora',5],['premium',5],['minimalist',6]];
 const C_TOTAL=22;
 function cVariantFor(seed){
-  let idx=pickVariant('contemporary',seed,C_TOTAL);
+  let idx=pickV('contemporary',seed,C_TOTAL);
   for(const [k,n] of C_POOL){if(idx<n)return {key:k,local:idx};idx-=n;}
   return {key:'contemporaryX',local:0};
 }
@@ -1227,7 +1230,10 @@ const HERO_ALTS={
     [[SF.archivo,800],[SF.bebas,400],[SF.barlowc,700]],
     [[F.greatVibes,400],[F.italianno,400],[F.mrsSaint,400],[F.pinyon,400]],
     [[SF.ebg,500],[F.cinzel,500],[F.marcellus,400]],
-    [[SF.playfair,700],[F.cinzel,600],[F.prata,400]]],
+    [[SF.playfair,700],[F.cinzel,600],[F.prata,400]],
+    [[SF.playfair,600],[F.prata,400],[SF.tinos,700]],
+    [[SF.grenze,600],[F.manufacturing,400]],
+    [[SF.grenze,600],[F.manufacturing,400]]],
   contemporaryX:[
     [[SF.archivo,800],[SF.anton,400],[SF.bebas,400]],
     [[SF.fraunces,600],[SF.playfair,700],[F.prata,400]],
@@ -1380,7 +1386,7 @@ function styleTraditional(d,order,seed,twMM,thMM){
   const TPAL=[['#FFFFFF','#D71920','#26221E','#5D564C'],['#F6F0DE','#8E2430','#26221E','#5D564C'],['#F2E9D2','#6B4A2F','#26221E','#5D564C'],['#F4EFE0','#3E5C76','#26221E','#5D564C']];
   const [BG,ACC,INK,SUB]=palPick('traditional','traditional',seed,TPAL,function(p){return [p.bg,p.acc||p.ink,p.ink,p.sub];});
   const cx=W/2, cW=W-2*SM;
-  const variant=pickVariant('traditional',seed,6);
+  const variant=pickV('traditional',seed,STYLE_BOXES.traditional.length);
   const HP=heroPick(seed,'traditional',variant,'traditional');
   const F2=rolePick(seed,'traditional','traditional','secondary'),F3=rolePick(seed,'traditional','traditional','small');
   const BOX=STYLE_BOXES['traditional'][variant];
@@ -1444,6 +1450,47 @@ function styleTraditional(d,order,seed,twMM,thMM){
       {str:[f.special,desc,alc].filter(Boolean).join(' \u00b7 '),size:H*0.022,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-4,H*0.007,'c',cW*0.8);
     body+=st.svg;
     body+=fitHero(f.wine,cx,BOX[3]*H+MINGAP,st.topY,{size:H*0.050,maxW:cW*0.9,f:HP?HP[0]:(EG),w:HP?HP[1]:(500),fill:INK,caps:capsFor(HP,true),tr:0.42}).svg;
+  }else if(variant===6){ // Jullouville board (owner 2026-08-17): wide engraving
+                         // band over a serif name between two short rules
+    body+=sImageBox('traditional',BOX,W,H);
+    const st=stackUp([
+      {str:[f.classification,f.vintage].filter(Boolean).join(' '),size:H*0.046,f:F2?F2[0]:(EG),w:F2?F2[1]:(600),fill:INK,caps:capsFor(F2,true),tr:0.10},
+      {str:f.appellation,size:H*0.030,f:F2?F2[0]:(EG),w:F2?F2[1]:(600),fill:INK,caps:capsFor(F2,true),tr:0.16},
+      {str:[f.region,f.special].filter(Boolean).join(' · '),size:H*0.026,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:INK,caps:capsFor(F3,false)},
+      {str:[f.grape,f.producer].filter(Boolean).join(' · '),size:H*0.024,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)},
+      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.023,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-4,H*0.007,'c',cW*0.9);
+    body+=st.svg;
+    const hero6=fitHero(f.wine,cx,BOX[3]*H+MINGAP+H*0.024,st.topY-H*0.024,{size:H*0.105,maxW:cW*0.9,f:HP?HP[0]:(PF),w:HP?HP[1]:(600),fill:INK,caps:capsFor(HP,false)});
+    body+=hero6.svg;
+    if(hero6.svg&&hero6.top!=null){ // short divider rules (not frames) flanking the name
+      const rx1=cx-cW*0.45, rx2=cx+cW*0.45;
+      body+=`<line x1="${rx1.toFixed(1)}" y1="${(hero6.top-H*0.02).toFixed(1)}" x2="${rx2.toFixed(1)}" y2="${(hero6.top-H*0.02).toFixed(1)}" stroke="${INK}" stroke-width="1.6"/>`;
+      body+=`<line x1="${rx1.toFixed(1)}" y1="${(hero6.bottom+H*0.02).toFixed(1)}" x2="${rx2.toFixed(1)}" y2="${(hero6.bottom+H*0.02).toFixed(1)}" stroke="${INK}" stroke-width="1.6"/>`;
+    }
+  }else if(variant===7){ // Perrin board: emblem, tracked producer caps, then
+                         // name + italic appellation + cuvée grouped mid
+    body+=sImageBox('traditional',BOX,W,H);
+    body+=sFlow([
+      {str:f.producer,size:H*0.042,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,true),tr:0.24,maxW:cW*0.8,gap:H*0.014},
+      {str:f.wine,size:H*0.115,f:HP?HP[0]:(SF.grenze),w:HP?HP[1]:(600),fill:ACC,caps:capsFor(HP,false),maxW:cW*0.94,gap:H*0.012},
+      {str:f.appellation,size:H*0.040,f:F2?F2[0]:(CI),w:F2?F2[1]:(600),fill:ACC,ital:true,caps:capsFor(F2,false),maxW:cW*0.8,gap:H*0.012},
+      {str:[f.special,f.grape].filter(Boolean).join(' · '),size:H*0.048,f:F2?F2[0]:(CI),w:F2?F2[1]:(600),fill:INK,ital:true,caps:capsFor(F2,false),maxW:cW*0.8,gap:0}],cx,BOX[3]*H+MINGAP+H*0.006,'c').svg;
+    body+=stackUp([
+      {str:[f.region,f.vintage].filter(Boolean).join(', '),size:H*0.026,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:INK,ital:true,caps:capsFor(F3,false)},
+      {str:f.classification,size:H*0.024,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:INK,caps:capsFor(F3,true),tr:0.12},
+      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.023,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-4,H*0.008,'c',cW*0.9).svg;
+  }else if(variant===8){ // Pegau board: arched producer caps over the crest,
+                         // blackletter name, red accent lines
+    const asz8=Math.max(H*0.042,MIN7), R8=cW*0.42;
+    body+=sArcText(f.producer,cx,SM+asz8*1.25,R8,{f:F3?F3[0]:(EG),w:F3?F3[1]:(500),size:asz8,fill:INK,tr:0.30,caps:true});
+    body+=sImageBox('traditional',BOX,W,H);
+    const st8=stackUp([
+      {str:f.appellation,size:H*0.032,f:F2?F2[0]:(EG),w:F2?F2[1]:(600),fill:INK,caps:capsFor(F2,true),tr:0.14},
+      {str:[f.special,f.vintage].filter(Boolean).join(' · '),size:H*0.028,f:F2?F2[0]:(EG),w:F2?F2[1]:(500),fill:ACC,caps:capsFor(F2,false)},
+      {str:[f.grape,f.region,f.classification].filter(Boolean).join(' · '),size:H*0.024,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:INK,caps:capsFor(F3,false)},
+      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.023,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-4,H*0.008,'c',cW*0.9);
+    body+=st8.svg;
+    body+=fitHero(f.wine,cx,BOX[3]*H+MINGAP,st8.topY,{size:H*0.115,maxW:cW*0.94,f:HP?HP[0]:(SF.grenze),w:HP?HP[1]:(600),fill:ACC,caps:capsFor(HP,false)}).svg;
   }else{ // Margaux/Ausone boards: pure centred type
     body+=sFlow([
       {str:f.vintage,size:H*0.045,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:INK,maxW:cW*0.3,gap:H*0.02,pre:H*0.06,caps:capsFor(F3,false)},
@@ -1764,7 +1811,7 @@ function stylePunk(f,W,H,seed,twMM,thMM){
   const APAL=[['#F3EFE4','#171512','#C22A1C'],['#DA3D1C','#F8EFE0','#171512'],['#F2BFC9','#171512','#C22A1C'],['#EFE9DA','#171512','#E8542F']];
   const [BG,INK,AC]=palPick('punk','punk',seed,APAL,function(p){return [p.bg,p.ink,p.acc||p.sub];});
   const cx=W/2, cW=W-2*SM;
-  const variant=pickVariant('punk',seed,6);
+  const variant=pickV('punk',seed,STYLE_BOXES.punk.length);
   const HP=heroPick(seed,'punk',variant,'punk');
   const F2=rolePick(seed,'punk','punk','secondary'),F3=rolePick(seed,'punk','punk','small');
   const BOX=STYLE_BOXES['punk'][variant];
@@ -1863,6 +1910,14 @@ const STYLE_LIST=[
    card byte-for-byte no matter how the pools or boards change later.
    Without looks the previous behaviour (weights / soft mode) stands, and
    without hints at all the path is byte-identical (goldens). */
+/* FORCED_V pins the comp index while a look renders: pool sizes may GROW
+   after a look was approved (board→comp builds), which would remap the
+   look's seed onto a different comp — the stored variant wins instead. */
+let FORCED_V=null;
+function pickV(key,seed,n){
+  if(FORCED_V!=null&&FORCED_V>=0&&FORCED_V<n)return FORCED_V;
+  return pickVariant(key,seed,n);
+}
 function withLook(key,seed,fn){
   const h=STYLE_HINTS[key], looks=h&&h.looks;
   if(!Array.isArray(looks)||!looks.length)return fn(seed);
@@ -1873,7 +1928,8 @@ function withLook(key,seed,fn){
   });
   const prev=STYLE_HINTS[key];
   STYLE_HINTS[key]=frozen;
-  try{return fn(+L.seed||0);}finally{STYLE_HINTS[key]=prev;}
+  FORCED_V=isFinite(+L.variant)?+L.variant:null;
+  try{return fn(+L.seed||0);}finally{STYLE_HINTS[key]=prev;FORCED_V=null;}
 }
 function renderStyleOptions(d,order,opts){
   opts=opts||{}; const seed=opts.seed|0;

@@ -73,7 +73,7 @@ export interface LayoutRules {
 /** Variant counts per public style — MUST match the engine's pools
     (traditional 6; contemporary = 6+5+5+6 merged; punk 6). */
 export const VARIANT_COUNTS: Record<string, number> = {
-  traditional: 6,
+  traditional: 9, // +3 board→comp builds 2026-08-17 (Jullouville/Perrin/Pegau)
   contemporary: 22,
   punk: 6,
 };
