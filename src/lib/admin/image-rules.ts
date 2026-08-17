@@ -267,6 +267,19 @@ export const QVEVRI_RULE: CompiledRule = {
     "If the image contains a qvevri or similar large clay wine vessel: does it have handles, ornaments, carvings or any surface decoration, OR is it shown partially buried with its body protruding from the ground? A vessel standing fully above ground with a smooth plain surface is fine. If no such vessel appears, answer no.",
 };
 
+/* Built-in rule (owner, 2026-08-17): DOMINANT COLOUR. Red may lead the
+   palette only on red products; white/amber products lead with yellows,
+   greens, blues, browns and earth tones. Pushed for traditional and
+   contemporary only — punk is exempt — and only for non-red products. */
+export const NO_RED_DOMINANCE_RULE: CompiledRule = {
+  src: "red never dominates a non-red product's image (built-in)",
+  positive:
+    "The palette is led by yellows, golds, greens, blues, browns and earth tones; red appears only as a small accent, never as the dominant colour of the image.",
+  negative: "red-dominated palette, overall crimson wash, predominantly red image",
+  check:
+    "Is RED clearly the DOMINANT colour of this image overall — a red-led palette or red wash? Small red accents or details do not count; only an image whose overall colour impression is red.",
+};
+
 /* Built-in dynamic rule (owner, 2026-08-17): FORMAL LANGUAGE. Outputs drift
    toward realistic rendering (especially human figures). The gate is the
    chosen art direction's TECHNIQUE, not the style name: engraving-family
