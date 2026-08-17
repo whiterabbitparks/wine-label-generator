@@ -9,7 +9,7 @@ import { logGeneration } from "@/lib/admin/generation-log";
 import { getProfiles, type StyleProfile } from "@/lib/admin/style-refs";
 import { buildLayoutHints } from "@/lib/admin/layout-refs";
 import { feedbackAggregates, weightedPick, type StyleFeedbackAggregate } from "@/lib/admin/feedback";
-import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, NO_BORDER_RULE, NO_ARCHITECTURE_RULE, NEUTRAL_GEO_RULE, geographicRule, wantsBuilding, QVEVRI_RULE, mentionsQvevri, qvevriOverridden, wantsText, subjectFocusRule, wantsCrowd } from "@/lib/admin/image-rules";
+import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, NO_BORDER_RULE, NO_ARCHITECTURE_RULE, NEUTRAL_GEO_RULE, geographicRule, wantsBuilding, QVEVRI_RULE, mentionsQvevri, qvevriOverridden, stylizationRule, wantsText, subjectFocusRule, wantsCrowd } from "@/lib/admin/image-rules";
 import { subjectFrom } from "@/lib/styles/prompt";
 
 /* POST /api/generate-label-set — the generation orchestrator.
@@ -193,6 +193,9 @@ export async function POST(req: Request) {
           if (mentionsQvevri(brief.vision) && !qvevriOverridden(brief.vision)) rules.push(QVEVRI_RULE);
           const place = [brief.data?.region, brief.data?.country].filter(Boolean).join(", ");
           rules.push(place ? geographicRule(place) : NEUTRAL_GEO_RULE);
+          // formal language (owner 2026-08-17): keyed to the CHOSEN card's
+          // technique — engraving keeps print realism, everything else stylized
+          rules.push(stylizationRule(style.key, `${(sub as { language?: string }).language || ""} ${sub.medium || ""}`));
           const job = buildStyleJob(style, sub, brief, art, fbLines, prof?.charter || prof?.summary, rules.map((r) => r.positive));
           const ruleNeg = rules.map((r) => r.negative).filter(Boolean).join(", ");
           if (ruleNeg) job.negative = job.negative ? job.negative + ", " + ruleNeg : ruleNeg;

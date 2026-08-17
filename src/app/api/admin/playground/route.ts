@@ -8,7 +8,7 @@ import { providerName, generateImageWithRetry } from "@/lib/image-provider";
 import { getImageStorage } from "@/lib/image-storage";
 import { logGeneration } from "@/lib/admin/generation-log";
 import { getProfiles, listRefs, getCardSeen, markCardsSeen } from "@/lib/admin/style-refs";
-import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, NO_BORDER_RULE, NO_ARCHITECTURE_RULE, NEUTRAL_GEO_RULE, geographicRule, wantsBuilding, QVEVRI_RULE, mentionsQvevri, qvevriOverridden, wantsText, subjectFocusRule, wantsCrowd } from "@/lib/admin/image-rules";
+import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, NO_BORDER_RULE, NO_ARCHITECTURE_RULE, NEUTRAL_GEO_RULE, geographicRule, wantsBuilding, QVEVRI_RULE, mentionsQvevri, qvevriOverridden, stylizationRule, wantsText, subjectFocusRule, wantsCrowd } from "@/lib/admin/image-rules";
 import { subjectFrom } from "@/lib/styles/prompt";
 import { feedbackAggregates } from "@/lib/admin/feedback";
 
@@ -87,15 +87,18 @@ export async function POST(req: Request) {
     Array.from({ length: count }, async (_, i) => {
       const sub = { ...picks[i % picks.length] };
       const notes = cardNotes[sub.key];
-      const job = buildStyleJob(style, sub, brief, art, { ...globalFb, fixes: notes?.fixes, keeps: notes?.keeps, rejections: notes?.rejections }, charter, rules.map((r) => r.positive));
-      const ruleNeg = rules.map((r) => r.negative).filter(Boolean).join(", ");
+      // formal language is card-aware (owner 2026-08-17): engraving-family
+      // cards keep print realism, everything else demands stylization
+      const cardRules = [...rules, stylizationRule(style.key, `${(sub as { language?: string }).language || ""} ${sub.medium || ""}`)];
+      const job = buildStyleJob(style, sub, brief, art, { ...globalFb, fixes: notes?.fixes, keeps: notes?.keeps, rejections: notes?.rejections }, charter, cardRules.map((r) => r.positive));
+      const ruleNeg = cardRules.map((r) => r.negative).filter(Boolean).join(", ");
       if (ruleNeg) job.negative = job.negative ? job.negative + ", " + ruleNeg : ruleNeg;
       const started = Date.now();
       try {
         let dataUrl = await generateImageWithRetry(job);
         // VERIFIED RULES: check the image against the owner's plain-English
         // rules; a violator is regenerated once with the broken rules strict
-        let check = await verifyImage(dataUrl, rules);
+        let check = await verifyImage(dataUrl, cardRules);
         for (let attempt = 0; !check.ok && attempt < 2; attempt++) {
           const strictJob = {
             ...job,
@@ -104,7 +107,7 @@ export async function POST(req: Request) {
           };
           try {
             dataUrl = await generateImageWithRetry(strictJob);
-            check = await verifyImage(dataUrl, rules);
+            check = await verifyImage(dataUrl, cardRules);
           } catch { break; }
         }
         let stored = null;
