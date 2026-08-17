@@ -49,7 +49,6 @@ const REF={
   vintage:       {x:0.3850,y:0.9050,w:0.2300,h:0.0620, sz:0.0400, wt:400, a:'center'},         // bottom row, centre, larger
   alcVol:        {x:0.0000,y:0.9150,w:1.0000,h:0.0480, sz:0.0250, wt:400, a:'left', grp:1}     // Alc. left / Vol. right flank the vintage
 };
-const LOGO={x:0.8300,y:0.0380,w:0.1600,h:0.0560};   // compact upload-logo, top-right corner
 const REF_RATIO=(768.3-54.6)/(618.9-46.8);          // content-box aspect from the reference PDF
 
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -79,7 +78,7 @@ function ensureContainers(){
 const RH_MM=80;                              // the reference content maps to ~80 mm of label height
 function computeLayout(W,H){
   W=Math.max(40,+W||110); H=Math.max(30,+H||80);
-  const mm=f=>f*RH_MM, top={}, logoBottom=mm(LOGO.y+LOGO.h);
+  const mm=f=>f*RH_MM, top={};
   top.producer=mm(REF.producer.y);                                           // header: fixed mm from the top
   ['vintage','regionCountry','special','classification','attributes','alcVol']
     .forEach(fid=>{top[fid]=H-(RH_MM-mm(REF[fid].y));});                      // footer: fixed mm from the bottom
@@ -87,10 +86,10 @@ function computeLayout(W,H){
   top.grape=footerTop-mm(REF.regionCountry.y-(REF.grape.y+REF.grape.h))-mm(REF.grape.h);
   top.appellation=top.grape-mm(REF.grape.y-(REF.appellation.y+REF.appellation.h))-mm(REF.appellation.h);
   top.wineName=top.appellation-mm(REF.appellation.y-(REF.wineName.y+REF.wineName.h))-mm(REF.wineName.h);
-  const minWine=logoBottom+mm(0.02);
+  const minWine=mm(REF.producer.y+REF.producer.h)+mm(0.02);   // never ride over the producer line
   if(top.wineName<minWine){const d=minWine-top.wineName;top.wineName+=d;top.appellation+=d;top.grape+=d;}
   const boxes={}; order.forEach(fid=>{const r=REF[fid];boxes[fid]={x:r.x,w:r.w,a:r.a,wt:r.wt,y:top[fid]/H,h:mm(r.h)/H,sz:mm(r.sz)/H};});
-  return {boxes, logo:{x:LOGO.x,y:mm(LOGO.y)/H,w:LOGO.w,h:mm(LOGO.h)/H}};
+  return {boxes};
 }
 function attrSelectsHTML(){var v=FIELDS.attributes.value;
   return ATTR_PARTS.map(function(p){return '<span class="le2-lbl">'+ATTR_LBL[p.k]+'</span><select class="le2-sel'+(isNA(v[p.k])?' na':'')+'" data-attr="'+p.k+'">'
@@ -104,9 +103,8 @@ function render(){
   if(!ensureContainers()) return;
   const st=stageEl(); if(!st) return; const dm=dims();
   st.style.aspectRatio=(dm.W/dm.H).toFixed(4);                               // preview reshapes to the real label proportions
-  const L=computeLayout(dm.W,dm.H), lg=L.logo, pr=L.boxes.producer;
-  let html='<div class="le2-logo" style="left:'+(lg.x*100)+'%;top:'+(lg.y*100)+'%;width:'+(lg.w*100)+'%;height:'+(lg.h*100).toFixed(3)+'%;">'
-          +'<button type="button" class="le2-upload"><span class="ar">↑</span> logo</button></div>';   // compact corner control; producer line runs full-centre (typewriter sheet)
+  const L=computeLayout(dm.W,dm.H);
+  let html='';   // no logo upload on the typewriter sheet (owner 2026-08-17)
   order.forEach(function(fid){var r=L.boxes[fid], grp=REF[fid].grp;
     var inner=(fid==='attributes')?attrSelectsHTML():(fid==='alcVol')?alcGroupHTML()
       :'<input class="le2-inp" data-zone-fid="'+fid+'" placeholder="'+esc(FIELDS[fid].ph)+'" value="'+esc(FIELDS[fid].value)+'">';
