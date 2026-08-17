@@ -276,7 +276,7 @@ async function ensureFonts(){
   if(typeof document!=='undefined'&&!document.getElementById('__lblfonts')){   // load the faces at the page level so inline-SVG text uses them
     const st=document.createElement('style'); st.id='__lblfonts'; st.textContent="@import url('"+FONTS_URL+"');"; document.head.appendChild(st);
   }
-  const specs=["600 40px 'Cormorant Garamond'","400 40px 'EB Garamond'","500 40px 'EB Garamond'","italic 400 40px 'EB Garamond'",
+  const specs=["600 40px 'Cormorant Garamond'","italic 500 40px 'Cormorant Garamond'","400 40px 'EB Garamond'","500 40px 'EB Garamond'","italic 400 40px 'EB Garamond'",
     "500 40px 'Cinzel'","600 40px 'Cinzel'","700 40px 'Playfair Display'","600 40px 'Playfair Display'","400 40px 'Pinyon Script'",
     "400 40px 'Marcellus'","400 40px 'Prata'","400 40px 'Ballet'","400 40px 'Mrs Saint Delafield'",
     "400 40px 'Great Vibes'","400 40px 'MonteCarlo'","400 40px 'Estonia'","400 40px 'Felipa'","400 40px 'Italianno'",
@@ -1177,48 +1177,133 @@ function pickVariant(key,seed,tags){
   }
   return sPick(seed,(STYLE_SALT[key]||0)*7+1,n);
 }
-/* BACKGROUND COLOUR RULE (owner 2026-08-16): label grounds are white/warm
-   tones for EVERY wine; red/pink grounds are additionally allowed ONLY for
-   red wines. Cool or dark grounds never pass. Applied inside palPick so it
-   governs built-ins, board palettes and approved looks alike; when a list
-   has no allowed entry, the seeded pick keeps its inks on a forced
-   warm-white ground. WINE_RED is set per render from wineColorName. */
-let WINE_RED=false;
+/* COLOUR GAMUT (owner 2026-08-17, supersedes the 2026-08-16 ground rule).
+   GROUNDS under artwork are always LIGHT (multiply ink dies on dark):
+     red/rosé wines → white, warm papers, pinks; every other wine → white
+     and warm only (never pink). Bold/dark grounds exist ONLY on palette
+     entries marked panel:true — those force a text-only comp: red
+     products may take red/dark-red/black panels; white products black/
+     orange/deep-yellow/green/blue/tan/brown panels.
+   ELEMENTS (ink/accents/sub): red wine → blacks/greys + reds/dark reds;
+     white wine → blacks/greys + warm & earth tones + greens. Off-gamut
+     elements are RECOLOURED (hue clamped to the nearest allowed range,
+     keeping their lightness/saturation) so board palettes keep their
+     character instead of being dropped. PUNK ONLY: the single most
+     saturated off-gamut element stays untouched — one free vivid accent
+     (owner ruling 2026-08-17). WINE_KIND set per render. */
+let WINE_KIND='red';
 function palBg(p){if(!p)return null;if(typeof p.bg==='string')return p.bg;if(Array.isArray(p))return p[0];return null;}
-function bgAllowed(hex){
-  const m=/^#?([0-9a-f]{6})$/i.exec(String(hex||''));
-  if(!m)return true;
+function hslOf(hex){
+  const m=/^#?([0-9a-f]{6})$/i.exec(String(hex||'')); if(!m)return null;
   const n=parseInt(m[1],16), r=(n>>16)&255, g=(n>>8)&255, b=n&255;
   const mx=Math.max(r,g,b), mn=Math.min(r,g,b), L=(mx+mn)/510;
   const S=mx===mn?0:(mx-mn)/(255-Math.abs(mx+mn-255));
   let H=0;
   if(mx!==mn){
-    if(mx===r)H=60*(((g-b)/(mx-mn))%6);
+    if(mx===r)H=60*(((g-b)/(mx-mn))+(g<b?6:0));
     else if(mx===g)H=60*((b-r)/(mx-mn)+2);
     else H=60*((r-g)/(mx-mn)+4);
-    if(H<0)H+=360;
   }
-  const whiteWarm=L>=0.78&&(S<=0.28||(H>=15&&H<=70));
-  const redPink=(H>=335||H<=25)&&S>=0.15;
-  return whiteWarm||(WINE_RED&&redPink);
+  return {H:((H%360)+360)%360,S,L};
+}
+function hslHex(H,S,L){
+  H=((H%360)+360)%360;
+  const C=(1-Math.abs(2*L-1))*S, X=C*(1-Math.abs(((H/60)%2)-1)), m=L-C/2;
+  let r=0,g=0,b=0;
+  if(H<60){r=C;g=X;}else if(H<120){r=X;g=C;}else if(H<180){g=C;b=X;}
+  else if(H<240){g=X;b=C;}else if(H<300){r=X;b=C;}else{r=C;b=X;}
+  const q=v=>Math.round((v+m)*255).toString(16).padStart(2,'0');
+  return ('#'+q(r)+q(g)+q(b)).toUpperCase();
+}
+/* allowed element hue ranges per wine kind ([from,to] on a 0-360 circle;
+   near-neutrals — S below 0.14 — always pass as blacks/greys) */
+function elemRanges(){
+  return (WINE_KIND==='red'||WINE_KIND==='rose')
+    ? [[335,385]]                       // reds, dark reds, pinks
+    : [[15,170]];                       // warm, earth, gold, green
+}
+function inRanges(H,ranges){
+  for(const [a,b]of ranges){if(H>=a&&H<=b)return true;if(b>360&&H+360>=a&&H+360<=b)return true;}
+  return false;
+}
+function elementOK(hex){
+  const c=hslOf(hex); if(!c)return true;
+  if(c.S<=0.14||c.L<=0.16||c.L>=0.94)return true;   // blacks/greys/paper
+  return inRanges(c.H,elemRanges());
+}
+function recolour(hex){
+  const c=hslOf(hex); if(!c)return hex;
+  const ranges=elemRanges();
+  let best=ranges[0][0], bd=1e9;
+  for(const [a,b]of ranges){
+    for(const edge of [a,b]){
+      const e=((edge%360)+360)%360;
+      const d=Math.min(Math.abs(c.H-e),360-Math.abs(c.H-e));
+      if(d<bd){bd=d;best=e;}
+    }
+  }
+  return hslHex(best,c.S*0.9,c.L);
+}
+function groundOK(hex,panel){
+  const c=hslOf(hex); if(!c)return true;
+  if(panel){
+    // bold text-only panel grounds, by product colour (owner 2026-08-17)
+    if(c.L<=0.2)return true;                                   // black
+    if(WINE_KIND==='red'||WINE_KIND==='rose')return inRanges(c.H,[[335,385]])&&c.S>=0.2;
+    return c.H>=15&&c.H<=260&&c.S>=0.2;                        // orange…blue
+  }
+  if(c.L<0.78)return false;                                    // light only under art
+  if(c.S<=0.28)return true;                                    // whites/greys
+  if(c.H>=15&&c.H<=70)return true;                             // warm papers
+  if((WINE_KIND==='red'||WINE_KIND==='rose')&&inRanges(c.H,[[335,385]]))return true; // pinks
+  return false;
+}
+/* adapt one palette entry to the gamut: null = ground disallowed; else a
+   copy with off-gamut elements recoloured (punk keeps one vivid accent) */
+function palAdapt(p,punkFree){
+  if(!p)return null;
+  const isArr=Array.isArray(p);
+  const panel=!isArr&&p.panel===true;
+  if(!groundOK(palBg(p),panel))return null;
+  const out=isArr?p.slice():Object.assign({},p);
+  const keys=isArr?out.map(function(_,i){return i;}):Object.keys(out);
+  let freeKey=null, freeSat=0;
+  for(const k of keys){
+    if(isArr?k===0:k==='bg')continue;
+    const v=out[k]; if(typeof v!=='string'||!/^#([0-9a-f]{6})$/i.test(v))continue;
+    if(!elementOK(v)&&punkFree){
+      const c=hslOf(v);
+      if(c&&c.S>freeSat){freeSat=c.S;freeKey=k;}
+    }
+  }
+  for(const k of keys){
+    if(isArr?k===0:k==='bg')continue;
+    if(k===freeKey)continue;
+    const v=out[k]; if(typeof v!=='string'||!/^#([0-9a-f]{6})$/i.test(v))continue;
+    if(!elementOK(v))out[k]=recolour(v);
+  }
+  return out;
 }
 /* hintKey = the public style the admin curates; saltKey = the internal pool
    (merged contemporary keeps four internal pools for palette diversity). */
 function palPick(hintKey,saltKey,seed,arr,map){
   const h=STYLE_HINTS[hintKey], hp=h&&h.palettes;
   const salt=(STYLE_SALT[saltKey]||0)*7+2;
-  const filt=list=>{const ok=list.filter(p=>bgAllowed(palBg(p)));return ok.length?ok:null;};
+  const punkFree=saltKey==='punk';
+  const adapt=list=>{const out=[];for(const p of list){const a=palAdapt(p,punkFree);if(a)out.push(a);}return out;};
   if(Array.isArray(hp)&&hp.length&&map){
     try{
-      const ok=filt(hp);
-      if(ok)return map(ok[sPick(seed,salt,ok.length)]);
-      return map(Object.assign({},hp[sPick(seed,salt,hp.length)],{bg:'#FBF7EF'}));
+      const ok=adapt(hp);
+      if(ok.length)return map(ok[sPick(seed,salt,ok.length)]);
+      const p1=palAdapt(Object.assign({},hp[sPick(seed,salt,hp.length)],{bg:'#FBF7EF'}),punkFree);
+      if(p1)return map(p1);
     }catch(e){}
   }
-  const ok=filt(arr);
-  if(ok)return ok[sPick(seed,salt,ok.length)];
+  const ok=adapt(arr);
+  if(ok.length)return ok[sPick(seed,salt,ok.length)];
   const p0=arr[sPick(seed,salt,arr.length)];
-  return Array.isArray(p0)?['#FBF7EF'].concat(p0.slice(1)):Object.assign({},p0,{bg:'#FBF7EF'});
+  const forced=Array.isArray(p0)?['#FBF7EF'].concat(p0.slice(1)):Object.assign({},p0,{bg:'#FBF7EF',panel:null});
+  return palAdapt(forced,punkFree)||forced;
 }
 /* Per-variant hero-font alternates — every option hand-picked to fit that
    composition's board (blackletter comps offer blackletters, script comps
@@ -1742,7 +1827,11 @@ function styleMinimal(f,W,H,seed,twMM,thMM,fv){
   const MSCH=[{bg:'#FBFBF9',ink:'#231F20',sub:'#8A8780',panel:null},
     {bg:'#F4EFE4',ink:'#2A2722',sub:'#8F887B',panel:null},
     {bg:'#FFFFFF',ink:'#2B5BB7',sub:'#7C8797',panel:null},
-    {bg:'#E2574C',ink:'#FBF6EA',sub:'#F8E8DF',panel:true}];
+    {bg:'#E2574C',ink:'#FBF6EA',sub:'#F8E8DF',panel:true},
+    // bold text-only panels for WHITE products (owner 2026-08-17): deep
+    // green and deep blue grounds, light warm ink — rare by pool weight
+    {bg:'#2F5D3A',ink:'#F4EFE0',sub:'#D8E0CE',panel:true},
+    {bg:'#2B4C7A',ink:'#F4EFE0',sub:'#CFD8E2',panel:true}];
   const MS=palPick('contemporary','minimalist',seed,MSCH,function(p){return {bg:p.bg,ink:p.ink,sub:p.sub,panel:null};});
   const INK=MS.ink, SUB=MS.sub, cx=W/2, cW=W-2*SM;
   let variant=(fv!=null)?fv:pickVariant('minimalist',seed,6);
@@ -1935,7 +2024,8 @@ function renderStyleOptions(d,order,opts){
   opts=opts||{}; const seed=opts.seed|0;
   const twMM=Math.max(30,(+opts.widthMM||110)), thMM=Math.max(30,(+opts.heightMM||80));
   const W=twMM*10, H=thMM*10, f=sFields(d);
-  WINE_RED=/red/i.test(String((d&&d.wineColorName)||''));
+  const wc=String((d&&d.wineColorName)||'');
+  WINE_KIND=/red/i.test(wc)?'red':/ros/i.test(wc)?'rose':/orange|amber/i.test(wc)?'orange':'white';
   const testRig=(typeof window!=='undefined'&&typeof window.__SEED0__==='number');
   return STYLE_LIST.map(st=>{let svg;
     const hs=STYLE_HINTS[st.key];

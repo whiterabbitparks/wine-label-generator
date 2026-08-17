@@ -257,6 +257,41 @@ ref image files moved there too). KEPT: fontFeedback, settings (hard
 rules / image rules / catalog / case prefs), users, generated-images.
 Boards are empty until the owner re-uploads and re-derives.
 
+## 6-COLOUR-SYSTEM (2026-08-17, owner rulings) — wine-kind gamut + harmony
+
+Owner wrote the missing rules + ruled on colour. SUPERSEDES the
+2026-08-16 ground rule. Engine (palAdapt/palPick, WINE_KIND per render):
+- GROUNDS under artwork: always LIGHT. red/rosé → white/warm/pink;
+  white/orange → white/warm, never pink. Bold/dark grounds ONLY on
+  palette entries marked panel:true (they force a text-only comp):
+  red products → red/dark-red/black panels; white products → black/
+  orange/deep-yellow/green/blue/tan/brown panels (MSCH gained deep green
+  + deep blue panels for whites).
+- ELEMENTS: red wine → blacks/greys + red hue range [335..25]; white →
+  blacks/greys + warm/earth/green [15..170]. Off-gamut elements are
+  RECOLOURED (hue clamped to nearest allowed edge, S×0.9, L kept) so
+  board palettes keep character. PUNK ONLY: single most saturated
+  off-gamut element survives untouched = one free vivid accent.
+- IMAGE side ("layout must not limit artwork" — owner): prompt gains a
+  seeded "Colour world" sentence per wine kind — the LOOSE reading of the
+  same harmonious family (artwork may be vivid/many-coloured, punk gets
+  full saturation); the strict reading lives in the engine gamut. Both
+  sides share ancestry, neither constrains the other.
+- IMAGE RULES box FILLED (via live compile): 6 global anti-AI/copyright/
+  print-imperfection rules + 2 per style (traditional hand-cut roughness,
+  contemporary economy, punk protected rawness). Art Direction extra
+  refined (dead "1:1 square" removed).
+- FONT RACE ROOT-FIXED: ensureFonts now loads "italic 500 Cormorant
+  Garamond" (the face the browser substitutes for the engine's italic-600
+  runs — it was NEVER loaded, causing run-to-run golden wobble on
+  shrink-fitted italic lines, surfaced by new comp #8). engine-test NEED
+  list extended (CG 500 italic, Playfair 600, Prata, Grenze, Manufacturing
+  Consent). Goldens re-baselined, 72/72 stable across 3 consecutive runs.
+TRAP (cost an hour): the parity/e2e suite targets the ROOT page — on
+branch UX_Tasting_Journey the root is the journey UI, so captures/e2e
+must run on the MAIN branch (classic at root). Also: goldens rewrote
+.next again — rebuild before `next start` (documented trap, re-hit).
+
 ## 6-RULES-AUDIT (2026-08-17) — "do the admin rules actually work?"
 
 Owner challenged whether admin rules influence anything. Audit verdict:

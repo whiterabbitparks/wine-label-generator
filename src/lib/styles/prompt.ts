@@ -160,6 +160,35 @@ export function buildStylePrompt(
   // image inputs — image inputs made the model copy shapes and subjects)
   const paletteText = (sub as { palette?: string }).palette?.trim();
   const inkTreatment = paletteText ? ` Ink and colour treatment: ${paletteText}.` : "";
+  // COLOUR WORLD (owner 2026-08-17): artwork and layout draw from ONE
+  // harmonious family per wine colour — the artwork gets the LOOSE reading
+  // (as many colours as the scene wants; it is the hierarchy star), the
+  // layout gets the strict gamut in the engine. Seeded per generation so
+  // consecutive labels move within the family instead of repeating.
+  const wineC = String(brief.data?.wineColorName || "");
+  const kind = /red/i.test(wineC) ? "red" : /ros/i.test(wineC) ? "rose" : /orange|amber/i.test(wineC) ? "orange" : "white";
+  const FAMILIES: Record<string, string[]> = {
+    red: [
+      "an analogous warm family around deep wine reds, oxblood, dusty rose and warm paper, one cool counterpoint allowed",
+      "claret and terracotta against parchment, sparingly cut with slate",
+      "dark cherry, faded crimson and rose over cream, charcoal drawing the line work",
+    ],
+    white: [
+      "straw gold, olive and forest green over ivory, umber line work",
+      "pale gold, sage and warm grey with one deep bottle-green note",
+      "honey, tan and moss with dark sepia line work",
+    ],
+    rose: [
+      "dusty pinks, coral and warm cream with charcoal line work",
+      "faded rose, salmon and parchment cut with oxblood",
+    ],
+    orange: ["amber, burnt orange and earth browns over warm paper"],
+  };
+  const fam = FAMILIES[kind];
+  const famPick = fam[Math.abs(((brief.seed || 0) | 0) + kind.length) % fam.length];
+  const punkNote = style.key === "punk" ? " vivid, fearless colour is welcome here, full saturation allowed —" : "";
+  const colourWorld =
+    ` Colour world:${punkNote} use as many colours as the scene wants, chosen like a deliberate printmaker's ink set in harmony: ${famPick}. Colour decisions are intentional — never garish randomness, never dull.`;
   // rules = global house rules + this style's own rules + owner-approved traits
   const ruleParts = [art.extra?.trim(), art.perStyle?.[style.key]?.rules?.trim()].filter(Boolean);
   if (fb?.favour?.length) ruleParts.push(`favour: ${fb.favour.join("; ")}`);
@@ -220,6 +249,7 @@ export function buildStylePrompt(
     .replace("{rules}", rules)
     .concat(strengths)
     .concat(inkTreatment)
+    .concat(colourWorld)
     .concat(ANALOG)
     .concat(WHITE_BG)
     .replace(/\s+/g, " ")
