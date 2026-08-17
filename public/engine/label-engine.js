@@ -912,7 +912,12 @@ function resolveArt(body,W,H){
     for(let k=0;k<24;k++){const mid=(lo+hi)/2; if(okAt(cx,cy,mid))lo=mid; else hi=mid;}
     return lo;
   };
-  const N=12, spanX=0.25*W, spanY=0.25*H;
+  /* CENTRED BOXES STAY CENTRED (owner fix 2026-08-17): when the comp's free
+     area is horizontally centred, corner captions must not push the artwork
+     sideways for a marginally bigger fit — lock the x to centre and slide
+     only vertically. Side-field boxes keep the full horizontal slide. */
+  const centred=Math.abs(bcx-W/2)<0.02*W;
+  const N=12, spanX=centred?0:0.25*W, spanY=0.25*H;
   let bestS=maxScale(bcx,bcy), cands=[[bcx,bcy,bestS]];
   for(let i=0;i<=N;i++)for(let j=0;j<=N;j++){
     const cx=bcx-spanX+2*spanX*i/N, cy=bcy-spanY+2*spanY*j/N;
