@@ -208,6 +208,41 @@ export const NO_BORDER_RULE: CompiledRule = {
     "Is the composition contained inside ANY enclosing form — a drawn frame, border, outline, band, OR a solid/shaded oval, circle, cameo, medallion, arch or rectangle whose edge bounds the whole artwork? A small object of that shape INSIDE an open scene does not count; a shape that contains the composition does.",
 };
 
+/* Built-in hard rules (owner, 2026-08-17): architecture & geography.
+   1. NO buildings of any kind unless the story asks for one.
+   2. Geography is either PRECISE (a known place → landscape/plants must be
+      plausible there) or NEUTRAL (no place known → nothing that pins one). */
+export function wantsBuilding(vision: string | undefined): boolean {
+  return /\b(castle|ch[âa]teau|tower|church|monaster|cathedral|chapel|house|hut|cottage|cabin|building|winery|cellar|architect|village|town|city|bridge|ruin|palace|temple|barn|fortress|marani|street)\b/i.test(
+    String(vision || "")
+  );
+}
+export const NO_ARCHITECTURE_RULE: CompiledRule = {
+  src: "no buildings unless the story asks (built-in)",
+  positive:
+    "The scene contains no buildings or architectural structures of any kind — no castles, towers, churches, houses, ruins or bridges; the composition relies on natural forms, figures and objects instead.",
+  negative: "castle, church, tower, house, building, ruins, cityscape, bridge, architecture",
+  check:
+    "Does the image contain any building or architectural structure (castle, tower, church, house, ruin, bridge or similar)? Small objects, furniture and vessels do not count.",
+};
+export function geographicRule(place: string): CompiledRule {
+  const s = place.slice(0, 140);
+  return {
+    src: "geographic accuracy (built-in)",
+    positive: `Geographic truth: the setting is ${s} — terrain, landscape, vegetation and plant species must be accurate and plausible for ${s}; nothing that contradicts that place, and any requested architecture must be in that region's own style.`,
+    negative: "misplaced vegetation, wrong-climate plants, foreign landmark architecture",
+    check: `The intended setting is: "${s}". Does the image clearly contradict that geography — vegetation, terrain or architecture that could not belong there (e.g. tropical palms in a temperate wine region)? Only clear contradictions count.`,
+  };
+}
+export const NEUTRAL_GEO_RULE: CompiledRule = {
+  src: "stay geographically neutral (built-in)",
+  positive:
+    "No specific place is intended: keep landscape and vegetation geographically neutral — timeless, generic wine-country forms; no landmark buildings and no plant species or terrain that pin a specific real region.",
+  negative: "famous landmarks, unmistakably region-specific architecture, exotic region-pinning species",
+  check:
+    "Does the image contain a recognizable real-world landmark, or unmistakably region-specific vegetation/architecture that pins one specific place? Generic hills, vines and trees do not count.",
+};
+
 /** Does the winemaker's story explicitly ask for lettering? */
 export function wantsText(vision: string | undefined): boolean {
   return /\b(text|letter|lettering|word|writing|written|inscription|sign\s+say|says|saying|glyph|number|digit|numeral|typograph|caption|monogram|slogan|motto)\b/i.test(
