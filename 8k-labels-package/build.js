@@ -89,7 +89,7 @@ const CSS = '<style>'
  + '#labelEditor .le-ruler-v{position:absolute;top:0;bottom:0;left:calc(100% + 58px);display:flex;align-items:center;gap:24px}'
  + '#labelEditor .le-rlab{display:inline-flex;align-items:center;gap:10px;font-size:14px;margin-bottom:16px}'
  + '#labelEditor .le-ruler-v .le-rlab{margin-bottom:0}'
- + '#labelEditor .le-rlab input{width:58px;height:auto;border:none;background:transparent;text-align:right;font-size:14px;padding:0;color:#000}'
+ + '#labelEditor .le-rlab input{width:58px;height:24px;line-height:24px;border:none;background:transparent;text-align:right;font-size:14px;padding:2px 0 0;color:#000;overflow:visible}'   // room for Special Elite ascenders — no clipped digit tops
  + '#labelEditor .le-rlab input:focus{outline:none;background:transparent;border:none;box-shadow:none}'
  + '#labelEditor .le-rlab input::-webkit-inner-spin-button{opacity:1;margin-left:10px}'   // arrows centred in the number↔mm gap
  + '#labelEditor .le-rlab .le-unit{text-transform:lowercase;margin:0}'
