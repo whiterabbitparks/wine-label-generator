@@ -257,7 +257,36 @@ ref image files moved there too). KEPT: fontFeedback, settings (hard
 rules / image rules / catalog / case prefs), users, generated-images.
 Boards are empty until the owner re-uploads and re-derives.
 
-## 5-COLOUR-AND-EDGES (2026-08-16, latest)
+## 6-QUALITY-ROADMAP (2026-08-17) — owner-approved priority order
+
+Owner milestone review: images still read as AI; layouts lack diversity
+(and he correctly sensed layouts trace to his old PDFs — "Derive layout
+language" extracts palettes/fonts ONLY, never arrangements; every
+arrangement is hand-coded engine comps). Agreed plan, in order:
+1. **Ink-discipline post-process** — SHIPPED (below).
+2. **Board→comp workflow** — SHIPPED (marker below); owner marks board
+   labels 🔨 "build this as a composition" in Layout Refs; Claude reads
+   the marked list (layoutRefs.buildRequest) and hand-builds each as a
+   verified engine comp. Plus comp MUTATIONS (parameterized anchoring/
+   scale/alignment per comp, verifier-swept) — NOT built yet.
+3. **Provider A/B test** (Recraft / FLUX style conditioning vs gpt-image)
+   — NOT started. Architecture ready via IMAGE_PROVIDER.
+4. **Generated layouts** (LLM proposes comps in engine vocabulary →
+   hard-rules verifier kills broken → playground approval gate) — later.
+5. **LoRA custom style model** — needs owner decision (training data +
+   setup cost); the real endgame for non-AI-looking art.
+
+**INK DISCIPLINE (owner 2026-08-17), in finishArtwork()
+(image-provider/index.ts, replaces whitenEdges, same call site):** every
+generated PNG gets deterministic paper grain (∝ ink coverage — white
+stays clean) and LUMINANCE-quantized tones (INK_LEVELS=6, all channels
+scaled by one factor so hue is exactly preserved — per-channel posterize
+bands into false colours, tested and rejected), then the white-edge
+snap+feather. Smooth AI gradients break into flat ink layers like a
+screen print. Constants INK_LEVELS/GRAIN_AMP are code-side tunables.
+Cached pre-ship sets keep old pixels until regenerated.
+
+## 5-COLOUR-AND-EDGES (2026-08-16)
 
 **Standing rule (owner): label BACKGROUND colours are white/warm tones for
 EVERY wine; red/pink grounds are additionally allowed ONLY for red wines

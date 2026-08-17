@@ -3,29 +3,60 @@ import type { GenerationJob } from "./types";
 import { generateMockImage } from "./mock";
 import { generateOpenAIImage } from "./openai";
 
-/* WHITE-EDGE GUARANTEE (owner 2026-08-16): the model sometimes returns a
-   near-white ground (250-ish grey, not #FFF) — under the multiply blend
-   that prints as a faint square around the artwork. Every generated PNG is
-   post-processed: alpha flattened onto white, near-white pixels snapped to
-   pure white through a soft knee (art shading below the knee untouched),
-   and the outer 4% of every edge feathered to white — so the image always
-   merges seamlessly into the label ground. Non-PNG (mock SVG) passes
-   through; any failure returns the original. */
-export function whitenEdges(dataUrl: string): string {
+/* ARTWORK FINISHING (owner 2026-08-16/17) — one pixel pass over every
+   generated PNG, two jobs:
+
+   1. INK DISCIPLINE (owner 2026-08-17): the AI look is mostly continuous
+      airbrushed gradients; real prints are discrete ink on paper. Each
+      pixel gets deterministic paper grain (amplitude proportional to ink
+      coverage — white paper stays clean) and is then posterized to a
+      small number of tone levels per channel, so smooth gradients break
+      into flat ink layers like a screen print. Hue is preserved, so
+      multi-colour art (riso, cut-outs) keeps its colours.
+
+   2. WHITE-EDGE GUARANTEE (owner 2026-08-16): near-white grounds print as
+      a faint square under multiply. Alpha is flattened onto white,
+      near-white snaps to pure #FFF through a soft knee, and the outer 4%
+      of every edge feathers to white so the image merges seamlessly.
+
+   Non-PNG (mock SVG) passes through; any failure returns the original. */
+const INK_LEVELS = 6;      // tone steps per channel (screen-print layers)
+const GRAIN_AMP = 12;      // max grain, scaled by ink coverage
+
+/* deterministic per-pixel noise in [-1, 1] — no RNG, reproducible */
+function grainAt(x: number, y: number): number {
+  let n = (Math.imul(x, 73856093) ^ Math.imul(y, 19349663)) >>> 0;
+  n = Math.imul(n ^ (n >>> 13), 1274126177) >>> 0;
+  return ((n & 0xffff) / 0x7fff) - 1;
+}
+
+export function finishArtwork(dataUrl: string): string {
   const PREFIX = "data:image/png;base64,";
   if (!dataUrl.startsWith(PREFIX)) return dataUrl;
   try {
     const png = PNG.sync.read(Buffer.from(dataUrl.slice(PREFIX.length), "base64"));
     const { width: W, height: H, data: px } = png;
     const D = Math.max(2, Math.round(Math.min(W, H) * 0.04));
-    const LO = 232, HI = 248;
+    const LO = 232, HI = 248, STEP = 255 / (INK_LEVELS - 1);
     for (let y = 0; y < H; y++) {
       for (let x = 0; x < W; x++) {
         const i = (y * W + x) * 4;
         let r = px[i], g = px[i + 1], b = px[i + 2];
         const a = px[i + 3] / 255;
         if (a < 1) { r = r * a + 255 * (1 - a); g = g * a + 255 * (1 - a); b = b * a + 255 * (1 - a); }
-        const m = Math.min(r, g, b);
+        let m = Math.min(r, g, b);
+        // ink discipline: grain ∝ ink coverage, then quantize LUMINANCE only
+        // (all channels scaled by the same factor → hue exactly preserved;
+        // per-channel posterizing would band into false colours)
+        if (m < HI) {
+          const L = 0.299 * r + 0.587 * g + 0.114 * b;
+          const gr = grainAt(x, y) * GRAIN_AMP * (1 - m / 255);
+          const Lq = Math.min(255, Math.max(0, Math.round((L + gr) / STEP) * STEP));
+          const f = L > 0 ? Lq / L : 0;
+          r = Math.min(255, r * f); g = Math.min(255, g * f); b = Math.min(255, b * f);
+          m = Math.min(r, g, b);
+        }
+        // white-edge guarantee: soft knee to pure white + edge feather
         let t = m >= HI ? 1 : m >= LO ? (m - LO) / (HI - LO) : 0;
         if (t > 0 && t < 1) t = t * t * (3 - 2 * t);
         const ed = Math.min(x, y, W - 1 - x, H - 1 - y);
@@ -72,7 +103,7 @@ function transientKind(e: unknown): "rate" | "network" | null {
 export async function generateImageWithRetry(job: GenerationJob): Promise<string> {
   for (let attempt = 0; ; attempt++) {
     try {
-      return whitenEdges(await generateImage(job));
+      return finishArtwork(await generateImage(job));
     } catch (e) {
       const kind = transientKind(e);
       if (!kind || attempt >= RETRIES) throw e;

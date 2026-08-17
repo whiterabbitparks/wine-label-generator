@@ -960,7 +960,7 @@ const S: Record<string, React.CSSProperties> = {
    Everything reaches the client via /api/layout-hints — nothing else touches
    layout rendering. */
 
-interface LayoutRefRow { id: string; style: string; name: string; url: string }
+interface LayoutRefRow { id: string; style: string; name: string; url: string; buildRequest?: boolean }
 interface LayoutProfileRow {
   style: string; notes: string; refCount: number; analyzedAt: string;
   palettes: { bg: string; ink: string; acc: string }[];
@@ -997,6 +997,13 @@ function LayoutTab() {
     setBusy(""); load();
   }
   async function remove(id: string) { await fetch(`/api/admin/layout-refs?id=${id}`, { method: "DELETE" }); load(); }
+  async function toggleBuild(r: LayoutRefRow) {
+    await fetch("/api/admin/layout-refs", {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: r.id, buildRequest: !r.buildRequest }),
+    });
+    load();
+  }
   async function analyze(style: string) {
     setBusy(`analyze-${style}`); setErr("");
     const r = await fetch("/api/admin/layout-refs/analyze", {
@@ -1044,12 +1051,21 @@ function LayoutTab() {
                 </button>
               </div>
             </div>
+            {mine.some((r) => r.buildRequest) && (
+              <p style={{ fontSize: 13, color: "#5a6b3b", margin: "10px 0 0" }}>
+                🔨 {mine.filter((r) => r.buildRequest).length} label(s) marked &ldquo;build as composition&rdquo; —
+                tell Claude to build them and they become real layouts in the playground.
+              </p>
+            )}
             {mine.length > 0 && (
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
                 {mine.map((r) => (
                   <div key={r.id} style={{ position: "relative" }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={r.url} alt={r.name} style={{ width: 110, height: 110, objectFit: "cover", border: "1px solid #999" }} />
+                    <img src={r.url} alt={r.name} style={{ width: 110, height: 110, objectFit: "cover", border: r.buildRequest ? "3px solid #5a6b3b" : "1px solid #999" }} />
+                    <button title={r.buildRequest ? "Unmark — don't build this layout" : "Mark: build this label's layout as a composition"}
+                      onClick={() => toggleBuild(r)}
+                      style={{ position: "absolute", bottom: 2, left: 2, border: "none", background: r.buildRequest ? "#5a6b3b" : "#fff", color: r.buildRequest ? "#fff" : "#111", cursor: "pointer", lineHeight: 1.2, fontSize: 11, padding: "1px 4px" }}>🔨</button>
                     <button title="Delete" onClick={() => remove(r.id)}
                       style={{ position: "absolute", top: 2, right: 2, border: "none", background: "#fff", cursor: "pointer", lineHeight: 1 }}>×</button>
                   </div>

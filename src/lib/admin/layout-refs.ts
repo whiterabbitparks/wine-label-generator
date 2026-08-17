@@ -49,6 +49,8 @@ export interface LayoutRefDoc {
   file: string;
   url: string;
   bytes: number;
+  /** owner-marked "build this as a composition" (board→comp workflow) */
+  buildRequest?: boolean;
   createdAt: Date;
 }
 
@@ -90,6 +92,14 @@ export async function listLayoutRefs(style?: string): Promise<LayoutRefDoc[]> {
     .find(q, { projection: { _id: 0 } })
     .sort({ createdAt: 1 })
     .toArray();
+}
+
+/* "Build this as a composition" marker (owner 2026-08-17): flags a board
+   label for Claude to hand-build as a new verified engine comp. */
+export async function setBuildRequest(id: string, on: boolean): Promise<boolean> {
+  const db = await getDb();
+  const r = await db.collection("layoutRefs").updateOne({ id }, { $set: { buildRequest: on } });
+  return r.matchedCount > 0;
 }
 
 export async function addLayoutRef(style: string, imageDataUrl: string, name: string): Promise<LayoutRefDoc> {

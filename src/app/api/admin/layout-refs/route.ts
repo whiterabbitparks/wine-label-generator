@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requestIsAuthenticated } from "@/lib/admin/session";
 import {
   listLayoutRefs, addLayoutRef, deleteLayoutRef, getLayoutProfiles, getLayoutRules,
-  LAYOUT_STYLES,
+  setBuildRequest, LAYOUT_STYLES,
 } from "@/lib/admin/layout-refs";
 
 export async function GET() {
@@ -29,6 +29,21 @@ export async function POST(req: Request) {
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 400 });
   }
+}
+
+/* PATCH {id, buildRequest} — the owner marks a board label "build this as a
+   composition"; Claude reads the marked list and hand-builds verified comps
+   (the board→comp workflow, owner 2026-08-17). */
+export async function PATCH(req: Request) {
+  if (!(await requestIsAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  let body: { id?: string; buildRequest?: boolean };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "invalid JSON body" }, { status: 400 });
+  }
+  if (!body.id) return NextResponse.json({ error: "id required" }, { status: 400 });
+  return NextResponse.json({ ok: await setBuildRequest(String(body.id), body.buildRequest === true) });
 }
 
 export async function DELETE(req: Request) {
