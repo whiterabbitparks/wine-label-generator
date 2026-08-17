@@ -153,11 +153,29 @@ document.addEventListener('change',function(e){const t=e.target;if(!t.closest||!
 window.addEventListener('resize',applyFonts);
 /* Dimension numbers behave like the label texts (owner 2026-08-17): on
    click the number simply disappears and typed digits replace it; leaving
-   the field empty restores the previous size. No focus box. */
+   the field empty restores the previous size. No focus box. The SPIN
+   ARROWS are exempt (owner): they always step from the present number —
+   a click in the arrow zone never clears, and stepping an emptied field
+   restores the previous value first. */
+function sizeDefault(t){return t.getAttribute('data-prev')||(t.id==='le_wmm'?'110':'80');}
+document.addEventListener('mousedown',function(e){const t=e.target;
+  if(t.id!=='le_wmm'&&t.id!=='le_hmm')return;
+  const r=t.getBoundingClientRect();
+  if((e.clientX-r.left)>(r.width-22)){t.setAttribute('data-spin','1');if(!t.value)t.value=sizeDefault(t);}
+  else{t.removeAttribute('data-spin');
+    // digits clicked while ALREADY focused (e.g. right after using the
+    // arrows): clear here too — focusin won't fire again
+    if(document.activeElement===t&&t.value){t.setAttribute('data-prev',t.value);t.value='';}}
+},true);
+document.addEventListener('keydown',function(e){const t=e.target;
+  if((t.id==='le_wmm'||t.id==='le_hmm')&&(e.key==='ArrowUp'||e.key==='ArrowDown')&&!t.value)t.value=sizeDefault(t);});
 document.addEventListener('focusin',function(e){const t=e.target;
-  if(t.id==='le_wmm'||t.id==='le_hmm'){t.setAttribute('data-prev',t.value);t.value='';}});
+  if(t.id==='le_wmm'||t.id==='le_hmm'){
+    if(t.getAttribute('data-spin')==='1'){t.removeAttribute('data-spin');if(t.value)t.setAttribute('data-prev',t.value);return;}
+    t.setAttribute('data-prev',t.value);t.value='';
+  }});
 document.addEventListener('focusout',function(e){const t=e.target;
-  if(t.id==='le_wmm'||t.id==='le_hmm'){if(!t.value)t.value=t.getAttribute('data-prev')||(t.id==='le_wmm'?'110':'80');render();mirrorSize();}});
+  if(t.id==='le_wmm'||t.id==='le_hmm'){if(!t.value)t.value=sizeDefault(t);render();mirrorSize();}});
 function mirrorSize(){var d=dims();var ow=document.getElementById('widthMM'),oh=document.getElementById('heightMM');if(ow){ow.value=d.W;ow.dispatchEvent(new Event('input',{bubbles:true}));}if(oh){oh.value=d.H;oh.dispatchEvent(new Event('input',{bubbles:true}));}}
 
 /* ---------- preview glue ---------- */
