@@ -119,6 +119,19 @@ const CSS = '<style>'
  + '.section-cover{height:auto;}'
  + '.section-head h2{font-size:13.3px;}'
  + '#visionHead::after{display:none;}'
+ // --- TYPEWRITER SHEET input UI (owner reference, 2026-08-17): every field is a
+ //     typed line on its own 2px black underline; no boxed fields anywhere ---
+ + '#labelEditor .le2-box{border:none;border-bottom:2px solid #000;}'
+ + '#labelEditor .le2-box.warn{border:none;border-bottom:4px solid #000;}'
+ + '#labelEditor .le2-box.grp{border:none;border-bottom:2px solid #000;}'
+ + '#labelEditor .le2-box.grp.warn{border:none;border-bottom:4px solid #000;}'
+ + '#labelEditor .le2-box.grp[data-zfid=alcVol]{border-bottom:none;}'
+ + '#labelEditor .le2-box.grp[data-zfid=alcVol].warn{border-bottom:none;}'
+ + '.le2-avgrp{border-bottom:2px solid #000;padding:0 .6em .14em .3em;}'
+ + '#labelEditor .le2-sel,#labelEditor .le2-vinp{border:none;background:transparent;}'
+ + '.le2-slash{color:#000;margin:0 .4em;flex:0 0 auto;}'
+ + '#labelEditor .le2-logo{border:none;justify-content:flex-end;}'
+ + '#labelEditor .le2-upload{font-size:11px;}'
  + '</style>';
 
 const inject = '\n' + CSS + '\n<script>\n' + imgData + '\n</'+'script>\n<script>\n' + engine + '\n</'+'script>\n<script>\n' + editorJs + '\n</'+'script>\n<script>\n' + imgGenJs + '\n</'+'script>\n';
