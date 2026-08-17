@@ -1024,13 +1024,16 @@ function LayoutTab() {
   return (
     <div>
       <p style={{ fontSize: 14, color: "#4a4a42" }}>
-        Upload <b>layout</b> references per style (full labels whose layout you like — typography and
-        colour are what gets analysed). &ldquo;Derive layout language&rdquo; extracts the palettes and
-        hero-font pool the engine will actually use. Rules below are handed to the analysis.
-        <br /><span style={{ color: "#8a887e" }}>Note: rules steer the derived language (colours,
-        type). Hard geometry rules — sizes, margins, spacing — must be built into the engine: tell
-        Claude and it becomes code. Already enforced mechanically: <b>no text below 7pt</b>, no
-        overlaps, light grounds.</span>
+        Upload <b>layout</b> references per style. Two separate powers here:
+        the 🔨 button on a thumbnail marks that label&apos;s <b>arrangement</b> for Claude to build
+        as a real composition; &ldquo;Derive layout language&rdquo; analyses the board for <b>colours
+        and font character only</b> — it never creates or moves layouts.
+        <br /><span style={{ color: "#8a887e" }}>Honest note on the Rules box: those lines steer ONLY
+        the colour/typography analysis. Geometry wishes written there (font sizes, margins, spacing,
+        overlaps) have no effect — the engine already enforces geometry mechanically (7pt floor, 5mm
+        margins, 1mm gaps, no overlaps), and NEW geometry rules must be told to Claude to become
+        code + a verifier. Also: once looks are approved, new derivations only affect future
+        playground rolls — approved looks keep their frozen colours and fonts.</span>
       </p>
       {err && <p style={{ color: "#a03030" }}>{err}</p>}
       {STYLE_DEFS.map(([key, name]) => {
