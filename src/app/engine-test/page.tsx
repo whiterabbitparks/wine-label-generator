@@ -42,8 +42,14 @@ export default function EngineTest() {
       ["Barlow", "700"], ["Barlow Condensed", "700"], ["Permanent Marker", "400"],
       ["Anton", "400"], ["Bebas Neue", "400"], ["Jost", "400"], ["Jost", "500"],
       ["EB Garamond", "400"], ["EB Garamond", "500"], ["EB Garamond", "400", "italic"],
-      ["Cormorant Garamond", "600"], ["Cinzel", "500"], ["Cinzel", "600"],
-      ["Playfair Display", "700"], ["Fraunces", "600"], ["Fraunces", "700"], ["Tinos", "700"],
+      // NOTE: FONTS_URL carries Cormorant italic ONLY at 500 — the engine's
+      // italic-600 runs render with this face (browser substitution), so THIS
+      // is the face whose metrics must be loaded before goldens render.
+      ["Cormorant Garamond", "600"], ["Cormorant Garamond", "500", "italic"],
+      ["Cinzel", "500"], ["Cinzel", "600"],
+      ["Playfair Display", "600"], ["Playfair Display", "700"],
+      ["Fraunces", "600"], ["Fraunces", "700"], ["Tinos", "700"],
+      ["Prata", "400"], ["Grenze Gotisch", "600"], ["Manufacturing Consent", "400"],
       ["Caveat", "600"],
     ];
     (async () => {
