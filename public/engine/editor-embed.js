@@ -151,6 +151,15 @@ document.addEventListener('input',function(e){const t=e.target;
 document.addEventListener('change',function(e){const t=e.target;if(!t.closest||!t.closest('#labelEditor'))return;
   if(t.matches('.le2-sel[data-attr]')){const k=t.getAttribute('data-attr');FIELDS.attributes.value[k]=t.value;t.classList.toggle('na',isNA(t.value));
     const box=t.closest('.le2-box'); if(box&&cv('attributes'))box.classList.remove('warn');}});
+/* Clicking a row label ("Sweetness Level:", "Color:", "Type:", "Alc.:",
+   "Vol.:") acts exactly like clicking its control (owner 2026-08-17):
+   the label's following select opens (showPicker where the browser
+   supports it), an input simply focuses. */
+document.addEventListener('click',function(e){const t=e.target;
+  if(!t.closest||!t.matches('.le2-lbl')||!t.closest('#labelEditor'))return;
+  var n=t.nextElementSibling;
+  if(n&&n.matches&&n.matches('.le2-sel')){try{n.showPicker();}catch(err){}n.focus();}
+  else if(n&&n.matches&&n.matches('.le2-vinp')){n.focus();}});
 window.addEventListener('resize',applyFonts);
 /* Dimension numbers behave like the label texts (owner 2026-08-17): on
    click the number simply disappears and typed digits replace it; leaving
