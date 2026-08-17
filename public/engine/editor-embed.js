@@ -33,19 +33,24 @@ let order=['producer','wineName','appellation','grape','vintage','classification
 /* Fixed replica of Layout_preview_UI.pdf, traced from the PDF vectors:
    x/y/w/h = fractions of the content box · sz = font size as a fraction of the preview height ·
    wt = Hepta Slab weight (200 = ExtraLight, 700 = Bold) · a = text alignment. */
+/* TYPEWRITER SHEET (owner reference, 2026-08-17): every field is a typed
+   line on its own black underline inside the bordered sheet. Producer
+   centred at the top; wine name huge; vintage moves into the BOTTOM row
+   between alcohol and volume; classification joins the region/special
+   line. Sizes traced from the owner's reference image. */
 const REF={
-  producer:      {x:0.0300,y:0.0350,w:0.4500,h:0.0730, sz:0.04725, wt:200, a:'center'},   // producer box (left half of the top row)
-  wineName:      {x:0.0377,y:0.4216,w:0.9208,h:0.1204, sz:0.08190, wt:700, a:'center'},
-  appellation:   {x:0.2254,y:0.5560,w:0.5454,h:0.0892, sz:0.05985, wt:700, a:'center'},
-  grape:         {x:0.1230,y:0.6692,w:0.7502,h:0.0777, sz:0.05355, wt:600, a:'center'},   // Hepta Slab Semibold
-  vintage:       {x:0.3853,y:0.7609,w:0.2295,h:0.0662, sz:0.04725, wt:600, a:'center'},   // Hepta Slab Semibold
-  regionCountry: {x:0.0000,y:0.7810,w:0.3589,h:0.0461, sz:0.03150, wt:600, a:'left'},     // Hepta Slab Semibold
-  special:       {x:0.6404,y:0.7810,w:0.3589,h:0.0461, sz:0.03150, wt:600, a:'right'},    // Hepta Slab Semibold
-  classification:{x:0.2926,y:0.8411,w:0.4111,h:0.0414, sz:0.03465, wt:200, a:'center'},   // own centred row (swapped)
-  attributes:    {x:0.0000,y:0.8965,w:1.0000,h:0.0415, sz:0.0210, wt:200, a:'left', grp:1},   // Sweetness/Color/Type labelled row
-  alcVol:        {x:0.0000,y:0.9520,w:1.0000,h:0.0415, sz:0.0210, wt:200, a:'left', grp:1}     // Alc./Vol. labelled row
+  producer:      {x:0.1900,y:0.0450,w:0.6200,h:0.0700, sz:0.0400, wt:400, a:'center'},
+  wineName:      {x:0.0200,y:0.2950,w:0.9600,h:0.1350, sz:0.1000, wt:400, a:'center'},
+  appellation:   {x:0.1200,y:0.4750,w:0.7600,h:0.0950, sz:0.0630, wt:400, a:'center'},
+  grape:         {x:0.1000,y:0.6150,w:0.8000,h:0.0800, sz:0.0520, wt:400, a:'center'},
+  regionCountry: {x:0.0000,y:0.7450,w:0.3150,h:0.0520, sz:0.0280, wt:400, a:'center'},
+  classification:{x:0.3425,y:0.7450,w:0.3150,h:0.0520, sz:0.0280, wt:400, a:'center'},
+  special:       {x:0.6850,y:0.7450,w:0.3150,h:0.0520, sz:0.0280, wt:400, a:'center'},
+  attributes:    {x:0.0900,y:0.8350,w:0.8200,h:0.0480, sz:0.0250, wt:400, a:'center', grp:1},  // Sweetness/Color/Type line
+  vintage:       {x:0.3850,y:0.9050,w:0.2300,h:0.0620, sz:0.0400, wt:400, a:'center'},         // bottom row, centre, larger
+  alcVol:        {x:0.0000,y:0.9150,w:1.0000,h:0.0480, sz:0.0250, wt:400, a:'left', grp:1}     // Alc. left / Vol. right flank the vintage
 };
-const LOGO={x:0.5500,y:0.0350,w:0.4200,h:0.0730};   // upload-logo box: right half of the top row, beside the producer box
+const LOGO={x:0.8300,y:0.0380,w:0.1600,h:0.0560};   // compact upload-logo, top-right corner
 const REF_RATIO=(768.3-54.6)/(618.9-46.8);          // content-box aspect from the reference PDF
 
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -80,7 +85,7 @@ function computeLayout(W,H){
   ['vintage','regionCountry','special','classification','attributes','alcVol']
     .forEach(fid=>{top[fid]=H-(RH_MM-mm(REF[fid].y));});                      // footer: fixed mm from the bottom
   const footerTop=Math.min(top.vintage,top.regionCountry,top.special);
-  top.grape=footerTop-mm(REF.vintage.y-(REF.grape.y+REF.grape.h))-mm(REF.grape.h);
+  top.grape=footerTop-mm(REF.regionCountry.y-(REF.grape.y+REF.grape.h))-mm(REF.grape.h);
   top.appellation=top.grape-mm(REF.grape.y-(REF.appellation.y+REF.appellation.h))-mm(REF.appellation.h);
   top.wineName=top.appellation-mm(REF.appellation.y-(REF.wineName.y+REF.wineName.h))-mm(REF.wineName.h);
   const minWine=logoBottom+mm(0.02);
@@ -90,7 +95,7 @@ function computeLayout(W,H){
 }
 function attrSelectsHTML(){var v=FIELDS.attributes.value;
   return ATTR_PARTS.map(function(p){return '<span class="le2-lbl">'+ATTR_LBL[p.k]+'</span><select class="le2-sel'+(isNA(v[p.k])?' na':'')+'" data-attr="'+p.k+'">'
-    +p.opts.map(function(o){return '<option'+(o===v[p.k]?' selected':'')+'>'+esc(o)+'</option>';}).join('')+'</select>';}).join('');
+    +p.opts.map(function(o){return '<option'+(o===v[p.k]?' selected':'')+'>'+esc(o)+'</option>';}).join('')+'</select>';}).join('<span class="le2-slash">/</span>');
 }
 function alcGroupHTML(){var v=FIELDS.alcVol.value;
   return '<span class="le2-avgrp"><span class="le2-lbl">Alc.:</span><input class="le2-vinp" data-av="alcohol" placeholder="E.g. 12" value="'+esc(v.alcohol)+'"></span>'
@@ -102,8 +107,7 @@ function render(){
   st.style.aspectRatio=(dm.W/dm.H).toFixed(4);                               // preview reshapes to the real label proportions
   const L=computeLayout(dm.W,dm.H), lg=L.logo, pr=L.boxes.producer;
   let html='<div class="le2-logo" style="left:'+(lg.x*100)+'%;top:'+(lg.y*100)+'%;width:'+(lg.w*100)+'%;height:'+(lg.h*100).toFixed(3)+'%;">'
-          +'<button type="button" class="le2-upload"><span class="ar">↑</span> Upload logo</button></div>'
-          +'<div class="le2-or" style="left:'+((pr.x+pr.w)*100).toFixed(3)+'%;top:'+(pr.y*100).toFixed(3)+'%;width:'+((lg.x-pr.x-pr.w)*100).toFixed(3)+'%;height:'+(pr.h*100).toFixed(3)+'%;">or</div>';   // between producer and upload-logo
+          +'<button type="button" class="le2-upload"><span class="ar">↑</span> logo</button></div>';   // compact corner control; producer line runs full-centre (typewriter sheet)
   order.forEach(function(fid){var r=L.boxes[fid], grp=REF[fid].grp;
     var inner=(fid==='attributes')?attrSelectsHTML():(fid==='alcVol')?alcGroupHTML()
       :'<input class="le2-inp" data-zone-fid="'+fid+'" placeholder="'+esc(FIELDS[fid].ph)+'" value="'+esc(FIELDS[fid].value)+'">';
