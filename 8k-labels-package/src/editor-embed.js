@@ -66,8 +66,10 @@ function ensureContainers(){
          with native spinner arrows, no box around them. */
       +'<div class="le2-grid">'
       +'<div class="le-ruler-w"><span class="le-rlab"><input id="le_wmm" type="number" value="110"><span class="le-unit">mm</span></span><div class="le-rline-h"></div></div>'
-      +'<div class="le2-stage" id="le_wire"></div>'
-      +'<div class="le-ruler-v"><div class="le-rline-v"></div><span class="le-rlab"><input id="le_hmm" type="number" value="80"><span class="le-unit">mm</span></span></div>'
+      /* the SHEET is what centres on the page (owner 2026-08-17); the height
+         ruler hangs off its right edge without affecting the centring */
+      +'<div class="le2-srow"><div class="le2-stage" id="le_wire"></div>'
+      +'<div class="le-ruler-v"><div class="le-rline-v"></div><span class="le-rlab"><input id="le_hmm" type="number" value="80"><span class="le-unit">mm</span></span></div></div>'
       +'</div>'
       +'<div class="le-note">This is not the final label design. It is a layout template to help you enter your label details in the correct visual hierarchy. Enter only the information you want printed on your label, and feel free to leave any fields blank. The final label will be generated based on the information you provide, and you can edit or update any of these details after your label has been generated.</div>'
       +'<div class="dash-sep"></div>';

@@ -75,63 +75,64 @@ body  "               "
               input#le_wmm
               span.le-unit  "mm"
             div.le-rline-h
-          div#le_wire.le2-stage
-            div.le2-inner
-              div.le2-box.a-center
-                input.le2-inp
-              div.le2-box.a-center
-                input.le2-inp
-              div.le2-box.a-center
-                input.le2-inp
-              div.le2-box.a-center
-                input.le2-inp
-              div.le2-box.a-center
-                input.le2-inp
-              div.le2-box.a-center
-                input.le2-inp
-              div.le2-box.a-center
-                input.le2-inp
-              div.le2-box.a-center
-                input.le2-inp
-              div.le2-box.grp
-                span.le2-lbl  "Sweetness Level:"
-                select.le2-sel.na
-                  option  "N/A"
-                  option  "Dry"
-                  option  "Semi-Dry"
-                  option  "Semi-Sweet"
-                  option  "Sweet"
-                span.le2-slash  "/"
-                span.le2-lbl  "Color:"
-                select.le2-sel.na
-                  option  "N/A"
-                  option  "Red"
-                  option  "White"
-                  option  "Orange"
-                  option  "Rosé"
-                span.le2-slash  "/"
-                span.le2-lbl  "Type:"
-                select.le2-sel.na
-                  option  "N/A"
-                  option  "Wine"
-                  option  "Sparkling Wine"
-                  option  "Pét-Nat"
-                  option  "Fortified Wine"
-                  option  "Ice Wine"
-                  option  "Dessert Wine"
-              div.le2-box.grp
-                span.le2-avgrp
-                  span.le2-lbl  "Alc.:"
-                  input.le2-vinp
-                span.le2-avgrp
-                  span.le2-lbl  "Vol.:"
-                  input.le2-vinp
-                  span.le2-lbl  "mL"
-          div.le-ruler-v
-            div.le-rline-v
-            span.le-rlab
-              input#le_hmm
-              span.le-unit  "mm"
+          div.le2-srow
+            div#le_wire.le2-stage
+              div.le2-inner
+                div.le2-box.a-center
+                  input.le2-inp
+                div.le2-box.a-center
+                  input.le2-inp
+                div.le2-box.a-center
+                  input.le2-inp
+                div.le2-box.a-center
+                  input.le2-inp
+                div.le2-box.a-center
+                  input.le2-inp
+                div.le2-box.a-center
+                  input.le2-inp
+                div.le2-box.a-center
+                  input.le2-inp
+                div.le2-box.a-center
+                  input.le2-inp
+                div.le2-box.grp
+                  span.le2-lbl  "Sweetness Level:"
+                  select.le2-sel.na
+                    option  "N/A"
+                    option  "Dry"
+                    option  "Semi-Dry"
+                    option  "Semi-Sweet"
+                    option  "Sweet"
+                  span.le2-slash  "/"
+                  span.le2-lbl  "Color:"
+                  select.le2-sel.na
+                    option  "N/A"
+                    option  "Red"
+                    option  "White"
+                    option  "Orange"
+                    option  "Rosé"
+                  span.le2-slash  "/"
+                  span.le2-lbl  "Type:"
+                  select.le2-sel.na
+                    option  "N/A"
+                    option  "Wine"
+                    option  "Sparkling Wine"
+                    option  "Pét-Nat"
+                    option  "Fortified Wine"
+                    option  "Ice Wine"
+                    option  "Dessert Wine"
+                div.le2-box.grp
+                  span.le2-avgrp
+                    span.le2-lbl  "Alc.:"
+                    input.le2-vinp
+                  span.le2-avgrp
+                    span.le2-lbl  "Vol.:"
+                    input.le2-vinp
+                    span.le2-lbl  "mL"
+            div.le-ruler-v
+              div.le-rline-v
+              span.le-rlab
+                input#le_hmm
+                span.le-unit  "mm"
         div.le-note  "This is not the final label design. It is a layout template to help you enter yo"
         div.dash-sep
       div.option-cols  [HIDDEN]  "   "
@@ -722,7 +723,91 @@ body  "               "
         div.gallery-item
           div.gallery-placeholder
             img
+          div.gallery-caption  "Traditional / Heritage"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Contemporary"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Artistic / Punk"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Contemporary"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Artistic / Punk"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Minimalist"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Contemporary"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Minimalist"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Artistic / Punk"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Marketing Images"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Artistic / Punk"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Contemporary"
+        div.gallery-item
+          div.gallery-placeholder
+            img
           div.gallery-caption  "Flora & Fauna"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Flora & Fauna"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Traditional / Heritage"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Premium"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Traditional / Heritage"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Premium"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Artistic / Punk"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Flora & Fauna"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Premium"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Minimalist"
         div.gallery-item
           div.gallery-placeholder
             img
@@ -734,43 +819,15 @@ body  "               "
         div.gallery-item
           div.gallery-placeholder
             img
-          div.gallery-caption  "Minimalist"
-        div.gallery-item
-          div.gallery-placeholder
-            img
           div.gallery-caption  "Flora & Fauna"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Flora & Fauna"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Marketing Images"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Artistic / Punk"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Minimalist"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Marketing Images"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Premium"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Artistic / Punk"
         div.gallery-item
           div.gallery-placeholder
             img
           div.gallery-caption  "Traditional / Heritage"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Artistic / Punk"
         div.gallery-item
           div.gallery-placeholder
             img
@@ -786,22 +843,6 @@ body  "               "
         div.gallery-item
           div.gallery-placeholder
             img
-          div.gallery-caption  "Contemporary"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Premium"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Marketing Images"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Artistic / Punk"
-        div.gallery-item
-          div.gallery-placeholder
-            img
           div.gallery-caption  "Flora & Fauna"
         div.gallery-item
           div.gallery-placeholder
@@ -810,75 +851,7 @@ body  "               "
         div.gallery-item
           div.gallery-placeholder
             img
-          div.gallery-caption  "Minimalist"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Traditional / Heritage"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Artistic / Punk"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Traditional / Heritage"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Traditional / Heritage"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Contemporary"
-        div.gallery-item
-          div.gallery-placeholder
-            img
           div.gallery-caption  "Marketing Images"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Contemporary"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Artistic / Punk"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Artistic / Punk"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Premium"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Flora & Fauna"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Flora & Fauna"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Minimalist"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Contemporary"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Marketing Images"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Minimalist"
-        div.gallery-item
-          div.gallery-placeholder
-            img
-          div.gallery-caption  "Minimalist"
         div.gallery-item
           div.gallery-placeholder
             img
@@ -891,6 +864,34 @@ body  "               "
           div.gallery-placeholder
             img
           div.gallery-caption  "Premium"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Flora & Fauna"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Marketing Images"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Marketing Images"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Minimalist"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Minimalist"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Marketing Images"
+        div.gallery-item
+          div.gallery-placeholder
+            img
+          div.gallery-caption  "Minimalist"
         div.gallery-item
           div.gallery-placeholder
             img

@@ -83,10 +83,10 @@ const CSS = '<style>'
  //     end ticks; typed numbers, native spin arrows, NO box around them ---
  // spacing traced from the owner's reference (FRONT LABEL header underline as
  // the datum): label→line 16px, line→sheet 62px, sheet→height-ruler 58px
- + '#labelEditor .le2-grid{display:grid;grid-template-columns:minmax(0,560px) max-content;grid-template-rows:auto auto;gap:62px 58px;justify-content:center;align-items:stretch;margin-top:46px}'
- + '#labelEditor .le-ruler-w{grid-column:1;grid-row:1;display:flex;flex-direction:column;align-items:center}'
- + '#labelEditor .le2-grid .le2-stage{grid-column:1;grid-row:2}'
- + '#labelEditor .le-ruler-v{grid-column:2;grid-row:2;display:flex;align-items:center;gap:24px}'
+ + '#labelEditor .le2-grid{max-width:560px;margin:46px auto 0}'                                    // the SHEET centres; rulers hang around it
+ + '#labelEditor .le-ruler-w{display:flex;flex-direction:column;align-items:center;margin-bottom:62px}'
+ + '#labelEditor .le2-srow{position:relative}'
+ + '#labelEditor .le-ruler-v{position:absolute;top:0;bottom:0;left:calc(100% + 58px);display:flex;align-items:center;gap:24px}'
  + '#labelEditor .le-rlab{display:inline-flex;align-items:center;gap:10px;font-size:14px;margin-bottom:16px}'
  + '#labelEditor .le-ruler-v .le-rlab{margin-bottom:0}'
  + '#labelEditor .le-rlab input{width:58px;height:auto;border:none;background:transparent;text-align:right;font-size:14px;padding:0;color:#000}'
