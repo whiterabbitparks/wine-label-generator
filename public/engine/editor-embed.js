@@ -46,9 +46,9 @@ const REF={
   regionCountry: {x:0.0000,y:0.7450,w:0.3150,h:0.0520, sz:0.0280, wt:400, a:'center'},
   classification:{x:0.3425,y:0.7450,w:0.3150,h:0.0520, sz:0.0280, wt:400, a:'center'},
   special:       {x:0.6850,y:0.7450,w:0.3150,h:0.0520, sz:0.0280, wt:400, a:'center'},
-  attributes:    {x:0.0900,y:0.8350,w:0.8200,h:0.0480, sz:0.0250, wt:400, a:'center', grp:1},  // Sweetness/Color/Type line
+  attributes:    {x:0.0300,y:0.8350,w:0.9400,h:0.0480, sz:0.0280, wt:400, a:'center', grp:1},  // Sweetness/Color/Type line (same size as region row, owner 2026-08-17)
   vintage:       {x:0.3850,y:0.9050,w:0.2300,h:0.0620, sz:0.0400, wt:400, a:'center'},         // bottom row, centre, larger
-  alcVol:        {x:0.0000,y:0.9150,w:1.0000,h:0.0480, sz:0.0250, wt:400, a:'left', grp:1}     // Alc. left / Vol. right flank the vintage
+  alcVol:        {x:0.0000,y:0.9150,w:1.0000,h:0.0480, sz:0.0280, wt:400, a:'left', grp:1}     // Alc. left / Vol. right flank the vintage (same size as region row)
 };
 const REF_RATIO=(768.3-54.6)/(618.9-46.8);          // content-box aspect from the reference PDF
 
