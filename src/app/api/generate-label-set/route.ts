@@ -9,7 +9,7 @@ import { logGeneration } from "@/lib/admin/generation-log";
 import { getProfiles, type StyleProfile } from "@/lib/admin/style-refs";
 import { buildLayoutHints } from "@/lib/admin/layout-refs";
 import { feedbackAggregates, weightedPick, type StyleFeedbackAggregate } from "@/lib/admin/feedback";
-import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, NO_BORDER_RULE, NO_ARCHITECTURE_RULE, NEUTRAL_GEO_RULE, geographicRule, wantsBuilding, wantsText, subjectFocusRule, wantsCrowd } from "@/lib/admin/image-rules";
+import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, NO_BORDER_RULE, NO_ARCHITECTURE_RULE, NEUTRAL_GEO_RULE, geographicRule, wantsBuilding, QVEVRI_RULE, mentionsQvevri, qvevriOverridden, wantsText, subjectFocusRule, wantsCrowd } from "@/lib/admin/image-rules";
 import { subjectFrom } from "@/lib/styles/prompt";
 
 /* POST /api/generate-label-set — the generation orchestrator.
@@ -190,6 +190,7 @@ export async function POST(req: Request) {
           // architecture & geography (owner 2026-08-17): buildings only when
           // asked; geography precise when the wine names a place, neutral when not
           if (!wantsBuilding(brief.vision)) rules.push(NO_ARCHITECTURE_RULE);
+          if (mentionsQvevri(brief.vision) && !qvevriOverridden(brief.vision)) rules.push(QVEVRI_RULE);
           const place = [brief.data?.region, brief.data?.country].filter(Boolean).join(", ");
           rules.push(place ? geographicRule(place) : NEUTRAL_GEO_RULE);
           const job = buildStyleJob(style, sub, brief, art, fbLines, prof?.charter || prof?.summary, rules.map((r) => r.positive));

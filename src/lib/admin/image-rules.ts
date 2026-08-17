@@ -243,6 +243,30 @@ export const NEUTRAL_GEO_RULE: CompiledRule = {
     "Does the image contain a recognizable real-world landmark, or unmistakably region-specific vegetation/architecture that pins one specific place? Generic hills, vines and trees do not count.",
 };
 
+/* Built-in hard rule (owner, 2026-08-17): QVEVRI ANATOMY. A qvevri is a
+   plain vessel — completely smooth clean clay, NO ornaments, NO handles,
+   NO carvings. When shown buried it is buried WHOLE: only the round mouth
+   is visible flush with the ground — never a half-buried body. Applied
+   only when the story mentions a qvevri, and skipped entirely when the
+   customer explicitly asks for decoration/handles/half-buried. */
+export function mentionsQvevri(vision: string | undefined): boolean {
+  return /\b(qvevri|kvevri|kwevri|quevri|churi)\b/i.test(String(vision || ""));
+}
+export function qvevriOverridden(vision: string | undefined): boolean {
+  return /\b(handle|ornament|decorat|carv|relief|engraved\s+qvevri|half[- ]?buried|partially\s+buried|sticking\s+out)\b/i.test(
+    String(vision || "")
+  );
+}
+export const QVEVRI_RULE: CompiledRule = {
+  src: "qvevri are plain and buried whole (built-in)",
+  positive:
+    "Any qvevri is rendered truthfully: a plain clay vessel with a completely smooth, clean, undecorated surface — no ornaments, no reliefs, no carvings and no handles of any kind. If it is shown buried in the earth it is buried WHOLE: only its round mouth/opening is visible, flush with the ground — never a half-buried vessel with its body protruding.",
+  negative:
+    "ornamented qvevri, decorated clay vessel, carved qvevri, qvevri with handles, amphora handles, half-buried vessel, vessel body protruding from the ground",
+  check:
+    "If the image contains a qvevri or similar large clay wine vessel: does it have handles, ornaments, carvings or any surface decoration, OR is it shown partially buried with its body protruding from the ground? A vessel standing fully above ground with a smooth plain surface is fine. If no such vessel appears, answer no.",
+};
+
 /** Does the winemaker's story explicitly ask for lettering? */
 export function wantsText(vision: string | undefined): boolean {
   return /\b(text|letter|lettering|word|writing|written|inscription|sign\s+say|says|saying|glyph|number|digit|numeral|typograph|caption|monogram|slogan|motto)\b/i.test(
