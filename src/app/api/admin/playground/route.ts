@@ -8,7 +8,7 @@ import { providerName, generateImageWithRetry } from "@/lib/image-provider";
 import { getImageStorage } from "@/lib/image-storage";
 import { logGeneration } from "@/lib/admin/generation-log";
 import { getProfiles, listRefs, getCardSeen, markCardsSeen } from "@/lib/admin/style-refs";
-import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, NO_BORDER_RULE, wantsText, subjectFocusRule, wantsCrowd } from "@/lib/admin/image-rules";
+import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, NO_BORDER_RULE, NO_ARCHITECTURE_RULE, NEUTRAL_GEO_RULE, geographicRule, wantsBuilding, wantsText, subjectFocusRule, wantsCrowd } from "@/lib/admin/image-rules";
 import { subjectFrom } from "@/lib/styles/prompt";
 import { feedbackAggregates } from "@/lib/admin/feedback";
 
@@ -57,6 +57,10 @@ export async function POST(req: Request) {
   rules.push(NO_BORDER_RULE);
   if (!wantsText(vision)) rules.push(NO_TEXT_RULE);
   if (!wantsCrowd(vision)) rules.push(subjectFocusRule(subjectFrom(vision, {})));
+  // playground briefs carry no wine data: buildings gated on the test story,
+  // geography kept neutral unless the story itself names a place
+  if (!wantsBuilding(vision)) rules.push(NO_ARCHITECTURE_RULE);
+  rules.push(/\b(valley|region|mountain|coast|island|georgia|kakheti|france|bordeaux|burgundy|tuscany|rioja|mosel|provence|caucasus)\b/i.test(vision) ? geographicRule(vision.slice(0, 140)) : NEUTRAL_GEO_RULE);
 
   // BENCH ROTATION (owner 2026-08-15): references never lose value — every
   // card always stays in rotation (removing one = deleting the reference).
