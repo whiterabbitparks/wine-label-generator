@@ -81,13 +81,16 @@ const CSS = '<style>'
  + '#labelEditor .le-divider.le-full{max-width:none;margin:22px 0}'                                // full-width line across the margin area
  // --- DIMENSION RULERS (owner reference, 2026-08-17): measuring lines with
  //     end ticks; typed numbers, native spin arrows, NO box around them ---
- + '#labelEditor .le2-grid{display:grid;grid-template-columns:minmax(0,560px) max-content;grid-template-rows:auto auto;gap:16px 24px;justify-content:center;align-items:stretch;margin-top:30px}'
+ // spacing traced from the owner's reference (FRONT LABEL header underline as
+ // the datum): label→line 16px, line→sheet 62px, sheet→height-ruler 58px
+ + '#labelEditor .le2-grid{display:grid;grid-template-columns:minmax(0,560px) max-content;grid-template-rows:auto auto;gap:62px 58px;justify-content:center;align-items:stretch;margin-top:46px}'
  + '#labelEditor .le-ruler-w{grid-column:1;grid-row:1;display:flex;flex-direction:column;align-items:center}'
  + '#labelEditor .le2-grid .le2-stage{grid-column:1;grid-row:2}'
- + '#labelEditor .le-ruler-v{grid-column:2;grid-row:2;display:flex;align-items:center;gap:14px}'
- + '#labelEditor .le-rlab{display:inline-flex;align-items:center;gap:4px;font-size:14px;margin-bottom:8px}'
+ + '#labelEditor .le-ruler-v{grid-column:2;grid-row:2;display:flex;align-items:center;gap:24px}'
+ + '#labelEditor .le-rlab{display:inline-flex;align-items:center;gap:10px;font-size:14px;margin-bottom:16px}'
  + '#labelEditor .le-ruler-v .le-rlab{margin-bottom:0}'
  + '#labelEditor .le-rlab input{width:58px;height:auto;border:none;background:transparent;text-align:right;font-size:14px;padding:0;color:#000}'
+ + '#labelEditor .le-rlab input:focus{outline:none;background:transparent;border:none;box-shadow:none}'
  + '#labelEditor .le-rlab input::-webkit-inner-spin-button{opacity:1}'
  + '#labelEditor .le-rline-h{width:100%;height:14px;position:relative;border-left:2px solid #000;border-right:2px solid #000}'
  + '#labelEditor .le-rline-h::after{content:"";position:absolute;left:0;right:0;top:50%;margin-top:-1px;border-top:2px solid #000}'

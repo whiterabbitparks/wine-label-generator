@@ -149,6 +149,13 @@ document.addEventListener('change',function(e){const t=e.target;if(!t.closest||!
   if(t.matches('.le2-sel[data-attr]')){const k=t.getAttribute('data-attr');FIELDS.attributes.value[k]=t.value;t.classList.toggle('na',isNA(t.value));
     const box=t.closest('.le2-box'); if(box&&cv('attributes'))box.classList.remove('warn');}});
 window.addEventListener('resize',applyFonts);
+/* Dimension numbers behave like the label texts (owner 2026-08-17): on
+   click the number simply disappears and typed digits replace it; leaving
+   the field empty restores the previous size. No focus box. */
+document.addEventListener('focusin',function(e){const t=e.target;
+  if(t.id==='le_wmm'||t.id==='le_hmm'){t.setAttribute('data-prev',t.value);t.value='';}});
+document.addEventListener('focusout',function(e){const t=e.target;
+  if(t.id==='le_wmm'||t.id==='le_hmm'){if(!t.value)t.value=t.getAttribute('data-prev')||(t.id==='le_wmm'?'110':'80');render();mirrorSize();}});
 function mirrorSize(){var d=dims();var ow=document.getElementById('widthMM'),oh=document.getElementById('heightMM');if(ow){ow.value=d.W;ow.dispatchEvent(new Event('input',{bubbles:true}));}if(oh){oh.value=d.H;oh.dispatchEvent(new Event('input',{bubbles:true}));}}
 
 /* ---------- preview glue ---------- */
