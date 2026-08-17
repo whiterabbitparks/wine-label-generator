@@ -1173,14 +1173,48 @@ function pickVariant(key,seed,tags){
   }
   return sPick(seed,(STYLE_SALT[key]||0)*7+1,n);
 }
+/* BACKGROUND COLOUR RULE (owner 2026-08-16): label grounds are white/warm
+   tones for EVERY wine; red/pink grounds are additionally allowed ONLY for
+   red wines. Cool or dark grounds never pass. Applied inside palPick so it
+   governs built-ins, board palettes and approved looks alike; when a list
+   has no allowed entry, the seeded pick keeps its inks on a forced
+   warm-white ground. WINE_RED is set per render from wineColorName. */
+let WINE_RED=false;
+function palBg(p){if(!p)return null;if(typeof p.bg==='string')return p.bg;if(Array.isArray(p))return p[0];return null;}
+function bgAllowed(hex){
+  const m=/^#?([0-9a-f]{6})$/i.exec(String(hex||''));
+  if(!m)return true;
+  const n=parseInt(m[1],16), r=(n>>16)&255, g=(n>>8)&255, b=n&255;
+  const mx=Math.max(r,g,b), mn=Math.min(r,g,b), L=(mx+mn)/510;
+  const S=mx===mn?0:(mx-mn)/(255-Math.abs(mx+mn-255));
+  let H=0;
+  if(mx!==mn){
+    if(mx===r)H=60*(((g-b)/(mx-mn))%6);
+    else if(mx===g)H=60*((b-r)/(mx-mn)+2);
+    else H=60*((r-g)/(mx-mn)+4);
+    if(H<0)H+=360;
+  }
+  const whiteWarm=L>=0.78&&(S<=0.28||(H>=15&&H<=70));
+  const redPink=(H>=335||H<=25)&&S>=0.15;
+  return whiteWarm||(WINE_RED&&redPink);
+}
 /* hintKey = the public style the admin curates; saltKey = the internal pool
    (merged contemporary keeps four internal pools for palette diversity). */
 function palPick(hintKey,saltKey,seed,arr,map){
   const h=STYLE_HINTS[hintKey], hp=h&&h.palettes;
+  const salt=(STYLE_SALT[saltKey]||0)*7+2;
+  const filt=list=>{const ok=list.filter(p=>bgAllowed(palBg(p)));return ok.length?ok:null;};
   if(Array.isArray(hp)&&hp.length&&map){
-    try{return map(hp[sPick(seed,(STYLE_SALT[saltKey]||0)*7+2,hp.length)]);}catch(e){}
+    try{
+      const ok=filt(hp);
+      if(ok)return map(ok[sPick(seed,salt,ok.length)]);
+      return map(Object.assign({},hp[sPick(seed,salt,hp.length)],{bg:'#FBF7EF'}));
+    }catch(e){}
   }
-  return arr[sPick(seed,(STYLE_SALT[saltKey]||0)*7+2,arr.length)];
+  const ok=filt(arr);
+  if(ok)return ok[sPick(seed,salt,ok.length)];
+  const p0=arr[sPick(seed,salt,arr.length)];
+  return Array.isArray(p0)?['#FBF7EF'].concat(p0.slice(1)):Object.assign({},p0,{bg:'#FBF7EF'});
 }
 /* Per-variant hero-font alternates — every option hand-picked to fit that
    composition's board (blackletter comps offer blackletters, script comps
@@ -1844,6 +1878,7 @@ function renderStyleOptions(d,order,opts){
   opts=opts||{}; const seed=opts.seed|0;
   const twMM=Math.max(30,(+opts.widthMM||110)), thMM=Math.max(30,(+opts.heightMM||80));
   const W=twMM*10, H=thMM*10, f=sFields(d);
+  WINE_RED=/red/i.test(String((d&&d.wineColorName)||''));
   const testRig=(typeof window!=='undefined'&&typeof window.__SEED0__==='number');
   return STYLE_LIST.map(st=>{let svg;
     const hs=STYLE_HINTS[st.key];

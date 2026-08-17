@@ -257,6 +257,28 @@ ref image files moved there too). KEPT: fontFeedback, settings (hard
 rules / image rules / catalog / case prefs), users, generated-images.
 Boards are empty until the owner re-uploads and re-derives.
 
+## 5-COLOUR-AND-EDGES (2026-08-16, latest)
+
+**Standing rule (owner): label BACKGROUND colours are white/warm tones for
+EVERY wine; red/pink grounds are additionally allowed ONLY for red wines
+(wineColorName matches /red/i; rosé currently counts as non-red). Cool or
+dark grounds never pass.** Enforced in the engine's palPick (bgAllowed:
+HSL classify the bg — whiteWarm L≥0.78 & (S≤0.28 or hue 15-70); redPink
+hue ≥335/≤25 & S≥0.15) so it governs built-ins, board palettes AND
+approved looks alike; a list with no allowed entry keeps its inks on a
+forced warm-white #FBF7EF. Notable: the minimalist red panel and punk
+red/pink grounds are now red-wine-only. Goldens re-baselined (9 diffs,
+all in the White dataset, punk+contemporary — the rule working).
+
+**WHITE-EDGE GUARANTEE (owner): generated near-white grounds printed as a
+faint square under multiply.** whitenEdges() in image-provider/index.ts
+post-processes EVERY generated PNG (inside generateImageWithRetry, so
+set + playground + legacy single all get it): alpha flattened onto white,
+near-white snapped to #FFF through a soft knee (min-channel ≥248 → white,
+232-248 smoothstep, below untouched), outer 4% of each edge feathered to
+white. Non-PNG (mock SVG) passes through; failures return the original.
+pngjs promoted to a runtime dependency (+@types/pngjs dev).
+
 **LOOKS-ONLY GATE (owner 2026-08-16, after seeing unapproved layouts on
 the page post-wipe): customers NEVER see unapproved layouts — no
 fallback.** buildLayoutHints always sends `__looksOnly:true`; the engine
