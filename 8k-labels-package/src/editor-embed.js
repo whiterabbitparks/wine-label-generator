@@ -60,11 +60,15 @@ function ensureContainers(){
   const host=document.getElementById('labelEditor'); if(!host) return null;
   if(!document.getElementById('le_wire')){
     host.innerHTML=
-       '<div class="le-size"><span class="le-sizelab lw">Width</span><input id="le_wmm" type="number" value="110"><span class="le-unit">mm</span>'
-      +'<span class="le-sizelab lh">Height</span><input id="le_hmm" type="number" value="80"><span class="le-unit">mm</span></div>'          // width/height row (top)
-      +'<div class="le-divider le-full"></div>'                                     // grey dashed line, full width across the margin, between size row and label
-      +'<div class="le-warn" id="le_warn" style="display:none">No label details were provided. If you want to generate a blank label, simply click <b>Show Labels</b> again.</div>'
-      +'<div class="le2-wrap"><div class="le2-stage" id="le_wire"></div></div>'     // the single, centred layout-preview interface
+       '<div class="le-warn" id="le_warn" style="display:none">No label details were provided. If you want to generate a blank label, simply click <b>Show Labels</b> again.</div>'
+      /* DIMENSION RULERS (owner reference, 2026-08-17): width as a measuring
+         line above the sheet, height as one to its right — typed numbers
+         with native spinner arrows, no box around them. */
+      +'<div class="le2-grid">'
+      +'<div class="le-ruler-w"><span class="le-rlab"><input id="le_wmm" type="number" value="110"><span class="le-unit">mm</span></span><div class="le-rline-h"></div></div>'
+      +'<div class="le2-stage" id="le_wire"></div>'
+      +'<div class="le-ruler-v"><div class="le-rline-v"></div><span class="le-rlab"><input id="le_hmm" type="number" value="80"><span class="le-unit">mm</span></span></div>'
+      +'</div>'
       +'<div class="le-note">This is not the final label design. It is a layout template to help you enter your label details in the correct visual hierarchy. Enter only the information you want printed on your label, and feel free to leave any fields blank. The final label will be generated based on the information you provide, and you can edit or update any of these details after your label has been generated.</div>'
       +'<div class="dash-sep"></div>';
   }

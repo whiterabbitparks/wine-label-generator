@@ -79,13 +79,20 @@ const CSS = '<style>'
  + '#labelEditor .le-note{max-width:560px;margin:44px auto 0;text-align:center;font-size:12.5px;line-height:1.45;color:#000000;font-style:italic}'   // instruction below the label (matched gap)
  + '#labelEditor .le-divider{border-top:2px solid #000000;max-width:560px;margin:22px auto}'      // grey solid line between sections
  + '#labelEditor .le-divider.le-full{max-width:none;margin:22px 0}'                                // full-width line across the margin area
- + '#labelEditor .le-size{display:flex;align-items:center;justify-content:center;margin:0 auto}'   // width/height row, centred above the preview
- + '#labelEditor .le-sizelab{font-weight:600;font-size:12px}'
- + '#labelEditor .le-size .lw{display:inline-block}'
- + '#labelEditor .le-size #le_wmm{margin-left:14px}'
- + '#labelEditor .le-size .lh{margin-left:26px}'
- + '#labelEditor .le-size #le_hmm{margin-left:14px}'
- + '#labelEditor .le-size input{width:76px;height:38px;border:2px solid #000;border-radius:0;text-align:center;font-size:14px;padding:0 6px;color:#000;background:#FFFFFF}'
+ // --- DIMENSION RULERS (owner reference, 2026-08-17): measuring lines with
+ //     end ticks; typed numbers, native spin arrows, NO box around them ---
+ + '#labelEditor .le2-grid{display:grid;grid-template-columns:minmax(0,560px) max-content;grid-template-rows:auto auto;gap:16px 24px;justify-content:center;align-items:stretch;margin-top:30px}'
+ + '#labelEditor .le-ruler-w{grid-column:1;grid-row:1;display:flex;flex-direction:column;align-items:center}'
+ + '#labelEditor .le2-grid .le2-stage{grid-column:1;grid-row:2}'
+ + '#labelEditor .le-ruler-v{grid-column:2;grid-row:2;display:flex;align-items:center;gap:14px}'
+ + '#labelEditor .le-rlab{display:inline-flex;align-items:center;gap:4px;font-size:14px;margin-bottom:8px}'
+ + '#labelEditor .le-ruler-v .le-rlab{margin-bottom:0}'
+ + '#labelEditor .le-rlab input{width:58px;height:auto;border:none;background:transparent;text-align:right;font-size:14px;padding:0;color:#000}'
+ + '#labelEditor .le-rlab input::-webkit-inner-spin-button{opacity:1}'
+ + '#labelEditor .le-rline-h{width:100%;height:14px;position:relative;border-left:2px solid #000;border-right:2px solid #000}'
+ + '#labelEditor .le-rline-h::after{content:"";position:absolute;left:0;right:0;top:50%;margin-top:-1px;border-top:2px solid #000}'
+ + '#labelEditor .le-rline-v{width:14px;height:100%;position:relative;border-top:2px solid #000;border-bottom:2px solid #000}'
+ + '#labelEditor .le-rline-v::after{content:"";position:absolute;top:0;bottom:0;left:50%;margin-left:-1px;border-left:2px solid #000}'
  + '#labelEditor .le-unit{color:#000000;font-size:13px;margin:0 6px}'
  // --- the single, centred layout-preview interface (exact replica of Layout_preview_UI.pdf) ---
  + '#labelEditor .le2-wrap{display:flex;justify-content:center;margin-top:44px}'                   // matched gap above the label
