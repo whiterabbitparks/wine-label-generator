@@ -13,6 +13,7 @@ import { buildLayoutHints } from "@/lib/admin/layout-refs";
 import { feedbackAggregates, weightedPick, type StyleFeedbackAggregate } from "@/lib/admin/feedback";
 import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, NO_BORDER_RULE, WHITE_BG_RULE, NO_ARCHITECTURE_RULE, NEUTRAL_GEO_RULE, geographicRule, wantsBuilding, QVEVRI_RULE, mentionsQvevri, qvevriOverridden, stylizationRule, NO_RED_DOMINANCE_RULE, compareToReference, wantsText, subjectFocusRule, wantsCrowd } from "@/lib/admin/image-rules";
 import { subjectFrom } from "@/lib/styles/prompt";
+import { cardPalette } from "@/lib/admin/card-palette";
 
 /* POST /api/generate-label-set — the generation orchestrator.
 
@@ -204,6 +205,16 @@ export async function POST(req: Request) {
           const job = buildStyleJob(style, sub, brief, art, fbLines, prof?.charter || prof?.summary, rules.map((r) => r.positive));
           const ruleNeg = rules.map((r) => r.negative).filter(Boolean).join(", ");
           if (ruleNeg) job.negative = job.negative ? job.negative + ", " + ruleNeg : ruleNeg;
+          // EXACT COLOURS (owner 2026-08-18): the card's reference palette is
+          // requested in the prompt AND enforced mechanically in finishing
+          try {
+            job.paletteLock = await cardPalette(style.key, sub.key);
+            if (job.paletteLock.length) {
+              const hint = ` Use ONLY the reference's own ink colours (${job.paletteLock.join(", ")}) — no other hues.`;
+              job.prompt += hint;
+              if (job.shortPrompt) job.shortPrompt += hint;
+            }
+          } catch {}
           const started = Date.now();
           try {
             let imageDataUrl = await generateImageWithRetry(job);

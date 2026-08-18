@@ -15,6 +15,9 @@ export interface GenerationJob {
   /** condensed prompt for style-conditioned providers (subject + geometry +
       non-negotiables; the style_id carries the visual language) */
   shortPrompt?: string;
+  /** exact ink colours extracted from the card's reference — the finishing
+      pass maps every coloured pixel to the nearest of these (owner rule) */
+  paletteLock?: string[];
 }
 
 /** Returns an image as a data URL that slots into the label's image area. */

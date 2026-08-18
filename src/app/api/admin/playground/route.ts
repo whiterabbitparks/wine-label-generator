@@ -12,6 +12,7 @@ import path from "node:path";
 import { getProfiles, listRefs, getCardSeen, markCardsSeen, REFS_DIR } from "@/lib/admin/style-refs";
 import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, NO_BORDER_RULE, WHITE_BG_RULE, NO_ARCHITECTURE_RULE, NEUTRAL_GEO_RULE, geographicRule, wantsBuilding, QVEVRI_RULE, mentionsQvevri, qvevriOverridden, stylizationRule, NO_RED_DOMINANCE_RULE, compareToReference, wantsText, subjectFocusRule, wantsCrowd } from "@/lib/admin/image-rules";
 import { subjectFrom } from "@/lib/styles/prompt";
+import { cardPalette } from "@/lib/admin/card-palette";
 import { feedbackAggregates } from "@/lib/admin/feedback";
 
 /* POST /api/admin/playground — owner's test bench for the refinement loop.
@@ -108,6 +109,15 @@ export async function POST(req: Request) {
       job.provider = provider; // batch's chosen provider rides the job
       const ruleNeg = cardRules.map((r) => r.negative).filter(Boolean).join(", ");
       if (ruleNeg) job.negative = job.negative ? job.negative + ", " + ruleNeg : ruleNeg;
+      // EXACT COLOURS (owner 2026-08-18): reference palette requested + enforced
+      try {
+        job.paletteLock = await cardPalette(style.key, sub.key);
+        if (job.paletteLock.length) {
+          const hint = ` Use ONLY the reference's own ink colours (${job.paletteLock.join(", ")}) — no other hues.`;
+          job.prompt += hint;
+          if (job.shortPrompt) job.shortPrompt += hint;
+        }
+      } catch {}
       const started = Date.now();
       try {
         let dataUrl = await generateImageWithRetry(job);
