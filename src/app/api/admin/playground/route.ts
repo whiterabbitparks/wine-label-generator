@@ -91,6 +91,7 @@ export async function POST(req: Request) {
   // default per batch — same story, two providers, honest comparison
   const provider =
     body.provider === "recraft" ? ("recraft" as const)
+    : body.provider === "flux" ? ("flux" as const)
     : body.provider === "openai" ? ("openai" as const)
     : providerName();
   const brief: LabelBrief = { vision, data: {}, seed: 0, zones: null };

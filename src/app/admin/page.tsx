@@ -113,11 +113,25 @@ function StylesTab() {
   const [err, setErr] = useState<string>("");
   const [recraft, setRecraft] = useState<{ styles: Record<string, { id: string; refCount: number; syncedAt: string }>; keySet: boolean } | null>(null);
 
+  const [falLoras, setFalLoras] = useState<{ loras: Record<string, { url: string; refCount: number; trainedAt: string }>; keySet: boolean } | null>(null);
   const loadRecraft = useCallback(async () => {
     const r = await fetch("/api/admin/recraft-styles");
     if (r.ok) setRecraft(await r.json());
+    const f = await fetch("/api/admin/fal-lora");
+    if (f.ok) setFalLoras(await f.json());
   }, []);
   useEffect(() => { loadRecraft(); }, [loadRecraft]);
+
+  async function trainLora(style: string) {
+    setBusy(`lora-${style}`); setErr("");
+    const r = await fetch("/api/admin/fal-lora", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ style }),
+    });
+    const bo = await r.json().catch(() => ({}));
+    if (!r.ok) setErr(bo.error || `LoRA training failed (${r.status})`);
+    setBusy(""); loadRecraft();
+  }
 
   async function syncRecraft() {
     setBusy("recraft"); setErr("");
@@ -218,6 +232,13 @@ function StylesTab() {
                 <button style={S.btn} disabled={!mine.length || busy === `analyze-${key}`}
                   onClick={() => analyze(key)}>
                   {busy === `analyze-${key}` ? "Analyzing…" : "Analyze references"}
+                </button>
+                <button style={S.btnGhost} disabled={!mine.length || busy === `lora-${key}` || falLoras?.keySet === false}
+                  title={falLoras?.keySet === false ? "FAL_KEY not set in .env.local" : "Train a real FLUX LoRA on this board (~$2, a few minutes)"}
+                  onClick={() => trainLora(key)}>
+                  {busy === `lora-${key}` ? "Training LoRA (minutes)…"
+                    : falLoras?.loras?.[key] ? `Retrain FLUX LoRA (done ${new Date(falLoras.loras[key].trainedAt).toLocaleDateString()})`
+                    : "Train FLUX LoRA"}
                 </button>
               </div>
             </div>
@@ -640,6 +661,7 @@ function PlaygroundTab() {
               <option value="default">server default</option>
               <option value="openai">gpt-image</option>
               <option value="recraft">Recraft (sees your boards)</option>
+              <option value="flux">FLUX (trained LoRA)</option>
             </select>
           </div>
           <button style={S.btn} onClick={generate} disabled={busy}>

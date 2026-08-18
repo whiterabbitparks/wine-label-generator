@@ -11,7 +11,7 @@ export interface GenerationJob {
   data?: Record<string, string>;
   vision?: string;
   /** per-job provider override (admin playground A/B); env default otherwise */
-  provider?: "mock" | "openai" | "recraft";
+  provider?: "mock" | "openai" | "recraft" | "flux";
   /** condensed prompt for style-conditioned providers (subject + geometry +
       non-negotiables; the style_id carries the visual language) */
   shortPrompt?: string;
