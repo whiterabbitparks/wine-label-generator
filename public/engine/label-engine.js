@@ -897,9 +897,15 @@ function resolveArt(body,W,H){
      beside them. Final size = the reachable maximum scaled to ARTFILL of
      its area; floor = contain-in-box. */
   const CORE=0.05, pad=MINGAP;
+  /* boxes declared flush to a side edge (see the slide lock below) may run
+     their rect further off THAT side: the outer fringe of real artwork is
+     white (invisible under multiply) and artwork may bleed off the label
+     (owner rules), so the flush side grants 15% of the label beyond the
+     normal bleed — without it the edge anchor throttles the reachable size */
+  const fR=p.b[2]>=0.96?0.15*W:0, fL=p.b[0]<=0.04?0.15*W:0;
   const okAt=(cx,cy,s)=>{
     const mw=cw*s, mh=ch*s;
-    if(cx-mw/2<-SBLEED||cx+mw/2>W+SBLEED||cy-mh/2<-SBLEED||cy+mh/2>H+SBLEED)return false;
+    if(cx-mw/2<-SBLEED-fL||cx+mw/2>W+SBLEED+fR||cy-mh/2<-SBLEED||cy+mh/2>H+SBLEED)return false;
     const ix=cx-mw/2+mw*CORE, ix2=cx+mw/2-mw*CORE;
     const iy=cy-mh/2+mh*CORE, iy2=cy+mh/2-mh*CORE;
     for(const r of rects)
@@ -917,10 +923,16 @@ function resolveArt(body,W,H){
      sideways for a marginally bigger fit — lock the x to centre and slide
      only vertically. Side-field boxes keep the full horizontal slide. */
   const centred=Math.abs(bcx-W/2)<0.02*W;
-  const N=12, spanX=centred?0:0.25*W, spanY=0.25*H;
+  /* EDGE-FLUSH BOXES STAY AT THEIR EDGE (owner ref 2026-08-19, punk v2):
+     a box declared flush to a side edge means "the figure lives at that
+     edge" — the slide may not walk it back toward the roomier middle, so
+     the search is one-sided (like the centred x-lock, but anchored). */
+  const flushR=p.b[2]>=0.96, flushL=p.b[0]<=0.04;
+  const N=12, spanY=0.25*H;
+  const sxL=centred||flushR?0:0.25*W, sxR=centred||flushL?0:0.25*W;
   let bestS=maxScale(bcx,bcy), cands=[[bcx,bcy,bestS]];
   for(let i=0;i<=N;i++)for(let j=0;j<=N;j++){
-    const cx=bcx-spanX+2*spanX*i/N, cy=bcy-spanY+2*spanY*j/N;
+    const cx=bcx-sxL+(sxL+sxR)*i/N, cy=bcy-spanY+2*spanY*j/N;
     const s=maxScale(cx,cy);
     cands.push([cx,cy,s]);
     if(s>bestS)bestS=s;
@@ -936,10 +948,12 @@ function resolveArt(body,W,H){
      in every punk comp — loud is the style; overflow dissolves to white and
      may bleed. Capped at full-bleed so the rect never exceeds the canvas. */
   let sF=Math.max(1,bestS*Math.sqrt(ARTFILL))*(p.st==='punk'?1.3:1);
-  sF=Math.min(sF,(W+2*SBLEED)/cw,(H+2*SBLEED)/ch);
+  sF=Math.min(sF,(W+2*SBLEED+fL+fR)/cw,(H+2*SBLEED)/ch);
   let mw=cw*sF, mh=ch*sF;
-  /* keep the final rect inside the bleed bounds (position only) */
-  const px=Math.min(Math.max(bx-mw/2,-SBLEED),W+SBLEED-mw);
+  /* keep the final rect inside the bleed bounds (position only) — the
+     flush-side allowance holds here too, or the boost walks the artwork
+     back off its anchored edge */
+  const px=Math.min(Math.max(bx-mw/2,-SBLEED-fL),W+SBLEED+fR-mw);
   const py=Math.min(Math.max(by-mh/2,-SBLEED),H+SBLEED-mh);
   return body.split(ART_TOKEN).join(
     `<image x="${px.toFixed(1)}" y="${py.toFixed(1)}" width="${mw.toFixed(1)}" height="${mh.toFixed(1)}" preserveAspectRatio="xMidYMid meet" xlink:href="${p.src}" href="${p.src}" style="mix-blend-mode:multiply"/>`);
@@ -1059,7 +1073,7 @@ const STYLE_BOXES={
   punk:[
     [0.22,0.05,0.78,0.50],   // naive drawing centre stage
     [0.55,0.10,0.95,0.82],   // poster type left, figure right
-    [0.34,0.14,0.94,0.70],   // handwritten title corner, figure right
+    [0.55,0.10,1.00,0.82],   // handwritten title corner, figure right (owner ref 2026-08-19: bigger, pushed right)
     [0.28,0.06,0.88,0.58],   // rotated side caps, riso figure centre
     [0.28,0.15,0.72,0.58],   // arched hand-lettering ring over figure
     [0.10,0.04,0.90,0.40]]}; // riso band top, knockout hero below
