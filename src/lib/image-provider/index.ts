@@ -3,6 +3,7 @@ import type { GenerationJob } from "./types";
 import { generateMockImage } from "./mock";
 import { generateOpenAIImage } from "./openai";
 import { generateRecraftImage } from "./recraft";
+import { generateFluxImage } from "./flux";
 
 /* ARTWORK FINISHING (owner 2026-08-16/17) — one pixel pass over every
    generated PNG, two jobs:
@@ -135,15 +136,16 @@ export function finishArtwork(dataUrl: string): string {
 /* Single place that answers "which image model are we using?" — read at
    request time so .env.local edits apply without a restart in dev. */
 
-export function providerName(): "mock" | "openai" | "recraft" {
+export function providerName(): "mock" | "openai" | "recraft" | "flux" {
   const p = process.env.IMAGE_PROVIDER;
-  return p === "openai" ? "openai" : p === "recraft" ? "recraft" : "mock";
+  return p === "openai" ? "openai" : p === "recraft" ? "recraft" : p === "flux" ? "flux" : "mock";
 }
 
 export function generateImage(job: GenerationJob): Promise<string> {
   const p = job.provider || providerName(); // per-job override = playground A/B
   return p === "openai" ? generateOpenAIImage(job)
     : p === "recraft" ? generateRecraftImage(job)
+    : p === "flux" ? generateFluxImage(job)
     : generateMockImage(job);
 }
 
