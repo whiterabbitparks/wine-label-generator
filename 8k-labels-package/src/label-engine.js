@@ -2008,7 +2008,10 @@ function stylePunk(f,W,H,seed,twMM,thMM){
       {str:f.appellation,size:H*0.05,f:F2?F2[0]:(SF.marker),w:F2?F2[1]:(400),fill:INK,maxW:W*0.5,gap:H*0.02,caps:capsFor(F2,false)},
       {str:[f.grape,f.classification].filter(Boolean).join(' / '),size:H*0.03,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(600),fill:INK,maxW:W*0.5,gap:H*0.012,caps:capsFor(F2,false)},
       {str:[reg,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.028,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,maxW:W*0.5,gap:0,caps:capsFor(F3,false)}],SM,SM,'l').svg;
-    body+=sBlock([desc,alc].filter(Boolean).join(' / '),{x:SM,top:H-SM-4,fromBottom:true,maxW:W*0.5,size:H*0.024,min:H*0.02,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,a:'l',caps:capsFor(F3,false)}).svg;
+    /* the legal line must NEVER lose words to a narrow column (hard rule:
+       ".. Alc. by Vol. / N mL" complete) — the area under the figure is free,
+       so this line alone may run wider than the type column above it */
+    body+=sBlock([desc,alc].filter(Boolean).join(' / '),{x:SM,top:H-SM-4,fromBottom:true,maxW:W*0.62,size:H*0.024,min:H*0.02,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,a:'l',caps:capsFor(F3,false)}).svg;
   }else if(variant===2){ // handwritten title corner, figure right (Say When board)
     body+=sBlock(f.wine,{x:SM,top:SM,maxW:cW*0.9,size:H*0.08,min:H*0.05,f:HP?HP[0]:(SF.caveat),w:HP?HP[1]:(700),fill:AC,a:'l',caps:capsFor(HP,true)}).svg;
     body+=sImageBox('punk',BOX,W,H);
@@ -2020,7 +2023,7 @@ function stylePunk(f,W,H,seed,twMM,thMM){
     body+=stackUp([
       {str:f.producer,size:H*0.032,f:F3?F3[0]:(SF.marker),w:F3?F3[1]:(400),fill:INK,caps:capsFor(F3,false)},
       {str:reg,size:H*0.024,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,false)},
-      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,false)}],SM,H-SM-2,H*0.008,'l',W*0.4).svg;
+      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,maxW:W*0.62,caps:capsFor(F3,false)}],SM,H-SM-2,H*0.008,'l',W*0.4).svg;
   }else if(variant===3){ // rotated side caps, riso figure centre (PET-NAT / SUR512 boards)
     body+=sRot(f.producer,SM+Math.max(H*0.034,MIN7)*1.1,H,{size:H*0.034,f:F3?F3[0]:(SF.anton),w:F3?F3[1]:(400),fill:AC,tr:0.14,caps:true});
     body+=sImageBox('punk',BOX,W,H);
