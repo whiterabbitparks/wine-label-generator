@@ -3,7 +3,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { loadCatalog, pickSubStyle } from "@/lib/styles/catalog";
 import { buildStyleJob, type LabelBrief } from "@/lib/styles/prompt";
 import { loadConfig, DEFAULT_CONFIG } from "@/lib/admin/config-store";
-import { providerName, generateImageWithRetry } from "@/lib/image-provider";
+import { providerName, generateImageWithRetry, keyArtwork } from "@/lib/image-provider";
 import { getImageStorage } from "@/lib/image-storage";
 import { logGeneration } from "@/lib/admin/generation-log";
 import fs from "node:fs";
@@ -64,6 +64,12 @@ declare global {
   var __labelSetCache: Map<string, SetResult> | undefined;
 }
 const CACHE_MAX = 50; // FIFO bound — entries hold 6 data URLs each
+/** send-time white→alpha keying (screen-print mode); cache stays opaque */
+function keyedImages(images: Record<string, SetEntry>): Record<string, SetEntry> {
+  return Object.fromEntries(
+    Object.entries(images).map(([k, v]) => [k, { ...v, url: keyArtwork(v.url) }])
+  );
+}
 function cache(): Map<string, SetResult> {
   if (!globalThis.__labelSetCache) globalThis.__labelSetCache = new Map();
   return globalThis.__labelSetCache;
@@ -171,7 +177,7 @@ export async function POST(req: Request) {
     const hintsImg = await withImgPalettes(layoutHints, hit.images).catch(() => layoutHints);
     const body =
       JSON.stringify({ type: "progress", done: 6, total: 6 }) + "\n" +
-      JSON.stringify({ type: "result", ...hit, layoutHints: hintsImg, cached: true }) + "\n";
+      JSON.stringify({ type: "result", ...hit, images: keyedImages(hit.images), layoutHints: hintsImg, cached: true }) + "\n";
     return new Response(enc.encode(body), { headers: NDJSON });
   }
 
@@ -335,7 +341,9 @@ export async function POST(req: Request) {
           c.set(key, result);
           if (c.size > CACHE_MAX) c.delete(c.keys().next().value as string);
         }
-        send({ type: "result", ...result });
+        // keying is send-time only: the cache and every upstream consumer
+        // (verifier, palette extraction, admin log) work on opaque pixels
+        send({ type: "result", ...result, images: keyedImages(images) });
       }
       controller.close();
     },

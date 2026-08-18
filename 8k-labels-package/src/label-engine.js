@@ -874,7 +874,7 @@ const ART_TOKEN='<!--8KART-->';
    toward the spot overlapping the least text ink — i.e. into the label's
    empty space — with ties resolved toward the box centre. Deterministic. */
 let ARTFILL=0.85;
-function resolveArt(body,W,H){
+function resolveArt(body,W,H,bg){
   const rects=INK_RECTS; INK_RECTS=[];
   const p=PENDING_ART; PENDING_ART=null;
   if(body.indexOf(ART_TOKEN)<0)return body;
@@ -954,11 +954,18 @@ function resolveArt(body,W,H){
      back off its anchored edge */
   const px=Math.min(Math.max(bx-mw/2,-SBLEED-fL),W+SBLEED+fR-mw);
   const py=Math.min(Math.max(by-mh/2,-SBLEED),H+SBLEED-mh);
+  /* SCREEN-PRINT MODE (owner 2026-08-19): artwork arrives white-KEYED
+     (ink-density alpha). Under multiply that renders identically to the
+     old opaque-white image on any light ground (multiply is linear in the
+     source), but on a DARK ground multiply buries dark inks — there the
+     artwork composites normally: opaque inks on coloured stock, like real
+     screen printing. data-sp marks the mode for tests. */
+  const gl=hslOf(bg), sp=!!(gl&&gl.L<0.60);
   return body.split(ART_TOKEN).join(
-    `<image x="${px.toFixed(1)}" y="${py.toFixed(1)}" width="${mw.toFixed(1)}" height="${mh.toFixed(1)}" preserveAspectRatio="xMidYMid meet" xlink:href="${p.src}" href="${p.src}" style="mix-blend-mode:multiply"/>`);
+    `<image x="${px.toFixed(1)}" y="${py.toFixed(1)}" width="${mw.toFixed(1)}" height="${mh.toFixed(1)}" preserveAspectRatio="xMidYMid meet" xlink:href="${p.src}" href="${p.src}"${sp?' data-sp="1"':''} style="mix-blend-mode:${sp?'normal':'multiply'}"/>`);
 }
 function sWrap(W,H,twMM,thMM,bg,body,defs){
-  body=resolveArt(body,W,H);
+  body=resolveArt(body,W,H,bg);
   return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W.toFixed(1)} ${H.toFixed(1)}" width="${twMM}mm" height="${thMM}mm">`
     +`<defs><style><![CDATA[@import url('${FONTS_URL}');${EXTRA_FONTS_URL?`@import url('${EXTRA_FONTS_URL}');`:''}]]></style>${defs||''}</defs>`
     +`<rect x="${(-SBLEED)}" y="${(-SBLEED)}" width="${(W+2*SBLEED).toFixed(1)}" height="${(H+2*SBLEED).toFixed(1)}" fill="${bg}"/>`

@@ -248,3 +248,34 @@ export async function generateImageWithRetry(job: GenerationJob): Promise<string
     }
   }
 }
+
+/* SCREEN-PRINT KEYING (owner 2026-08-19): convert the finished white-ground
+   PNG into an ink-density alpha PNG — "unmultiply". Alpha = ink coverage
+   (255 − min channel); colour is re-derived so that compositing the pixel
+   over pure white reproduces the original exactly. Because multiply is
+   linear in the source, the keyed image under multiply renders identically
+   to the old opaque image on ANY light ground — but on dark grounds the
+   engine can now composite it normally: opaque inks on coloured stock, the
+   real screen-print behaviour, instead of ink drowning in the ground.
+   MUST run LAST: verification and palette extraction need opaque pixels. */
+export function keyArtwork(dataUrl: string): string {
+  const PREFIX = "data:image/png;base64,";
+  if (!dataUrl.startsWith(PREFIX)) return dataUrl;
+  try {
+    const png = PNG.sync.read(Buffer.from(dataUrl.slice(PREFIX.length), "base64"));
+    const { width: W, height: H, data: px } = png;
+    for (let i = 0; i < W * H * 4; i += 4) {
+      const r = px[i], g = px[i + 1], b = px[i + 2];
+      const a = 255 - Math.min(r, g, b); // ink coverage
+      if (a === 0) { px[i] = px[i + 1] = px[i + 2] = 0; px[i + 3] = 0; continue; }
+      const w = 255 - a; // white share to remove
+      px[i] = Math.max(0, Math.min(255, Math.round(((r - w) * 255) / a)));
+      px[i + 1] = Math.max(0, Math.min(255, Math.round(((g - w) * 255) / a)));
+      px[i + 2] = Math.max(0, Math.min(255, Math.round(((b - w) * 255) / a)));
+      px[i + 3] = a;
+    }
+    return PREFIX + PNG.sync.write(png).toString("base64");
+  } catch {
+    return dataUrl;
+  }
+}

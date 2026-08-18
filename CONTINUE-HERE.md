@@ -914,3 +914,10 @@ server" framing and their pending-work lists, which this file supersedes.
   wine's family — reds on reds, greens on whites. hlAcc() in palPick,
   imgPalettes path only. Punk v1 appellation joined the accent role.
 - Kirile (traditional v3) artwork box enlarged per owner duck reference.
+- SCREEN-PRINT MODE (owner 2026-08-19): generate-label-set keys artwork at
+  SEND time (keyArtwork in image-provider: white → ink-density alpha;
+  cache/verifier/palette extraction stay opaque). Engine picks blend per
+  ground: L≥0.60 multiply (renders identically to the old opaque-white
+  image — multiply is linear), L<0.60 normal compositing (opaque inks on
+  coloured stock, data-sp="1"). Dark-on-dark artwork is gone; goldens and
+  parity untouched.
