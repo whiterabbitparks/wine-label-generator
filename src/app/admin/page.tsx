@@ -662,6 +662,7 @@ function PlaygroundTab() {
               <option value="openai">gpt-image</option>
               <option value="recraft">Recraft (sees your boards)</option>
               <option value="flux">FLUX (trained LoRA)</option>
+              <option value="hybrid">GPT→FLUX hybrid (story + craft)</option>
             </select>
           </div>
           <button style={S.btn} onClick={generate} disabled={busy}>
