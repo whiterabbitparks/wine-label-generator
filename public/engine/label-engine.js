@@ -1267,8 +1267,12 @@ function recolour(hex){
   }
   return hslHex(best,c.S*0.9,c.L);
 }
-function groundOK(hex,panel){
+function groundOK(hex,panel,punkFree){
   const c=hslOf(hex); if(!c)return true;
+  /* PUNK BOLD GROUNDS (owner 2026-08-18): punk grounds may be saturated
+     and bold in ANY hue, down to the lightness floor where multiply-
+     blended artwork still reads. Contrast of text is fixed in palAdapt. */
+  if(punkFree&&!panel)return c.L>=0.42;
   if(panel){
     // bold text-only panel grounds, by product colour (owner 2026-08-17)
     if(c.L<=0.2)return true;                                   // black
@@ -1287,7 +1291,7 @@ function palAdapt(p,punkFree){
   if(!p)return null;
   const isArr=Array.isArray(p);
   const panel=!isArr&&p.panel===true;
-  if(!groundOK(palBg(p),panel))return null;
+  if(!groundOK(palBg(p),panel,punkFree))return null;
   const out=isArr?p.slice():Object.assign({},p);
   const keys=isArr?out.map(function(_,i){return i;}):Object.keys(out);
   let freeKey=null, freeSat=0;
@@ -1304,6 +1308,25 @@ function palAdapt(p,punkFree){
     if(k===freeKey)continue;
     const v=out[k]; if(typeof v!=='string'||!/^#([0-9a-f]{6})$/i.test(v))continue;
     if(!elementOK(v))out[k]=recolour(v);
+  }
+  /* CONTRAST GUARD (owner 2026-08-18): dark ground → light text, light
+     ground → dark text — applied to every element after all recolours. */
+  const bgc=hslOf(palBg(out));
+  if(bgc){
+    const mixHex=(hex,toWhite,t)=>{
+      const mm=/^#?([0-9a-f]{6})$/i.exec(hex); if(!mm)return hex;
+      const n=parseInt(mm[1],16); let r=(n>>16)&255,g=(n>>8)&255,b2=n&255;
+      const tgt=toWhite?255:0;
+      r=Math.round(r+(tgt-r)*t); g=Math.round(g+(tgt-g)*t); b2=Math.round(b2+(tgt-b2)*t);
+      return ('#'+r.toString(16).padStart(2,'0')+g.toString(16).padStart(2,'0')+b2.toString(16).padStart(2,'0')).toUpperCase();
+    };
+    for(const k of keys){
+      if(isArr?k===0:k==='bg')continue;
+      const v=out[k]; if(typeof v!=='string'||!/^#([0-9a-f]{6})$/i.test(v))continue;
+      const c=hslOf(v); if(!c)continue;
+      if(bgc.L<0.55&&c.L<0.45)out[k]=mixHex(v,true,0.78);       // dark ground: lift the text
+      else if(bgc.L>=0.55&&c.L>0.82)out[k]=mixHex(v,false,0.6); // light ground: sink the text
+    }
   }
   return out;
 }
