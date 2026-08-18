@@ -111,6 +111,26 @@ function StylesTab() {
   const [profiles, setProfiles] = useState<Record<string, ProfileRow>>({});
   const [busy, setBusy] = useState<string>("");
   const [err, setErr] = useState<string>("");
+  const [recraft, setRecraft] = useState<{ styles: Record<string, { id: string; refCount: number; syncedAt: string }>; keySet: boolean } | null>(null);
+
+  const loadRecraft = useCallback(async () => {
+    const r = await fetch("/api/admin/recraft-styles");
+    if (r.ok) setRecraft(await r.json());
+  }, []);
+  useEffect(() => { loadRecraft(); }, [loadRecraft]);
+
+  async function syncRecraft() {
+    setBusy("recraft"); setErr("");
+    const r = await fetch("/api/admin/recraft-styles", { method: "POST" });
+    const b = await r.json().catch(() => ({}));
+    if (!r.ok) setErr(b.error || `Recraft sync failed (${r.status})`);
+    else {
+      const bad = Object.entries((b.results || {}) as Record<string, { ok: boolean; error?: string }>)
+        .filter(([, v]) => !v.ok).map(([k, v]) => `${k}: ${v.error}`).join(" · ");
+      if (bad) setErr("Recraft sync partial — " + bad);
+    }
+    setBusy(""); loadRecraft();
+  }
 
   const load = useCallback(async () => {
     const r = await fetch("/api/admin/style-refs");
@@ -168,6 +188,18 @@ function StylesTab() {
           &ldquo;Analyze references&rdquo; processes new uploads; deleting a reference removes its
           style card. Approve/reject in Image Play sticks to the reference permanently.
         </p>
+        <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
+          <button style={S.btn} disabled={busy === "recraft" || recraft?.keySet === false} onClick={syncRecraft}>
+            {busy === "recraft" ? "Syncing boards to Recraft…" : "Sync boards to Recraft"}
+          </button>
+          <span style={{ fontSize: 12, color: "#8a887e" }}>
+            {recraft === null ? "" : !recraft.keySet
+              ? "RECRAFT_API_KEY not set — add it to .env.local to enable the style-conditioning trial"
+              : Object.keys(recraft.styles || {}).length
+                ? "Recraft styles: " + Object.entries(recraft.styles).map(([k, v]) => `${k} (${v.refCount} refs)`).join(" · ")
+                : "key set — press Sync to turn each board into a Recraft style the model can SEE"}
+          </span>
+        </div>
         {err && <p style={{ color: "#a33", fontSize: 13 }}>{err}</p>}
       </div>
       {STYLE_DEFS.map(([key, name]) => {
@@ -508,6 +540,7 @@ function PlaygroundTab() {
   const [style, setStyle] = useState<string>("traditional");
   const [story, setStory] = useState("");
   const [count, setCount] = useState(4);
+  const [provider, setProvider] = useState<string>("default");
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [results, setResults] = useState<PlayResult[]>([]);
@@ -536,7 +569,7 @@ function PlaygroundTab() {
       const r = await fetch("/api/admin/playground", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ style, vision: story, count }),
+        body: JSON.stringify({ style, vision: story, count, ...(provider !== "default" ? { provider } : {}) }),
       });
       const body = await r.json();
       if (!r.ok) throw new Error(body.error || String(r.status));
@@ -599,6 +632,14 @@ function PlaygroundTab() {
               {[2, 4, 6, 8].map((n) => (
                 <option key={n} value={n}>{n}</option>
               ))}
+            </select>
+          </div>
+          <div>
+            <label style={S.label}>Provider (A/B)</label>
+            <select style={S.input} value={provider} onChange={(e) => setProvider(e.target.value)}>
+              <option value="default">server default</option>
+              <option value="openai">gpt-image</option>
+              <option value="recraft">Recraft (sees your boards)</option>
             </select>
           </div>
           <button style={S.btn} onClick={generate} disabled={busy}>

@@ -22,7 +22,7 @@ export const maxDuration = 300;
 export async function POST(req: Request) {
   if (!(await requestIsAuthenticated()))
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  let body: { style?: string; vision?: string; count?: number };
+  let body: { style?: string; vision?: string; count?: number; provider?: string };
   try {
     body = await req.json();
   } catch {
@@ -81,7 +81,12 @@ export async function POST(req: Request) {
     approved: entries.filter((e) => e.w > 1).length,
     unrated: entries.filter((e) => !e.rated).length,
   };
-  const provider = providerName();
+  // provider A/B (owner GO 2026-08-17): the playground may override the env
+  // default per batch — same story, two providers, honest comparison
+  const provider =
+    body.provider === "recraft" ? ("recraft" as const)
+    : body.provider === "openai" ? ("openai" as const)
+    : providerName();
   const brief: LabelBrief = { vision, data: {}, seed: 0, zones: null };
   const results = await Promise.all(
     Array.from({ length: count }, async (_, i) => {
@@ -92,6 +97,7 @@ export async function POST(req: Request) {
       const cardRules = [...rules, stylizationRule(style.key, `${(sub as { language?: string }).language || ""} ${sub.medium || ""}`)];
       if (style.key !== "punk") cardRules.push(NO_RED_DOMINANCE_RULE); // playground briefs default to the white colour-world
       const job = buildStyleJob(style, sub, brief, art, { ...globalFb, fixes: notes?.fixes, keeps: notes?.keeps, rejections: notes?.rejections }, charter, cardRules.map((r) => r.positive));
+      job.provider = provider; // batch's chosen provider rides the job
       const ruleNeg = cardRules.map((r) => r.negative).filter(Boolean).join(", ");
       if (ruleNeg) job.negative = job.negative ? job.negative + ", " + ruleNeg : ruleNeg;
       const started = Date.now();
