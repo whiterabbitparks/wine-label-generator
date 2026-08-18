@@ -1319,12 +1319,21 @@ function palAdapt(p,punkFree){
       r=Math.round(r+(tgt-r)*t); g=Math.round(g+(tgt-g)*t); b2=Math.round(b2+(tgt-b2)*t);
       return ('#'+r.toString(16).padStart(2,'0')+g.toString(16).padStart(2,'0')+b2.toString(16).padStart(2,'0')).toUpperCase();
     };
+    /* MINIMUM CONTRAST DELTA (owner 2026-08-18, after an invisible cream-
+       on-mustard producer line): thresholds left a gap where mid-light
+       text sat on a mid-light ground. Now EVERY element must differ from
+       the ground by ≥0.32 lightness — pushed away step by step (toward
+       white on dark grounds, toward black on light ones) until it does. */
     for(const k of keys){
       if(isArr?k===0:k==='bg')continue;
-      const v=out[k]; if(typeof v!=='string'||!/^#([0-9a-f]{6})$/i.test(v))continue;
-      const c=hslOf(v); if(!c)continue;
-      if(bgc.L<0.55&&c.L<0.45)out[k]=mixHex(v,true,0.78);       // dark ground: lift the text
-      else if(bgc.L>=0.55&&c.L>0.82)out[k]=mixHex(v,false,0.6); // light ground: sink the text
+      let v=out[k]; if(typeof v!=='string'||!/^#([0-9a-f]{6})$/i.test(v))continue;
+      const towardWhite=bgc.L<0.5;
+      for(let t=0;t<6;t++){
+        const c=hslOf(v); if(!c)break;
+        if(Math.abs(c.L-bgc.L)>=0.32)break;
+        v=mixHex(v,towardWhite,0.3);
+      }
+      out[k]=v;
     }
   }
   return out;
