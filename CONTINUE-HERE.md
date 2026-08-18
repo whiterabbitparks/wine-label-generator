@@ -921,3 +921,9 @@ server" framing and their pending-work lists, which this file supersedes.
   image — multiply is linear), L<0.60 normal compositing (opaque inks on
   coloured stock, data-sp="1"). Dark-on-dark artwork is gone; goldens and
   parity untouched.
+- TIMELESS NEUTRALITY (owner 2026-08-19): unless the story names a time,
+  culture or ethnicity, images may not pin one — no period/folk costume,
+  no culture-specific accessories or era-specific architecture; people and
+  settings read modern-but-neutral or timeless. TIMELESS_RULE +
+  mentionsEra() in image-rules.ts, wired in set route + playground,
+  verifier-checked like the other built-ins.

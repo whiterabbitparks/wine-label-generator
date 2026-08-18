@@ -11,7 +11,7 @@ import path from "node:path";
 import { getProfiles, listRefs, REFS_DIR, type StyleProfile } from "@/lib/admin/style-refs";
 import { buildLayoutHints } from "@/lib/admin/layout-refs";
 import { feedbackAggregates, weightedPick, type StyleFeedbackAggregate } from "@/lib/admin/feedback";
-import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, NO_BORDER_RULE, WHITE_BG_RULE, NO_ARCHITECTURE_RULE, NEUTRAL_GEO_RULE, geographicRule, wantsBuilding, QVEVRI_RULE, mentionsQvevri, qvevriOverridden, stylizationRule, NO_RED_DOMINANCE_RULE, compareToReference, wantsText, subjectFocusRule, wantsCrowd } from "@/lib/admin/image-rules";
+import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, NO_BORDER_RULE, WHITE_BG_RULE, NO_ARCHITECTURE_RULE, NEUTRAL_GEO_RULE, geographicRule, wantsBuilding, QVEVRI_RULE, mentionsQvevri, qvevriOverridden, stylizationRule, TIMELESS_RULE, mentionsEra, NO_RED_DOMINANCE_RULE, compareToReference, wantsText, subjectFocusRule, wantsCrowd } from "@/lib/admin/image-rules";
 import { subjectFrom } from "@/lib/styles/prompt";
 import { cardPalette, labelPaletteFromImage } from "@/lib/admin/card-palette";
 
@@ -227,6 +227,7 @@ export async function POST(req: Request) {
           // asked; geography precise when the wine names a place, neutral when not
           if (!wantsBuilding(brief.vision)) rules.push(NO_ARCHITECTURE_RULE);
           if (mentionsQvevri(brief.vision) && !qvevriOverridden(brief.vision)) rules.push(QVEVRI_RULE);
+          if (!mentionsEra(brief.vision)) rules.push(TIMELESS_RULE);
           const place = [brief.data?.region, brief.data?.country].filter(Boolean).join(", ");
           rules.push(place ? geographicRule(place) : NEUTRAL_GEO_RULE);
           // formal language (owner 2026-08-17): keyed to the CHOSEN card's
