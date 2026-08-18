@@ -90,7 +90,7 @@ export async function cardPalette(styleKey: string, refId: string): Promise<stri
    bg is always white (ground rule); ink = the darkest ink (clamped dark
    enough to read); acc = the most saturated ink; sub = ink faded toward
    the ground. The engine's wine-colour gamut still applies on top. */
-export async function labelPaletteFromImage(dataUrl: string): Promise<{ bg: string; ink: string; sub: string; acc: string }[] | null> {
+export async function labelPaletteFromImage(dataUrl: string, styleKey?: string): Promise<{ bg: string; ink: string; sub: string; acc: string }[] | null> {
   try {
     const m = dataUrl.match(/^data:image\/[a-z]+;base64,(.+)$/);
     if (!m) return null;
@@ -131,6 +131,27 @@ export async function labelPaletteFromImage(dataUrl: string): Promise<{ bg: stri
     const tintA = { bg: hex(mixToWhite(vivid.c, 0.82)), ink: inkHex, sub: subHex, acc: accHex };
     const tintB = { bg: hex(mixToWhite(dark.c, 0.84)), ink: inkHex, sub: subHex, acc: accHex };
     const white = { bg: "#FFFFFF", ink: inkHex, sub: subHex, acc: accHex };
+    // PUNK BOLD GROUNDS (owner 2026-08-18): saturated opaque grounds built
+    // from the image's own inks so the artwork prints INTO the colour (its
+    // whites dissolve into the ground under multiply). Lightness floored
+    // where multiply ink still reads; the engine's contrast guard flips
+    // text light on the deeper grounds.
+    if (styleKey === "punk") {
+      const toHsl = (c: { r: number; g: number; b: number }) => rgbToHsl(c.r, c.g, c.b);
+      const hsl2hex = (h: number, sVal: number, l: number) => {
+        h = ((h % 360) + 360) % 360;
+        const C = (1 - Math.abs(2 * l - 1)) * sVal, X = C * (1 - Math.abs(((h / 60) % 2) - 1)), m2 = l - C / 2;
+        let r = 0, g = 0, b = 0;
+        if (h < 60) { r = C; g = X; } else if (h < 120) { r = X; g = C; } else if (h < 180) { g = C; b = X; }
+        else if (h < 240) { g = X; b = C; } else if (h < 300) { r = X; b = C; } else { r = C; b = X; }
+        const q = (v: number) => Math.round((v + m2) * 255).toString(16).padStart(2, "0");
+        return ("#" + q(r) + q(g) + q(b)).toUpperCase();
+      };
+      const hv = toHsl(vivid.c), hd = toHsl(dark.c);
+      const boldA = { bg: hsl2hex(hv.h, Math.max(hv.s, 0.6), 0.62), ink: inkHex, sub: subHex, acc: accHex };
+      const boldB = { bg: hsl2hex(hd.h, Math.max(hd.s, 0.5), 0.48), ink: inkHex, sub: subHex, acc: accHex };
+      return [boldA, boldB, boldA, boldB, boldA, boldB, boldA, tintA, tintB, white];
+    }
     return [tintA, tintB, tintA, tintB, tintA, tintB, tintA, tintB, tintA, white];
   } catch {
     return null;

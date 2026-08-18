@@ -79,7 +79,7 @@ async function withImgPalettes(
 ): Promise<Record<string, unknown>> {
   const out = JSON.parse(JSON.stringify(base)) as Record<string, Record<string, unknown>>;
   for (const [k, v] of Object.entries(images)) {
-    const pal = await labelPaletteFromImage(v.url).catch(() => null);
+    const pal = await labelPaletteFromImage(v.url, k).catch(() => null);
     if (pal?.length) { out[k] = out[k] || {}; out[k].imgPalettes = pal; }
   }
   return out;
