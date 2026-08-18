@@ -1770,9 +1770,10 @@ function styleFlora(f,W,H,seed,twMM,thMM,fv){
     (function(){
       let asz=H*0.05; const R=W*0.40;
       const af=HP?HP[0]:(SF.imfell), aww=HP?HP[1]:(400);
-      const aw=measure(up(f.wine||''),asz,af,aww,false,asz*0.16);
+      const hcaps=capsFor(HP,true);   // curated fonts keep their case pref (owner 2026-08-18)
+      const aw=measure(hcaps?up(f.wine||''):(f.wine||''),asz,af,aww,false,asz*0.16);
       if(aw>R*1.55)asz=Math.max(MIN7,asz*R*1.55/aw);
-      body+=sArcText(f.wine,cx,SM+asz*0.85,R,{f:af,w:aww,size:asz,fill:INK,tr:0.16,caps:true});
+      body+=sArcText(f.wine,cx,SM+asz*0.85,R,{f:af,w:aww,size:asz,fill:INK,tr:0.16,caps:hcaps});
     })();
     body+=sImageBox('contemporary',BOX,W,H);
     body+=sFlow([
@@ -1995,7 +1996,7 @@ function stylePunk(f,W,H,seed,twMM,thMM){
       {str:[reg,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.028,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,maxW:W*0.5,gap:0,caps:capsFor(F3,false)}],SM,SM,'l').svg;
     body+=sBlock([desc,alc].filter(Boolean).join(' / '),{x:SM,top:H-SM-4,fromBottom:true,maxW:W*0.5,size:H*0.024,min:H*0.02,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,a:'l',caps:capsFor(F3,false)}).svg;
   }else if(variant===2){ // handwritten title corner, figure right (Say When board)
-    body+=sBlock(f.wine,{x:SM,top:SM,maxW:cW*0.9,size:H*0.08,min:H*0.05,f:HP?HP[0]:(SF.caveat),w:HP?HP[1]:(700),fill:AC,a:'l',caps:true}).svg;
+    body+=sBlock(f.wine,{x:SM,top:SM,maxW:cW*0.9,size:H*0.08,min:H*0.05,f:HP?HP[0]:(SF.caveat),w:HP?HP[1]:(700),fill:AC,a:'l',caps:capsFor(HP,true)}).svg;
     body+=sImageBox('punk',BOX,W,H);
     body+=sFlow([
       {str:f.appellation,size:H*0.045,f:F2?F2[0]:(SF.marker),w:F2?F2[1]:(400),fill:INK,maxW:W*0.26,gap:H*0.02,pre:H*0.16,caps:capsFor(F2,false)},
