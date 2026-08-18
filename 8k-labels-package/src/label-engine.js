@@ -1037,7 +1037,7 @@ const STYLE_BOXES={
     [0.24,0.06,0.76,0.40],   // Gewürztraminer: oval vignette in the frame
     [0.30,0.30,0.70,0.60],   // La Couspaude: vignette mid, type above+below
     [0.38,0.13,0.62,0.36],   // Mittelwihr: emblem over the red sans hero
-    [0.30,0.05,0.70,0.44],   // Kirile: portrait top, script + side verticals
+    [0.26,0.04,0.74,0.50],   // Kirile: portrait top, script + side verticals (owner ref 2026-08-19: bigger)
     [0.32,0.07,0.68,0.40],   // Olive Tree: airy engraving over tiny caps
     null,                    // Margaux: framed pure type
     [0.14,0.07,0.86,0.38],   // Jullouville (owner board 2026-08-17): wide engraving band
@@ -1354,20 +1354,49 @@ function palAdapt(p,punkFree){
 }
 /* hintKey = the public style the admin curates; saltKey = the internal pool
    (merged contemporary keeps four internal pools for palette diversity). */
+/* 70% HIGHLIGHT (owner 2026-08-19): monochrome artwork and layout are
+   allowed, but 7 renders in 10 must colour ONE worthy element — the accent
+   role, worn by appellation/vintage/grape lines across the comps (the
+   traditional hero keeps its own colour law on top) — in the wine's own
+   family: reds on red wines, greens on whites. Runs only on the artwork-
+   derived (imgPalettes) path, so goldens/no-hints renders never change. */
+const HL_RED=['#8E2430','#A32633','#7A1E28','#B03A2E'];
+const HL_GRN=['#3E5F3A','#2F5233','#556B2F','#4A7042'];
+function hlAcc(p,seed,salt){
+  if(sPick(seed,salt+13,10)>=7)return p; // 3 in 10 stay fully as derived
+  const set=(WINE_KIND==='red'||WINE_KIND==='rose')?HL_RED:HL_GRN;
+  const c=set[sPick(seed,salt+29,set.length)];
+  const out=Object.assign({},p,{acc:c});
+  /* not every comp wears the accent role — when the derived sub role is
+     neutral (the monochrome case this rule exists for), sub carries a
+     softened highlight too, so 7-in-10 holds across ALL comps */
+  const sc=hslOf(p.sub);
+  if(!sc||sc.S<0.18){
+    const n=parseInt(c.slice(1),16);
+    const soft=[(n>>16)&255,(n>>8)&255,n&255]
+      .map(v=>Math.round(v+(255-v)*0.22).toString(16).padStart(2,'0')).join('');
+    out.sub='#'+soft.toUpperCase();
+  }
+  return out;
+}
 function palPick(hintKey,saltKey,seed,arr,map){
   /* imgPalettes (owner 2026-08-18): colours derived from THIS label's own
      generated artwork outrank board/look palettes — text elements dress in
      the artwork's inks. Gamut adaptation still applies below. */
   const h=STYLE_HINTS[hintKey];
-  const hp=(h&&Array.isArray(h.imgPalettes)&&h.imgPalettes.length)?h.imgPalettes:(h&&h.palettes);
+  const isImg=!!(h&&Array.isArray(h.imgPalettes)&&h.imgPalettes.length);
+  const hp=isImg?h.imgPalettes:(h&&h.palettes);
   const salt=(STYLE_SALT[saltKey]||0)*7+2;
   const punkFree=saltKey==='punk';
-  const adapt=list=>{const out=[];for(const p of list){const a=palAdapt(p,punkFree);if(a)out.push(a);}return out;};
+  /* highlight BEFORE gamut/contrast adaptation so the guard still verifies
+     the forced accent against each entry's own ground */
+  const prep=isImg?(p=>hlAcc(p,seed,salt)):(p=>p);
+  const adapt=list=>{const out=[];for(const p of list){const a=palAdapt(prep(p),punkFree);if(a)out.push(a);}return out;};
   if(Array.isArray(hp)&&hp.length&&map){
     try{
       const ok=adapt(hp);
       if(ok.length)return map(ok[sPick(seed,salt,ok.length)]);
-      const p1=palAdapt(Object.assign({},hp[sPick(seed,salt,hp.length)],{bg:'#FBF7EF'}),punkFree);
+      const p1=palAdapt(prep(Object.assign({},hp[sPick(seed,salt,hp.length)],{bg:'#FBF7EF'})),punkFree);
       if(p1)return map(p1);
     }catch(e){}
   }
@@ -2019,7 +2048,7 @@ function stylePunk(f,W,H,seed,twMM,thMM){
     body+=sFlow([
       {str:f.producer,size:H*0.045,f:F3?F3[0]:(SF.marker),w:F3?F3[1]:(400),fill:INK,maxW:W*0.5,gap:H*0.045,pre:H*0.04,caps:capsFor(F3,false)},
       {str:f.wine,size:H*0.17,f:HP?HP[0]:(SF.anton),w:HP?HP[1]:(400),fill:INK,caps:capsFor(HP,true),lines:2,lh:0.95,maxW:W*0.52,gap:H*0.025},
-      {str:f.appellation,size:H*0.05,f:F2?F2[0]:(SF.marker),w:F2?F2[1]:(400),fill:INK,maxW:W*0.5,gap:H*0.02,caps:capsFor(F2,false)},
+      {str:f.appellation,size:H*0.05,f:F2?F2[0]:(SF.marker),w:F2?F2[1]:(400),fill:AC,maxW:W*0.5,gap:H*0.02,caps:capsFor(F2,false)},
       {str:[f.grape,f.classification].filter(Boolean).join(' / '),size:H*0.03,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(600),fill:INK,maxW:W*0.5,gap:H*0.012,caps:capsFor(F2,false)},
       {str:[reg,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.028,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,maxW:W*0.5,gap:0,caps:capsFor(F3,false)}],SM,SM,'l').svg;
     /* the legal line must NEVER lose words to a narrow column (hard rule:
