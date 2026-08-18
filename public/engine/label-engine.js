@@ -1106,7 +1106,21 @@ let STYLE_HINTS={};
 let MINGAP=10;
 let LOOKS_ONLY=false;
 function setStyleHints(h){
+  const prevH=STYLE_HINTS;
   STYLE_HINTS=(h&&typeof h==='object')?h:{};
+  /* imgPalettes persistence (owner bug report 2026-08-18): artwork-derived
+     colours arrive once with the generation result, but boot refetches,
+     "Layout alternatives" refreshes and per-look renders re-set hints
+     WITHOUT them — wiping the artwork's colours moments after they land.
+     Carry them across any hint set that doesn't bring its own; the next
+     generation always overrides with fresh ones. */
+  for(const k in prevH){
+    const pv=prevH[k];
+    if(pv&&Array.isArray(pv.imgPalettes)&&pv.imgPalettes.length){
+      if(STYLE_HINTS[k]&&!STYLE_HINTS[k].imgPalettes)STYLE_HINTS[k].imgPalettes=pv.imgPalettes;
+      else if(!STYLE_HINTS[k])STYLE_HINTS[k]={imgPalettes:pv.imgPalettes};
+    }
+  }
   const hr=STYLE_HINTS.__hardRules;
   MINGAP=(hr&&isFinite(+hr.minGapMM)&&+hr.minGapMM>=0)?Math.round(+hr.minGapMM*10):10;
   ARTFILL=(hr&&isFinite(+hr.artFillPct)&&+hr.artFillPct>=30&&+hr.artFillPct<=100)?+hr.artFillPct/100:0.85;
