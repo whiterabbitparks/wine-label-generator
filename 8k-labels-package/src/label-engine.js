@@ -2096,18 +2096,60 @@ function pickV(key,seed,n){
   if(FORCED_V!=null&&FORCED_V>=0&&FORCED_V<n)return FORCED_V;
   return pickVariant(key,seed,n);
 }
+/* SESSION VARIETY (owner 2026-08-19): rendering costs nothing, so a session
+   must walk the WHOLE approved pool before any look repeats — the seeded
+   pick looped fast (random draws collide). A per-style shuffle bag deals
+   looks like a deck of cards; each render SEED keeps its deal, because the
+   post-generation repaint re-renders the same seed and the shown set must
+   not reshuffle under the customer. Test rigs (__SEED0__) keep the old
+   deterministic pick so parity/e2e assertions stay reproducible. The
+   no-hints path never reaches this (goldens untouched). */
+const LOOK_BAG={}, LOOK_DEAL={};
+function lookIndexFor(key,seed,looks){
+  const n=looks.length;
+  if(n<=1)return 0;
+  if(typeof window!=='undefined'&&typeof window.__SEED0__==='number')
+    return sPick(seed,(STYLE_SALT[key]||0)*7+9,n);
+  const deals=LOOK_DEAL[key]||(LOOK_DEAL[key]={});
+  if(deals[seed]!=null)return deals[seed];
+  let bag=LOOK_BAG[key];
+  if(!bag||bag.n!==n)bag=LOOK_BAG[key]={n:n,q:[],last:-1};
+  if(!bag.q.length){
+    /* refill: shuffle WITHIN each comp variant, shuffle the variant order,
+       then interleave — the first deals cover every distinct ARRANGEMENT
+       before any repeats (approvals cluster on few comps; a plain shuffle
+       could open with three near-identical cards). */
+    const shuf=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=a[i];a[i]=a[j];a[j]=t;}return a;};
+    const gm={};
+    for(let i=0;i<n;i++){const v=(looks[i]&&looks[i].variant)|0;(gm[v]=gm[v]||[]).push(i);}
+    const groups=shuf(Object.keys(gm).map(function(v){return shuf(gm[v]);}));
+    const q=[];
+    for(let r=0;q.length<n;r++)for(const g of groups){if(g[r]!=null)q.push(g[r]);}
+    if(q[0]===bag.last)q.push(q.shift()); // no immediate repeat across refills
+    bag.q=q;
+  }
+  const idx=bag.q.shift();bag.last=idx;deals[seed]=idx;
+  return idx;
+}
 function withLook(key,seed,fn){
   const h=STYLE_HINTS[key], looks=h&&h.looks;
   if(!Array.isArray(looks)||!looks.length)return fn(seed);
-  const L=looks[sPick(seed,(STYLE_SALT[key]||0)*7+9,looks.length)]||looks[0];
+  const L=looks[lookIndexFor(key,seed,looks)]||looks[0];
   const frozen={};
   ['palettes','heroFonts','secondaryFonts','smallFonts'].forEach(function(k2){
     if(Array.isArray(L[k2])&&L[k2].length)frozen[k2]=L[k2];
   });
   const prev=STYLE_HINTS[key];
   /* artwork-derived colours pierce the look's frozen outfit (owner
-     2026-08-18): arrangement + fonts stay frozen, colours follow the art */
-  if(prev&&Array.isArray(prev.imgPalettes)&&prev.imgPalettes.length)frozen.imgPalettes=prev.imgPalettes;
+     2026-08-18): arrangement + fonts stay frozen, colours follow the art.
+     The list is ROTATED by the outer roll seed (owner 2026-08-19: grounds
+     looped) — the look renders under its own frozen seed, so without this
+     a look would keep one ground all session; rotation keeps the white-
+     to-tint weighting intact and stays stable across same-seed repaints. */
+  if(prev&&Array.isArray(prev.imgPalettes)&&prev.imgPalettes.length){
+    const P=prev.imgPalettes, off=sPick(seed,31,P.length);
+    frozen.imgPalettes=P.slice(off).concat(P.slice(0,off));
+  }
   STYLE_HINTS[key]=frozen;
   FORCED_V=isFinite(+L.variant)?+L.variant:null;
   try{return fn(+L.seed||0);}finally{STYLE_HINTS[key]=prev;FORCED_V=null;}
