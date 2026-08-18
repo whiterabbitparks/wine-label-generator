@@ -1,4 +1,5 @@
 import { getDb } from "@/lib/db";
+import { imageQuality } from "./index";
 import type { GenerationJob } from "./types";
 
 /* FLUX provider via fal.ai (owner GO, 2026-08-18) — the LoRA path.
@@ -9,6 +10,10 @@ import type { GenerationJob } from "./types";
    No LoRA trained yet → base FLUX dev (still a fair A/B baseline). */
 
 const GEN_URL = "https://fal.run/fal-ai/flux-lora"; // blocking endpoint
+/* fal bills per MEGAPIXEL — dev quarter-size costs ~1/4 of prod */
+function fluxSize(): { width: number; height: number } {
+  return imageQuality() === "prod" ? { width: 1664, height: 1024 } : { width: 832, height: 512 };
+}
 export const FAL_LORAS_DOC = "fal-loras";
 export const LORA_TRIGGER = "STYLE8K"; // trigger word baked at training time
 
@@ -85,7 +90,7 @@ export async function restyleWithFlux(baseDataUrl: string, job: GenerationJob): 
       prompt,
       image_url: baseUrl,
       strength: 0.62, // keep the GPT composition; replace the rendering
-      image_size: { width: 1664, height: 1024 },
+      image_size: fluxSize(), // dev = quarter cost
       num_inference_steps: 28,
       guidance_scale: 3.5,
       num_images: 1,
@@ -127,7 +132,7 @@ export async function generateFluxImage(job: GenerationJob): Promise<string> {
     headers: { Authorization: `Key ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       prompt,
-      image_size: { width: 1664, height: 1024 }, // ≈ the engine's 1.6:1
+      image_size: fluxSize(), // dev = quarter cost
       num_inference_steps: 28,
       guidance_scale: 3.5,
       num_images: 1,
