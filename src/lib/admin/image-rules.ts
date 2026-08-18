@@ -324,6 +324,29 @@ export const QVEVRI_RULE: CompiledRule = {
     "If the image contains a qvevri or similar large clay wine vessel: does it have handles, ornaments, carvings or any surface decoration, OR is it shown partially buried with its body protruding from the ground? A vessel standing fully above ground with a smooth plain surface is fine. If no such vessel appears, answer no.",
 };
 
+/* Built-in rule (owner, 2026-08-19): TIMELESS NEUTRALITY. Unless the story
+   explicitly asks for a specific time, culture or ethnicity, nothing in the
+   image may pin one: no period costume, no folk/national dress, no
+   culture-specific accessories, no era-specific architecture or props.
+   People and settings read modern-but-neutral, or simply timeless.
+   (Live-observed failure this rule exists for: "man in the cellar" came
+   back as a 17th-century figure.) Skipped when the customer names an era,
+   culture, ethnicity or historical style themselves. */
+export function mentionsEra(vision: string | undefined): boolean {
+  return /\b(ancient|medieval|renaissance|baroque|victorian|edwardian|antique|retro|vintage|soviet|ussr|roman|greek|ottoman|persian|byzantine|colonial|belle.?[ée]poque|art\s*(deco|nouveau)|\d{2}(th|st|nd|rd)\s*century|1[5-9]\d\d s?|folk|national\s+(dress|costume)|traditional\s+(dress|costume|clothing|outfit)|chokha|kimono|toga|knight|samurai|viking|cowboy|pharaoh|tsar|king|queen|monk|priest|peasant\s+(dress|costume)|ethnic)\b/i.test(
+    String(vision || "")
+  );
+}
+export const TIMELESS_RULE: CompiledRule = {
+  src: "timeless neutrality (built-in)",
+  positive:
+    "Unless the story itself specifies a time, culture or ethnicity, keep everything era-neutral and culture-neutral: any people wear simple modern-but-timeless clothing (plain shirts, work clothes, unremarkable garments) with no period costume, no folk or national dress and no culture-specific accessories; any objects, tools or structures are contemporary-neutral or timeless in design, never evoking a particular historical era, country or ethnic tradition.",
+  negative:
+    "period costume, historical dress, folk costume, national dress, traditional ethnic clothing, medieval clothing, victorian clothing, old-fashioned suit, tricorn hat, bonnet, armor, era-specific architecture, culturally specific ornament",
+  check:
+    "Does a person wear clearly historical, period, folk or national costume, or does clothing, accessories or architecture unmistakably evoke one specific historical era, culture or ethnicity? Plain modern or timeless clothing and generic settings are fine. If no people or such elements appear, answer no.",
+};
+
 /* Built-in rule (2026-08-17): PURE WHITE GROUND, now vision-CHECKED too.
    WHITE_BG has always ridden the prompt, but style-conditioned providers
    inherit their references' toned paper (live-observed: tan ground from
