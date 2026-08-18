@@ -85,6 +85,10 @@ async function withImgPalettes(
   return out;
 }
 
+/* recently-used art cards per style (in-memory): consecutive generations
+   rotate instead of re-landing on the same heavily-approved favourites */
+const recentCards: Record<string, string[]> = {};
+
 function sanitizeBrief(raw: unknown): LabelBrief | { error: string } {
   const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   const vision = typeof r.vision === "string" ? r.vision.slice(0, MAX_VISION).trim() : "";
@@ -195,7 +199,12 @@ export async function POST(req: Request) {
             // directions even within one session (seed is per-session)
             const vh = Array.from(brief.vision || "").reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 0);
             const hash = Math.abs(seed * 31 + i * 7 + ((seed >> 3) % 5) + (vh % 97));
-            sub = { ...weightedPick(baseVariants, fbAgg?.weights, hash) };
+            // rotate away from the last two cards used for this style (unless
+            // the pool is too small to afford exclusions)
+            const recent = recentCards[style.key] || [];
+            const pool = baseVariants.length > 3 ? baseVariants.filter((v) => !recent.includes(v.key)) : baseVariants;
+            sub = { ...weightedPick(pool.length ? pool : baseVariants, fbAgg?.weights, hash) };
+            recentCards[style.key] = [sub.key, ...recent].slice(0, 2);
           } else {
             sub = pickSubStyle(style, seed, i);
           }
@@ -262,10 +271,14 @@ export async function POST(req: Request) {
                   const refDataUrl = `data:image/${ext};base64,${fs.readFileSync(rp).toString("base64")}`;
                   const refine = await compareToReference(imageDataUrl, refDataUrl);
                   if (refine.length) {
-                    imageDataUrl = await generateImageWithRetry({
+                    const refined = await generateImageWithRetry({
                       ...job,
                       prompt: `MATCH THE REFERENCE CRAFT — corrections from a side-by-side comparison: ${refine.join("; ")}. ` + job.prompt,
                     });
+                    // the refined image must pass the SAME rules (owner saw a
+                    // word slip in): keep the previous verified image otherwise
+                    const recheck = rules.length ? await verifyImage(refined, rules) : { ok: true };
+                    if (recheck.ok) imageDataUrl = refined;
                   }
                 }
               }

@@ -135,7 +135,9 @@ export function weightedPick<T extends { key: string }>(
   weights: Record<string, number> | undefined,
   hash: number
 ): T {
-  const w = items.map((v) => Math.max(0.05, weights?.[v.key] ?? 1));
+  // approvals boost a card's share but never monopolize it (owner report
+  // 2026-08-18: heavily-approved favourites made the pool feel repetitive)
+  const w = items.map((v) => Math.min(2.5, Math.max(0.05, weights?.[v.key] ?? 1)));
   const sum = w.reduce((a, b) => a + b, 0);
   let t = (Math.imul(hash ^ 0x9e3779b9, 2654435761) >>> 0) / 4294967296;
   t *= sum;
