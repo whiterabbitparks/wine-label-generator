@@ -178,6 +178,15 @@ export function finishArtwork(dataUrl: string, paletteLock?: string[]): string {
 /* Single place that answers "which image model are we using?" — read at
    request time so .env.local edits apply without a restart in dev. */
 
+/* DEV/PROD QUALITY (owner 2026-08-18): during development the artistic
+   side is what's being tuned — resolution and render quality are wasted
+   money. IMAGE_QUALITY=dev (the default) buys cheap passes (gpt-image
+   quality low, FLUX at quarter-megapixels); IMAGE_QUALITY=prod restores
+   full quality for launch. One env switch, nothing else changes. */
+export function imageQuality(): "dev" | "prod" {
+  return process.env.IMAGE_QUALITY === "prod" ? "prod" : "dev";
+}
+
 export function providerName(): "mock" | "openai" | "recraft" | "flux" | "hybrid" {
   const p = process.env.IMAGE_PROVIDER;
   return p === "openai" ? "openai" : p === "recraft" ? "recraft" : p === "flux" ? "flux" : p === "hybrid" ? "hybrid" : "mock";

@@ -1,4 +1,5 @@
 import type { GenerationJob } from "./types";
+import { imageQuality } from "./index";
 
 /* Real provider — OpenAI Images API. Text-only jobs use /images/generations;
    jobs with an uploaded reference sketch use /images/edits (which accepts an
@@ -43,6 +44,7 @@ export async function generateOpenAIImage(job: GenerationJob): Promise<string> {
     form.append("model", model);
     form.append("prompt", prompt);
     form.append("size", pickSize(job.size));
+    form.append("quality", imageQuality() === "prod" ? "medium" : "low");
     for (const inp of imageInputs) form.append("image[]", inp.blob, inp.name);
     res = await fetch(`${API}/images/edits`, {
       method: "POST",
@@ -53,7 +55,7 @@ export async function generateOpenAIImage(job: GenerationJob): Promise<string> {
     res = await fetch(`${API}/images/generations`, {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model, prompt, size: pickSize(job.size) }),
+      body: JSON.stringify({ model, prompt, size: pickSize(job.size), quality: imageQuality() === "prod" ? "medium" : "low" }),
     });
   }
 
