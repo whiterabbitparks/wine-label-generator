@@ -52,15 +52,16 @@ const cardChecks = await page.evaluate((styles) => {
     return {
       style: k,
       embedded: !!(svg && frag && svg.innerHTML.includes(frag)),
-      multiply: !!(svg && svg.innerHTML.includes('mix-blend-mode:multiply')),
+      // multiply on light grounds; screen-print (data-sp, normal blend) on dark
+      multiply: !!(svg && (svg.innerHTML.includes('mix-blend-mode:multiply') || svg.innerHTML.includes('data-sp="1"'))),
     };
   });
 }, STYLES);
 for (const c of cardChecks) {
   if (!c.embedded) fail(`style "${c.style}" does not embed its own artwork`);
-  if (!c.multiply) fail(`style "${c.style}" artwork missing multiply blend`);
+  if (!c.multiply) fail(`style "${c.style}" artwork missing multiply/screen-print blend`);
 }
-console.log('all 3 style options embed their own artwork with multiply ✓');
+console.log('all 3 style options embed their own artwork with multiply/screen-print ✓');
 
 // unchanged brief + reseed (Show Labels is replaced by "Other Layout Options"
 // once labels are shown) → cached, no extra call
