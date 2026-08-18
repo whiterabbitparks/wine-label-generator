@@ -28,9 +28,9 @@ function rgbToHsl(r: number, g: number, b: number): { h: number; s: number; l: n
   return { h: ((h % 360) + 360) % 360, s, l };
 }
 
-/** Extract up to MAX_COLORS ink colours from one reference image file. */
-async function extractPalette(filePath: string): Promise<string[]> {
-  const { data, info } = await sharp(filePath)
+/** Extract up to MAX_COLORS ink colours from an image buffer. */
+export async function extractPaletteFromBuffer(input: Buffer): Promise<string[]> {
+  const { data, info } = await sharp(input)
     .resize(96, 96, { fit: "inside" })
     .removeAlpha()
     .raw()
@@ -73,7 +73,7 @@ export async function cardPalette(styleKey: string, refId: string): Promise<stri
     if (!ref) return [];
     const p = path.join(REFS_DIR, path.basename(ref.file));
     if (!fs.existsSync(p)) return [];
-    const colors = await extractPalette(p);
+    const colors = await extractPaletteFromBuffer(fs.readFileSync(p));
     await db.collection("settings").updateOne(
       { _id: DOC_ID } as never,
       { $set: { [`map.${refId}`]: { colors, at: new Date().toISOString() } } },
@@ -82,5 +82,44 @@ export async function cardPalette(styleKey: string, refId: string): Promise<stri
     return colors;
   } catch {
     return [];
+  }
+}
+
+/* ELEMENT COLOURS FROM THE ARTWORK (owner 2026-08-18): turn a generated
+   image's ink palette into one engine palette entry {bg,ink,sub,acc}.
+   bg is always white (ground rule); ink = the darkest ink (clamped dark
+   enough to read); acc = the most saturated ink; sub = ink faded toward
+   the ground. The engine's wine-colour gamut still applies on top. */
+export async function labelPaletteFromImage(dataUrl: string): Promise<{ bg: string; ink: string; sub: string; acc: string } | null> {
+  try {
+    const m = dataUrl.match(/^data:image\/[a-z]+;base64,(.+)$/);
+    if (!m) return null;
+    const colors = await extractPaletteFromBuffer(Buffer.from(m[1], "base64"));
+    if (!colors.length) return null;
+    const rgb = (hx: string) => {
+      const n = parseInt(hx.slice(1), 16);
+      return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+    };
+    const lum = (c: { r: number; g: number; b: number }) => 0.299 * c.r + 0.587 * c.g + 0.114 * c.b;
+    const sat = (c: { r: number; g: number; b: number }) => {
+      const mx = Math.max(c.r, c.g, c.b), mn = Math.min(c.r, c.g, c.b);
+      return mx === mn ? 0 : (mx - mn) / (255 - Math.abs(mx + mn - 255));
+    };
+    const cs = colors.map((hx) => ({ hx, c: rgb(hx) }));
+    const dark = [...cs].sort((a, b) => lum(a.c) - lum(b.c))[0];
+    const vivid = [...cs].sort((a, b) => sat(b.c) - sat(a.c))[0];
+    const hex = (c: { r: number; g: number; b: number }) =>
+      "#" + [c.r, c.g, c.b].map((v) => Math.round(Math.min(255, Math.max(0, v))).toString(16).padStart(2, "0")).join("").toUpperCase();
+    // ink must be dark enough to print as text
+    let ink = dark.c;
+    const f = lum(ink) > 110 ? 110 / lum(ink) : 1;
+    ink = { r: ink.r * f, g: ink.g * f, b: ink.b * f };
+    const acc = vivid.hx === dark.hx && cs.length > 1 ? cs.find((x) => x.hx !== dark.hx)!.c : vivid.c;
+    const mixToWhite = (c: { r: number; g: number; b: number }, t: number) => ({
+      r: c.r + (255 - c.r) * t, g: c.g + (255 - c.g) * t, b: c.b + (255 - c.b) * t,
+    });
+    return { bg: "#FFFFFF", ink: hex(ink), sub: hex(mixToWhite(ink, 0.45)), acc: hex(acc) };
+  } catch {
+    return null;
   }
 }

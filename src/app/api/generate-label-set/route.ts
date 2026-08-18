@@ -13,7 +13,7 @@ import { buildLayoutHints } from "@/lib/admin/layout-refs";
 import { feedbackAggregates, weightedPick, type StyleFeedbackAggregate } from "@/lib/admin/feedback";
 import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, NO_BORDER_RULE, WHITE_BG_RULE, NO_ARCHITECTURE_RULE, NEUTRAL_GEO_RULE, geographicRule, wantsBuilding, QVEVRI_RULE, mentionsQvevri, qvevriOverridden, stylizationRule, NO_RED_DOMINANCE_RULE, compareToReference, wantsText, subjectFocusRule, wantsCrowd } from "@/lib/admin/image-rules";
 import { subjectFrom } from "@/lib/styles/prompt";
-import { cardPalette } from "@/lib/admin/card-palette";
+import { cardPalette, labelPaletteFromImage } from "@/lib/admin/card-palette";
 
 /* POST /api/generate-label-set — the generation orchestrator.
 
@@ -67,6 +67,22 @@ const CACHE_MAX = 50; // FIFO bound — entries hold 6 data URLs each
 function cache(): Map<string, SetResult> {
   if (!globalThis.__labelSetCache) globalThis.__labelSetCache = new Map();
   return globalThis.__labelSetCache;
+}
+
+/* ELEMENT COLOURS FROM THE ARTWORK (owner 2026-08-18): each generated
+   image's ink palette rides back as hints[style].imgPalettes — the engine
+   prefers it over board/look palettes, so label text elements are coloured
+   by the artwork they sit beside (wine-colour gamut still applies). */
+async function withImgPalettes(
+  base: Record<string, unknown>,
+  images: Record<string, SetEntry>
+): Promise<Record<string, unknown>> {
+  const out = JSON.parse(JSON.stringify(base)) as Record<string, Record<string, unknown>>;
+  for (const [k, v] of Object.entries(images)) {
+    const pal = await labelPaletteFromImage(v.url).catch(() => null);
+    if (pal) { out[k] = out[k] || {}; out[k].imgPalettes = [pal]; }
+  }
+  return out;
 }
 
 function sanitizeBrief(raw: unknown): LabelBrief | { error: string } {
@@ -148,9 +164,10 @@ export async function POST(req: Request) {
 
   const hit = cache().get(key);
   if (hit) {
+    const hintsImg = await withImgPalettes(layoutHints, hit.images).catch(() => layoutHints);
     const body =
       JSON.stringify({ type: "progress", done: 6, total: 6 }) + "\n" +
-      JSON.stringify({ type: "result", ...hit, layoutHints, cached: true }) + "\n";
+      JSON.stringify({ type: "result", ...hit, layoutHints: hintsImg, cached: true }) + "\n";
     return new Response(enc.encode(body), { headers: NDJSON });
   }
 
@@ -296,7 +313,8 @@ export async function POST(req: Request) {
       if (!Object.keys(images).length) {
         send({ type: "error", error: "all style generations failed", errors });
       } else {
-        const result: SetResult = { seed: brief.seed || 0, provider, images, errors, layoutHints };
+        const hintsImg = await withImgPalettes(layoutHints, images).catch(() => layoutHints);
+        const result: SetResult = { seed: brief.seed || 0, provider, images, errors, layoutHints: hintsImg };
         // only complete sets are cacheable — caching a partial set would pin
         // the missing styles as permanently absent for this brief
         if (!Object.keys(errors).length) {
