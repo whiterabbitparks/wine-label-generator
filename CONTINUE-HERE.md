@@ -891,3 +891,20 @@ server" framing and their pending-work lists, which this file supersedes.
 - `start-demo.sh` (repo root): kill :3200 → build if missing → start → open.
 - Known cosmetic: punk look seed 34465 sets grape/vintage very tight (still
   readable); owner can Remove that look in admin if it bothers him.
+
+## 9. GROUND COLOUR RULES v2 (owner, 2026-08-19)
+
+- Grounds are WARM, SOLID, FOOD-FRIENDLY. No acid/toxic/chemical hues ever
+  (the toxic-green snail label triggered this).
+- PINK ground only when the image itself contains pink; otherwise the tint
+  is replaced by old paper.
+- Neutral / monochrome (grey-black) artwork → OLD-PAPER grounds: warm pastel
+  yellows and light beiges (never chemical lemon yellow).
+- Cool-hued image inks (green/blue) still make grounds, but muted and warmed
+  (olive/sage, blended toward paper) — never bright pastels or acid bolds.
+- Punk: warm inks lead the bold grounds (solid, S≤0.62); cool inks give
+  muted deep voices; neutral punk art gets warm sand/ochre papers. The punk
+  PROMPT now demands colour-DOMINATED images (multi-colour printing, not
+  monochrome drawings).
+- All implemented in labelPaletteFromImage (card-palette.ts); engine
+  wine-kind gamut + ΔL≥0.32 contrast guard unchanged on top.

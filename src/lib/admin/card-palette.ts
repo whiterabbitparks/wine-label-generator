@@ -120,21 +120,50 @@ export async function labelPaletteFromImage(dataUrl: string, styleKey?: string):
     });
     const inkHex = hex(ink), subHex = hex(mixToWhite(ink, 0.45)), accHex = hex(acc);
     // 9:1 tinted vs white (owner 2026-08-18: "white backgrounds still
-    // dominate — only 1/10"), but the nine tinted slots now draw on EVERY
-    // extracted ink at two paper strengths (owner 2026-08-19: two tints
-    // looped all session — grounds must be as diverse as the artwork
-    // allows). The engine's seeded pick is uniform over the list; gamut
-    // adaptation may still veto a tint for a given wine, falling back white.
+    // dominate — only 1/10"), nine tinted slots drawing on EVERY extracted
+    // ink (owner 2026-08-19: diversity). GROUND RULES (owner 2026-08-19):
+    // grounds are WARM, solid, food-friendly — no acid/toxic hues; pink
+    // only when the image itself contains pink; neutral/monochrome images
+    // get old-paper grounds (warm pastel yellows and light beiges, never
+    // chemical lemon). The engine's wine-kind gamut still applies on top.
     const entry = (bg: string) => ({ bg, ink: inkHex, sub: subHex, acc: accHex });
+    const hsl = (c: { r: number; g: number; b: number }) => rgbToHsl(c.r, c.g, c.b);
+    const isWarmHue = (h: number) => h <= 75 || h >= 330;
+    const isPinkish = (c: { r: number; g: number; b: number }) => {
+      const { h, s, l } = hsl(c);
+      return (h >= 300 || h <= 18) && s >= 0.25 && l >= 0.55;
+    };
+    const imageHasPink = cs.some((x) => isPinkish(x.c));
+    // warm old-paper voices: soft warm yellows and light beiges
+    const PAPER = ["#F6EDD8", "#F3E7C9", "#F7F1E1", "#EFE5CE", "#F1E9D4"];
+    const paperC = (hx: string) => {
+      const n = parseInt(hx.slice(1), 16);
+      return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+    };
+    const blend = (a: { r: number; g: number; b: number }, b: { r: number; g: number; b: number }, t: number) => ({
+      r: a.r + (b.r - a.r) * t, g: a.g + (b.g - a.g) * t, b: a.b + (b.b - a.b) * t,
+    });
+    const monochrome = cs.every((x) => hsl(x.c).s < 0.22);
     const tintBGs: string[] = [];
-    for (const x of cs) {
-      for (const t of [0.78, 0.87]) {
-        const b = hex(mixToWhite(x.c, t));
-        if (!tintBGs.includes(b)) tintBGs.push(b);
+    if (!monochrome) {
+      let pi = 0;
+      for (const x of cs) {
+        for (const t of [0.78, 0.87]) {
+          let tc = mixToWhite(x.c, t);
+          const th = hsl(x.c).h;
+          // cool-hued tints lean warm: blend toward old paper so even
+          // green/blue inks yield food-friendly grounds, never acid pastels
+          if (!isWarmHue(th)) tc = blend(tc, paperC(PAPER[0]), 0.45);
+          // pink ground only if the image really carries pink
+          if (isPinkish(tc) && !imageHasPink) tc = paperC(PAPER[pi++ % PAPER.length]);
+          const b = hex(tc);
+          if (!tintBGs.includes(b)) tintBGs.push(b);
+        }
       }
     }
-    const tintA = entry(tintBGs[0] || hex(mixToWhite(vivid.c, 0.82)));
-    const tintB = entry(tintBGs[1 % tintBGs.length] || tintA.bg);
+    if (!tintBGs.length) tintBGs.push(...PAPER); // monochrome/neutral → old paper
+    const tintA = entry(tintBGs[0]);
+    const tintB = entry(tintBGs[1 % tintBGs.length]);
     const nineTints = Array.from({ length: 9 }, (_, i) => entry(tintBGs[i % tintBGs.length]));
     const white = { bg: "#FFFFFF", ink: inkHex, sub: subHex, acc: accHex };
     // PUNK BOLD GROUNDS (owner 2026-08-18): saturated opaque grounds built
@@ -153,16 +182,32 @@ export async function labelPaletteFromImage(dataUrl: string, styleKey?: string):
         const q = (v: number) => Math.round((v + m2) * 255).toString(16).padStart(2, "0");
         return ("#" + q(r) + q(g) + q(b)).toUpperCase();
       };
-      // bold grounds from EVERY ink hue, vivid and deep voices alternating
-      // (2026-08-19: two bolds looped all session)
+      // bold grounds from the image's inks, WARM AND FOOD-FRIENDLY (owner
+      // 2026-08-19, after a toxic-green ground): warm hues lead and stay
+      // solid; cool hues are muted to olive/sage territory instead of acid;
+      // pink only if the image carries pink; a neutral/monochrome image
+      // gets deep old-paper grounds instead of invented colour.
       const boldBGs: string[] = [];
-      for (const x of cs) {
-        const hh = toHsl(x.c);
-        for (const [s, l] of [[Math.max(hh.s, 0.6), 0.62], [Math.max(hh.s, 0.5), 0.48]]) {
-          const b = hsl2hex(hh.h, s, l);
-          if (!boldBGs.includes(b)) boldBGs.push(b);
+      const addBold = (h: number, s: number, l: number) => {
+        const b = hsl2hex(h, s, l);
+        if (!imageHasPink && isPinkish(paperC(b))) return;
+        if (!boldBGs.includes(b)) boldBGs.push(b);
+      };
+      const orderedInks = [...cs].sort(
+        (a, b2) => (isWarmHue(hsl(a.c).h) ? 0 : 1) - (isWarmHue(hsl(b2.c).h) ? 0 : 1)
+      );
+      for (const x of orderedInks) {
+        const hh = hsl(x.c);
+        if (hh.s < 0.18) continue; // neutral ink makes no bold ground
+        if (isWarmHue(hh.h)) {
+          addBold(hh.h, Math.min(Math.max(hh.s, 0.45), 0.62), 0.58);
+          addBold(hh.h, Math.min(Math.max(hh.s, 0.4), 0.55), 0.47);
+        } else {
+          addBold(hh.h, Math.min(hh.s, 0.3), 0.55);
+          addBold(hh.h, Math.min(hh.s, 0.26), 0.46);
         }
       }
+      if (!boldBGs.length) boldBGs.push("#E5D3A8", "#D9C08C", "#E9DDBE"); // warm sand / ochre papers
       const sevenBolds = Array.from({ length: 7 }, (_, i) => entry(boldBGs[i % boldBGs.length]));
       return [...sevenBolds, tintA, tintB, white];
     }

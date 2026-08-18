@@ -195,7 +195,7 @@ export function buildStylePrompt(
       : " Yellows, golds, greens, blues, browns and earth tones lead this image — red NEVER dominates (small red accents only).";
   const colourWorld =
     style.key === "punk"
-      ? " Colour world: free and fearless — any colours, full saturation welcome; deliberate and harmonious, never muddy."
+      ? " Colour world: free and fearless — COLOUR DOMINATES the image: bold multi-colour printing with large saturated colour areas, never a monochrome ink drawing; deliberate and harmonious, never muddy."
       : ` Colour world: use as many colours as the scene wants, chosen like a deliberate printmaker's ink set in harmony: ${famPick}.${dominance} Colour decisions are intentional — never garish randomness, never dull.`;
   // rules = global house rules + this style's own rules + owner-approved traits
   const ruleParts = [art.extra?.trim(), art.perStyle?.[style.key]?.rules?.trim()].filter(Boolean);
@@ -288,7 +288,7 @@ export function buildShortPrompt(style: StyleDef, sub: SubStyle, brief: LabelBri
   const wineC = String(brief.data?.wineColorName || "");
   const kind = /red/i.test(wineC) ? "red" : /ros/i.test(wineC) ? "rose" : "white";
   const dom =
-    style.key === "punk" ? " Free, vivid colour is welcome."
+    style.key === "punk" ? " Bold saturated colour dominates the image — multi-colour printing, not a monochrome drawing."
     : kind === "red" || kind === "rose" ? " Red and wine tones may lead the palette."
     : " Yellows, golds, greens, blues, browns and earth tones lead the palette — red never dominates.";
   return (
