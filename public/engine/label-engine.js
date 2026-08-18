@@ -1296,7 +1296,11 @@ function palAdapt(p,punkFree){
 /* hintKey = the public style the admin curates; saltKey = the internal pool
    (merged contemporary keeps four internal pools for palette diversity). */
 function palPick(hintKey,saltKey,seed,arr,map){
-  const h=STYLE_HINTS[hintKey], hp=h&&h.palettes;
+  /* imgPalettes (owner 2026-08-18): colours derived from THIS label's own
+     generated artwork outrank board/look palettes — text elements dress in
+     the artwork's inks. Gamut adaptation still applies below. */
+  const h=STYLE_HINTS[hintKey];
+  const hp=(h&&Array.isArray(h.imgPalettes)&&h.imgPalettes.length)?h.imgPalettes:(h&&h.palettes);
   const salt=(STYLE_SALT[saltKey]||0)*7+2;
   const punkFree=saltKey==='punk';
   const adapt=list=>{const out=[];for(const p of list){const a=palAdapt(p,punkFree);if(a)out.push(a);}return out;};
@@ -2025,6 +2029,9 @@ function withLook(key,seed,fn){
     if(Array.isArray(L[k2])&&L[k2].length)frozen[k2]=L[k2];
   });
   const prev=STYLE_HINTS[key];
+  /* artwork-derived colours pierce the look's frozen outfit (owner
+     2026-08-18): arrangement + fonts stay frozen, colours follow the art */
+  if(prev&&Array.isArray(prev.imgPalettes)&&prev.imgPalettes.length)frozen.imgPalettes=prev.imgPalettes;
   STYLE_HINTS[key]=frozen;
   FORCED_V=isFinite(+L.variant)?+L.variant:null;
   try{return fn(+L.seed||0);}finally{STYLE_HINTS[key]=prev;FORCED_V=null;}
