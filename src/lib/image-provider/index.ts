@@ -138,24 +138,33 @@ export function finishArtwork(dataUrl: string, paletteLock?: string[]): string {
         px[i] = Math.round(r); px[i + 1] = Math.round(g); px[i + 2] = Math.round(b); px[i + 3] = 255;
       }
     }
-    /* CONTENT RE-CENTRING (owner 2026-08-17): the model often paints the
-       subject off-centre on its canvas (extra white on one side). The layout
-       centres the RECT, so an off-centre subject reads as a broken layout.
-       Find the ink bounding box (non-white after whitening) and shift the
-       whole content so its centre sits on the canvas centre. */
-    let bx0 = W, by0 = H, bx1 = -1, by1 = -1;
+    /* CONTENT RE-CENTRING (owner 2026-08-17; refined 2026-08-18 after the
+       owner's before/after comparison): centre on the ink CENTROID (density-
+       weighted mass), not the bounding-box midpoint — sparse tendrils used
+       to count as much as the dense subject, leaving the visual mass a few
+       percent off-centre. Shift is clamped so no ink leaves the canvas. */
+    let bx0 = W, by0 = H, bx1 = -1, by1 = -1; // bbox of SIGNIFICANT ink only —
+    let sw = 0, sx2 = 0, sy2 = 0;             // ghost speckles may crop
     for (let y = 0; y < H; y++) {
       for (let x = 0; x < W; x++) {
         const i = (y * W + x) * 4;
-        if (Math.min(px[i], px[i + 1], px[i + 2]) < HI) {
-          if (x < bx0) bx0 = x; if (x > bx1) bx1 = x;
-          if (y < by0) by0 = y; if (y > by1) by1 = y;
+        const m2 = Math.min(px[i], px[i + 1], px[i + 2]);
+        if (m2 < HI) {
+          if (m2 < 200) {
+            if (x < bx0) bx0 = x; if (x > bx1) bx1 = x;
+            if (y < by0) by0 = y; if (y > by1) by1 = y;
+          }
+          const w2 = 1 - m2 / 255; // denser ink pulls harder
+          sw += w2; sx2 += x * w2; sy2 += y * w2;
         }
       }
     }
-    if (bx1 >= bx0) {
-      const dx = Math.round(W / 2 - (bx0 + bx1 + 1) / 2);
-      const dy = Math.round(H / 2 - (by0 + by1 + 1) / 2);
+    if (bx1 >= bx0 && sw > 0) {
+      let dx = Math.round(W / 2 - sx2 / sw);
+      let dy = Math.round(H / 2 - sy2 / sw);
+      // clamp: the full ink bbox must stay on the canvas
+      dx = Math.max(-bx0, Math.min(W - 1 - bx1, dx));
+      dy = Math.max(-by0, Math.min(H - 1 - by1, dy));
       if (Math.abs(dx) > W * 0.01 || Math.abs(dy) > H * 0.01) {
         const src = Buffer.from(px);
         px.fill(255);
