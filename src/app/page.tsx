@@ -249,8 +249,18 @@ export default function Journey() {
     const score = (c: { st: string; look: Look }) =>
       (lovedRef.current.has(`${c.st}#${c.look.seed}`) ? 100 : 0) + (tasteRef.current[c.st] || 0);
     const ordered = [...pool].sort((a, b) => score(b) - score(a));
-    const first = ordered.slice(0, 4);
-    flightQueue.current = ordered.slice(4);
+    // round-robin across styles (best-first within each) so the first pour —
+    // and every replacement — shows the range, not one style's whole shelf
+    const byStyle = new Map<string, { st: string; look: Look }[]>();
+    for (const c of ordered) {
+      const l = byStyle.get(c.st) || []; l.push(c); byStyle.set(c.st, l);
+    }
+    const lists = [...byStyle.values()];
+    const mixed: { st: string; look: Look }[] = [];
+    for (let i = 0; mixed.length < ordered.length; i++)
+      for (const l of lists) { if (l[i]) mixed.push(l[i]); }
+    const first = mixed.slice(0, 4);
+    flightQueue.current = mixed.slice(4);
     setGlasses(first.map(({ st, look }) => ({ st, look, svg: renderLook(st, look, data) })));
     setWinner(null);
     setStage("flight");
@@ -297,7 +307,7 @@ export default function Journey() {
         {stage === "calibrate" && deck[deckIdx] && (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 18, flex: 1, justifyContent: "center", padding: "20px 0" }}>
             <p style={{ ...S.sub, margin: 0 }}>Does this one speak to you? ({deckIdx + 1}/{deck.length})</p>
-            <div style={S.card} dangerouslySetInnerHTML={{ __html: deck[deckIdx].svg.replace(/width="110mm" height="80mm"/, 'width="100%" height="auto"') }} />
+            <div style={S.card} dangerouslySetInnerHTML={{ __html: deck[deckIdx].svg.replace(/width="110mm" height="80mm"/, 'width="100%"') }} />
             <div style={{ display: "flex", gap: 18 }}>
               <button style={S.btn} onClick={() => vote(false)}>← Not for me</button>
               <button style={S.btnGrey} onClick={() => vote(true)}>Love it →</button>
@@ -372,7 +382,7 @@ export default function Journey() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, width: "100%" }}>
               {glasses.map((g, i) => (
                 <div key={g.st + g.look.seed + i} style={{ border: `2px solid ${INK}`, background: "#fff", padding: 8 }}>
-                  <div dangerouslySetInnerHTML={{ __html: g.svg.replace(/width="110mm" height="80mm"/, 'width="100%" height="auto"') }} />
+                  <div dangerouslySetInnerHTML={{ __html: g.svg.replace(/width="110mm" height="80mm"/, 'width="100%"') }} />
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
                     <span style={{ fontSize: 11, color: SUBT }}>{STYLE_NAMES[g.st] || g.st}</span>
                     <div style={{ display: "flex", gap: 10 }}>
@@ -390,7 +400,7 @@ export default function Journey() {
         {stage === "winner" && winner && (
           <div style={{ width: "100%", padding: "24px 0", display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
             <p style={{ ...S.big, marginBottom: 0 }}>It&apos;s yours.</p>
-            <div style={{ ...S.card, width: "min(760px, 92vw)" }} dangerouslySetInnerHTML={{ __html: winner.svg.replace(/width="110mm" height="80mm"/, 'width="100%" height="auto"') }} />
+            <div style={{ ...S.card, width: "min(760px, 92vw)" }} dangerouslySetInnerHTML={{ __html: winner.svg.replace(/width="110mm" height="80mm"/, 'width="100%"') }} />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, width: "100%", maxWidth: 760 }}>
               {[
                 ["The Label", "print-ready front & back label files"],
