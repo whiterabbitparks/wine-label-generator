@@ -81,6 +81,12 @@ export async function restyleWithFlux(baseDataUrl: string, job: GenerationJob): 
 
   let prompt = job.shortPrompt || job.prompt || "";
   if (lora) prompt = `${LORA_TRIGGER} style. ${prompt}`;
+  /* subject fidelity (owner report 2026-08-19: "style good, subject off" —
+     the repaint was rewriting specifics: instruments, animals, headwear).
+     Verified A/B on one base: strength 0.62 drifted every named detail;
+     0.45 keeps them with the technique intact; 0.55+ also hallucinated
+     edge text. The prompt states faithfulness explicitly. */
+  prompt += " Keep the exact composition, pose and objects of the input image — repaint only the rendering technique.";
   if (prompt.length > 1900) prompt = prompt.slice(0, 1900);
 
   const res = await fetch("https://fal.run/fal-ai/flux-lora/image-to-image", {
@@ -89,7 +95,7 @@ export async function restyleWithFlux(baseDataUrl: string, job: GenerationJob): 
     body: JSON.stringify({
       prompt,
       image_url: baseUrl,
-      strength: 0.62, // keep the GPT composition; replace the rendering
+      strength: 0.45, // repaint the rendering; the GPT composition survives
       image_size: fluxSize(), // dev = quarter cost
       num_inference_steps: 28,
       guidance_scale: 3.5,
