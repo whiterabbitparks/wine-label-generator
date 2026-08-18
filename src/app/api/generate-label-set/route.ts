@@ -6,10 +6,12 @@ import { loadConfig, DEFAULT_CONFIG } from "@/lib/admin/config-store";
 import { providerName, generateImageWithRetry } from "@/lib/image-provider";
 import { getImageStorage } from "@/lib/image-storage";
 import { logGeneration } from "@/lib/admin/generation-log";
-import { getProfiles, type StyleProfile } from "@/lib/admin/style-refs";
+import fs from "node:fs";
+import path from "node:path";
+import { getProfiles, listRefs, REFS_DIR, type StyleProfile } from "@/lib/admin/style-refs";
 import { buildLayoutHints } from "@/lib/admin/layout-refs";
 import { feedbackAggregates, weightedPick, type StyleFeedbackAggregate } from "@/lib/admin/feedback";
-import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, NO_BORDER_RULE, WHITE_BG_RULE, NO_ARCHITECTURE_RULE, NEUTRAL_GEO_RULE, geographicRule, wantsBuilding, QVEVRI_RULE, mentionsQvevri, qvevriOverridden, stylizationRule, NO_RED_DOMINANCE_RULE, wantsText, subjectFocusRule, wantsCrowd } from "@/lib/admin/image-rules";
+import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, NO_BORDER_RULE, WHITE_BG_RULE, NO_ARCHITECTURE_RULE, NEUTRAL_GEO_RULE, geographicRule, wantsBuilding, QVEVRI_RULE, mentionsQvevri, qvevriOverridden, stylizationRule, NO_RED_DOMINANCE_RULE, compareToReference, wantsText, subjectFocusRule, wantsCrowd } from "@/lib/admin/image-rules";
 import { subjectFrom } from "@/lib/styles/prompt";
 
 /* POST /api/generate-label-set — the generation orchestrator.
@@ -220,6 +222,26 @@ export async function POST(req: Request) {
                 } catch {}
               }
             }
+            // COMPARE-AND-CORRECT (owner 2026-08-18): side-by-side with the
+            // chosen card's actual reference image; craft deltas -> one
+            // corrective regeneration. Never blocks the set.
+            try {
+              const refDoc = (await listRefs(style.key)).find((r) => r.id === sub.key);
+              if (refDoc) {
+                const rp = path.join(REFS_DIR, path.basename(refDoc.file));
+                if (fs.existsSync(rp)) {
+                  const ext = (rp.split(".").pop() || "png").replace("jpg", "jpeg");
+                  const refDataUrl = `data:image/${ext};base64,${fs.readFileSync(rp).toString("base64")}`;
+                  const refine = await compareToReference(imageDataUrl, refDataUrl);
+                  if (refine.length) {
+                    imageDataUrl = await generateImageWithRetry({
+                      ...job,
+                      prompt: `MATCH THE REFERENCE CRAFT — corrections from a side-by-side comparison: ${refine.join("; ")}. ` + job.prompt,
+                    });
+                  }
+                }
+              }
+            } catch {}
 
             let stored = null;
             try {

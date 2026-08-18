@@ -7,8 +7,10 @@ import { loadConfig, DEFAULT_CONFIG } from "@/lib/admin/config-store";
 import { providerName, generateImageWithRetry } from "@/lib/image-provider";
 import { getImageStorage } from "@/lib/image-storage";
 import { logGeneration } from "@/lib/admin/generation-log";
-import { getProfiles, listRefs, getCardSeen, markCardsSeen } from "@/lib/admin/style-refs";
-import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, NO_BORDER_RULE, WHITE_BG_RULE, NO_ARCHITECTURE_RULE, NEUTRAL_GEO_RULE, geographicRule, wantsBuilding, QVEVRI_RULE, mentionsQvevri, qvevriOverridden, stylizationRule, NO_RED_DOMINANCE_RULE, wantsText, subjectFocusRule, wantsCrowd } from "@/lib/admin/image-rules";
+import fs from "node:fs";
+import path from "node:path";
+import { getProfiles, listRefs, getCardSeen, markCardsSeen, REFS_DIR } from "@/lib/admin/style-refs";
+import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, NO_BORDER_RULE, WHITE_BG_RULE, NO_ARCHITECTURE_RULE, NEUTRAL_GEO_RULE, geographicRule, wantsBuilding, QVEVRI_RULE, mentionsQvevri, qvevriOverridden, stylizationRule, NO_RED_DOMINANCE_RULE, compareToReference, wantsText, subjectFocusRule, wantsCrowd } from "@/lib/admin/image-rules";
 import { subjectFrom } from "@/lib/styles/prompt";
 import { feedbackAggregates } from "@/lib/admin/feedback";
 
@@ -43,6 +45,7 @@ export async function POST(req: Request) {
   let cardNotes: Record<string, { keeps: string[]; fixes: string[]; rejections: number }> = {};
   let globalFb: { avoid: string[]; favour: string[] } = { avoid: [], favour: [] };
   let refUrls: Record<string, string> = {};
+  let refFiles: Record<string, string> = {};
   try {
     const prof = (await getProfiles())[style.key];
     if (prof?.variants?.length) variants = prof.variants;
@@ -51,7 +54,9 @@ export async function POST(req: Request) {
     weights = agg?.weights || {};
     cardNotes = agg?.cardNotes || {};
     globalFb = { avoid: agg?.avoid || [], favour: agg?.favour || [] };
-    refUrls = Object.fromEntries((await listRefs(style.key)).map((r) => [r.id, r.url]));
+    const _refs = await listRefs(style.key);
+    refUrls = Object.fromEntries(_refs.map((r) => [r.id, r.url]));
+    refFiles = Object.fromEntries(_refs.map((r) => [r.id, r.file]));
   } catch {}
   const rules = ruleLines(await getImageRules().catch(() => ({ global: '', perStyle: {} })), style.key);
   rules.push(NO_BORDER_RULE);
@@ -118,6 +123,26 @@ export async function POST(req: Request) {
             check = await verifyImage(dataUrl, cardRules);
           } catch { break; }
         }
+        // COMPARE-AND-CORRECT (owner 2026-08-18): side-by-side with the card's
+        // actual reference; concrete craft deltas -> one corrective regeneration
+        let refine: string[] = [];
+        const rf = refFiles[sub.key];
+        if (rf) {
+          const rp = path.join(REFS_DIR, path.basename(rf));
+          if (fs.existsSync(rp)) {
+            const ext = (rp.split(".").pop() || "png").replace("jpg", "jpeg");
+            const refDataUrl = `data:image/${ext};base64,${fs.readFileSync(rp).toString("base64")}`;
+            refine = await compareToReference(dataUrl, refDataUrl);
+            if (refine.length) {
+              const rJob = { ...job, prompt: `MATCH THE REFERENCE CRAFT — corrections from a side-by-side comparison: ${refine.join("; ")}. ` + job.prompt };
+              try {
+                const d2 = await generateImageWithRetry(rJob);
+                const c2 = await verifyImage(d2, cardRules);
+                if (c2.ok || !check.ok) { dataUrl = d2; check = c2; }
+              } catch {}
+            }
+          }
+        }
         let stored = null;
         try {
           stored = await getImageStorage().save(
@@ -139,6 +164,7 @@ export async function POST(req: Request) {
           weight: weights[sub.key] ?? 1,
           refUrl: refUrls[sub.key] || null,
           check,
+          refine,
           url: dataUrl,
           imageUrl: stored?.url ?? null,
           prompt: job.prompt,
