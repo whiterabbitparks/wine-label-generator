@@ -90,7 +90,7 @@ export async function cardPalette(styleKey: string, refId: string): Promise<stri
    bg is always white (ground rule); ink = the darkest ink (clamped dark
    enough to read); acc = the most saturated ink; sub = ink faded toward
    the ground. The engine's wine-colour gamut still applies on top. */
-export async function labelPaletteFromImage(dataUrl: string): Promise<{ bg: string; ink: string; sub: string; acc: string } | null> {
+export async function labelPaletteFromImage(dataUrl: string): Promise<{ bg: string; ink: string; sub: string; acc: string }[] | null> {
   try {
     const m = dataUrl.match(/^data:image\/[a-z]+;base64,(.+)$/);
     if (!m) return null;
@@ -118,7 +118,16 @@ export async function labelPaletteFromImage(dataUrl: string): Promise<{ bg: stri
     const mixToWhite = (c: { r: number; g: number; b: number }, t: number) => ({
       r: c.r + (255 - c.r) * t, g: c.g + (255 - c.g) * t, b: c.b + (255 - c.b) * t,
     });
-    return { bg: "#FFFFFF", ink: hex(ink), sub: hex(mixToWhite(ink, 0.45)), acc: hex(acc) };
+    // TWO entries (owner 2026-08-18: "more diversity in label background"):
+    // one with a light paper tint derived from the image's own ink, one on
+    // pure white — the engine picks seeded, and the wine-colour gamut
+    // rejects tints that break the ground rules (e.g. pinkish for whites).
+    const inkHex = hex(ink), subHex = hex(mixToWhite(ink, 0.45)), accHex = hex(acc);
+    const tint = hex(mixToWhite(vivid.c, 0.82));
+    return [
+      { bg: tint, ink: inkHex, sub: subHex, acc: accHex },
+      { bg: "#FFFFFF", ink: inkHex, sub: subHex, acc: accHex },
+    ];
   } catch {
     return null;
   }

@@ -1394,6 +1394,24 @@ function capsFor(picked,designed){
   if(!picked||picked.length<3)return designed;   // designed font: keep the design
   return picked[2]==='upper';                    // curated font: standard unless switched
 }
+/* HERO COLOUR DISTRIBUTION (owner 2026-08-18). Traditional: red wines →
+   wine name in reds/dark reds 70% of renders (rest: the image-derived
+   accent); white wines → greens/dark greens 50%, image-derived 30%,
+   white-knockout 20% (knockout only on a tinted ground — on a white
+   ground it falls back to ink). Contemporary and punk hero colours stay
+   100% image-derived through imgPalettes. Seeded → deterministic. */
+function heroColour(styleKey,seed,INKc,ACCc,BGc){
+  const r=sRand(seed,(STYLE_SALT[styleKey]||0)*7+11);
+  if(styleKey!=='traditional')return ACCc;
+  const REDS=['#8E2430','#6E1423','#A32638','#57121B'];
+  const GREENS=['#2F5D3A','#1F4429','#3F6B34','#25503B'];
+  if(WINE_KIND==='red'||WINE_KIND==='rose')
+    return r<0.70?REDS[sPick(seed,97,REDS.length)]:ACCc;
+  if(r<0.50)return GREENS[sPick(seed,96,GREENS.length)];
+  if(r<0.80)return ACCc;
+  const c=hslOf(BGc);
+  return (c&&c.L<0.86)?'#FFFFFF':INKc;   // knockout only where it stays legible
+}
 function heroPick(seed,key,variant,hintKey){
   const h=STYLE_HINTS[hintKey||key], hf=h&&h.heroFonts;
   if(Array.isArray(hf)&&hf.length){
@@ -1496,6 +1514,7 @@ function styleTraditional(d,order,seed,twMM,thMM){
   const f=sFields(d), W=twMM*10, H=thMM*10;
   const TPAL=[['#FFFFFF','#D71920','#26221E','#5D564C'],['#F6F0DE','#8E2430','#26221E','#5D564C'],['#F2E9D2','#6B4A2F','#26221E','#5D564C'],['#F4EFE0','#3E5C76','#26221E','#5D564C']];
   const [BG,ACC,INK,SUB]=palPick('traditional','traditional',seed,TPAL,function(p){return [p.bg,p.acc||p.ink,p.ink,p.sub];});
+  const HC=heroColour('traditional',seed,INK,ACC,BG);   // wine-name colour (owner distribution)
   const cx=W/2, cW=W-2*SM;
   const variant=pickV('traditional',seed,STYLE_BOXES.traditional.length);
   const HP=heroPick(seed,'traditional',variant,'traditional');
@@ -1515,11 +1534,11 @@ function styleTraditional(d,order,seed,twMM,thMM){
       {str:[f.region,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.027,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:INK,caps:capsFor(F3,false)},
       {str:[f.classification,desc,alc].filter(Boolean).join(' \u00b7 '),size:H*0.023,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-4,H*0.007,'c',cW*0.84);
     body+=st.svg;
-    body+=fitHero(f.wine,cx,BOX[3]*H+MINGAP,st.topY,{size:H*0.115,maxW:cW*0.88,f:HP?HP[0]:(SF.grenze),w:HP?HP[1]:(600),fill:ACC,caps:capsFor(HP,false)}).svg;
+    body+=fitHero(f.wine,cx,BOX[3]*H+MINGAP,st.topY,{size:H*0.115,maxW:cW*0.88,f:HP?HP[0]:(SF.grenze),w:HP?HP[1]:(600),fill:HC,caps:capsFor(HP,false)}).svg;
   }else if(variant===1){ // La Couspaude board: centred, vignette mid, stacked data
     body+=sFlow([
       {str:f.producer,size:H*0.032,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:SUB,caps:capsFor(F3,true),tr:0.34,maxW:cW*0.72,gap:H*0.012,pre:H*0.012},
-      {str:f.wine,size:H*0.092,f:HP?HP[0]:(PF),w:HP?HP[1]:(700),fill:ACC,caps:capsFor(HP,true),maxW:cW*0.94,gap:0}],cx,SM,'c').svg;
+      {str:f.wine,size:H*0.092,f:HP?HP[0]:(PF),w:HP?HP[1]:(700),fill:HC,caps:capsFor(HP,true),maxW:cW*0.94,gap:0}],cx,SM,'c').svg;
     body+=sImageBox('traditional',BOX,W,H);
     body+=stackUp([
       {str:f.vintage,size:H*0.044,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,false)},
@@ -1532,7 +1551,7 @@ function styleTraditional(d,order,seed,twMM,thMM){
     body+=sBlock(f.appellation,{x:cx,top:SM+H*0.012,maxW:cW*0.8,size:H*0.040,min:H*0.028,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(500),fill:ACC,a:'c',caps:true,tr:0.32}).svg;
     body+=sImageBox('traditional',BOX,W,H);
     body+=sFlow([
-      {str:f.wine,size:H*0.115,f:HP?HP[0]:(SF.archivo),w:HP?HP[1]:(800),fill:ACC,caps:capsFor(HP,true),tr:0.05,maxW:cW*0.92,gap:H*0.014,pre:H*0.38},
+      {str:f.wine,size:H*0.115,f:HP?HP[0]:(SF.archivo),w:HP?HP[1]:(800),fill:HC,caps:capsFor(HP,true),tr:0.05,maxW:cW*0.92,gap:H*0.014,pre:H*0.38},
       {str:f.producer,size:H*0.031,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,true),tr:0.22,maxW:cW*0.78,gap:H*0.012},
       {str:f.grape,size:H*0.030,f:F2?F2[0]:(EG),w:F2?F2[1]:(600),fill:INK,caps:capsFor(F2,true),tr:0.10,maxW:cW*0.7,gap:0}],cx,SM,'c').svg;
     body+=stackUp([
@@ -1550,7 +1569,7 @@ function styleTraditional(d,order,seed,twMM,thMM){
       {str:[f.grape,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.026,f:F2?F2[0]:(EG),w:F2?F2[1]:(400),fill:INK,caps:capsFor(F2,false)},
       {str:f.special,size:H*0.023,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-4,H*0.007,'c',cW*0.66);
     body+=st.svg;
-    body+=fitHero(f.wine,cx,BOX[3]*H+MINGAP,st.topY,{size:H*0.145,maxW:cW*0.8,f:HP?HP[0]:(F.greatVibes),w:HP?HP[1]:(400),fill:INK,caps:capsFor(HP,false)}).svg;
+    body+=fitHero(f.wine,cx,BOX[3]*H+MINGAP,st.topY,{size:H*0.145,maxW:cW*0.8,f:HP?HP[0]:(F.greatVibes),w:HP?HP[1]:(400),fill:HC,caps:capsFor(HP,false)}).svg;
   }else if(variant===4){ // Olive Tree board: airy engraving over tiny tracked caps
     body+=sImageBox('traditional',BOX,W,H);
     const st=stackUp([
@@ -1560,7 +1579,7 @@ function styleTraditional(d,order,seed,twMM,thMM){
       {str:[f.region,f.classification].filter(Boolean).join(' \u00b7 '),size:H*0.024,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)},
       {str:[f.special,desc,alc].filter(Boolean).join(' \u00b7 '),size:H*0.022,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-4,H*0.007,'c',cW*0.8);
     body+=st.svg;
-    body+=fitHero(f.wine,cx,BOX[3]*H+MINGAP,st.topY,{size:H*0.050,maxW:cW*0.9,f:HP?HP[0]:(EG),w:HP?HP[1]:(500),fill:INK,caps:capsFor(HP,true),tr:0.42}).svg;
+    body+=fitHero(f.wine,cx,BOX[3]*H+MINGAP,st.topY,{size:H*0.050,maxW:cW*0.9,f:HP?HP[0]:(EG),w:HP?HP[1]:(500),fill:HC,caps:capsFor(HP,true),tr:0.42}).svg;
   }else if(variant===6){ // Jullouville board (owner 2026-08-17): wide engraving
                          // band over a serif name between two short rules
     body+=sImageBox('traditional',BOX,W,H);
@@ -1571,7 +1590,7 @@ function styleTraditional(d,order,seed,twMM,thMM){
       {str:[f.grape,f.producer].filter(Boolean).join(' · '),size:H*0.024,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)},
       {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.023,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-4,H*0.007,'c',cW*0.9);
     body+=st.svg;
-    const hero6=fitHero(f.wine,cx,BOX[3]*H+MINGAP+H*0.024,st.topY-H*0.024,{size:H*0.105,maxW:cW*0.9,f:HP?HP[0]:(PF),w:HP?HP[1]:(600),fill:INK,caps:capsFor(HP,false)});
+    const hero6=fitHero(f.wine,cx,BOX[3]*H+MINGAP+H*0.024,st.topY-H*0.024,{size:H*0.105,maxW:cW*0.9,f:HP?HP[0]:(PF),w:HP?HP[1]:(600),fill:HC,caps:capsFor(HP,false)});
     body+=hero6.svg;
     if(hero6.svg&&hero6.top!=null){ // short divider rules (not frames) flanking the name
       const rx1=cx-cW*0.45, rx2=cx+cW*0.45;
@@ -1583,7 +1602,7 @@ function styleTraditional(d,order,seed,twMM,thMM){
     body+=sImageBox('traditional',BOX,W,H);
     body+=sFlow([
       {str:f.producer,size:H*0.042,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,true),tr:0.24,maxW:cW*0.8,gap:H*0.014},
-      {str:f.wine,size:H*0.115,f:HP?HP[0]:(SF.grenze),w:HP?HP[1]:(600),fill:ACC,caps:capsFor(HP,false),maxW:cW*0.94,gap:H*0.012},
+      {str:f.wine,size:H*0.115,f:HP?HP[0]:(SF.grenze),w:HP?HP[1]:(600),fill:HC,caps:capsFor(HP,false),maxW:cW*0.94,gap:H*0.012},
       {str:f.appellation,size:H*0.040,f:F2?F2[0]:(CI),w:F2?F2[1]:(600),fill:ACC,ital:true,caps:capsFor(F2,false),maxW:cW*0.8,gap:H*0.012},
       {str:[f.special,f.grape].filter(Boolean).join(' · '),size:H*0.048,f:F2?F2[0]:(CI),w:F2?F2[1]:(600),fill:INK,ital:true,caps:capsFor(F2,false),maxW:cW*0.8,gap:0}],cx,BOX[3]*H+MINGAP+H*0.006,'c').svg;
     body+=stackUp([
@@ -1601,12 +1620,12 @@ function styleTraditional(d,order,seed,twMM,thMM){
       {str:[f.grape,f.region,f.classification].filter(Boolean).join(' · '),size:H*0.024,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:INK,caps:capsFor(F3,false)},
       {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.023,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,caps:capsFor(F3,false)}],cx,H-SM-4,H*0.008,'c',cW*0.9);
     body+=st8.svg;
-    body+=fitHero(f.wine,cx,BOX[3]*H+MINGAP,st8.topY,{size:H*0.115,maxW:cW*0.94,f:HP?HP[0]:(SF.grenze),w:HP?HP[1]:(600),fill:ACC,caps:capsFor(HP,false)}).svg;
+    body+=fitHero(f.wine,cx,BOX[3]*H+MINGAP,st8.topY,{size:H*0.115,maxW:cW*0.94,f:HP?HP[0]:(SF.grenze),w:HP?HP[1]:(600),fill:HC,caps:capsFor(HP,false)}).svg;
   }else{ // Margaux/Ausone boards: pure centred type
     body+=sFlow([
       {str:f.vintage,size:H*0.045,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:INK,maxW:cW*0.3,gap:H*0.02,pre:H*0.06,caps:capsFor(F3,false)},
       {str:f.producer,size:H*0.04,f:F3?F3[0]:(EG),w:F3?F3[1]:(500),fill:SUB,caps:capsFor(F3,true),tr:0.3,maxW:cW*0.72,gap:H*0.05},
-      {str:f.wine,size:H*0.13,f:HP?HP[0]:(PF),w:HP?HP[1]:(700),fill:ACC,caps:capsFor(HP,true),lines:2,lh:1.02,maxW:cW*0.8,gap:H*0.02},
+      {str:f.wine,size:H*0.13,f:HP?HP[0]:(PF),w:HP?HP[1]:(700),fill:HC,caps:capsFor(HP,true),lines:2,lh:1.02,maxW:cW*0.8,gap:H*0.02},
       {str:f.appellation,size:H*0.055,f:F2?F2[0]:(CI),w:F2?F2[1]:(600),fill:INK,ital:true,maxW:cW*0.6,gap:H*0.03,caps:capsFor(F2,false)},
       {str:f.classification,size:H*0.037,f:F3?F3[0]:(EG),w:F3?F3[1]:(400),fill:SUB,maxW:cW*0.7,gap:H*0.012,caps:capsFor(F3,false)},
       {str:f.grape,size:H*0.037,f:F2?F2[0]:(EG),w:F2?F2[1]:(700),fill:INK,caps:capsFor(F2,true),tr:0.08,maxW:cW*0.7,gap:H*0.012},
