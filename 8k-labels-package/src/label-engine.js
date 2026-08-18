@@ -1514,8 +1514,13 @@ function sRot(t,x,H,o){
 function sFlow(items,x,y0,a){
   let svg='', y=y0;
   for(const it of items){
-    if(!it||!it.str)continue;
+    if(!it)continue;
+    /* pre clears a zone above the block (hero, arc, artwork) — it must hold
+       even when this line's field is empty, or the rest of the flow collapses
+       upward into that zone (live collision: no appellation → grape+vintage
+       printed over the hero in punk v2 / flora v1). */
     if(it.pre)y+=it.pre;
+    if(!it.str)continue;
     const b=sBlock(it.str,{x,top:y,maxW:it.maxW,size:it.size,min:it.min||it.size*0.6,
       f:it.f,w:it.w,fill:it.fill,a,tr:it.tr,caps:it.caps,ital:it.ital,halo:it.halo,
       lines:it.lines||1,lh:it.lh});
@@ -2034,13 +2039,16 @@ function stylePunk(f,W,H,seed,twMM,thMM){
       body+=sArcText(f.producer,cx,SM+asz*0.9,R,{f:af,w:aww,size:asz,fill:AC,tr:0.06});
     })();
     body+=sImageBox('punk',BOX,W,H);
-    body+=sFlow([
-      {str:f.wine,size:H*0.10,f:HP?HP[0]:(SF.marker),w:HP?HP[1]:(400),fill:INK,maxW:cW*0.92,gap:H*0.018,pre:H*0.605,caps:capsFor(HP,false)},
-      {str:[f.appellation,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.045,f:F2?F2[0]:(SF.caveat),w:F2?F2[1]:(600),fill:AC,maxW:cW*0.8,gap:H*0.014,caps:capsFor(F2,false)},
-      {str:[f.grape,f.classification].filter(Boolean).join(' / '),size:H*0.028,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(500),fill:INK,maxW:cW*0.85,gap:0,caps:capsFor(F2,false)}],cx,SM,'c').svg;
-    body+=stackUp([
+    /* everything under the figure stacks UP from the foot, and the hero
+       shrink-fits between the artwork box and that stack \u2014 the old blind
+       down-flow crowded the bottom lines into each other on full briefs */
+    const st4=stackUp([
+      {str:[f.appellation,f.vintage].filter(Boolean).join(' \u00b7 '),size:H*0.045,f:F2?F2[0]:(SF.caveat),w:F2?F2[1]:(600),fill:AC,caps:capsFor(F2,false)},
+      {str:[f.grape,f.classification].filter(Boolean).join(' / '),size:H*0.028,f:F2?F2[0]:(SF.archivo),w:F2?F2[1]:(500),fill:INK,caps:capsFor(F2,false)},
       {str:reg,size:H*0.024,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,false)},
-      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,false)}],cx,H-SM-2,H*0.008,'c',cW*0.8).svg;
+      {str:[desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(SF.archivo),w:F3?F3[1]:(500),fill:INK,caps:capsFor(F3,false)}],cx,H-SM-2,H*0.008,'c',cW*0.85);
+    body+=st4.svg;
+    body+=fitHero(f.wine,cx,BOX[3]*H+MINGAP,st4.topY,{size:H*0.10,maxW:cW*0.92,f:HP?HP[0]:(SF.marker),w:HP?HP[1]:(400),fill:INK,caps:capsFor(HP,false)}).svg;
   }else{ // riso band top, loud knockout hero below (poster boards)
     body+=sImageBox('punk',BOX,W,H);
     const st=stackUp([
