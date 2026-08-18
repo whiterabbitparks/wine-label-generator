@@ -123,11 +123,15 @@ export async function labelPaletteFromImage(dataUrl: string): Promise<{ bg: stri
     // pure white — the engine picks seeded, and the wine-colour gamut
     // rejects tints that break the ground rules (e.g. pinkish for whites).
     const inkHex = hex(ink), subHex = hex(mixToWhite(ink, 0.45)), accHex = hex(acc);
-    const tint = hex(mixToWhite(vivid.c, 0.82));
-    return [
-      { bg: tint, ink: inkHex, sub: subHex, acc: accHex },
-      { bg: "#FFFFFF", ink: inkHex, sub: subHex, acc: accHex },
-    ];
+    // 9:1 tinted vs white (owner 2026-08-18: "white backgrounds still
+    // dominate — only 1/10"): two tint voices (vivid-ink paper and ink-warm
+    // paper) fill nine slots, pure white keeps one. The engine's seeded pick
+    // is uniform over the list, so repetition IS the weighting; gamut
+    // adaptation may still veto a tint for a given wine, falling back white.
+    const tintA = { bg: hex(mixToWhite(vivid.c, 0.82)), ink: inkHex, sub: subHex, acc: accHex };
+    const tintB = { bg: hex(mixToWhite(dark.c, 0.84)), ink: inkHex, sub: subHex, acc: accHex };
+    const white = { bg: "#FFFFFF", ink: inkHex, sub: subHex, acc: accHex };
+    return [tintA, tintB, tintA, tintB, tintA, tintB, tintA, tintB, tintA, white];
   } catch {
     return null;
   }
