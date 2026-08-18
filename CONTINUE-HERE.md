@@ -908,3 +908,9 @@ server" framing and their pending-work lists, which this file supersedes.
   monochrome drawings).
 - All implemented in labelPaletteFromImage (card-palette.ts); engine
   wine-kind gamut + ΔL≥0.32 contrast guard unchanged on top.
+- HIGHLIGHT RULE (owner 2026-08-19): monochrome image/layout allowed, but
+  70% of renders colour ≥1 worthy element (accent role: appellation/vintage/
+  grape lines; neutral sub small-print carries a softened highlight) in the
+  wine's family — reds on reds, greens on whites. hlAcc() in palPick,
+  imgPalettes path only. Punk v1 appellation joined the accent role.
+- Kirile (traditional v3) artwork box enlarged per owner duck reference.
