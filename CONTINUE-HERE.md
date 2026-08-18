@@ -867,3 +867,27 @@ compositions, the 6 styles, data shape), see
 `8k-labels-package/CONTINUE-HERE.md` §4–5 and `8k-labels-package/docs/` —
 still accurate for the engine itself; ignore their "single HTML file / no
 server" framing and their pending-work lists, which this file supersedes.
+
+## 8. DEMO DAY prep (2026-08-18, investor demo)
+
+- **Hybrid is the web default now**: `.env.local` has `IMAGE_PROVIDER=hybrid`
+  (gpt-image composes the story → FLUX img2img + per-style LoRA repaints the
+  craft). `IMAGE_QUALITY="dev"` stays until launch (quarter-cost, ~8–10¢ per
+  finished image incl. the corrective pass; full set ≈ 68–76s). Flip to
+  `"prod"` + consider an upscale pass when publishing.
+- **Engine fixes (gated + goldens re-baselined twice)**:
+  1. `sFlow` now applies an empty line's `pre` offset — briefs without
+     appellation/producer/vintage no longer collapse the text flow into the
+     hero zone (live collisions in punk v2 and flora v1).
+  2. Punk v4 small print stacks up from the foot; hero shrink-fits above it
+     (down-flow used to crowd the bottom lines on full briefs).
+  3. The legal line ("… Alc. by Vol. / N mL") gets maxW 62% in punk v1/v2 —
+     wrapFit silently DROPS TRAILING WORDS when a line can't fit its column
+     at the 7pt floor, and the truncation was baked into 6 goldens. If a new
+     comp ever gives the legal line a narrow column, re-check this.
+- **Journey polish**: flight pours round-robin across styles (first four
+  glasses show the range); SVG scaling uses `width="100%"` only (SVG rejects
+  `height="auto"`); favicon added (`src/app/icon.svg`).
+- `start-demo.sh` (repo root): kill :3200 → build if missing → start → open.
+- Known cosmetic: punk look seed 34465 sets grape/vintage very tight (still
+  readable); owner can Remove that look in admin if it bothers him.
