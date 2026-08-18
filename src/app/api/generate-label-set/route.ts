@@ -9,7 +9,7 @@ import { logGeneration } from "@/lib/admin/generation-log";
 import { getProfiles, type StyleProfile } from "@/lib/admin/style-refs";
 import { buildLayoutHints } from "@/lib/admin/layout-refs";
 import { feedbackAggregates, weightedPick, type StyleFeedbackAggregate } from "@/lib/admin/feedback";
-import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, NO_BORDER_RULE, NO_ARCHITECTURE_RULE, NEUTRAL_GEO_RULE, geographicRule, wantsBuilding, QVEVRI_RULE, mentionsQvevri, qvevriOverridden, stylizationRule, NO_RED_DOMINANCE_RULE, wantsText, subjectFocusRule, wantsCrowd } from "@/lib/admin/image-rules";
+import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, NO_BORDER_RULE, WHITE_BG_RULE, NO_ARCHITECTURE_RULE, NEUTRAL_GEO_RULE, geographicRule, wantsBuilding, QVEVRI_RULE, mentionsQvevri, qvevriOverridden, stylizationRule, NO_RED_DOMINANCE_RULE, wantsText, subjectFocusRule, wantsCrowd } from "@/lib/admin/image-rules";
 import { subjectFrom } from "@/lib/styles/prompt";
 
 /* POST /api/generate-label-set — the generation orchestrator.
@@ -185,6 +185,7 @@ export async function POST(req: Request) {
           // back to their summary so the boards still lead the prompt
           const rules = ruleLines(imageRules, style.key);
           rules.push(NO_BORDER_RULE);
+          rules.push(WHITE_BG_RULE);
           if (!wantsText(brief.vision)) rules.push(NO_TEXT_RULE);
           if (!wantsCrowd(brief.vision)) rules.push(subjectFocusRule(subjectFrom(brief.vision || "", brief.data || {})));
           // architecture & geography (owner 2026-08-17): buildings only when

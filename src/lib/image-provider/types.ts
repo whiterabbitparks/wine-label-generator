@@ -12,6 +12,9 @@ export interface GenerationJob {
   vision?: string;
   /** per-job provider override (admin playground A/B); env default otherwise */
   provider?: "mock" | "openai" | "recraft";
+  /** condensed prompt for style-conditioned providers (subject + geometry +
+      non-negotiables; the style_id carries the visual language) */
+  shortPrompt?: string;
 }
 
 /** Returns an image as a data URL that slots into the label's image area. */

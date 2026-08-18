@@ -273,6 +273,32 @@ function withFocusSlot(template: string): string {
 
 /** Build the provider job for one style — same GenerationJob shape the
     providers already accept, so mock and openai need no changes. */
+/* SHORT PROMPT for style-conditioned providers (owner trial 2026-08-17):
+   when the provider SEES the boards (Recraft style_id), the long artistic-
+   language lead is redundant and Recraft's prompt limit would cut off the
+   subject (live-observed: the millstone that should have been a watchtower).
+   This carries only what the style can't: subject, composition geometry,
+   colour dominance, and the non-negotiables (white ground, no text, no
+   enclosure) — all inside the limit. */
+export function buildShortPrompt(style: StyleDef, sub: SubStyle, brief: LabelBrief): string {
+  const subject = subjectFrom(brief.vision || "", brief.data || {});
+  const zone = brief.zones?.[style.key] ?? null;
+  const compShape = pickCompShape(style.key, sub.key || "", brief.vision || "", brief.seed || 0);
+  const focus = zone ? zoneSentence(zone, brief.aspect, compShape) : ` Compose the subject as a ${compShape}.`;
+  const wineC = String(brief.data?.wineColorName || "");
+  const kind = /red/i.test(wineC) ? "red" : /ros/i.test(wineC) ? "rose" : "white";
+  const dom =
+    style.key === "punk" ? " Free, vivid colour is welcome."
+    : kind === "red" || kind === "rose" ? " Red and wine tones may lead the palette."
+    : " Yellows, golds, greens, blues, browns and earth tones lead the palette — red never dominates.";
+  return (
+    `Subject: ${subject}.${focus}${dom}` +
+    " Pure imagery with no text, letters or numbers of any kind." +
+    " The composition is never enclosed by any frame, border, oval or shape — its edges dissolve into the background." +
+    WHITE_BG
+  ).replace(/\s+/g, " ").trim();
+}
+
 export function buildStyleJob(
   style: StyleDef,
   sub: SubStyle,
@@ -287,6 +313,7 @@ export function buildStyleJob(
   if (fb?.avoid?.length) negParts.push(fb.avoid.join(", "));
   return {
     prompt: buildStylePrompt(style, sub, brief, art, fb, charter, checked),
+    shortPrompt: buildShortPrompt(style, sub, brief),
     negative: negParts.join(", "),
     reference: brief.reference || null,
     zone: brief.zones?.[style.key] ?? null,
