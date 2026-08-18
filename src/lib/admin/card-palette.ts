@@ -118,18 +118,24 @@ export async function labelPaletteFromImage(dataUrl: string, styleKey?: string):
     const mixToWhite = (c: { r: number; g: number; b: number }, t: number) => ({
       r: c.r + (255 - c.r) * t, g: c.g + (255 - c.g) * t, b: c.b + (255 - c.b) * t,
     });
-    // TWO entries (owner 2026-08-18: "more diversity in label background"):
-    // one with a light paper tint derived from the image's own ink, one on
-    // pure white — the engine picks seeded, and the wine-colour gamut
-    // rejects tints that break the ground rules (e.g. pinkish for whites).
     const inkHex = hex(ink), subHex = hex(mixToWhite(ink, 0.45)), accHex = hex(acc);
     // 9:1 tinted vs white (owner 2026-08-18: "white backgrounds still
-    // dominate — only 1/10"): two tint voices (vivid-ink paper and ink-warm
-    // paper) fill nine slots, pure white keeps one. The engine's seeded pick
-    // is uniform over the list, so repetition IS the weighting; gamut
+    // dominate — only 1/10"), but the nine tinted slots now draw on EVERY
+    // extracted ink at two paper strengths (owner 2026-08-19: two tints
+    // looped all session — grounds must be as diverse as the artwork
+    // allows). The engine's seeded pick is uniform over the list; gamut
     // adaptation may still veto a tint for a given wine, falling back white.
-    const tintA = { bg: hex(mixToWhite(vivid.c, 0.82)), ink: inkHex, sub: subHex, acc: accHex };
-    const tintB = { bg: hex(mixToWhite(dark.c, 0.84)), ink: inkHex, sub: subHex, acc: accHex };
+    const entry = (bg: string) => ({ bg, ink: inkHex, sub: subHex, acc: accHex });
+    const tintBGs: string[] = [];
+    for (const x of cs) {
+      for (const t of [0.78, 0.87]) {
+        const b = hex(mixToWhite(x.c, t));
+        if (!tintBGs.includes(b)) tintBGs.push(b);
+      }
+    }
+    const tintA = entry(tintBGs[0] || hex(mixToWhite(vivid.c, 0.82)));
+    const tintB = entry(tintBGs[1 % tintBGs.length] || tintA.bg);
+    const nineTints = Array.from({ length: 9 }, (_, i) => entry(tintBGs[i % tintBGs.length]));
     const white = { bg: "#FFFFFF", ink: inkHex, sub: subHex, acc: accHex };
     // PUNK BOLD GROUNDS (owner 2026-08-18): saturated opaque grounds built
     // from the image's own inks so the artwork prints INTO the colour (its
@@ -147,12 +153,20 @@ export async function labelPaletteFromImage(dataUrl: string, styleKey?: string):
         const q = (v: number) => Math.round((v + m2) * 255).toString(16).padStart(2, "0");
         return ("#" + q(r) + q(g) + q(b)).toUpperCase();
       };
-      const hv = toHsl(vivid.c), hd = toHsl(dark.c);
-      const boldA = { bg: hsl2hex(hv.h, Math.max(hv.s, 0.6), 0.62), ink: inkHex, sub: subHex, acc: accHex };
-      const boldB = { bg: hsl2hex(hd.h, Math.max(hd.s, 0.5), 0.48), ink: inkHex, sub: subHex, acc: accHex };
-      return [boldA, boldB, boldA, boldB, boldA, boldB, boldA, tintA, tintB, white];
+      // bold grounds from EVERY ink hue, vivid and deep voices alternating
+      // (2026-08-19: two bolds looped all session)
+      const boldBGs: string[] = [];
+      for (const x of cs) {
+        const hh = toHsl(x.c);
+        for (const [s, l] of [[Math.max(hh.s, 0.6), 0.62], [Math.max(hh.s, 0.5), 0.48]]) {
+          const b = hsl2hex(hh.h, s, l);
+          if (!boldBGs.includes(b)) boldBGs.push(b);
+        }
+      }
+      const sevenBolds = Array.from({ length: 7 }, (_, i) => entry(boldBGs[i % boldBGs.length]));
+      return [...sevenBolds, tintA, tintB, white];
     }
-    return [tintA, tintB, tintA, tintB, tintA, tintB, tintA, tintB, tintA, white];
+    return [...nineTints, white];
   } catch {
     return null;
   }
