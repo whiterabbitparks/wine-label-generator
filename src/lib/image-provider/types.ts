@@ -10,6 +10,8 @@ export interface GenerationJob {
   art?: { preset?: string; extra?: string; negative?: string; template?: string };
   data?: Record<string, string>;
   vision?: string;
+  /** per-job provider override (admin playground A/B); env default otherwise */
+  provider?: "mock" | "openai" | "recraft";
 }
 
 /** Returns an image as a data URL that slots into the label's image area. */
