@@ -181,6 +181,63 @@ export async function verifyImage(
   }
 }
 
+/* COMPARE-AND-CORRECT (owner 2026-08-18): the strongest text-side lever —
+   after generation, put the OUTPUT side by side with the actual REFERENCE
+   image and extract concrete corrective deltas (technique, line quality,
+   light, detail scale, colour behaviour); the caller regenerates once with
+   them. The automated version of the owner's own eye. Never blocks
+   generation; empty list = close enough. */
+export async function compareToReference(
+  generatedDataUrl: string,
+  referenceDataUrl: string
+): Promise<string[]> {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) return [];
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: process.env.OPENAI_VISION_MODEL || "gpt-4o",
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content:
+              "You compare a GENERATED image (B) against a REFERENCE artwork (A) whose technique it must match. " +
+              "Subjects are expected to differ — judge ONLY the craft: printing/drawing technique and tool marks, " +
+              "line quality and weight, lighting (direction, contrast), detail scale/density, and colour behaviour. " +
+              "Return up to 4 CONCRETE corrective instructions for regenerating B to match A's craft " +
+              '(e.g. "use coarser cross-hatching with visible tool wobble", "reduce micro-detail: 4-6 large forms", ' +
+              '"flatten the lighting: single light source, higher contrast"). NEVER suggest adding borders, frames, ' +
+              "text, or enclosing shapes — those are forbidden by other rules. If B already matches A's craft well, return none. " +
+              'Strict JSON: {"corrections": ["...", ...]}.',
+          },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "A = reference:" },
+              { type: "image_url", image_url: { url: referenceDataUrl, detail: "low" } },
+              { type: "text", text: "B = generated:" },
+              { type: "image_url", image_url: { url: generatedDataUrl, detail: "low" } },
+            ],
+          },
+        ],
+      }),
+    });
+    if (!res.ok) return [];
+    const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+    const parsed = JSON.parse(json.choices?.[0]?.message?.content || "{}") as { corrections?: unknown };
+    return (Array.isArray(parsed.corrections) ? parsed.corrections : [])
+      .map((c) => String(c).slice(0, 200))
+      // safety net: a correction must never smuggle in what other rules ban
+      .filter((c) => c.length > 5 && !/border|frame|cartouche|enclos|oval|text|letter/i.test(c))
+      .slice(0, 4);
+  } catch {
+    return [];
+  }
+}
+
 /* Built-in hard rule (owner, 2026-08-15): artwork never contains text,
    glyphs or numbers — UNLESS the winemaker's story explicitly asks for
    lettering. Joins the same compiled pipeline (prompt clause, avoid-list,
