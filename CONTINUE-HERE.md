@@ -292,6 +292,41 @@ branch UX_Tasting_Journey the root is the journey UI, so captures/e2e
 must run on the MAIN branch (classic at root). Also: goldens rewrote
 .next again — rebuild before `next start` (documented trap, re-hit).
 
+## 7-PROVIDERS (2026-08-18) — four engines + the winning HYBRID
+
+Owner-driven provider trials, all behind IMAGE_PROVIDER + a per-batch
+A/B dropdown in Image Play (job.provider override):
+- openai (gpt-image): best STORY comprehension; house default until now.
+- recraft: style_id per style ("Sync boards to Recraft", Image Refs) —
+  gorgeous technique, poor scene comprehension/anatomy (owner verdict).
+  RECRAFT_API_KEY. Note: Recraft memberships ≠ API units (separate).
+- flux (fal.ai): per-style REAL LoRA trained from the boards ("Train FLUX
+  LoRA" per style, ~$2/3min via queue + fal storage upload — data-URI
+  zips are rejected as "URL too long"; pending runs persist and resume so
+  a paid run can't be lost). Best technique, learned the boards' oval/
+  toned-paper habits; text comprehension mediocre. FAL_KEY.
+- **hybrid (the winner so far): gpt-image composes the story, then FLUX
+  image-to-image (strength 0.62, lora 0.9) repaints it in the board's
+  LoRA craft.** Live-verified: "man in the wine cellar" → correct figure
+  + barrel in genuine engraving. Tuning dials: strength (content
+  fidelity) and lora scale (technique strength).
+- Providers plug in via src/lib/image-provider/{recraft,flux}.ts;
+  finishArtwork (webp→png via sharp for recraft) + all verified rules
+  apply to every provider. shortPrompt (buildShortPrompt) serves
+  style-conditioned providers: subject + geometry + non-negotiables.
+- COMPARE-AND-CORRECT (image-rules.compareToReference): output judged
+  side-by-side against its reference card; ≤4 craft corrections → one
+  corrective regeneration. Wired in playground (result.refine) + sets.
+- **EXACT COLOURS (owner rule 2026-08-18): card-palette.ts extracts each
+  reference's ink palette (deterministic, cached settings/card-palettes);
+  prompts request ONLY those inks and finishArtwork's palette-lock stage
+  MAPS every coloured pixel to the nearest reference ink (luminance
+  preserved) — invented hues cannot survive. Backgrounds stay under the
+  white-ground rules.** finishArtwork also does paper neutralization
+  (border-ring white balance) and WHITE_BG_RULE is vision-checked.
+- LoRAs trained so far: traditional only — owner to train contemporary
+  and punk from the admin buttons.
+
 ## 6-RULES-AUDIT (2026-08-17) — "do the admin rules actually work?"
 
 Owner challenged whether admin rules influence anything. Audit verdict:

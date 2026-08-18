@@ -32,7 +32,7 @@ function grainAt(x: number, y: number): number {
   return ((n & 0xffff) / 0x7fff) - 1;
 }
 
-export function finishArtwork(dataUrl: string): string {
+export function finishArtwork(dataUrl: string, paletteLock?: string[]): string {
   const PREFIX = "data:image/png;base64,";
   if (!dataUrl.startsWith(PREFIX)) return dataUrl;
   try {
@@ -68,6 +68,26 @@ export function finishArtwork(dataUrl: string): string {
         }
       }
     }
+    /* PALETTE LOCK (owner rule 2026-08-18): precompute the card's ink set;
+       every coloured pixel is mapped to its nearest ink by hue, luminance
+       preserved — invented hues cannot survive. Neutral pixels stay. */
+    const PAL = (paletteLock || [])
+      .map((hx) => {
+        const mm = /^#?([0-9a-f]{6})$/i.exec(hx); if (!mm) return null;
+        const n = parseInt(mm[1], 16), pr = (n >> 16) & 255, pg = (n >> 8) & 255, pb = n & 255;
+        const mx = Math.max(pr, pg, pb), mn = Math.min(pr, pg, pb);
+        const s2 = mx === mn ? 0 : (mx - mn) / (255 - Math.abs(mx + mn - 255));
+        let h2 = 0;
+        if (mx !== mn) {
+          if (mx === pr) h2 = 60 * ((pg - pb) / (mx - mn) + (pg < pb ? 6 : 0));
+          else if (mx === pg) h2 = 60 * ((pb - pr) / (mx - mn) + 2);
+          else h2 = 60 * ((pr - pg) / (mx - mn) + 4);
+        }
+        const L2 = 0.299 * pr + 0.587 * pg + 0.114 * pb;
+        return { r: pr, g: pg, b: pb, h: ((h2 % 360) + 360) % 360, s: s2, L: Math.max(1, L2) };
+      })
+      .filter(Boolean) as { r: number; g: number; b: number; h: number; s: number; L: number }[];
+    const PAL_C = PAL.filter((p2) => p2.s >= 0.15); // coloured inks only
     for (let y = 0; y < H; y++) {
       for (let x = 0; x < W; x++) {
         const i = (y * W + x) * 4;
@@ -76,6 +96,28 @@ export function finishArtwork(dataUrl: string): string {
         if (a < 1) { r = r * a + 255 * (1 - a); g = g * a + 255 * (1 - a); b = b * a + 255 * (1 - a); }
         r = Math.min(255, r * fr); g = Math.min(255, g * fg); b = Math.min(255, b * fb);
         let m = Math.min(r, g, b);
+        if (PAL_C.length && m < HI) {
+          const mx2 = Math.max(r, g, b);
+          const s2 = mx2 === m ? 0 : (mx2 - m) / (255 - Math.abs(mx2 + m - 255));
+          if (s2 >= 0.12) { // coloured pixel → nearest ink by hue
+            let h2 = 0;
+            if (mx2 !== m) {
+              if (mx2 === r) h2 = 60 * ((g - b) / (mx2 - m) + (g < b ? 6 : 0));
+              else if (mx2 === g) h2 = 60 * ((b - r) / (mx2 - m) + 2);
+              else h2 = 60 * ((r - g) / (mx2 - m) + 4);
+            }
+            h2 = ((h2 % 360) + 360) % 360;
+            let best = PAL_C[0], bd = 1e9;
+            for (const p2 of PAL_C) {
+              const d = Math.min(Math.abs(h2 - p2.h), 360 - Math.abs(h2 - p2.h));
+              if (d < bd) { bd = d; best = p2; }
+            }
+            const Lp = 0.299 * r + 0.587 * g + 0.114 * b;
+            const f2 = Lp / best.L;
+            r = Math.min(255, best.r * f2); g = Math.min(255, best.g * f2); b = Math.min(255, best.b * f2);
+            m = Math.min(r, g, b);
+          }
+        }
         // ink discipline: grain ∝ ink coverage, then quantize LUMINANCE only
         // (all channels scaled by the same factor → hue exactly preserved;
         // per-channel posterizing would band into false colours)
@@ -176,7 +218,7 @@ function transientKind(e: unknown): "rate" | "network" | null {
 export async function generateImageWithRetry(job: GenerationJob): Promise<string> {
   for (let attempt = 0; ; attempt++) {
     try {
-      return finishArtwork(await generateImage(job));
+      return finishArtwork(await generateImage(job), job.paletteLock);
     } catch (e) {
       const kind = transientKind(e);
       if (!kind || attempt >= RETRIES) throw e;
