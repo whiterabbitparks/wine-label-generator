@@ -267,6 +267,20 @@ export const QVEVRI_RULE: CompiledRule = {
     "If the image contains a qvevri or similar large clay wine vessel: does it have handles, ornaments, carvings or any surface decoration, OR is it shown partially buried with its body protruding from the ground? A vessel standing fully above ground with a smooth plain surface is fine. If no such vessel appears, answer no.",
 };
 
+/* Built-in rule (2026-08-17): PURE WHITE GROUND, now vision-CHECKED too.
+   WHITE_BG has always ridden the prompt, but style-conditioned providers
+   inherit their references' toned paper (live-observed: tan ground from
+   Recraft) — under multiply a tan block prints. The check makes the
+   regenerate loop enforce it on every provider. */
+export const WHITE_BG_RULE: CompiledRule = {
+  src: "pure white background (built-in)",
+  positive:
+    "The artwork sits on a clean, solid, PURE WHITE background — no coloured or toned paper, no beige/tan ground, no texture and no gradient behind the scene.",
+  negative: "beige background, tan paper background, coloured background, textured paper ground, gradient background",
+  check:
+    "Look at the ground AROUND the composition: if it is beige, tan, cream, sepia, grey or ANY colour or texture other than clean pure white, that IS a violation — answer yes. Answer no only when the surrounding ground is genuinely white.",
+};
+
 /* Built-in rule (owner, 2026-08-17): DOMINANT COLOUR. Red may lead the
    palette only on red products; white/amber products lead with yellows,
    greens, blues, browns and earth tones. Pushed for traditional and

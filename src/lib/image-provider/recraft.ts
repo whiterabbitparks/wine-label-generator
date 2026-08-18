@@ -1,3 +1,4 @@
+import sharp from "sharp";
 import { getDb } from "@/lib/db";
 import type { GenerationJob } from "./types";
 
@@ -68,11 +69,11 @@ export async function generateRecraftImage(job: GenerationJob): Promise<string> 
   const key = process.env.RECRAFT_API_KEY;
   if (!key) throw new Error("RECRAFT_API_KEY is not set (put it in .env.local, server-side only)");
 
-  let prompt = job.prompt || "";
-  if (job.negative) prompt += ` Avoid: ${job.negative}.`;
-  // Recraft's prompt limit is far below gpt-image's; the front of our prompt
-  // carries the non-negotiables and subject, the tail carries board language
-  // that the style_id already embodies — safe to cut.
+  // The style_id carries the boards' visual language, so the CONDENSED prompt
+  // wins: subject + composition geometry + non-negotiables. (Truncating the
+  // full prompt cut off the SUBJECT in live testing — millstone, not tower.)
+  let prompt = job.shortPrompt || job.prompt || "";
+  if (!job.shortPrompt && job.negative) prompt += ` Avoid: ${job.negative}.`;
   if (prompt.length > 990) prompt = prompt.slice(0, 990);
 
   const styleKey = String(job.art?.preset || "").split("/")[0];
@@ -84,6 +85,7 @@ export async function generateRecraftImage(job: GenerationJob): Promise<string> 
     model: "recraftv3",
     size: "1707x1024", // closest offering to the engine's 1.6:1 artwork
     n: 1,
+    response_format: "b64_json",
   };
   if (styleId) payload.style_id = styleId;
   else payload.style = "digital_illustration"; // pre-sync fallback
@@ -101,11 +103,17 @@ export async function generateRecraftImage(job: GenerationJob): Promise<string> 
     throw new Error(`Recraft generation failed (${res.status}): ${body.message || body.error || "no image returned"}`);
 
   const item = body.data[0];
-  if (item.b64_json) return `data:image/png;base64,${item.b64_json}`;
-  if (!item.url) throw new Error("Recraft returned neither url nor b64_json");
-  const imgRes = await fetch(item.url);
-  if (!imgRes.ok) throw new Error(`Recraft image download failed (${imgRes.status})`);
-  const mime = imgRes.headers.get("content-type") || "image/png";
-  const buf = Buffer.from(await imgRes.arrayBuffer());
-  return `data:${mime};base64,${buf.toString("base64")}`;
+  let buf: Buffer;
+  if (item.b64_json) buf = Buffer.from(item.b64_json, "base64");
+  else if (item.url) {
+    const imgRes = await fetch(item.url);
+    if (!imgRes.ok) throw new Error(`Recraft image download failed (${imgRes.status})`);
+    buf = Buffer.from(await imgRes.arrayBuffer());
+  } else throw new Error("Recraft returned neither url nor b64_json");
+
+  // Recraft serves WebP regardless of requested format (live-observed) — the
+  // finishing pipeline (white edges, ink discipline, re-centring) only
+  // processes PNG, so convert here.
+  if (buf.slice(0, 4).toString("ascii") === "RIFF") buf = await sharp(buf).png().toBuffer();
+  return `data:image/png;base64,${buf.toString("base64")}`;
 }

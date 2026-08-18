@@ -39,12 +39,41 @@ export function finishArtwork(dataUrl: string): string {
     const { width: W, height: H, data: px } = png;
     const D = Math.max(2, Math.round(Math.min(W, H) * 0.04));
     const LO = 232, HI = 248, STEP = 255 / (INK_LEVELS - 1);
+    /* PAPER NEUTRALIZATION (owner trial 2026-08-18): style-conditioned
+       providers inherit their references' toned paper (tan/beige grounds,
+       live-observed from Recraft) — under multiply a toned ground prints as
+       a block. Sample the border ring's light pixels; if the "paper" isn't
+       white, white-balance the whole image so paper → pure white (inks keep
+       their relative colour). No-op when the ground is already white. */
+    let fr = 1, fg = 1, fb = 1;
+    {
+      const R = Math.max(2, Math.round(Math.min(W, H) * 0.02));
+      let n = 0, sr = 0, sg = 0, sb = 0;
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          if (x >= R && x < W - R && y >= R && y < H - R) { x = W - R - 1; continue; }
+          const i = (y * W + x) * 4;
+          const a = px[i + 3] / 255;
+          const r = px[i] * a + 255 * (1 - a), g = px[i + 1] * a + 255 * (1 - a), b = px[i + 2] * a + 255 * (1 - a);
+          if ((Math.max(r, g, b) + Math.min(r, g, b)) / 510 > 0.55) { sr += r; sg += g; sb += b; n++; }
+        }
+      }
+      if (n > 50) {
+        const pr = sr / n, pg = sg / n, pb = sb / n;
+        // treat as "paper" down to fairly deep tans (live-observed ~140s);
+        // cap the boost so inks can't blow out
+        if (Math.min(pr, pg, pb) >= 110 && Math.min(pr, pg, pb) < 250) {
+          fr = Math.min(2.3, 255 / pr); fg = Math.min(2.3, 255 / pg); fb = Math.min(2.3, 255 / pb);
+        }
+      }
+    }
     for (let y = 0; y < H; y++) {
       for (let x = 0; x < W; x++) {
         const i = (y * W + x) * 4;
         let r = px[i], g = px[i + 1], b = px[i + 2];
         const a = px[i + 3] / 255;
         if (a < 1) { r = r * a + 255 * (1 - a); g = g * a + 255 * (1 - a); b = b * a + 255 * (1 - a); }
+        r = Math.min(255, r * fr); g = Math.min(255, g * fg); b = Math.min(255, b * fb);
         let m = Math.min(r, g, b);
         // ink discipline: grain ∝ ink coverage, then quantize LUMINANCE only
         // (all channels scaled by the same factor → hue exactly preserved;
