@@ -946,3 +946,12 @@ sections above). Built so far:
 Next on this branch: interlock effects (text-behind-subject, knockout hero,
 silhouette wrap) consuming imgAnalysis; composition contracts in prompts;
 then the LLM composer emitting engine specs.
+- IMAGE-AWARE PLACEMENT (2026-08-20, first consumer of imgAnalysis):
+  resolveArt lets the artwork's QUIET grid cells (density ≤0.07) slide
+  under text blocks — artwork grows into its own negative space and text
+  may sit inside the image's calm areas; dense ink still respects the gap
+  (mechanical legibility). With analysis present the punk boost caps at
+  the verified max size (an unverified overshoot broke the promise).
+  imgAnalysis rides setStyleHints persistence + withLook like imgPalettes.
+  Bench draws quiet zones ON the label at the artwork's real placement
+  ("Show/Hide quiet zones"). No-hints path unchanged; goldens 72/72.

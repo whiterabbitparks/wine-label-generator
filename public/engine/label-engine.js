@@ -903,13 +903,36 @@ function resolveArt(body,W,H,bg){
      (owner rules), so the flush side grants 15% of the label beyond the
      normal bleed — without it the edge anchor throttles the reachable size */
   const fR=p.b[2]>=0.96?0.15*W:0, fL=p.b[0]<=0.04?0.15*W:0;
+  /* IMAGE-AWARE OVERLAP (owner 2026-08-20, POPIKA_IMage&layout_relation):
+     with the artwork's measured density grid available, the image is no
+     longer an opaque rectangle to text — its QUIET regions (near-white,
+     invisible under multiply / transparent when keyed) may slide UNDER a
+     text block. Only where every overlapped grid cell is calm; dense ink
+     still respects the gap, so legibility is mechanical, not hoped for.
+     Without analysis (goldens, no-hints, mock) behaviour is unchanged. */
+  const AG=p.an&&Array.isArray(p.an.grid)&&p.an.grid.length?p.an.grid:null;
+  const AC_=AG?(p.an.cols||AG[0].length):0, AR_=AG?(p.an.rows||AG.length):0;
+  const QT=0.07;
+  const quietUnder=(cx,cy,mw,mh,r)=>{
+    if(!AG)return false;
+    const ix0=cx-mw/2, iy0=cy-mh/2;
+    const x0=Math.max(r.x-pad,ix0), x1=Math.min(r.x2+pad,ix0+mw);
+    const y0=Math.max(r.y-pad,iy0), y1=Math.min(r.y2+pad,iy0+mh);
+    if(x1<=x0||y1<=y0)return true;
+    const c0=Math.max(0,Math.floor((x0-ix0)/mw*AC_)), c1=Math.min(AC_-1,Math.floor((x1-ix0-0.001)/mw*AC_));
+    const r0=Math.max(0,Math.floor((y0-iy0)/mh*AR_)), r1=Math.min(AR_-1,Math.floor((y1-iy0-0.001)/mh*AR_));
+    for(let gy=r0;gy<=r1;gy++)for(let gx=c0;gx<=c1;gx++)if(AG[gy][gx]>QT)return false;
+    return true;
+  };
   const okAt=(cx,cy,s)=>{
     const mw=cw*s, mh=ch*s;
     if(cx-mw/2<-SBLEED-fL||cx+mw/2>W+SBLEED+fR||cy-mh/2<-SBLEED||cy+mh/2>H+SBLEED)return false;
     const ix=cx-mw/2+mw*CORE, ix2=cx+mw/2-mw*CORE;
     const iy=cy-mh/2+mh*CORE, iy2=cy+mh/2-mh*CORE;
     for(const r of rects)
-      if(ix<r.x2+pad&&ix2>r.x-pad&&iy<r.y2+pad&&iy2>r.y-pad)return false;
+      if(ix<r.x2+pad&&ix2>r.x-pad&&iy<r.y2+pad&&iy2>r.y-pad){
+        if(!quietUnder(cx,cy,mw,mh,r))return false;
+      }
     return true;
   };
   const maxScale=(cx,cy)=>{
@@ -948,6 +971,12 @@ function resolveArt(body,W,H,bg){
      in every punk comp — loud is the style; overflow dissolves to white and
      may bleed. Capped at full-bleed so the rect never exceeds the canvas. */
   let sF=Math.max(1,bestS*Math.sqrt(ARTFILL))*(p.st==='punk'?1.3:1);
+  /* with a density grid the placement PROMISES text only ever meets quiet
+     image cells — a boost beyond the verified maximum would break that
+     promise (live-observed: punk texture under the hero), so image-aware
+     placement caps at the verified size. The legacy path keeps the loud
+     punk overshoot ("overflow dissolves to white"). */
+  if(AG)sF=Math.min(sF,bestS);
   sF=Math.min(sF,(W+2*SBLEED+fL+fR)/cw,(H+2*SBLEED)/ch);
   let mw=cw*sF, mh=ch*sF;
   /* keep the final rect inside the bleed bounds (position only) — the
@@ -1140,6 +1169,11 @@ function setStyleHints(h){
     if(pv&&Array.isArray(pv.imgPalettes)&&pv.imgPalettes.length){
       if(STYLE_HINTS[k]&&!STYLE_HINTS[k].imgPalettes)STYLE_HINTS[k].imgPalettes=pv.imgPalettes;
       else if(!STYLE_HINTS[k])STYLE_HINTS[k]={imgPalettes:pv.imgPalettes};
+    }
+    /* imgAnalysis rides with the artwork the same way (2026-08-20) */
+    if(pv&&pv.imgAnalysis){
+      if(STYLE_HINTS[k]&&!STYLE_HINTS[k].imgAnalysis)STYLE_HINTS[k].imgAnalysis=pv.imgAnalysis;
+      else if(!STYLE_HINTS[k])STYLE_HINTS[k]={imgAnalysis:pv.imgAnalysis};
     }
   }
   const hr=STYLE_HINTS.__hardRules;
@@ -1530,7 +1564,8 @@ function sImageBox(styleKey,b,W,H){
      but the best position needs every text ink rect, known only once the
      whole comp has drawn. Emit a token here; sWrap→resolveArt replaces it
      in place, keeping the comp's paint order. */
-  PENDING_ART={src,b,st:styleKey};
+  const hsA=STYLE_HINTS[styleKey];
+  PENDING_ART={src,b,st:styleKey,an:(hsA&&hsA.imgAnalysis)||null};
   return ART_TOKEN;
 }
 
@@ -2201,6 +2236,7 @@ function withLook(key,seed,fn){
     const P=prev.imgPalettes, off=sPick(seed,31,P.length);
     frozen.imgPalettes=P.slice(off).concat(P.slice(0,off));
   }
+  if(prev&&prev.imgAnalysis)frozen.imgAnalysis=prev.imgAnalysis;
   STYLE_HINTS[key]=frozen;
   FORCED_V=isFinite(+L.variant)?+L.variant:null;
   try{return fn(+L.seed||0);}finally{STYLE_HINTS[key]=prev;FORCED_V=null;}

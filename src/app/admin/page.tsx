@@ -1767,6 +1767,26 @@ interface ProofCard {
 const PROOF_FAILS = ["image", "arrangement", "fonts", "colour", "interplay"] as const;
 const PROOF_STYLES = ["traditional", "contemporary", "punk"] as const;
 
+
+/* map the artwork's quiet zones from IMAGE space into LABEL space using the
+   <image> placement resolveArt chose — so the bench shows the zones exactly
+   where they land on the finished label (text sitting inside a dashed zone
+   is the image-aware placement working). */
+function labelZones(c: ProofCard): { x: number; y: number; w: number; h: number }[] {
+  if (!c.analysis?.quiet?.length) return [];
+  const im = c.svg.match(/<image x="(-?[\d.]+)" y="(-?[\d.]+)" width="([\d.]+)" height="([\d.]+)"/);
+  const vb = c.svg.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/);
+  if (!im || !vb) return [];
+  const [ix, iy, iw, ih] = [+im[1], +im[2], +im[3], +im[4]];
+  const [W, H] = [+vb[1], +vb[2]];
+  return c.analysis.quiet.map((q) => ({
+    x: ((ix + q.x * iw) / W) * 100,
+    y: ((iy + q.y * ih) / H) * 100,
+    w: ((q.w * iw) / W) * 100,
+    h: ((q.h * ih) / H) * 100,
+  })).filter((z) => z.x < 100 && z.y < 100 && z.x + z.w > 0 && z.y + z.h > 0);
+}
+
 function ProofBenchTab() {
   const [vision, setVision] = useState("An old man in a wool cap plays the panduri under a fig tree, a rooster pecking at his feet");
   const [wine, setWine] = useState("Saperavi Reserve");
@@ -1781,6 +1801,7 @@ function ProofBenchTab() {
   const [seed, setSeed] = useState(0);
   const [cards, setCards] = useState<ProofCard[]>([]);
   const [rej, setRej] = useState<Record<string, { chips: string[]; note: string }>>({});
+  const [showZones, setShowZones] = useState(true);
   const [engineReady, setEngineReady] = useState(false);
   const lastResult = useRef<{ images?: Record<string, { url: string; subStyleLabel?: string }>; layoutHints?: Record<string, { imgAnalysis?: ProofAnalysis }> } | null>(null);
 
@@ -1906,7 +1927,10 @@ function ProofBenchTab() {
             {busy ? "Printing…" : engineReady ? "Generate proofs" : "Loading engine…"}
           </button>
           {cards.length > 0 && !busy && (
-            <button style={S.btnGhost} onClick={reroll}>Re-render layouts (same artwork)</button>
+            <>
+              <button style={S.btnGhost} onClick={reroll}>Re-render layouts (same artwork)</button>
+              <button style={S.btnGhost} onClick={() => setShowZones((v) => !v)}>{showZones ? "Hide" : "Show"} quiet zones</button>
+            </>
           )}
           {busy && <div style={{ flex: 1, height: 6, background: "#e4e3db", borderRadius: 3 }}>
             <div style={{ width: `${Math.round(prog * 100)}%`, height: "100%", background: "#5a6b3b", borderRadius: 3, transition: "width .4s" }} />
@@ -1918,8 +1942,13 @@ function ProofBenchTab() {
       {cards.map((c) => (
         <div key={c.style + seed} style={S.card}>
           <div style={{ display: "flex", gap: 14 }}>
-            <div style={{ flex: 1, border: "1px solid #e2e1da" }}
-              dangerouslySetInnerHTML={{ __html: c.svg.replace(/width="110mm" height="80mm"/, 'width="100%"') }} />
+            <div style={{ flex: 1, border: "1px solid #e2e1da", position: "relative" }}>
+              <div dangerouslySetInnerHTML={{ __html: c.svg.replace(/width="110mm" height="80mm"/, 'width="100%"') }} />
+              {/* quiet zones mapped into LABEL space at the artwork's real placement */}
+              {showZones && labelZones(c).map((z, i) => (
+                <div key={i} style={{ position: "absolute", left: `${z.x}%`, top: `${z.y}%`, width: `${z.w}%`, height: `${z.h}%`, outline: "2px dashed #5a6b3b", outlineOffset: -2, pointerEvents: "none", background: "rgba(90,107,59,0.06)" }} />
+              ))}
+            </div>
             <div style={{ width: 170, flex: "none" }}>
               <div style={{ fontSize: 12, fontWeight: 700 }}>{c.style}</div>
               <div style={{ fontSize: 11, color: "#8a887e", marginBottom: 6 }}>{c.subStyleLabel}</div>
