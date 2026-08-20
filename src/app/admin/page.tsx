@@ -6,7 +6,7 @@
    Users         — admin account management
    The prompt-preview logic mirrors buildPrompt() in
    8k-labels-package/src/image-gen.js — keep in sync if the package changes. */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 interface Config {
   preset: string;
@@ -33,7 +33,7 @@ interface UserRow {
   createdAt: string;
 }
 
-const TABS = ["Image Refs", "Image Rules", "Image Play", "Layout Refs", "Layout Play", "Fonts", "Hard Rules", "Generations", "Users"] as const;
+const TABS = ["Image Refs", "Image Rules", "Image Play", "Layout Refs", "Layout Play", "Proof Bench", "Fonts", "Hard Rules", "Generations", "Users"] as const;
 type Tab = (typeof TABS)[number];
 
 export default function AdminPage() {
@@ -82,6 +82,7 @@ export default function AdminPage() {
         {tab === "Image Rules" && <ArtDirectionTab />}
         {tab === "Layout Refs" && <LayoutTab />}
         {tab === "Layout Play" && <LayoutPlaygroundTab />}
+        {tab === "Proof Bench" && <ProofBenchTab />}
         {tab === "Fonts" && <FontsTab />}
         {tab === "Hard Rules" && <HardRulesTab />}
         {tab === "Generations" && <GenerationsTab />}
@@ -1746,3 +1747,232 @@ function HardRulesTab() {
     </div>
   );
 }
+
+/* ================= PROOF BENCH (owner 2026-08-20, POPIKA_IMage&layout_relation) =================
+   Judge FINISHED labels — real artwork + layout + fonts together, exactly
+   what a customer sees. One verdict per label; a rejection carries "what
+   failed" chips so every lesson lands on the right subsystem. Verdicts feed
+   /api/admin/proof-feedback (the future harmony critic's corpus). The
+   artwork mini-map shows the new image intelligence: quiet zones (usable
+   negative space), open side and ink share. */
+
+interface ProofAnalysis {
+  quiet: { x: number; y: number; w: number; h: number; density: number }[];
+  openSide: string; inkShare: number;
+}
+interface ProofCard {
+  style: string; svg: string; subStyleLabel: string; imgUrl: string;
+  analysis: ProofAnalysis | null; done?: string;
+}
+const PROOF_FAILS = ["image", "arrangement", "fonts", "colour", "interplay"] as const;
+const PROOF_STYLES = ["traditional", "contemporary", "punk"] as const;
+
+function ProofBenchTab() {
+  const [vision, setVision] = useState("An old man in a wool cap plays the panduri under a fig tree, a rooster pecking at his feet");
+  const [wine, setWine] = useState("Saperavi Reserve");
+  const [producer, setProducer] = useState("Popiashvili Cellars");
+  const [colour, setColour] = useState("Red");
+  const [grape, setGrape] = useState("Saperavi");
+  const [region, setRegion] = useState("Kakheti, Georgia");
+  const [vintage, setVintage] = useState("2023");
+  const [busy, setBusy] = useState(false);
+  const [prog, setProg] = useState(0);
+  const [err, setErr] = useState("");
+  const [seed, setSeed] = useState(0);
+  const [cards, setCards] = useState<ProofCard[]>([]);
+  const [rej, setRej] = useState<Record<string, { chips: string[]; note: string }>>({});
+  const [engineReady, setEngineReady] = useState(false);
+  const lastResult = useRef<{ images?: Record<string, { url: string; subStyleLabel?: string }>; layoutHints?: Record<string, { imgAnalysis?: ProofAnalysis }> } | null>(null);
+
+  useEffect(() => {
+    const w = window as unknown as { LabelEngine?: { ensureFonts: () => Promise<void> } };
+    if (w.LabelEngine) { setEngineReady(true); return; }
+    const sc = document.createElement("script");
+    sc.src = "/engine/label-engine.js";
+    sc.onload = () => { w.LabelEngine?.ensureFonts().then(() => setEngineReady(true)); };
+    document.body.appendChild(sc);
+  }, []);
+
+  const briefData = useCallback(() => {
+    const [reg, country] = region.split(",").map((x) => x.trim());
+    return {
+      producer, wine, appellation: "", classification: "", grape,
+      region: reg || "", country: country || "", special: "", vintage,
+      wineColorName: colour, wineType: "Still Wine", sweetness: "Dry",
+      alcohol: "12.5", volume: "750",
+    };
+  }, [producer, wine, grape, region, vintage, colour]);
+
+  const renderCards = useCallback((s: number) => {
+    const result = lastResult.current; if (!result) return;
+    const w = window as unknown as {
+      __LABEL_IMGS__?: Record<string, string>;
+      LabelEngine: {
+        setStyleHints: (h: unknown) => void;
+        renderStyleOptions: (d: unknown, o: null, opts: { widthMM: number; heightMM: number; seed: number }) => { style: string; svg: string }[];
+      };
+    };
+    w.__LABEL_IMGS__ = Object.fromEntries(Object.entries(result.images || {}).map(([k, v]) => [k, v.url]));
+    w.LabelEngine.setStyleHints(result.layoutHints || {});
+    const opts = w.LabelEngine.renderStyleOptions(briefData(), null, { widthMM: 110, heightMM: 80, seed: s });
+    setCards(PROOF_STYLES.map((k) => ({
+      style: k,
+      svg: (opts.find((o) => o.style === k) || { svg: "" }).svg,
+      subStyleLabel: result.images?.[k]?.subStyleLabel || "",
+      imgUrl: result.images?.[k]?.url || "",
+      analysis: (result.layoutHints?.[k]?.imgAnalysis as ProofAnalysis) || null,
+    })));
+    setRej({});
+  }, [briefData]);
+
+  async function generate() {
+    setBusy(true); setErr(""); setProg(0.03); setCards([]);
+    const s = 1 + Math.floor(Math.random() * 100000);
+    setSeed(s);
+    try {
+      const w = window as unknown as { LabelEngine?: { styleZones?: (s: number) => unknown } };
+      const res = await fetch("/api/generate-label-set", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vision, reference: null, data: briefData(), seed: s, zones: w.LabelEngine?.styleZones?.(s) || null, aspect: "landscape" }),
+      });
+      if (!res.ok || !res.body) throw new Error(`generation failed (${res.status})`);
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = ""; let result: typeof lastResult.current = null;
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let nl;
+        while ((nl = buf.indexOf("\n")) >= 0) {
+          const line = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1);
+          if (!line) continue;
+          const msg = JSON.parse(line);
+          if (msg.type === "progress" && msg.total) setProg(0.05 + ((msg.done || 0) / msg.total) * 0.93);
+          else if (msg.type === "result") result = msg;
+          else if (msg.type === "error") throw new Error(msg.error || "generation failed");
+        }
+      }
+      if (!result?.images) throw new Error("no images came back");
+      lastResult.current = result;
+      setProg(1);
+      renderCards(s);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    }
+    setBusy(false);
+  }
+
+  function reroll() {
+    const s = 1 + Math.floor(Math.random() * 100000);
+    setSeed(s);
+    renderCards(s);
+  }
+
+  async function submit(style: string, verdict: "approve" | "reject") {
+    const r = rej[style] || { chips: [], note: "" };
+    const c = cards.find((x) => x.style === style);
+    await fetch("/api/admin/proof-feedback", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        style, verdict,
+        failures: verdict === "reject" ? r.chips : [],
+        note: r.note, vision, wine, wineColorName: colour, seed,
+        subStyle: c?.subStyleLabel, analysis: c?.analysis,
+      }),
+    });
+    setCards((cs) => cs.map((x) => (x.style === style ? { ...x, done: verdict } : x)));
+    setRej((m) => { const n = { ...m }; delete n[style]; return n; });
+  }
+
+  return (
+    <>
+      <div style={S.card}>
+        <label style={S.label}>Story / vision</label>
+        <textarea style={{ ...S.input, minHeight: 54 }} value={vision} onChange={(e) => setVision(e.target.value)} />
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 2fr 1fr", gap: 8 }}>
+          <div><label style={S.label}>Wine</label><input style={S.input} value={wine} onChange={(e) => setWine(e.target.value)} /></div>
+          <div><label style={S.label}>Producer</label><input style={S.input} value={producer} onChange={(e) => setProducer(e.target.value)} /></div>
+          <div><label style={S.label}>Colour</label>
+            <select style={S.input} value={colour} onChange={(e) => setColour(e.target.value)}>
+              {["Red", "White", "Rosé", "Orange"].map((c) => <option key={c}>{c}</option>)}
+            </select></div>
+          <div><label style={S.label}>Grape</label><input style={S.input} value={grape} onChange={(e) => setGrape(e.target.value)} /></div>
+          <div><label style={S.label}>Region, Country</label><input style={S.input} value={region} onChange={(e) => setRegion(e.target.value)} /></div>
+          <div><label style={S.label}>Vintage</label><input style={S.input} value={vintage} onChange={(e) => setVintage(e.target.value)} /></div>
+        </div>
+        <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 12 }}>
+          <button style={S.btn} disabled={!engineReady || busy} onClick={generate}>
+            {busy ? "Printing…" : engineReady ? "Generate proofs" : "Loading engine…"}
+          </button>
+          {cards.length > 0 && !busy && (
+            <button style={S.btnGhost} onClick={reroll}>Re-render layouts (same artwork)</button>
+          )}
+          {busy && <div style={{ flex: 1, height: 6, background: "#e4e3db", borderRadius: 3 }}>
+            <div style={{ width: `${Math.round(prog * 100)}%`, height: "100%", background: "#5a6b3b", borderRadius: 3, transition: "width .4s" }} />
+          </div>}
+        </div>
+        {err && <p style={{ color: "#a03030", fontSize: 13 }}>{err}</p>}
+      </div>
+
+      {cards.map((c) => (
+        <div key={c.style + seed} style={S.card}>
+          <div style={{ display: "flex", gap: 14 }}>
+            <div style={{ flex: 1, border: "1px solid #e2e1da" }}
+              dangerouslySetInnerHTML={{ __html: c.svg.replace(/width="110mm" height="80mm"/, 'width="100%"') }} />
+            <div style={{ width: 170, flex: "none" }}>
+              <div style={{ fontSize: 12, fontWeight: 700 }}>{c.style}</div>
+              <div style={{ fontSize: 11, color: "#8a887e", marginBottom: 6 }}>{c.subStyleLabel}</div>
+              <div style={{ position: "relative", width: "100%" }}>
+                {/* artwork mini-map with quiet zones (image intelligence) */}
+                {c.imgUrl && <img src={c.imgUrl} alt="" style={{ width: "100%", display: "block", background: "#fff", border: "1px solid #e2e1da" }} />}
+                {(c.analysis?.quiet || []).map((q, i) => (
+                  <div key={i} style={{ position: "absolute", left: `${q.x * 100}%`, top: `${q.y * 100}%`, width: `${q.w * 100}%`, height: `${q.h * 100}%`, outline: "2px dashed #5a6b3b", outlineOffset: -2, background: "rgba(90,107,59,0.08)" }} />
+                ))}
+              </div>
+              {c.analysis && (
+                <div style={{ fontSize: 10.5, color: "#8a887e", marginTop: 4 }}>
+                  quiet zones dashed · open side: {c.analysis.openSide} · ink {Math.round(c.analysis.inkShare * 100)}%
+                </div>
+              )}
+              <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+                {c.done ? (
+                  <span style={{ fontSize: 12, fontWeight: 700, color: c.done === "approve" ? "#3f6d2a" : "#a03030" }}>
+                    {c.done === "approve" ? "✓ recorded" : "✗ recorded"}
+                  </span>
+                ) : (
+                  <>
+                    <button style={{ ...S.btn, padding: "5px 12px", fontSize: 12 }} onClick={() => submit(c.style, "approve")}>✓ Good</button>
+                    <button style={{ ...S.btnGhost, padding: "4px 10px", fontSize: 12 }}
+                      onClick={() => setRej((m) => ({ ...m, [c.style]: m[c.style] || { chips: [], note: "" } }))}>✗ Reject…</button>
+                  </>
+                )}
+              </div>
+              {rej[c.style] && !c.done && (
+                <div style={{ marginTop: 8 }}>
+                  <div style={{ fontSize: 10.5, color: "#5a5a52", marginBottom: 4 }}>what failed?</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                    {PROOF_FAILS.map((f) => {
+                      const on = rej[c.style].chips.includes(f);
+                      return (
+                        <button key={f} onClick={() => setRej((m) => ({ ...m, [c.style]: { ...m[c.style], chips: on ? m[c.style].chips.filter((x) => x !== f) : [...m[c.style].chips, f] } }))}
+                          style={{ font: "inherit", fontSize: 11, padding: "3px 8px", borderRadius: 10, cursor: "pointer", border: "1px solid #5a6b3b", background: on ? "#5a6b3b" : "transparent", color: on ? "#fff" : "#5a6b3b" }}>
+                          {f}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <input style={{ ...S.input, marginTop: 6, fontSize: 12 }} placeholder="optional note"
+                    value={rej[c.style].note}
+                    onChange={(e) => setRej((m) => ({ ...m, [c.style]: { ...m[c.style], note: e.target.value } }))} />
+                  <button style={{ ...S.btnGhost, marginTop: 6, fontSize: 12 }} onClick={() => submit(c.style, "reject")}>Record rejection</button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ))}
+    </>
+  );
+}
+

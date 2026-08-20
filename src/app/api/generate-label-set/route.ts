@@ -14,6 +14,7 @@ import { feedbackAggregates, weightedPick, type StyleFeedbackAggregate } from "@
 import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, NO_BORDER_RULE, WHITE_BG_RULE, NO_ARCHITECTURE_RULE, NEUTRAL_GEO_RULE, geographicRule, wantsBuilding, QVEVRI_RULE, mentionsQvevri, qvevriOverridden, stylizationRule, TIMELESS_RULE, mentionsEra, NO_RED_DOMINANCE_RULE, compareToReference, wantsText, subjectFocusRule, wantsCrowd } from "@/lib/admin/image-rules";
 import { subjectFrom } from "@/lib/styles/prompt";
 import { cardPalette, labelPaletteFromImage } from "@/lib/admin/card-palette";
+import { analyzeArtwork } from "@/lib/admin/art-analysis";
 
 /* POST /api/generate-label-set — the generation orchestrator.
 
@@ -87,6 +88,12 @@ async function withImgPalettes(
   for (const [k, v] of Object.entries(images)) {
     const pal = await labelPaletteFromImage(v.url, k).catch(() => null);
     if (pal?.length) { out[k] = out[k] || {}; out[k].imgPalettes = pal; }
+    // IMAGE INTELLIGENCE (2026-08-20): density/quiet-zone/centroid analysis
+    // rides with the hints — proof bench shows it; placement consumes it next
+    try {
+      const an = analyzeArtwork(v.url);
+      if (an) { out[k] = out[k] || {}; out[k].imgAnalysis = an; }
+    } catch {}
   }
   return out;
 }

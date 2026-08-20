@@ -927,3 +927,22 @@ server" framing and their pending-work lists, which this file supersedes.
   settings read modern-but-neutral or timeless. TIMELESS_RULE +
   mentionsEra() in image-rules.ts, wired in set route + playground,
   verifier-checked like the other built-ins.
+
+## 10. BRANCH POPIKA_IMage&layout_relation (owner GO 2026-08-20)
+
+Goal: image↔layout relation — image-aware layouts, interlocks, then the
+composer + harmony critic + vocabulary gate (see the strategy discussion,
+sections above). Built so far:
+- IMAGE INTELLIGENCE: art-analysis.ts — per-artwork density grid (24×15),
+  quiet zones (usable negative space, up to 3 rects), ink bbox + centroid,
+  open side, ink share. Computed in generate-label-set on the opaque image,
+  ships as hints[style].imgAnalysis. Foundation for interlocks/full-bleed.
+- PROOF BENCH (admin tab): judge FINISHED labels (real artwork + layout +
+  fonts, exactly the customer render). Approve, or Reject with "what
+  failed" chips (image/arrangement/fonts/colour/interplay) + note →
+  /api/admin/proof-feedback (collection proof_feedback) — the corpus for
+  the future harmony critic. Cards show the artwork mini-map with quiet
+  zones. "Re-render layouts" re-deals looks on the same artwork set.
+Next on this branch: interlock effects (text-behind-subject, knockout hero,
+silhouette wrap) consuming imgAnalysis; composition contracts in prompts;
+then the LLM composer emitting engine specs.
