@@ -38,6 +38,7 @@ export function finishArtwork(dataUrl: string, paletteLock?: string[]): string {
     const png = PNG.sync.read(Buffer.from(dataUrl.slice(PREFIX.length), "base64"));
     const { width: W, height: H, data: px } = png;
     const D = Math.max(2, Math.round(Math.min(W, H) * 0.04));
+    const INK_FX = process.env.IMAGE_FINISH !== "raw";
     const LO = 232, HI = 248, STEP = 255 / (INK_LEVELS - 1);
     /* PAPER NEUTRALIZATION (owner trial 2026-08-18): style-conditioned
        providers inherit their references' toned paper (tan/beige grounds,
@@ -119,8 +120,10 @@ export function finishArtwork(dataUrl: string, paletteLock?: string[]): string {
         }
         // ink discipline: grain ∝ ink coverage, then quantize LUMINANCE only
         // (all channels scaled by the same factor → hue exactly preserved;
-        // per-channel posterizing would band into false colours)
-        if (m < HI) {
+        // per-channel posterizing would band into false colours).
+        // IMAGE_FINISH=raw skips it (owner A/B, 2026-08-20) — everything
+        // else (paper neutralization, palette lock, white edges) stays.
+        if (INK_FX && m < HI) {
           const L = 0.299 * r + 0.587 * g + 0.114 * b;
           const gr = grainAt(x, y) * GRAIN_AMP * (1 - m / 255);
           const Lq = Math.min(255, Math.max(0, Math.round((L + gr) / STEP) * STEP));
