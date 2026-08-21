@@ -10,7 +10,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { getProfiles, listRefs, REFS_DIR, type StyleProfile } from "@/lib/admin/style-refs";
 import { buildLayoutHints } from "@/lib/admin/layout-refs";
-import { feedbackAggregates, weightedPick, type StyleFeedbackAggregate } from "@/lib/admin/feedback";
+import { feedbackAggregates, type StyleFeedbackAggregate } from "@/lib/admin/feedback";
 import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, NO_BORDER_RULE, WHITE_BG_RULE, NO_ARCHITECTURE_RULE, NEUTRAL_GEO_RULE, geographicRule, wantsBuilding, QVEVRI_RULE, mentionsQvevri, qvevriOverridden, stylizationRule, TIMELESS_RULE, mentionsEra, NO_RED_DOMINANCE_RULE, compareToReference, wantsText, subjectFocusRule, wantsCrowd } from "@/lib/admin/image-rules";
 import { subjectFrom } from "@/lib/styles/prompt";
 import { cardPalette, labelPaletteFromImage } from "@/lib/admin/card-palette";
@@ -91,9 +91,39 @@ async function withImgPalettes(
   return out;
 }
 
-/* recently-used art cards per style (in-memory): consecutive generations
-   rotate instead of re-landing on the same heavily-approved favourites */
-const recentCards: Record<string, string[]> = {};
+/* CARD SHUFFLE BAG (owner 2026-08-21: "all styles have equal chance,
+   generation after generation"): rejected cards stay banned (weight below
+   0.5 from the owner's verdicts), but every OTHER card — approved and
+   unrated alike — is dealt like a shuffled deck: each appears once before
+   anything repeats, then reshuffle. Weighted randomness kept re-landing on
+   favourites and starving cards for long stretches. Per-process, like the
+   old LRU it replaces; a restart just reshuffles. */
+const cardBags: Record<string, { keys: string[]; queue: string[]; last: string }> = {};
+function dealCard<T extends { key: string }>(
+  styleKey: string,
+  items: T[],
+  weights: Record<string, number> | undefined,
+  hash: number
+): T {
+  const eligible = items.filter((v) => (weights?.[v.key] ?? 1) >= 0.5);
+  const pool = eligible.length ? eligible : items; // all rejected → all
+  const sig = pool.map((v) => v.key).sort().join("|");
+  let bag = cardBags[styleKey];
+  if (!bag || bag.keys.join("|") !== sig) bag = cardBags[styleKey] = { keys: pool.map((v) => v.key).sort(), queue: [], last: "" };
+  if (!bag.queue.length) {
+    const q = pool.map((v) => v.key);
+    for (let i = q.length - 1; i > 0; i--) {
+      // seeded-ish shuffle: brief hash + position so identical briefs stay cacheable upstream
+      const j = (hash + i * 2654435761) % (i + 1);
+      [q[i], q[j]] = [q[j], q[i]];
+    }
+    if (q.length > 1 && q[0] === bag.last) q.push(q.shift() as string);
+    bag.queue = q;
+  }
+  const key = bag.queue.shift() as string;
+  bag.last = key;
+  return items.find((v) => v.key === key) as T;
+}
 
 function sanitizeBrief(raw: unknown): LabelBrief | { error: string } {
   const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
@@ -205,12 +235,7 @@ export async function POST(req: Request) {
             // directions even within one session (seed is per-session)
             const vh = Array.from(brief.vision || "").reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 0);
             const hash = Math.abs(seed * 31 + i * 7 + ((seed >> 3) % 5) + (vh % 97));
-            // rotate away from the last two cards used for this style (unless
-            // the pool is too small to afford exclusions)
-            const recent = recentCards[style.key] || [];
-            const pool = baseVariants.length > 3 ? baseVariants.filter((v) => !recent.includes(v.key)) : baseVariants;
-            sub = { ...weightedPick(pool.length ? pool : baseVariants, fbAgg?.weights, hash) };
-            recentCards[style.key] = [sub.key, ...recent].slice(0, 2);
+            sub = { ...dealCard(style.key, baseVariants, fbAgg?.weights, hash) };
           } else {
             sub = pickSubStyle(style, seed, i);
           }
