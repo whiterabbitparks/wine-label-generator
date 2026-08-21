@@ -92,8 +92,7 @@ export async function POST(req: Request) {
   // provider A/B (owner GO 2026-08-17): the playground may override the env
   // default per batch — same story, two providers, honest comparison
   const provider =
-    body.provider === "recraft" ? ("recraft" as const)
-    : body.provider === "flux" ? ("flux" as const)
+    body.provider === "flux" ? ("flux" as const)
     : body.provider === "hybrid" ? ("hybrid" as const)
     : body.provider === "openai" ? ("openai" as const)
     : providerName();

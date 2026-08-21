@@ -955,3 +955,10 @@ then the LLM composer emitting engine specs.
   imgAnalysis rides setStyleHints persistence + withLook like imgPalettes.
   Bench draws quiet zones ON the label at the artwork's real placement
   ("Show/Hide quiet zones"). No-hints path unchanged; goldens 72/72.
+- RECRAFT REMOVED (owner 2026-08-20): provider, routes, admin sync UI and
+  env key stripped — hybrid (gpt→FLUX LoRA) is the only styled path.
+- INTEGRATED COMP PREVIEW (2026-08-20): styleIntegrated() — full-bleed
+  artwork, name set INTO the reserved top band, halo small print ON the
+  artwork. Reachable only via the __integrated hint flag (Proof Bench
+  "Integrated preview" toggle) — customers/goldens/parity untouched until
+  the owner blesses the direction. stackUp forwards halo.

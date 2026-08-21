@@ -112,16 +112,12 @@ function StylesTab() {
   const [profiles, setProfiles] = useState<Record<string, ProfileRow>>({});
   const [busy, setBusy] = useState<string>("");
   const [err, setErr] = useState<string>("");
-  const [recraft, setRecraft] = useState<{ styles: Record<string, { id: string; refCount: number; syncedAt: string }>; keySet: boolean } | null>(null);
-
   const [falLoras, setFalLoras] = useState<{ loras: Record<string, { url: string; refCount: number; trainedAt: string }>; keySet: boolean } | null>(null);
-  const loadRecraft = useCallback(async () => {
-    const r = await fetch("/api/admin/recraft-styles");
-    if (r.ok) setRecraft(await r.json());
+  const loadLoras = useCallback(async () => {
     const f = await fetch("/api/admin/fal-lora");
     if (f.ok) setFalLoras(await f.json());
   }, []);
-  useEffect(() => { loadRecraft(); }, [loadRecraft]);
+  useEffect(() => { loadLoras(); }, [loadLoras]);
 
   async function trainLora(style: string) {
     setBusy(`lora-${style}`); setErr("");
@@ -131,20 +127,7 @@ function StylesTab() {
     });
     const bo = await r.json().catch(() => ({}));
     if (!r.ok) setErr(bo.error || `LoRA training failed (${r.status})`);
-    setBusy(""); loadRecraft();
-  }
-
-  async function syncRecraft() {
-    setBusy("recraft"); setErr("");
-    const r = await fetch("/api/admin/recraft-styles", { method: "POST" });
-    const b = await r.json().catch(() => ({}));
-    if (!r.ok) setErr(b.error || `Recraft sync failed (${r.status})`);
-    else {
-      const bad = Object.entries((b.results || {}) as Record<string, { ok: boolean; error?: string }>)
-        .filter(([, v]) => !v.ok).map(([k, v]) => `${k}: ${v.error}`).join(" · ");
-      if (bad) setErr("Recraft sync partial — " + bad);
-    }
-    setBusy(""); loadRecraft();
+    setBusy(""); loadLoras();
   }
 
   const load = useCallback(async () => {
@@ -203,18 +186,6 @@ function StylesTab() {
           &ldquo;Analyze references&rdquo; processes new uploads; deleting a reference removes its
           style card. Approve/reject in Image Play sticks to the reference permanently.
         </p>
-        <div style={{ display: "flex", gap: 12, alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
-          <button style={S.btn} disabled={busy === "recraft" || recraft?.keySet === false} onClick={syncRecraft}>
-            {busy === "recraft" ? "Syncing boards to Recraft…" : "Sync boards to Recraft"}
-          </button>
-          <span style={{ fontSize: 12, color: "#8a887e" }}>
-            {recraft === null ? "" : !recraft.keySet
-              ? "RECRAFT_API_KEY not set — add it to .env.local to enable the style-conditioning trial"
-              : Object.keys(recraft.styles || {}).length
-                ? "Recraft styles: " + Object.entries(recraft.styles).map(([k, v]) => `${k} (${v.refCount} refs)`).join(" · ")
-                : "key set — press Sync to turn each board into a Recraft style the model can SEE"}
-          </span>
-        </div>
         {err && <p style={{ color: "#a33", fontSize: 13 }}>{err}</p>}
       </div>
       {STYLE_DEFS.map(([key, name]) => {
@@ -661,7 +632,6 @@ function PlaygroundTab() {
             <select style={S.input} value={provider} onChange={(e) => setProvider(e.target.value)}>
               <option value="default">server default</option>
               <option value="openai">gpt-image</option>
-              <option value="recraft">Recraft (sees your boards)</option>
               <option value="flux">FLUX (trained LoRA)</option>
               <option value="hybrid">GPT→FLUX hybrid (story + craft)</option>
             </select>
@@ -1802,6 +1772,7 @@ function ProofBenchTab() {
   const [cards, setCards] = useState<ProofCard[]>([]);
   const [rej, setRej] = useState<Record<string, { chips: string[]; note: string }>>({});
   const [showZones, setShowZones] = useState(true);
+  const [intg, setIntg] = useState(false);
   const [engineReady, setEngineReady] = useState(false);
   const lastResult = useRef<{ images?: Record<string, { url: string; subStyleLabel?: string }>; layoutHints?: Record<string, { imgAnalysis?: ProofAnalysis }> } | null>(null);
 
@@ -1824,7 +1795,7 @@ function ProofBenchTab() {
     };
   }, [producer, wine, grape, region, vintage, colour]);
 
-  const renderCards = useCallback((s: number) => {
+  const renderCards = useCallback((s: number, integrated = false) => {
     const result = lastResult.current; if (!result) return;
     const w = window as unknown as {
       __LABEL_IMGS__?: Record<string, string>;
@@ -1834,7 +1805,7 @@ function ProofBenchTab() {
       };
     };
     w.__LABEL_IMGS__ = Object.fromEntries(Object.entries(result.images || {}).map(([k, v]) => [k, v.url]));
-    w.LabelEngine.setStyleHints(result.layoutHints || {});
+    w.LabelEngine.setStyleHints({ ...(result.layoutHints || {}), ...(integrated ? { __integrated: true } : {}) });
     const opts = w.LabelEngine.renderStyleOptions(briefData(), null, { widthMM: 110, heightMM: 80, seed: s });
     setCards(PROOF_STYLES.map((k) => ({
       style: k,
@@ -1877,7 +1848,7 @@ function ProofBenchTab() {
       if (!result?.images) throw new Error("no images came back");
       lastResult.current = result;
       setProg(1);
-      renderCards(s);
+      renderCards(s, intg);
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
     }
@@ -1887,7 +1858,15 @@ function ProofBenchTab() {
   function reroll() {
     const s = 1 + Math.floor(Math.random() * 100000);
     setSeed(s);
-    renderCards(s);
+    renderCards(s, intg);
+  }
+
+  function toggleIntegrated() {
+    setIntg((v) => {
+      const n = !v;
+      renderCards(seed, n);
+      return n;
+    });
   }
 
   async function submit(style: string, verdict: "approve" | "reject") {
@@ -1930,6 +1909,9 @@ function ProofBenchTab() {
             <>
               <button style={S.btnGhost} onClick={reroll}>Re-render layouts (same artwork)</button>
               <button style={S.btnGhost} onClick={() => setShowZones((v) => !v)}>{showZones ? "Hide" : "Show"} quiet zones</button>
+              <button style={{ ...S.btnGhost, ...(intg ? { background: "#5a6b3b", color: "#fff" } : {}) }} onClick={toggleIntegrated}>
+                {intg ? "Integrated preview ON" : "Integrated preview"}
+              </button>
             </>
           )}
           {busy && <div style={{ flex: 1, height: 6, background: "#e4e3db", borderRadius: 3 }}>

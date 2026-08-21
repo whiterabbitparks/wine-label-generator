@@ -1033,7 +1033,7 @@ function fitHero(str,x,topY,bottomLimit,o){
 /* stack single-line detail items UP from a bottom baseline (centred/left/right). */
 function stackUp(items,x,botY,gap,a,maxW){let y=botY,svg='';
   for(let i=items.length-1;i>=0;i--){const it=items[i];if(!it||!it.str)continue;
-    const b=sBlock(it.str,{x,top:y,fromBottom:true,maxW:it.maxW||maxW,size:it.size,min:it.size*0.72,lines:1,f:it.f,w:it.w||400,fill:it.fill,a:a||'c',tr:it.tr||0,lh:1.1,caps:it.caps,ital:it.ital});
+    const b=sBlock(it.str,{x,top:y,fromBottom:true,maxW:it.maxW||maxW,size:it.size,min:it.size*0.72,lines:1,f:it.f,w:it.w||400,fill:it.fill,a:a||'c',tr:it.tr||0,lh:1.1,caps:it.caps,ital:it.ital,halo:it.halo});
     svg=b.svg+svg; y=b.top-Math.max(gap,MINGAP);}
   return {svg,topY:y+Math.max(gap,MINGAP)};}
 function sInitials(name){var p=String(name||'').trim().split(/\s+/).filter(Boolean);if(!p.length)return '';
@@ -2160,6 +2160,40 @@ function styleContemporary(f,W,H,seed,twMM,thMM){
   if(cv.key==='minimalist')return styleMinimal(f,W,H,seed,twMM,thMM,cv.local);
   return styleContempX(f,W,H,seed,twMM,thMM,cv.local);
 }
+/* INTEGRATED COMP (experimental preview, owner 2026-08-20, branch
+   POPIKA_IMage&layout_relation): the first layout designed around the
+   IMAGE instead of beside it. The artwork runs full-bleed across the
+   lower field; the top band is the reserved quiet zone the composition
+   contract asks the image model to keep airy; the name is set INTO that
+   band; the small print sits ON the artwork with a white halo so it
+   reads on any ink. Reachable ONLY via the __integrated hint flag (Proof
+   Bench preview) — customers, goldens and parity never see it until the
+   owner blesses the direction. */
+function styleIntegrated(f,W,H,seed,twMM,thMM,styleKey){
+  const FALLBACK=[{bg:'#FFFFFF',ink:'#221E1A',sub:'#7A7166',acc:'#6E2B25'}];
+  const [BG,INK,SUB,AC]=palPick(styleKey,styleKey,seed,FALLBACK,function(p){return [p.bg,p.ink,p.sub||p.ink,p.acc||p.sub||p.ink];});
+  const cx=W/2,cW=W-2*SM;
+  const HP=heroPick(seed,styleKey,0,styleKey);
+  const F2=rolePick(seed,styleKey,styleKey,'secondary'),F3=rolePick(seed,styleKey,styleKey,'small');
+  const alc=f.alc, desc=(f.descriptor||'').replace(/,/g,'');
+  const reg=[f.region,f.special].filter(Boolean).join(' \u00b7 ');
+  let body='';
+  /* full-bleed field: subject lives low, the top band stays airy */
+  body+=sImageBox(styleKey,[0.03,0.22,0.97,1.00],W,H);
+  /* the reserved band: producer whisper, then the name, then the wine line */
+  const bandBot=0.215*H;
+  const pr=sBlock(f.producer,{x:cx,top:SM,maxW:cW*0.8,size:H*0.024,min:MIN7,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(500),fill:SUB,a:'c',caps:capsFor(F3,true),tr:0.3});
+  body+=pr.svg;
+  const heroTop=(pr.nlines?pr.bottom+MINGAP:SM);
+  const hero=fitHero(f.wine,cx,heroTop,bandBot-H*0.045,{size:H*0.095,maxW:cW*0.94,f:HP?HP[0]:(SF.fraunces),w:HP?HP[1]:(600),fill:INK,caps:capsFor(HP,true)});
+  body+=hero.svg;
+  body+=sBlock([f.appellation,f.vintage].filter(Boolean).join(' \u00b7 '),{x:cx,top:hero.bottom+MINGAP,maxW:cW*0.8,size:H*0.03,min:MIN7,f:F2?F2[0]:(SF.ebg),w:F2?F2[1]:(500),fill:AC,a:'c',caps:capsFor(F2,true),tr:0.12}).svg;
+  /* small print lives ON the artwork, halo-guarded */
+  body+=stackUp([
+    {str:[f.grape,f.classification].filter(Boolean).join(' / '),size:H*0.026,f:F2?F2[0]:(SF.jost),w:F2?F2[1]:(500),fill:INK,halo:true,caps:capsFor(F2,false)},
+    {str:[reg,desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:INK,halo:true,caps:capsFor(F3,false)}],SM,H-SM-2,H*0.008,'l',cW*0.72).svg;
+  return sWrap(W,H,twMM,thMM,BG,body);
+}
 const STYLE_LIST=[
   {key:'traditional',name:'Traditional'},
   {key:'contemporary',name:'Contemporary'},
@@ -2252,7 +2286,9 @@ function renderStyleOptions(d,order,opts){
     const hs=STYLE_HINTS[st.key];
     const hasLooks=!!(hs&&Array.isArray(hs.looks)&&hs.looks.length);
     try{
-      if(LOOKS_ONLY&&!hasLooks&&!testRig)
+      if(STYLE_HINTS.__integrated)
+        svg=styleIntegrated(f,W,H,seed,twMM,thMM,st.key);
+      else if(LOOKS_ONLY&&!hasLooks&&!testRig)
         svg=sWrap(W,H,twMM,thMM,'#FFFFFF',`<text x="${(W/2).toFixed(1)}" y="${(H/2).toFixed(1)}" text-anchor="middle" font-family="${SF.jost}" font-size="${(10*PT_U).toFixed(1)}" fill="#8a887e">${esc(st.name+' — designs are being curated')}</text>`);
       else if(st.key==='traditional') svg=withLook('traditional',seed,s2=>styleTraditional(d,order,s2,twMM,thMM));
       else if(st.key==='contemporary') svg=withLook('contemporary',seed,s2=>styleContemporary(f,W,H,s2,twMM,thMM));

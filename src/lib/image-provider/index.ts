@@ -2,7 +2,6 @@ import { PNG } from "pngjs";
 import type { GenerationJob } from "./types";
 import { generateMockImage } from "./mock";
 import { generateOpenAIImage } from "./openai";
-import { generateRecraftImage } from "./recraft";
 import { generateFluxImage, restyleWithFlux } from "./flux";
 
 /* ARTWORK FINISHING (owner 2026-08-16/17) — one pixel pass over every
@@ -196,9 +195,9 @@ export function imageQuality(): "dev" | "prod" {
   return process.env.IMAGE_QUALITY === "prod" ? "prod" : "dev";
 }
 
-export function providerName(): "mock" | "openai" | "recraft" | "flux" | "hybrid" {
+export function providerName(): "mock" | "openai" | "flux" | "hybrid" {
   const p = process.env.IMAGE_PROVIDER;
-  return p === "openai" ? "openai" : p === "recraft" ? "recraft" : p === "flux" ? "flux" : p === "hybrid" ? "hybrid" : "mock";
+  return p === "openai" ? "openai" : p === "flux" ? "flux" : p === "hybrid" ? "hybrid" : "mock";
 }
 
 export async function generateImage(job: GenerationJob): Promise<string> {
@@ -210,7 +209,6 @@ export async function generateImage(job: GenerationJob): Promise<string> {
     return restyleWithFlux(base, job);
   }
   return p === "openai" ? generateOpenAIImage(job)
-    : p === "recraft" ? generateRecraftImage(job)
     : p === "flux" ? generateFluxImage(job)
     : generateMockImage(job);
 }
