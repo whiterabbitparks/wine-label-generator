@@ -115,8 +115,8 @@ export function StudioCore() {
           await new Promise((r) => setTimeout(r, 900)); // let the faces land
         }
       }
-      const w = window as unknown as { LabelEngine: { renderDreamSpec: (spec: unknown, d: unknown, o: unknown, art: string | null, align?: string) => string } };
-      const svg = w.LabelEngine.renderDreamSpec(b.spec, briefData(), { widthMM: 110, heightMM: 80 }, b.artwork, b.artAlign);
+      const w = window as unknown as { LabelEngine: { renderDreamSpec: (spec: unknown, d: unknown, o: unknown, art: string | null, align?: string, mode?: string) => string } };
+      const svg = w.LabelEngine.renderDreamSpec(b.spec, briefData(), { widthMM: 110, heightMM: 80 }, b.artwork, b.artAlign, b.artworkMode);
       setCards((cs) => cs.map((x) => (x.id === id ? { ...x, rebuilding: false, rebuilt: { svg, artwork: b.artwork } } : x)));
     } catch (e) {
       setCards((cs) => cs.map((x) => (x.id === id ? { ...x, rebuilding: false, rebuildErr: e instanceof Error ? e.message : String(e) } : x)));

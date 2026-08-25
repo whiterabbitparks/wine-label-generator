@@ -1026,3 +1026,12 @@ composition-contract tightening, then customer wiring.
   passes the dream's mood as the style (free→contemporary). LoRAs trained
   2026-08-25 from the new boards are saved in Mongo — code changes never
   require retraining.
+- FULL-BLEED DREAMS (owner escalation 2026-08-25 — a full-scene dream was
+  crushed into a pasted rectangle on flat ground): the transcriber now
+  classifies artwork coverage full|contained. Full: the ENTIRE dream is
+  reproduced text-erased (gpt edit, house-style language, LoRA restyle,
+  NO_TEXT verified with one corrective pass) and becomes the label's
+  opaque edge-to-edge background; vector type is set into the scene
+  (non-hero roles halo'd). Contained keeps the boxed path. KNOWN WEAK:
+  small text over busy scene areas is marginal — next fix is local-
+  luminance placement/stronger guard using imgAnalysis.

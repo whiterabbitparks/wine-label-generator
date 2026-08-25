@@ -142,7 +142,9 @@ export async function POST(req: Request) {
     "align l|c|r (relative to its own box), caps true/false, tracking 0-0.4, " +
     "font = the visually CLOSEST match from the allowed list (look at serifs, weight, width, script character), " +
     "weight 300-800, colour as exact hex sampled from the glyphs, lines (how many lines the element occupies). " +
-    "Also: ground (label background hex) and artwork {box, subject (one sentence, the illustration only), palette (up to 4 hex)}. " +
+    "Also: ground (label background hex) and artwork {coverage, box, subject (one sentence, the illustration only), palette (up to 4 hex)}. " +
+    "coverage is \"full\" when the illustration/scenery/texture extends behind or around the text across most of the label (the text sits INSIDE the scene), " +
+    "or \"contained\" when the illustration occupies its own clear region separate from the text; for full coverage, box = the main subject's area. " +
     'Strict JSON: {"ground":"#..","elements":[{"role":"..","box":{"x":..,"y":..,"w":..,"h":..},"align":"c","caps":true,"tracking":0.1,"font":"..","weight":600,"colour":"#..","lines":1}],"artwork":{"box":{..},"subject":"..","palette":["#.."]}} ' +
     "Every ROLE at most once — a text split across blocks gets ONE element whose box covers all its parts.";
   let spec: Record<string, unknown> = {};
@@ -218,8 +220,51 @@ export async function POST(req: Request) {
      Region aspect still comes from the dream so tall regions get tall art. */
   let artwork: string | null = null;
   let artAlign = "xMidYMid";
-  const art = (spec as { artwork?: { subject?: string; palette?: string[]; box?: { w: number; h: number } } }).artwork;
+  let artworkMode: "contained" | "full" = "contained";
+  const art = (spec as { artwork?: { subject?: string; palette?: string[]; box?: { w: number; h: number }; coverage?: string } }).artwork;
   const styleKey = ["traditional", "contemporary", "punk"].includes(String(body.style)) ? String(body.style) : "contemporary";
+
+  /* FULL-BLEED DREAMS (owner report 2026-08-25: a full-scene dream was
+     crushed into a pasted rectangle on flat ground): when the illustration
+     IS the label, the replica must be built the same way — the entire
+     dream, text erased, becomes the background; the LoRA restyles the
+     whole scene; vector type is set into it. */
+  if (art?.coverage === "full") {
+    artworkMode = "full";
+    try {
+      let styleLangF = "";
+      try {
+        const prof = (await getProfiles())[styleKey];
+        const aggF = (await feedbackAggregates())[styleKey];
+        const cardsF = (prof?.variants || []).filter((c) => (aggF?.weights?.[c.key] ?? 1) >= 0.5);
+        const cardF = cardsF.length ? cardsF[Math.floor(Math.random() * cardsF.length)] : null;
+        if (cardF) styleLangF = ` Rendering technique (the house style): ${(cardF as { language?: string }).language || [cardF.medium, cardF.mood].filter(Boolean).join("; ")}`;
+        else if (prof?.charter) styleLangF = ` Rendering technique (the house style): ${prof.charter.slice(0, 500)}`;
+      } catch {}
+      const fullPrompt =
+        `Reproduce this exact label design WITHOUT any text: erase every letter, number, word and typographic element completely, ` +
+        `and keep EVERYTHING else identical — the full scene, textures, colours, composition, edge to edge. ` +
+        `Where text was, continue the underlying scene/texture naturally.` + styleLangF;
+      const makeFull = (extra = "") =>
+        generateOpenAIImage({ prompt: fullPrompt + extra, size: { w: 1536, h: 1024 }, reference: dream } as never);
+      const craftFull = (base: string) =>
+        restyleWithFlux(
+          base,
+          { shortPrompt: `${art?.subject || vision}. Keep the exact composition — repaint only the rendering technique. No text anywhere.`, art: { preset: `${styleKey}/dream` } } as never,
+          { width: 832, height: 512 }
+        ).catch(() => base);
+      let raw = await craftFull(await makeFull());
+      try {
+        const check = await verifyImage(raw, [NO_TEXT_RULE]);
+        if (!check.ok) raw = await craftFull(await makeFull(` STRICT: the previous attempt still contained lettering — ${check.violations.join(" | ")}.`));
+      } catch {}
+      artwork = finishArtwork(raw); // opaque full background — no keying
+    } catch {
+      artwork = null;
+    }
+    return NextResponse.json({ spec, artwork, artAlign, artworkMode, styleKey, fonts: GOOGLE_FONTS });
+  }
+
   try {
     const palette = (art?.palette || []).filter((h) => /^#[0-9a-fA-F]{6}$/.test(h));
     const bx = art?.box;
@@ -286,5 +331,5 @@ export async function POST(req: Request) {
     artwork = null;
   }
 
-  return NextResponse.json({ spec, artwork, artAlign, styleKey, fonts: GOOGLE_FONTS });
+  return NextResponse.json({ spec, artwork, artAlign, artworkMode, styleKey, fonts: GOOGLE_FONTS });
 }

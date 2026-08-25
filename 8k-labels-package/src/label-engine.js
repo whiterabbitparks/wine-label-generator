@@ -2280,7 +2280,7 @@ function withLook(key,seed,fn){
    this renderer brings the law — 5mm text margins, 7pt floor (sBlock),
    contrast guard, and a complete legal line even when the dream forgot it.
    Never reached by any normal render path (goldens/parity untouched). */
-function renderDreamSpec(spec,d,opts,artSrc,artAlign){
+function renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode){
   opts=opts||{};
   const twMM=Math.max(30,(+opts.widthMM||110)), thMM=Math.max(30,(+opts.heightMM||80));
   const W=twMM*10, H=thMM*10, f=sFields(d);
@@ -2297,9 +2297,14 @@ function renderDreamSpec(spec,d,opts,artSrc,artAlign){
      legal line survive. */
   const guard=(hex)=>hslOf(hex)?String(hex):'#1E1B18';
   let body='';
+  /* FULL-BLEED mode (owner 2026-08-25): the illustration IS the label —
+     it covers everything, opaque, edge to edge; text is set into it. */
+  if(artSrc&&artMode==='full'){
+    body+=`<image x="0" y="0" width="${W.toFixed(1)}" height="${H.toFixed(1)}" preserveAspectRatio="xMidYMid slice" xlink:href="${artSrc}" href="${artSrc}"/>`;
+  }
   // artwork at the dream's position (exact placement — no sliding)
   const ab=spec&&spec.artwork&&spec.artwork.box;
-  if(artSrc&&ab&&ab.w>0&&ab.h>0){
+  if(artSrc&&artMode!=='full'&&ab&&ab.w>0&&ab.h>0){
     /* v3: the artwork fills the dream's region EXACTLY — cover-fit (slice)
        into the transcribed box; the artwork is generated in this region's
        aspect upstream so cropping is minimal. Trust the dream. */
@@ -2348,7 +2353,7 @@ function renderDreamSpec(spec,d,opts,artSrc,artAlign){
     const x=a==='l'?bx0:a==='r'?bx1:(bx0+bx1)/2;
     body+=sBlock(str,{x,top:by0,maxW:bw,size,min:MIN7,
       f:fam0,w:wt0,fill:guard(e.colour),a,caps:!!e.caps,tr:tr0,
-      halo:e.role==='legal',lines:nlines,lh:1.04}).svg;
+      halo:e.role==='legal'||(artMode==='full'&&e.role!=='wine'),lines:nlines,lh:1.04}).svg;
   }
   // the legal line is law — if the dream forgot it, it prints anyway
   if(!seen.legal&&ROLE_TEXT.legal)
