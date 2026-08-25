@@ -1086,3 +1086,8 @@ composition-contract tightening, then customer wiring.
   silently rendering an empty label. NOTE: composition cards exist only
   for boards analyzed after this — re-run "Analyze board" for
   contemporary and punk.
+- FLUX/LoRA RESTORED (owner verdict 2026-08-26: "flux lora is better"):
+  the retirement commit is reverted — dream-rebuild artwork runs ChatGPT
+  sketch → FLUX+LoRA craft again, IMAGE_PROVIDER=hybrid. The gpt-only
+  experiment remains reachable in history; the tag phase-flux-lora marks
+  the last pre-experiment state.
