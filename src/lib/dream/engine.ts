@@ -1,6 +1,5 @@
 import { generateOpenAIImage } from "@/lib/image-provider/openai";
 import { finishArtwork, keyArtwork } from "@/lib/image-provider";
-import { restyleWithFlux } from "@/lib/image-provider/flux";
 import { getProfiles } from "@/lib/admin/style-refs";
 import { feedbackAggregates } from "@/lib/admin/feedback";
 import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, WHITE_BG_RULE, NO_BORDER_RULE } from "@/lib/admin/image-rules";
@@ -358,16 +357,10 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
         `Where text was, continue the underlying scene/texture naturally.` + styleLangF;
       const makeFull = (extra = "") =>
         gen429(() => generateOpenAIImage({ prompt: fullPrompt + extra, size: { w: 1536, h: 1024 }, reference: dream } as never));
-      const craftFull = (base: string) =>
-        restyleWithFlux(
-          base,
-          { shortPrompt: `${art?.subject || vision}. Keep the exact composition — repaint only the rendering technique. No text anywhere.`, art: { preset: `${styleKey}/dream` } } as never,
-          { width: 832, height: 512 }
-        ).catch(() => base);
-      let raw = await craftFull(await makeFull());
+      let raw = await makeFull();
       try {
         const check = await verifyImage(raw, [NO_TEXT_RULE]);
-        if (!check.ok) raw = await craftFull(await makeFull(` STRICT: the previous attempt still contained lettering — ${check.violations.join(" | ")}.`));
+        if (!check.ok) raw = await makeFull(` STRICT: the previous attempt still contained lettering — ${check.violations.join(" | ")}.`);
       } catch {}
       artwork = finishArtwork(raw); // opaque full background — no keying
     } catch (e) {
@@ -383,7 +376,6 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
     const bx = art?.box;
     const regionAspect = bx && bx.h > 0 ? (bx.w * 1536) / (bx.h * 1024) : 1.5;
     const size = regionAspect < 0.83 ? { w: 1024, h: 1536 } : regionAspect > 1.2 ? { w: 1536, h: 1024 } : { w: 1024, h: 1024 };
-    const fluxSizeOv = regionAspect < 0.83 ? { width: 512, height: 832 } : regionAspect > 1.2 ? { width: 832, height: 512 } : { width: 640, height: 640 };
 
     // style language: a board card (non-rejected, random) + refinement lines
     let styleLang = "", fbLines = "";
@@ -394,7 +386,7 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
       const card = cards.length ? cards[Math.floor(Math.random() * cards.length)] : null;
       if (card)
         styleLang =
-          ` Visual style (the house technique — it OVERRIDES the reference design's rendering): ` +
+          ` Render in the house technique: ` +
           `${(card as { language?: string }).language || [card.medium, card.mood].filter(Boolean).join("; ")}`;
       else if (prof?.charter) styleLang = ` Visual style (the house technique): ${prof.charter.slice(0, 600)}`;
       if (agg?.favour?.length) fbLines += ` Favour: ${agg.favour.slice(0, 4).join("; ")}.`;
@@ -435,25 +427,18 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
       }
     } catch {}
 
+    /* FLUX/LoRA RETIRED (owner 2026-08-26, tag phase-flux-lora to return):
+       ChatGPT alone recreates the illustration from the dream's own crop —
+       the dream is already charter/card-steered, so board style arrives
+       through the dream itself plus the card language below. */
     const makeBase = (extra = "") =>
       gen429(() => generateOpenAIImage({ prompt: sketchPrompt + extra, size, reference: artRef } as never));
-    const craft = (base: string) =>
-      restyleWithFlux(
-        base,
-        {
-          shortPrompt:
-            `${art?.subject || vision}. Keep the exact composition of the input image — repaint only the rendering technique. ` +
-            `No text, no borders, pure white background.`,
-          art: { preset: `${styleKey}/dream` },
-        } as never,
-        fluxSizeOv
-      ).catch(() => base); // no LoRA / flux hiccup → the styled base still stands
 
-    let raw = await craft(await makeBase());
+    let raw = await makeBase();
     // verify the core laws (text leakage from the dream is the big one)
     try {
       const check = await verifyImage(raw, [NO_TEXT_RULE, WHITE_BG_RULE, NO_BORDER_RULE]);
-      if (!check.ok) raw = await craft(await makeBase(` STRICT — the previous attempt violated: ${check.violations.join(" | ")}.`));
+      if (!check.ok) raw = await makeBase(` STRICT — the previous attempt violated: ${check.violations.join(" | ")}.`);
     } catch {}
     raw = finishArtwork(raw); // soft palette hint only — no mechanical lock (owner)
     try {
