@@ -8,6 +8,7 @@ import { assembleDreamRules } from "@/lib/dream/rules";
 import { analyzeArtwork } from "@/lib/admin/art-analysis";
 import { getDb } from "@/lib/db";
 import { PNG } from "pngjs";
+import sharp from "sharp";
 
 /* DREAM ENGINE CORE (extracted 2026-08-25 so the admin studio and the
    public customer flow share one implementation — see the admin route
@@ -48,6 +49,25 @@ function labelTexts(d: Record<string, string>) {
 }
 
 
+/* COMPOSITION CARD DECK (owner 2026-08-25): each dream deals one of the
+   style's arrangement cards — full coverage before any repeat, so
+   consecutive dreams vary in composition, not just in dressing. */
+const cardBags: Record<string, string[]> = {};
+function dealCompositionCard(style: string, cards: { key: string; arrangement: string }[]): { key: string; arrangement: string } | null {
+  if (!cards.length) return null;
+  let bag = cardBags[style];
+  if (!bag || !bag.length || !bag.every((k) => cards.some((c) => c.key === k))) {
+    bag = cards.map((c) => c.key);
+    for (let i = bag.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [bag[i], bag[j]] = [bag[j], bag[i]];
+    }
+    cardBags[style] = bag;
+  }
+  const key = bag.shift() as string;
+  return cards.find((c) => c.key === key) || cards[0];
+}
+
 /* three styles dream in parallel from the classic page — a burst can trip
    the images rate limit; honour the hint and retry once */
 async function gen429<T>(fn: () => Promise<T>): Promise<T> {
@@ -72,6 +92,7 @@ export async function runDreamPhase(p: DreamParams): Promise<{ dream: string; pr
     const style = STYLE_MOOD[String(body.style)] ? String(body.style) : "free";
     // the owner's dream-refinement corpus steers future dreams
     let guidance = "";
+    let composition = "";
     try {
       const db = await getDb();
       // the dream charter: the board's spirit, distilled — never the images.
@@ -80,6 +101,9 @@ export async function runDreamPhase(p: DreamParams): Promise<{ dream: string; pr
       if (style !== "free") {
         const ch = (await db.collection("settings").findOne({ _id: `dream-charter-${style}` } as never)) as { text?: string } | null;
         if (ch?.text) guidance += ` House design spirit for this style (learned from the art director's reference labels): ${ch.text}`;
+        const cd = (await db.collection("settings").findOne({ _id: `dream-cards-${style}` } as never)) as { cards?: { key: string; arrangement: string }[] } | null;
+        const card = dealCompositionCard(style, cd?.cards || []);
+        if (card) composition = ` COMPOSITION — arrange the label exactly in this scheme: ${card.arrangement}`;
       }
       const rows = (await db.collection("dream_feedback")
         .find({ comment: { $ne: "" } }, { projection: { _id: 0, verdict: 1, comment: 1 } })
@@ -104,7 +128,7 @@ export async function runDreamPhase(p: DreamParams): Promise<{ dream: string; pr
         ? `, 4) ${[texts.grape && `grape "${texts.grape}"`, texts.region && `origin "${texts.region}"`].filter(Boolean).join(" and ")}`
         : "") +
       `, 5) small legal text "${texts.legal}" (the smallest). ` +
-      `Integrated, gallery-quality composition — type and image designed as one whole.` +
+      (composition || ` Integrated, gallery-quality composition — type and image designed as one whole.`) +
       guidance;
     try {
       /* DREAM RULES (owner 2026-08-25): the same rule-then-verify treatment
@@ -131,6 +155,7 @@ export async function runDreamPhase(p: DreamParams): Promise<{ dream: string; pr
 export interface RebuildResult {
   spec: Record<string, unknown>; artwork: string | null; artAlign: string;
   artworkMode: "contained" | "full"; styleKey: string; fonts: string[];
+  artworkError?: string;
 }
 export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> {
   const key = process.env.OPENAI_API_KEY;
@@ -245,10 +270,54 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
               e.box = nb;
               e.textH = nb.h; // measured glyph-block height (fraction of image)
               e.snapped = true;
+              // resample the ink colour INSIDE the snapped box — the guessed
+              // box could bleed a neighbour's colour (live-observed: a black
+              // producer line sampled red from the hero above it)
+              let rr = 0, rg = 0, rb2 = 0, rn = 0;
+              for (let y = sy0; y <= sy1; y += 2) for (let x = sx0; x <= sx1; x += 2) {
+                const i = (y * PW + x) * 4;
+                if (Math.min(px[i], px[i + 1], px[i + 2]) < 170) { rr += px[i]; rg += px[i + 1]; rb2 += px[i + 2]; rn++; }
+              }
+              if (rn > 12) e.colour = hex(rr / rn, rg / rn, rb2 / rn);
             }
           }
         }
       }
+
+      /* ARTWORK EXTENT IS MEASURED, NOT GUESSED (owner 2026-08-25: the
+         replica shrank a half-label illustration into a floating block).
+         Every pixel that differs from the ground and lies outside the text
+         boxes is artwork; its bbox replaces the transcribed art box, and
+         the coverage call (full vs contained) comes from the same numbers. */
+      try {
+        const spArt = (spec as { artwork?: { box?: { x: number; y: number; w: number; h: number }; coverage?: string } }).artwork;
+        const gN = sp.ground ? parseInt(sp.ground.slice(1), 16) : 0xffffff;
+        const gr2 = (gN >> 16) & 255, gg2 = (gN >> 8) & 255, gb2 = gN & 255;
+        const tboxes = (sp.elements || []).map((e) => e.box).filter(Boolean) as { x: number; y: number; w: number; h: number }[];
+        let ax0 = PW, ay0 = PH, ax1 = -1, ay1 = -1, an = 0;
+        for (let y = 0; y < PH; y += 3) {
+          const fy = y / PH;
+          for (let x = 0; x < PW; x += 3) {
+            const i = (y * PW + x) * 4;
+            if (Math.abs(px[i] - gr2) + Math.abs(px[i + 1] - gg2) + Math.abs(px[i + 2] - gb2) < 90) continue;
+            const fx = x / PW;
+            let inText = false;
+            for (const tb of tboxes) {
+              if (fx >= tb.x - 0.015 && fx <= tb.x + tb.w + 0.015 && fy >= tb.y - 0.015 && fy <= tb.y + tb.h + 0.015) { inText = true; break; }
+            }
+            if (inText) continue;
+            an++;
+            if (x < ax0) ax0 = x; if (x > ax1) ax1 = x;
+            if (y < ay0) ay0 = y; if (y > ay1) ay1 = y;
+          }
+        }
+        if (spArt && an > 300 && ax1 > ax0 && ay1 > ay0) {
+          const nb = { x: ax0 / PW, y: ay0 / PH, w: (ax1 - ax0 + 1) / PW, h: (ay1 - ay0 + 1) / PH };
+          spArt.box = nb;
+          const share = (an * 9) / (PW * PH); // stride-3 sampling
+          spArt.coverage = nb.w > 0.88 && nb.h > 0.82 && share > 0.45 ? "full" : "contained";
+        }
+      } catch {}
     }
   } catch {}
 
@@ -260,6 +329,7 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
          the dream in ChatGPT's story seat)
      Region aspect still comes from the dream so tall regions get tall art. */
   let artwork: string | null = null;
+  let artworkError: string | undefined;
   let artAlign = "xMidYMid";
   let artworkMode: "contained" | "full" = "contained";
   const art = (spec as { artwork?: { subject?: string; palette?: string[]; box?: { w: number; h: number }; coverage?: string } }).artwork;
@@ -300,10 +370,12 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
         if (!check.ok) raw = await craftFull(await makeFull(` STRICT: the previous attempt still contained lettering — ${check.violations.join(" | ")}.`));
       } catch {}
       artwork = finishArtwork(raw); // opaque full background — no keying
-    } catch {
+    } catch (e) {
+      console.error("dream full-bleed artwork failed:", e instanceof Error ? e.message : e);
       artwork = null;
+      artworkError = e instanceof Error ? e.message : String(e);
     }
-    return { spec, artwork, artAlign, artworkMode, styleKey, fonts: GOOGLE_FONTS };
+    return { spec, artwork, artAlign, artworkMode, styleKey, fonts: GOOGLE_FONTS, artworkError };
   }
 
   try {
@@ -334,15 +406,37 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
     } catch {}
 
     const sketchPrompt =
-      `From this label design, recreate ONLY the illustration: the exact same subject and composition, filling the whole canvas. ` +
+      `Recreate this illustration exactly — the same subject, the same composition, every element in the same place — filling the whole canvas. ` +
       (art?.subject ? `The illustration: ${art.subject}. ` : "") +
-      `Remove ALL text, letters, numbers and typography completely.` +
+      `Remove any text, letters or numbers completely.` +
       styleLang + fbLines + userRules +
       (palette.length ? ` Palette leaning: ${palette.join(", ")}.` : "") +
       ` Single composition on a pure white background; its edges dissolve into white; no borders or frames.`;
 
+    /* the reference is a CROP of the dream's own illustration region —
+       handing the model the whole dream let it recompose the scene
+       (subject re-centred, rooster cropped, live-observed) */
+    let artRef = dream;
+    try {
+      const m2 = dream.match(/^data:image\/png;base64,(.+)$/);
+      if (m2 && bx && bx.w > 0.05 && bx.h > 0.05) {
+        const img = sharp(Buffer.from(m2[1], "base64"));
+        const meta = await img.metadata();
+        const MW = meta.width || 1536, MH = meta.height || 1024;
+        const bxy = bx as unknown as { x: number; y: number; w: number; h: number };
+        const left = Math.max(0, Math.floor(bxy.x * MW));
+        const top = Math.max(0, Math.floor(bxy.y * MH));
+        const cw = Math.min(MW - left, Math.ceil(bx.w * MW));
+        const chh = Math.min(MH - top, Math.ceil(bx.h * MH));
+        if (cw > 60 && chh > 60) {
+          const crop = await sharp(Buffer.from(m2[1], "base64")).extract({ left, top, width: cw, height: chh }).png().toBuffer();
+          artRef = `data:image/png;base64,${crop.toString("base64")}`;
+        }
+      }
+    } catch {}
+
     const makeBase = (extra = "") =>
-      gen429(() => generateOpenAIImage({ prompt: sketchPrompt + extra, size, reference: dream } as never));
+      gen429(() => generateOpenAIImage({ prompt: sketchPrompt + extra, size, reference: artRef } as never));
     const craft = (base: string) =>
       restyleWithFlux(
         base,
@@ -368,9 +462,11 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
       artAlign = `x${cx < 0.42 ? "Min" : cx > 0.58 ? "Max" : "Mid"}Y${cy < 0.42 ? "Min" : cy > 0.58 ? "Max" : "Mid"}`;
     } catch {}
     artwork = keyArtwork(raw);
-  } catch {
+  } catch (e) {
+    console.error("dream artwork failed:", e instanceof Error ? e.message : e);
     artwork = null;
+    artworkError = e instanceof Error ? e.message : String(e);
   }
 
-  return { spec, artwork, artAlign, artworkMode, styleKey, fonts: GOOGLE_FONTS };
+  return { spec, artwork, artAlign, artworkMode, styleKey, fonts: GOOGLE_FONTS, artworkError };
 }

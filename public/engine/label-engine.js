@@ -2214,6 +2214,19 @@ function renderDreamFitted(spec,d,opts,artSrc,artAlign,artMode){
       const hr=p.th>0?p.h/p.th:1;              // placed vs target height
       if(hr>1.12||hr<0.88){e.__ds=Math.min(1.6,Math.max(0.5,(+e.__ds||1)/hr));adjusted=true;}
     }
+    /* COLLISIONS ARE RESOLVED, NOT SHIPPED (owner 2026-08-25: "2023" over
+       "Saperavi"): overlapping text pairs push the lower block down. */
+    const Hpx=(opts&&opts.heightMM?opts.heightMM*10:800);
+    const byY=[...placed].sort((a,b2)=>a.y-b2.y);
+    for(let i=0;i<byY.length;i++)for(let j=i+1;j<byY.length;j++){
+      const a=byY[i],b2=byY[j];
+      const ox=Math.min(a.x+a.w,b2.x+b2.w)-Math.max(a.x,b2.x);
+      const oy=Math.min(a.y+a.h,b2.y+b2.h)-Math.max(a.y,b2.y);
+      if(ox>0.01&&oy>0.004){
+        const e2=els.find(x=>x&&x.role===b2.role);
+        if(e2){e2.__dy=(+e2.__dy||0)+(oy+0.008)*Hpx;adjusted=true;}
+      }
+    }
     if(!adjusted)break;
   }
   /* fidelity: mean deviation of placed vs target, position + size */
@@ -2224,8 +2237,15 @@ function renderDreamFitted(spec,d,opts,artSrc,artAlign,artMode){
     const eh=p.th>0?Math.min(1,Math.abs(p.h-p.th)/p.th):0;
     err+=Math.min(1,exy*3+eh*0.5);n++;
   }
-  const fidelity=n?Math.round(100*(1-err/n)):null;
-  return {svg,fidelity,placed};
+  /* residual overlaps are a fidelity failure, not a detail */
+  let overlaps=0;
+  for(let i=0;i<placed.length;i++)for(let j=i+1;j<placed.length;j++){
+    const a=placed[i],b2=placed[j];
+    if(Math.min(a.x+a.w,b2.x+b2.w)-Math.max(a.x,b2.x)>0.01&&
+       Math.min(a.y+a.h,b2.y+b2.h)-Math.max(a.y,b2.y)>0.004)overlaps++;
+  }
+  const fidelity=n?Math.max(0,Math.round(100*(1-err/n))-overlaps*15):null;
+  return {svg,fidelity,placed,overlaps};
 }
 const STYLE_LIST=[
   {key:'traditional',name:'Traditional'},
@@ -2366,6 +2386,27 @@ function renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode){
     const fam0=e.font?`'${String(e.font).replace(/'/g,'')}'`:SF.jost;
     const wt0=+e.weight||400;
     const nlines=Math.max(1,Math.min(3,+e.lines||1));
+    /* CASE IS MEASURED, NOT TRUSTED (owner 2026-08-25: a mixed-case dream
+       hero came back ALL CAPS): when the block was ink-snapped, test both
+       case hypotheses — at the size each implies, whose predicted width
+       matches the measured block? Only when the string actually differs. */
+    if(e.snapped&&e.textH>0&&str!==up(str)){
+      const bw0=(Math.min(W-SM,(e.box.x+e.box.w)*W)-Math.max(SM,e.box.x*W))||1;
+      let bestC=e.caps,bestD=Infinity;
+      for(const hyp of [true,false]){
+        const sz=((e.textH*H)/nlines)*(hyp?1.30:0.96);
+        const t=hyp?up(str):str;
+        const wds=t.split(/\s+/), per=Math.ceil(wds.length/nlines);
+        let lg='';
+        for(let i=0;i<wds.length;i+=per){
+          const seg=wds.slice(i,i+per).join(' ');
+          if(measure(seg,sz,fam0,wt0,false,sz*tr0)>measure(lg,sz,fam0,wt0,false,sz*tr0))lg=seg;
+        }
+        const d=Math.abs(measure(lg,sz,fam0,wt0,false,sz*tr0)-bw0);
+        if(d<bestD){bestD=d;bestC=hyp;}
+      }
+      e.caps=bestC;
+    }
     const s0=e.caps?up(str):str;
     /* width-fit: what size makes the longest line exactly span the box? */
     let longest=s0;

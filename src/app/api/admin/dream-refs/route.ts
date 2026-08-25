@@ -55,20 +55,23 @@ export async function POST(req: Request) {
       const buf = await sharp(fs.readFileSync(p)).resize(640, 640, { fit: "inside" }).png().toBuffer();
       images.push({ type: "image_url", image_url: { url: `data:image/png;base64,${buf.toString("base64")}`, detail: "low" } });
     }
+    const vmodel = process.env.OPENAI_VISION_MODEL || "gpt-4o";
+    // 1) the style charter — shared typographic/colour spirit
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: process.env.OPENAI_VISION_MODEL || "gpt-4o",
+        model: vmodel,
         messages: [
           {
             role: "system",
             content:
               "You are a graphic design analyst. You receive examples of packaging label design. " +
               "Describe their SHARED VISUAL DESIGN LANGUAGE as a compact style guide (max 140 words): " +
-              "typography character, composition habits, how type and imagery interact, colour and mood, " +
-              "illustration technique, level of ornament. Phrase it as positive guidance for creating new, " +
-              "original designs in a similar spirit. Do not reference the specific products, names or texts shown.",
+              "typography character, colour and mood, illustration technique, level of ornament. " +
+              "Do NOT describe layout or composition — that is captured separately per example. " +
+              "Phrase it as positive guidance for creating new, original designs in a similar spirit. " +
+              "Do not reference the specific products, names or texts shown.",
           },
           { role: "user", content: [{ type: "text", text: "The design examples:" }, ...images] },
         ],
@@ -85,7 +88,46 @@ export async function POST(req: Request) {
       { $set: { text, analyzedAt: new Date().toISOString(), refCount: images.length } },
       { upsert: true }
     );
-    return NextResponse.json({ ok: true, charter: text });
+
+    /* 2) COMPOSITION CARDS (owner 2026-08-25): each reference becomes ONE
+       arrangement direction — the layout-side mirror of the image cards.
+       Every dream deals one card, so compositions vary AND stay true to
+       the board (traditional refs = contained centred emblems, etc.). */
+    const cards: { key: string; arrangement: string }[] = [];
+    for (const r of refs) {
+      const p2 = path.join(DREAM_REFS_DIR, path.basename(r.file));
+      if (!fs.existsSync(p2)) continue;
+      const buf2 = await sharp(fs.readFileSync(p2)).resize(640, 640, { fit: "inside" }).png().toBuffer();
+      const cres = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: vmodel,
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are a graphic design analyst. Describe ONLY the LAYOUT / COMPOSITION of this label design, " +
+                "in max 60 words, as instructions for arranging a new design the same way: " +
+                "whether the illustration fills the whole label or sits contained (and where, and roughly what fraction of the label it occupies), " +
+                "where the main name sits relative to the illustration and how large, where the smaller text blocks sit, " +
+                "the alignment scheme, and the level of ornament. Never mention the specific subject, products or words shown.",
+            },
+            { role: "user", content: [{ type: "image_url", image_url: { url: `data:image/png;base64,${buf2.toString("base64")}`, detail: "low" } }] },
+          ],
+        }),
+      });
+      if (!cres.ok) continue;
+      const cj = (await cres.json()) as { choices?: { message?: { content?: string } }[] };
+      const arr = String(cj.choices?.[0]?.message?.content || "").slice(0, 600);
+      if (arr.length > 30 && !/\b(i'?m sorry|i can'?t|cannot assist)\b/i.test(arr.slice(0, 80))) cards.push({ key: r.id, arrangement: arr });
+    }
+    await db.collection("settings").updateOne(
+      { _id: `dream-cards-${style}` } as never,
+      { $set: { cards, analyzedAt: new Date().toISOString() } },
+      { upsert: true }
+    );
+    return NextResponse.json({ ok: true, charter: text, cards: cards.length });
   }
 
   /* ---- upload (per style) ---- */

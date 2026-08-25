@@ -1069,3 +1069,20 @@ composition-contract tightening, then customer wiring.
   "Layout alternatives" is inert in dream mode (specs are fixed per
   generation); DEMO_FILL example values (e.g. "Margaux AOC") still leak
   into dream briefs for empty fields — standing pre-launch revert item.
+- COMPOSITION CARDS + REPLICATION OVERHAUL (owner 2026-08-25/26): each
+  dream reference now ALSO becomes a composition card (layout-only,
+  subject-blind, settings dream-cards-<style>); every dream deals one
+  from a per-style shuffled deck — consecutive dreams vary in ARRANGEMENT
+  and stay true to the board (traditional = contained emblems again). The
+  generic "integrated as one whole" line retires when a card leads.
+  Replication is measurement-first now: artwork extent measured from the
+  dream's pixels (ground-diff outside text boxes; overrides the guessed
+  box AND the full/contained call); contained artwork regenerates from a
+  CROP of the dream's own illustration (kills recomposition drift —
+  verified: heraldic lions survived); element colours resampled inside
+  snapped boxes; letter case decided by width-testing both hypotheses;
+  text collisions resolved in the fit loop and penalized in the score.
+  Artwork failures now SURFACE (artworkError + console) instead of
+  silently rendering an empty label. NOTE: composition cards exist only
+  for boards analyzed after this — re-run "Analyze board" for
+  contemporary and punk.

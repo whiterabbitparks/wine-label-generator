@@ -116,6 +116,7 @@ export function StudioCore() {
         }
       }
       const w = window as unknown as { LabelEngine: { renderDreamFitted: (spec: unknown, d: unknown, o: unknown, art: string | null, align?: string, mode?: string) => { svg: string; fidelity: number | null } } };
+      if (b.artworkError) setErr(`artwork failed on this rebuild (${String(b.artworkError).slice(0, 90)}) — the text layout still rendered; rebuild again to retry`);
       const fit = w.LabelEngine.renderDreamFitted(b.spec, briefData(), { widthMM: 110, heightMM: 80 }, b.artwork, b.artAlign, b.artworkMode);
       setCards((cs) => cs.map((x) => (x.id === id ? { ...x, rebuilding: false, rebuilt: { svg: fit.svg, artwork: b.artwork, fidelity: fit.fidelity } } : x)));
     } catch (e) {
