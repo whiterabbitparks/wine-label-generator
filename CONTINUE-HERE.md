@@ -1000,3 +1000,12 @@ composition-contract tightening, then customer wiring.
   kept: 7pt (sBlock), 5mm text margins, legal line always; word-dropping
   structurally impossible (boxes widen to measured full-text width).
   Old comp/rules/looks paths untouched (goldens 72/72 remain).
+- NEW ADMIN (owner 2026-08-25): /admin = Dream Engine panel only — tabs
+  Dream Studio · Hard Rules · Generations · Users, with the standing rule
+  noted in the header: fonts come from the open Google library only. The
+  old-engine tabs (Image Refs/Rules/Play, Layout Refs/Play, Fonts, Proof
+  Bench) are gone from it; the ENTIRE previous admin lives on at /legacy
+  (src/app/legacy/LegacyAdmin.tsx, which also exports the reused tabs)
+  and, of course, on the previous branches at /admin. Dream Studio is a
+  shared component (src/app/dream/studio.tsx) used by both /admin and the
+  standalone /dream page.
