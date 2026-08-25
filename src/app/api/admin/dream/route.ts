@@ -86,6 +86,9 @@ export async function POST(req: Request) {
     let guidance = "";
     try {
       const db = await getDb();
+      // the dream charter: the board's spirit, distilled — never the images
+      const ch = (await db.collection("settings").findOne({ _id: "dream-charter" } as never)) as { text?: string } | null;
+      if (ch?.text) guidance += ` House design spirit (learned from the art director's reference labels): ${ch.text}`;
       const rows = (await db.collection("dream_feedback")
         .find({ comment: { $ne: "" } }, { projection: { _id: 0, verdict: 1, comment: 1 } })
         .sort({ at: -1 }).limit(12).toArray()) as unknown as { verdict: string; comment: string }[];

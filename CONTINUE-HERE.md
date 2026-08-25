@@ -1009,3 +1009,10 @@ composition-contract tightening, then customer wiring.
   and, of course, on the previous branches at /admin. Dream Studio is a
   shared component (src/app/dream/studio.tsx) used by both /admin and the
   standalone /dream page.
+- ONE FULL ADMIN (owner 2026-08-25): /admin tabs = Dream Studio (with the
+  new DREAM REFERENCES board: upload whole-label designs → "Analyze board"
+  → dream charter text that rides every dream prompt; images never reach
+  the model, refusal-guarded) · Image Refs (boards→cards, as before) ·
+  Image Play (as before) · Rules (hard rules + verified image rules
+  merged; min-gap and artwork-fill RETIRED — not imposed by the dream
+  engine) · Generations · Users. Old admin at /legacy.

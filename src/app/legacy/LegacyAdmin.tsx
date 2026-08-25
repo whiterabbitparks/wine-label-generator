@@ -2051,4 +2051,4 @@ function ProofBenchTab() {
 
 
 /* reused by the new Dream Engine admin at /admin */
-export { HardRulesTab, GenerationsTab, UsersTab, LoginForm, S as AdminStyles };
+export { HardRulesTab, GenerationsTab, UsersTab, LoginForm, StylesTab, PlaygroundTab, ArtDirectionTab, S as AdminStyles };
