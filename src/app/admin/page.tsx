@@ -58,16 +58,19 @@ function RulesTab() {
   );
 }
 
-/* Dream references: the taste school for whole-label dreams. */
-interface DreamRef { id: string; name: string; thumb: string }
+/* Dream references: the taste school for whole-label dreams — one board
+   and one charter PER STYLE (owner 2026-08-25). */
+interface DreamRef { id: string; name: string; thumb: string; style: string }
+const DREAM_STYLES = ["traditional", "contemporary", "punk"] as const;
 function DreamRefsCard() {
   const [refs, setRefs] = useState<DreamRef[]>([]);
-  const [charter, setCharter] = useState("");
+  const [charters, setCharters] = useState<Record<string, string>>({});
+  const [style, setStyle] = useState<string>("traditional");
   const [busy, setBusy] = useState("");
   const [err, setErr] = useState("");
   const load = useCallback(async () => {
     const r = await fetch("/api/admin/dream-refs");
-    if (r.ok) { const b = await r.json(); setRefs(b.refs || []); setCharter(b.charter || ""); }
+    if (r.ok) { const b = await r.json(); setRefs(b.refs || []); setCharters(b.charters || {}); }
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -78,7 +81,7 @@ function DreamRefsCard() {
       const dataUrl = await new Promise<string>((res) => { const rd = new FileReader(); rd.onload = () => res(String(rd.result)); rd.readAsDataURL(f); });
       const r = await fetch("/api/admin/dream-refs", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dataUrl, name: f.name }),
+        body: JSON.stringify({ dataUrl, name: f.name, style }),
       });
       if (!r.ok) { setErr((await r.json().catch(() => ({}))).error || "upload failed"); break; }
     }
@@ -88,31 +91,40 @@ function DreamRefsCard() {
     setBusy("analyze"); setErr("");
     const r = await fetch("/api/admin/dream-refs", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ analyze: true }),
+      body: JSON.stringify({ analyze: true, style }),
     });
     if (!r.ok) setErr((await r.json().catch(() => ({}))).error || "analysis failed");
     setBusy(""); load();
   }
 
+  const styleRefs = refs.filter((r) => r.style === style);
   return (
     <div style={S.card}>
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
         <b style={{ fontSize: 13 }}>Dream references</b>
         <span style={{ fontSize: 11.5, color: "#8a887e" }}>
-          whole-label designs you admire — analyzed into a charter that steers every dream (images never go to the model)
+          whole-label designs you admire, per style — analyzed into a charter that steers that style&rsquo;s dreams (images never go to the model)
         </span>
-        <label style={{ ...S.btnGhost, display: "inline-block", cursor: "pointer" }}>
-          {busy === "upload" ? "Uploading…" : "Upload"}
+      </div>
+      <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 10, flexWrap: "wrap" }}>
+        {DREAM_STYLES.map((st) => (
+          <button key={st} onClick={() => setStyle(st)}
+            style={{ font: "inherit", fontSize: 12, padding: "4px 12px", borderRadius: 12, cursor: "pointer", border: "1px solid #5a6b3b", background: style === st ? "#5a6b3b" : "transparent", color: style === st ? "#fff" : "#5a6b3b" }}>
+            {st} ({refs.filter((r) => r.style === st).length}){charters[st] ? " ✓" : ""}
+          </button>
+        ))}
+        <label style={{ ...S.btnGhost, display: "inline-block", cursor: "pointer", marginLeft: 8 }}>
+          {busy === "upload" ? "Uploading…" : `Upload to ${style}`}
           <input type="file" accept="image/*" multiple style={{ display: "none" }} onChange={(e) => upload(e.target.files)} />
         </label>
-        <button style={S.btn} disabled={!refs.length || busy === "analyze"} onClick={analyze}>
-          {busy === "analyze" ? "Analyzing…" : "Analyze board"}
+        <button style={S.btn} disabled={!styleRefs.length || busy === "analyze"} onClick={analyze}>
+          {busy === "analyze" ? "Analyzing…" : `Analyze ${style} board`}
         </button>
       </div>
       {err && <p style={{ color: "#a33", fontSize: 12 }}>{err}</p>}
-      {refs.length > 0 && (
+      {styleRefs.length > 0 && (
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
-          {refs.map((r) => (
+          {styleRefs.map((r) => (
             <div key={r.id} style={{ position: "relative" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={r.thumb} alt={r.name} title={r.name} style={{ height: 84, border: "1px solid #ddd", display: "block" }} />
@@ -124,9 +136,9 @@ function DreamRefsCard() {
           ))}
         </div>
       )}
-      {charter && (
+      {charters[style] && (
         <p style={{ fontSize: 11.5, color: "#5a5a52", background: "#f4f3ee", border: "1px solid #e2e1da", borderRadius: 6, padding: 10, marginBottom: 0 }}>
-          <b>charter (rides every dream):</b> {charter}
+          <b>{style} charter (rides every {style} dream):</b> {charters[style]}
         </p>
       )}
     </div>

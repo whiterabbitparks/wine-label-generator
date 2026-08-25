@@ -14,34 +14,40 @@ import { getDb } from "@/lib/db";
    reference images steer through derived language, never as image inputs. */
 
 const DREAM_REFS_DIR = path.join(process.cwd(), "data", "dream-refs");
-const CHARTER_DOC = "dream-charter";
+const STYLES = ["traditional", "contemporary", "punk"] as const;
 
-interface DreamRefDoc { id: string; name: string; file: string; thumb: string; at: string }
+interface DreamRefDoc { id: string; name: string; file: string; thumb: string; at: string; style: string }
 
 export async function GET() {
   if (!(await requestIsAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const db = await getDb();
   const refs = (await db.collection("dreamRefs").find({}, { projection: { _id: 0 } }).sort({ at: 1 }).toArray()) as unknown as DreamRefDoc[];
-  const charter = (await db.collection("settings").findOne({ _id: CHARTER_DOC } as never)) as { text?: string; analyzedAt?: string } | null;
-  return NextResponse.json({ refs, charter: charter?.text || "", analyzedAt: charter?.analyzedAt || null });
+  const charters: Record<string, string> = {};
+  for (const st of STYLES) {
+    const c = (await db.collection("settings").findOne({ _id: `dream-charter-${st}` } as never)) as { text?: string } | null;
+    if (c?.text) charters[st] = c.text;
+  }
+  return NextResponse.json({ refs, charters });
 }
 
 export async function POST(req: Request) {
   if (!(await requestIsAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  let body: { dataUrl?: string; name?: string; analyze?: boolean };
+  let body: { dataUrl?: string; name?: string; analyze?: boolean; style?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "invalid JSON body" }, { status: 400 });
   }
   const db = await getDb();
+  const style = (STYLES as readonly string[]).includes(String(body.style)) ? String(body.style) : null;
 
-  /* ---- analyze: board → dream charter ---- */
+  /* ---- analyze: one style's board → that style's dream charter ---- */
   if (body.analyze) {
+    if (!style) return NextResponse.json({ error: "style required (traditional|contemporary|punk)" }, { status: 400 });
     const key = process.env.OPENAI_API_KEY;
     if (!key) return NextResponse.json({ error: "OPENAI_API_KEY not set" }, { status: 400 });
-    const refs = (await db.collection("dreamRefs").find({}).sort({ at: -1 }).limit(8).toArray()) as unknown as DreamRefDoc[];
-    if (!refs.length) return NextResponse.json({ error: "upload dream references first" }, { status: 400 });
+    const refs = (await db.collection("dreamRefs").find({ style }).sort({ at: -1 }).limit(8).toArray()) as unknown as DreamRefDoc[];
+    if (!refs.length) return NextResponse.json({ error: `upload ${style} dream references first` }, { status: 400 });
     const images: { type: string; image_url: { url: string; detail: string } }[] = [];
     for (const r of refs) {
       const p = path.join(DREAM_REFS_DIR, path.basename(r.file));
@@ -75,26 +81,27 @@ export async function POST(req: Request) {
     if (text.length < 60 || /\b(i'?m sorry|i can'?t|cannot assist|unable to)\b/i.test(text.slice(0, 120)))
       return NextResponse.json({ error: "the analyst refused this board — try again (or different references)" }, { status: 502 });
     await db.collection("settings").updateOne(
-      { _id: CHARTER_DOC } as never,
+      { _id: `dream-charter-${style}` } as never,
       { $set: { text, analyzedAt: new Date().toISOString(), refCount: images.length } },
       { upsert: true }
     );
     return NextResponse.json({ ok: true, charter: text });
   }
 
-  /* ---- upload ---- */
+  /* ---- upload (per style) ---- */
+  if (!style) return NextResponse.json({ error: "style required (traditional|contemporary|punk)" }, { status: 400 });
   const m = /^data:image\/(png|jpeg|webp);base64,(.+)$/.exec(String(body.dataUrl || ""));
   if (!m) return NextResponse.json({ error: "dataUrl must be a png/jpeg/webp image" }, { status: 400 });
   const buf = Buffer.from(m[2], "base64");
   if (buf.length > 12 * 1024 * 1024) return NextResponse.json({ error: "image too large (12 MB max)" }, { status: 400 });
-  const count = await db.collection("dreamRefs").countDocuments();
-  if (count >= 16) return NextResponse.json({ error: "16 dream references max — delete some first" }, { status: 400 });
+  const count = await db.collection("dreamRefs").countDocuments({ style });
+  if (count >= 16) return NextResponse.json({ error: `16 ${style} dream references max — delete some first` }, { status: 400 });
   fs.mkdirSync(DREAM_REFS_DIR, { recursive: true });
   const id = randomUUID().slice(0, 8);
   const file = `dream-${id}.png`;
   fs.writeFileSync(path.join(DREAM_REFS_DIR, file), await sharp(buf).png().toBuffer());
   const thumb = `data:image/png;base64,${(await sharp(buf).resize(220, 220, { fit: "inside" }).png().toBuffer()).toString("base64")}`;
-  const doc: DreamRefDoc = { id, name: String(body.name || file).slice(0, 120), file, thumb, at: new Date().toISOString() };
+  const doc: DreamRefDoc = { id, name: String(body.name || file).slice(0, 120), file, thumb, at: new Date().toISOString(), style };
   await db.collection("dreamRefs").insertOne({ ...doc } as never);
   return NextResponse.json({ ok: true, ref: doc });
 }

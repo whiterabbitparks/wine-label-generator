@@ -1035,3 +1035,14 @@ composition-contract tightening, then customer wiring.
   (non-hero roles halo'd). Contained keeps the boxed path. KNOWN WEAK:
   small text over busy scene areas is marginal — next fix is local-
   luminance placement/stronger guard using imgAnalysis.
+- FRONT-TO-BACK (owner 2026-08-25): dream engine core extracted to
+  src/lib/dream/engine.ts (admin route + public route share it). Public
+  streamed endpoint /api/dream-label (NDJSON; TODO(security) rate-limit
+  before deploy). NEW customer page at / — story + texts + optional
+  sketch + direction → dream → replica (fonts loaded dynamically,
+  "see the designer's sketch" toggle). Old configurator moved to
+  /classic. DREAM REFERENCES are now PER STYLE (boards + charters
+  dream-charter-<style>; "free" dreams run uncharted); studio card has
+  style pills with counts. Known weak point unchanged: small text over
+  busy scene areas is marginal (halo only) — local-luminance placement
+  remains the named next fix.
