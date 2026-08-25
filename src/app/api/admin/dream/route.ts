@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { requestIsAuthenticated } from "@/lib/admin/session";
 import { generateOpenAIImage } from "@/lib/image-provider/openai";
-import { generateImageWithRetry, keyArtwork } from "@/lib/image-provider";
+import { finishArtwork, keyArtwork } from "@/lib/image-provider";
+import { restyleWithFlux } from "@/lib/image-provider/flux";
+import { getProfiles } from "@/lib/admin/style-refs";
+import { feedbackAggregates } from "@/lib/admin/feedback";
+import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, WHITE_BG_RULE, NO_BORDER_RULE } from "@/lib/admin/image-rules";
 import { getDb } from "@/lib/db";
 import { PNG } from "pngjs";
 import { analyzeArtwork } from "@/lib/admin/art-analysis";
@@ -205,29 +209,73 @@ export async function POST(req: Request) {
     }
   } catch {}
 
-  // 2. artwork — the DREAM ITSELF is the visual reference (owner's choice),
-  //    generated IN THE ASPECT OF ITS REGION (a tall region needs a tall
-  //    artwork — the landscape-only default shrank the dream's full-height
-  //    illustration into a floating postcard, live-observed).
+  /* 2. ARTWORK — the division of labour (owner 2026-08-25):
+       · the DREAM decides subject + composition (+ a soft palette hint)
+       · the BOARDS decide visual style: card technique language, Image
+         Play refinements (favour/avoid), verified image rules
+       · FLUX + the style LoRA repaints the craft (the old hybrid, with
+         the dream in ChatGPT's story seat)
+     Region aspect still comes from the dream so tall regions get tall art. */
   let artwork: string | null = null;
   let artAlign = "xMidYMid";
   const art = (spec as { artwork?: { subject?: string; palette?: string[]; box?: { w: number; h: number } } }).artwork;
+  const styleKey = ["traditional", "contemporary", "punk"].includes(String(body.style)) ? String(body.style) : "contemporary";
   try {
     const palette = (art?.palette || []).filter((h) => /^#[0-9a-fA-F]{6}$/.test(h));
     const bx = art?.box;
     const regionAspect = bx && bx.h > 0 ? (bx.w * 1536) / (bx.h * 1024) : 1.5;
     const size = regionAspect < 0.83 ? { w: 1024, h: 1536 } : regionAspect > 1.2 ? { w: 1536, h: 1024 } : { w: 1024, h: 1024 };
-    const artPrompt =
-      `Recreate ONLY the illustration from this label design — the exact same subject, composition, colours and technique — ` +
-      `as standalone artwork filling the whole canvas. ` +
+    const fluxSizeOv = regionAspect < 0.83 ? { width: 512, height: 832 } : regionAspect > 1.2 ? { width: 832, height: 512 } : { width: 640, height: 640 };
+
+    // style language: a board card (non-rejected, random) + refinement lines
+    let styleLang = "", fbLines = "";
+    try {
+      const prof = (await getProfiles())[styleKey];
+      const agg = (await feedbackAggregates())[styleKey];
+      const cards = (prof?.variants || []).filter((c) => (agg?.weights?.[c.key] ?? 1) >= 0.5);
+      const card = cards.length ? cards[Math.floor(Math.random() * cards.length)] : null;
+      if (card)
+        styleLang =
+          ` Visual style (the house technique — it OVERRIDES the reference design's rendering): ` +
+          `${(card as { language?: string }).language || [card.medium, card.mood].filter(Boolean).join("; ")}`;
+      else if (prof?.charter) styleLang = ` Visual style (the house technique): ${prof.charter.slice(0, 600)}`;
+      if (agg?.favour?.length) fbLines += ` Favour: ${agg.favour.slice(0, 4).join("; ")}.`;
+      if (agg?.avoid?.length) fbLines += ` Avoid: ${agg.avoid.slice(0, 4).join("; ")}.`;
+    } catch {}
+    let userRules = "";
+    try {
+      userRules = ruleLines(await getImageRules(), styleKey).map((l) => ` ${l}.`).join("");
+    } catch {}
+
+    const sketchPrompt =
+      `From this label design, recreate ONLY the illustration: the exact same subject and composition, filling the whole canvas. ` +
       (art?.subject ? `The illustration: ${art.subject}. ` : "") +
-      `Remove ALL text, letters, numbers and typography completely. No borders or frames.`;
-    const raw = await generateImageWithRetry({
-      prompt: artPrompt, size, provider: "openai",
-      reference: dream, paletteLock: palette.length ? palette : undefined,
-    } as never);
-    // subject-aware cover-crop: aim the slice at the ink centroid so the
-    // crop never amputates the subject (live-observed: the man cut at the edge)
+      `Remove ALL text, letters, numbers and typography completely.` +
+      styleLang + fbLines + userRules +
+      (palette.length ? ` Palette leaning: ${palette.join(", ")}.` : "") +
+      ` Single composition on a pure white background; its edges dissolve into white; no borders or frames.`;
+
+    const makeBase = (extra = "") =>
+      generateOpenAIImage({ prompt: sketchPrompt + extra, size, reference: dream } as never);
+    const craft = (base: string) =>
+      restyleWithFlux(
+        base,
+        {
+          shortPrompt:
+            `${art?.subject || vision}. Keep the exact composition of the input image — repaint only the rendering technique. ` +
+            `No text, no borders, pure white background.`,
+          art: { preset: `${styleKey}/dream` },
+        } as never,
+        fluxSizeOv
+      ).catch(() => base); // no LoRA / flux hiccup → the styled base still stands
+
+    let raw = await craft(await makeBase());
+    // verify the core laws (text leakage from the dream is the big one)
+    try {
+      const check = await verifyImage(raw, [NO_TEXT_RULE, WHITE_BG_RULE, NO_BORDER_RULE]);
+      if (!check.ok) raw = await craft(await makeBase(` STRICT — the previous attempt violated: ${check.violations.join(" | ")}.`));
+    } catch {}
+    raw = finishArtwork(raw); // soft palette hint only — no mechanical lock (owner)
     try {
       const an = analyzeArtwork(raw);
       const cx = an?.centroid?.x ?? 0.5, cy = an?.centroid?.y ?? 0.5;
@@ -238,5 +286,5 @@ export async function POST(req: Request) {
     artwork = null;
   }
 
-  return NextResponse.json({ spec, artwork, artAlign, fonts: GOOGLE_FONTS });
+  return NextResponse.json({ spec, artwork, artAlign, styleKey, fonts: GOOGLE_FONTS });
 }

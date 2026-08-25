@@ -69,7 +69,7 @@ export async function falUpload(buf: Buffer, fileName: string, contentType: stri
    repaint with the other. Takes the GPT scene, runs FLUX image-to-image
    with the style LoRA at moderate strength: structure and content survive,
    the rendering becomes the board technique. */
-export async function restyleWithFlux(baseDataUrl: string, job: GenerationJob): Promise<string> {
+export async function restyleWithFlux(baseDataUrl: string, job: GenerationJob, sizeOverride?: { width: number; height: number }): Promise<string> {
   const key = process.env.FAL_KEY;
   if (!key) throw new Error("FAL_KEY is not set (put it in .env.local, server-side only)");
   const styleKey = String(job.art?.preset || "").split("/")[0];
@@ -96,7 +96,7 @@ export async function restyleWithFlux(baseDataUrl: string, job: GenerationJob): 
       prompt,
       image_url: baseUrl,
       strength: 0.45, // repaint the rendering; the GPT composition survives
-      image_size: fluxSize(), // dev = quarter cost
+      image_size: sizeOverride || fluxSize(), // dev = quarter cost
       num_inference_steps: 28,
       guidance_scale: 3.5,
       num_images: 1,

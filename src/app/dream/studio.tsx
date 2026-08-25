@@ -27,6 +27,7 @@ export const S: Record<string, React.CSSProperties> = {
 interface DreamCard {
   id: number;
   dream: string;
+  mood: string;
   verdict?: string;
   comment: string;
   rebuilding?: boolean;
@@ -78,7 +79,7 @@ export function StudioCore() {
       });
       const b = await res.json();
       if (!res.ok) throw new Error(b.error || `dream failed (${res.status})`);
-      setCards((cs) => [{ id: Date.now(), dream: b.dream, comment: "" }, ...cs]);
+      setCards((cs) => [{ id: Date.now(), dream: b.dream, mood: styleMood, comment: "" }, ...cs]);
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
     }
@@ -100,7 +101,7 @@ export function StudioCore() {
     try {
       const res = await fetch("/api/admin/dream", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phase: "rebuild", dream: c.dream, vision, data: briefData() }),
+        body: JSON.stringify({ phase: "rebuild", dream: c.dream, vision, data: briefData(), style: c.mood === "free" ? "contemporary" : c.mood }),
       });
       const b = await res.json();
       if (!res.ok) throw new Error(b.error || `rebuild failed (${res.status})`);

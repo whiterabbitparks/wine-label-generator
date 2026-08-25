@@ -1016,3 +1016,13 @@ composition-contract tightening, then customer wiring.
   Image Play (as before) · Rules (hard rules + verified image rules
   merged; min-gap and artwork-fill RETIRED — not imposed by the dream
   engine) · Generations · Users. Old admin at /legacy.
+- ARTWORK DIVISION OF LABOUR (owner 2026-08-25): dream rebuild artwork now
+  runs the corrected chain — the DREAM contributes subject + composition
+  (+ soft palette hint, no mechanical lock); the BOARDS contribute visual
+  style (card language / charter + Image Play favour/avoid + verified
+  image rules in the sketch prompt); FLUX + the style LoRA repaints the
+  craft (region-aspect flux size override); core rules verified with one
+  corrective pass (text leakage from the dream is the main catch). Studio
+  passes the dream's mood as the style (free→contemporary). LoRAs trained
+  2026-08-25 from the new boards are saved in Mongo — code changes never
+  require retraining.
