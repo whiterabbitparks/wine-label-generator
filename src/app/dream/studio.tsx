@@ -44,7 +44,7 @@ export function StudioCore() {
   const [grape, setGrape] = useState("Saperavi");
   const [region, setRegion] = useState("Kakheti, Georgia");
   const [vintage, setVintage] = useState("2023");
-  const [styleMood, setStyleMood] = useState("free");
+  const [styleMood, setStyleMood] = useState("traditional");
   const [sketch, setSketch] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -141,7 +141,7 @@ export function StudioCore() {
             <div><label style={S.label}>Region, Country</label><input style={S.input} value={region} onChange={(e) => setRegion(e.target.value)} /></div>
             <div><label style={S.label}>Mood</label>
               <select style={S.input} value={styleMood} onChange={(e) => setStyleMood(e.target.value)}>
-                {["free", "traditional", "contemporary", "punk"].map((c) => <option key={c}>{c}</option>)}
+                {["traditional", "contemporary", "punk"].map((c) => <option key={c}>{c}</option>)}
               </select></div>
             <div><label style={S.label}>Sketch (optional)</label>
               <input type="file" accept="image/*" style={{ fontSize: 11 }} onChange={(e) => {

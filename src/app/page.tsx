@@ -42,7 +42,7 @@ export default function DreamPage() {
   const [grape, setGrape] = useState("");
   const [region, setRegion] = useState("");
   const [vintage, setVintage] = useState("");
-  const [styleMood, setStyleMood] = useState("free");
+  const [styleMood, setStyleMood] = useState("traditional");
   const [sketch, setSketch] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState("");
@@ -142,7 +142,7 @@ export default function DreamPage() {
             <div><label style={S.label}>Region, Country</label><input style={S.input} value={region} onChange={(e) => setRegion(e.target.value)} /></div>
             <div><label style={S.label}>Direction</label>
               <select style={S.input} value={styleMood} onChange={(e) => setStyleMood(e.target.value)}>
-                {["free", "traditional", "contemporary", "punk"].map((c) => <option key={c}>{c}</option>)}
+                {["traditional", "contemporary", "punk"].map((c) => <option key={c}>{c}</option>)}
               </select></div>
             <div><label style={S.label}>Sketch (optional)</label>
               <input type="file" accept="image/*" style={{ fontSize: 11 }} onChange={(e) => {
