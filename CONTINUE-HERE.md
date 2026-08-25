@@ -986,3 +986,17 @@ never material. Pipeline v1 (all live in Proof Bench "Dream mode"):
 Cost ~5-8¢ + ~60s per dream at dev quality. Next: fidelity score
 (overlay-compare), approve-as-look for dream specs, richer font library,
 composition-contract tightening, then customer wiring.
+- DREAM ENGINE v2 (owner directive 2026-08-25): "the dream leads, the
+  architecture follows." Separate admin at /dream (Dream Studio) — old
+  admin/branches fully intact. phase:"dream" designs the whole label
+  (hierarchy-aware prompt, optional customer sketch as reference, prompt
+  quotes the owner's dream_feedback comments so dreams compound);
+  phase:"rebuild" transcribes geometry against an OPEN font library
+  (~50 Google faces, "forget the approved fonts") and regenerates the
+  artwork WITH THE DREAM AS IMAGE REFERENCE (owner-chosen path — text
+  stripped, same illustration), finished+keyed. renderDreamSpec v2
+  replicates verbatim: colours exact (contrast guard removed here), fonts
+  loaded dynamically, artwork placed by box width at true aspect. Laws
+  kept: 7pt (sBlock), 5mm text margins, legal line always; word-dropping
+  structurally impossible (boxes widen to measured full-text width).
+  Old comp/rules/looks paths untouched (goldens 72/72 remain).

@@ -2293,25 +2293,19 @@ function renderDreamSpec(spec,d,opts,artSrc){
     classification:f.classification, special:f.special,
     legal:[(f.descriptor||'').replace(/,/g,''),f.alc].filter(Boolean).join(' / ')
   };
-  const guard=(hex)=>{ // ΔL≥0.32 from the ground, same law as palAdapt
-    let v=hslOf(hex)?String(hex):'#1E1B18';
-    const towardWhite=gc.L<0.5;
-    for(let t=0;t<6;t++){
-      const c=hslOf(v); if(!c||Math.abs(c.L-gc.L)>=0.32)break;
-      const n=parseInt(v.slice(1),16),r=(n>>16)&255,gg=(n>>8)&255,b=n&255;
-      const mix=(x)=>Math.round(towardWhite?x+(255-x)*0.3:x*0.7);
-      v='#'+[mix(r),mix(gg),mix(b)].map(x=>x.toString(16).padStart(2,'0')).join('').toUpperCase();
-    }
-    return v;
-  };
+  /* v2 (owner 2026-08-25): REPLICATE the dream — colours verbatim, no
+     contrast guard, no palette law. Only 7pt, 5mm text margins and the
+     legal line survive. */
+  const guard=(hex)=>hslOf(hex)?String(hex):'#1E1B18';
   let body='';
   // artwork at the dream's position (exact placement — no sliding)
   const ab=spec&&spec.artwork&&spec.artwork.box;
   if(artSrc&&ab&&ab.w>0&&ab.h>0){
-    /* inflate slightly: 'meet' letterboxing plus the artwork's own white
-       fringe otherwise renders visibly smaller than the dream's mass */
-    const inf=1.12, aw=Math.min(W*1.04,ab.w*W*inf), ah=Math.min(H*1.04,ab.h*H*inf);
-    const ax=Math.max(-0.02*W,ab.x*W-(aw-ab.w*W)/2), ay=Math.max(-0.02*H,ab.y*H-(ah-ab.h*H)/2);
+    /* place by the box WIDTH at the artwork's own aspect (1.5), centred on
+       the box — 'meet' letterboxing otherwise shrinks it, and inflating the
+       box pushed art over text (live-observed). Fidelity: trust the spec. */
+    const aw=Math.min(W*1.04,ab.w*W), ah=aw/1.5;
+    const ax=ab.x*W, ay=Math.max(-0.02*H,(ab.y+ab.h/2)*H-ah/2);
     const sp=gc.L<0.60;
     body+=`<image x="${ax.toFixed(1)}" y="${ay.toFixed(1)}" width="${aw.toFixed(1)}" height="${ah.toFixed(1)}" preserveAspectRatio="xMidYMid meet" xlink:href="${artSrc}" href="${artSrc}"${sp?' data-sp="1"':''} style="mix-blend-mode:${sp?'normal':'multiply'}"/>`;
   }
@@ -2329,15 +2323,22 @@ function renderDreamSpec(spec,d,opts,artSrc){
        element ≥34% of the label width, the legal line ≥60% with a halo
        so it survives crossing artwork; the wine name may take 2 lines. */
     const floorW=e.role==='legal'?W*0.6:W*0.34;
-    const bw=Math.max(floorW,bx1-bx0);
+    /* the box must hold the FULL text at the 7pt floor — measure it and
+       widen as needed (capped at the printable width). wrapFit drops
+       trailing words when a line can't fit; that is never acceptable. */
+    const tr0=+e.tracking>0?Math.min(0.4,+e.tracking):0;
+    const fam0=e.font?`'${String(e.font).replace(/'/g,'')}'`:SF.jost;
+    const need=measure(e.caps?up(str):str,MIN7,fam0,+e.weight||400,false,MIN7*tr0)/(e.role==='wine'?2:1)+6;
+    const bw=Math.min(W-2*SM,Math.max(floorW,bx1-bx0,need));
     const a=e.align==='l'?'l':e.align==='r'?'r':'c';
     const x=a==='l'?Math.min(bx0,W-SM-bw):a==='r'?Math.max(bx1,SM+bw):(bx0+bx1)/2;
-    const size=Math.max(MIN7,Math.min(H*0.2,(e.box.h||0.05)*H*0.78));
+    const nlines=e.role==='wine'?Math.max(1,Math.min(2,+e.lines||1)):1;
+    const size=Math.max(MIN7,Math.min(H*0.2,((e.box.h||0.05)*H*0.82)/nlines));
     body+=sBlock(str,{x,top:by0,maxW:bw,size,min:Math.max(MIN7,size*0.55),
-      f:e.font?`'${String(e.font).replace(/'/g,'')}'`:SF.jost,w:+e.weight||400,
-      fill:guard(e.colour),a,caps:!!e.caps,tr:+e.tracking>0?Math.min(0.4,+e.tracking):0,
+      f:fam0,w:+e.weight||400,
+      fill:guard(e.colour),a,caps:!!e.caps,tr:tr0,
       halo:e.role==='legal',
-      lines:e.role==='wine'?2:1,lh:1.08}).svg;
+      lines:e.role==='wine'?2:nlines,lh:1.04}).svg;
   }
   // the legal line is law — if the dream forgot it, it prints anyway
   if(!seen.legal&&ROLE_TEXT.legal)
