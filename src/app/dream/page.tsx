@@ -32,6 +32,7 @@ interface DreamCard {
   rebuilding?: boolean;
   rebuilt?: { svg: string; artwork: string | null };
   rebuildErr?: string;
+  overlay?: boolean;
 }
 
 export default function DreamStudio() {
@@ -115,8 +116,8 @@ export default function DreamStudio() {
           await new Promise((r) => setTimeout(r, 900)); // let the faces land
         }
       }
-      const w = window as unknown as { LabelEngine: { renderDreamSpec: (spec: unknown, d: unknown, o: unknown, art: string | null) => string } };
-      const svg = w.LabelEngine.renderDreamSpec(b.spec, briefData(), { widthMM: 110, heightMM: 80 }, b.artwork);
+      const w = window as unknown as { LabelEngine: { renderDreamSpec: (spec: unknown, d: unknown, o: unknown, art: string | null, align?: string) => string } };
+      const svg = w.LabelEngine.renderDreamSpec(b.spec, briefData(), { widthMM: 110, heightMM: 80 }, b.artwork, b.artAlign);
       setCards((cs) => cs.map((x) => (x.id === id ? { ...x, rebuilding: false, rebuilt: { svg, artwork: b.artwork } } : x)));
     } catch (e) {
       setCards((cs) => cs.map((x) => (x.id === id ? { ...x, rebuilding: false, rebuildErr: e instanceof Error ? e.message : String(e) } : x)));
@@ -182,9 +183,20 @@ export default function DreamStudio() {
               </div>
               {c.rebuilt ? (
                 <div>
-                  <div style={S.sub}>the replica (real text · vector · 7pt + 5mm laws only)</div>
-                  <div style={{ border: `2px solid ${INK}`, marginTop: 4 }}
-                    dangerouslySetInnerHTML={{ __html: c.rebuilt.svg.replace(/width="110mm" height="80mm"/, 'width="100%"') }} />
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                    <div style={S.sub}>the replica (real text · vector · 7pt + 5mm laws only)</div>
+                    <button style={{ ...S.btnGhost, padding: "2px 8px", fontSize: 11 }}
+                      onClick={() => setCards((cs) => cs.map((x) => (x.id === c.id ? { ...x, overlay: !x.overlay } : x)))}>
+                      {c.overlay ? "overlay off" : "overlay dream"}
+                    </button>
+                  </div>
+                  <div style={{ border: `2px solid ${INK}`, marginTop: 4, position: "relative" }}>
+                    <div dangerouslySetInnerHTML={{ __html: c.rebuilt.svg.replace(/width="110mm" height="80mm"/, 'width="100%"') }} />
+                    {c.overlay && (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={c.dream} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "fill", opacity: 0.35, pointerEvents: "none" }} />
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div>

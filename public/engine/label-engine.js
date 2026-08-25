@@ -2281,7 +2281,7 @@ function withLook(key,seed,fn){
    this renderer brings the law — 5mm text margins, 7pt floor (sBlock),
    contrast guard, and a complete legal line even when the dream forgot it.
    Never reached by any normal render path (goldens/parity untouched). */
-function renderDreamSpec(spec,d,opts,artSrc){
+function renderDreamSpec(spec,d,opts,artSrc,artAlign){
   opts=opts||{};
   const twMM=Math.max(30,(+opts.widthMM||110)), thMM=Math.max(30,(+opts.heightMM||80));
   const W=twMM*10, H=thMM*10, f=sFields(d);
@@ -2301,13 +2301,13 @@ function renderDreamSpec(spec,d,opts,artSrc){
   // artwork at the dream's position (exact placement — no sliding)
   const ab=spec&&spec.artwork&&spec.artwork.box;
   if(artSrc&&ab&&ab.w>0&&ab.h>0){
-    /* place by the box WIDTH at the artwork's own aspect (1.5), centred on
-       the box — 'meet' letterboxing otherwise shrinks it, and inflating the
-       box pushed art over text (live-observed). Fidelity: trust the spec. */
-    const aw=Math.min(W*1.04,ab.w*W), ah=aw/1.5;
-    const ax=ab.x*W, ay=Math.max(-0.02*H,(ab.y+ab.h/2)*H-ah/2);
+    /* v3: the artwork fills the dream's region EXACTLY — cover-fit (slice)
+       into the transcribed box; the artwork is generated in this region's
+       aspect upstream so cropping is minimal. Trust the dream. */
+    const ax=ab.x*W, ay=ab.y*H, aw=ab.w*W, ah=ab.h*H;
     const sp=gc.L<0.60;
-    body+=`<image x="${ax.toFixed(1)}" y="${ay.toFixed(1)}" width="${aw.toFixed(1)}" height="${ah.toFixed(1)}" preserveAspectRatio="xMidYMid meet" xlink:href="${artSrc}" href="${artSrc}"${sp?' data-sp="1"':''} style="mix-blend-mode:${sp?'normal':'multiply'}"/>`;
+    const pa=/^x(Min|Mid|Max)Y(Min|Mid|Max)$/.test(String(artAlign))?artAlign:'xMidYMid';
+    body+=`<image x="${ax.toFixed(1)}" y="${ay.toFixed(1)}" width="${aw.toFixed(1)}" height="${ah.toFixed(1)}" preserveAspectRatio="${pa} slice" xlink:href="${artSrc}" href="${artSrc}"${sp?' data-sp="1"':''} style="mix-blend-mode:${sp?'normal':'multiply'}"/>`;
   }
   const els=(spec&&Array.isArray(spec.elements)?spec.elements:[]).filter(e=>e&&e.box&&ROLE_TEXT[e.role]);
   const seen={};
@@ -2317,28 +2317,39 @@ function renderDreamSpec(spec,d,opts,artSrc){
     // clamp the box inside the 5mm text margins (hard rule)
     const bx0=Math.max(SM,Math.min(W-SM,e.box.x*W)), bx1=Math.max(SM,Math.min(W-SM,(e.box.x+e.box.w)*W));
     const by0=Math.max(SM,Math.min(H-SM,e.box.y*H));
-    /* WORD LOSS IS FORBIDDEN: narrow spec boxes must widen, never drop
-       words (wrapFit silently drops trailing words at the 7pt floor —
-       live-observed "Kakheti," and a truncated legal line). Floors: any
-       element ≥34% of the label width, the legal line ≥60% with a halo
-       so it survives crossing artwork; the wine name may take 2 lines. */
-    const floorW=e.role==='legal'?W*0.6:W*0.34;
-    /* the box must hold the FULL text at the 7pt floor — measure it and
-       widen as needed (capped at the printable width). wrapFit drops
-       trailing words when a line can't fit; that is never acceptable. */
+    /* v3 (owner report 2026-08-25: "the rules are taking over"): the
+       dream's geometry is the truth. Size comes from FITTING THE BOX —
+       primarily its width (what the eye reads as scale), capped by its
+       height — never from floors or minimums that shift positions. The
+       only law: the full text must print (7pt floor; box grows only if
+       even 7pt cannot hold every word — the legal-line case). */
     const tr0=+e.tracking>0?Math.min(0.4,+e.tracking):0;
     const fam0=e.font?`'${String(e.font).replace(/'/g,'')}'`:SF.jost;
-    const need=measure(e.caps?up(str):str,MIN7,fam0,+e.weight||400,false,MIN7*tr0)/(e.role==='wine'?2:1)+6;
-    const bw=Math.min(W-2*SM,Math.max(floorW,bx1-bx0,need));
+    const wt0=+e.weight||400;
+    const nlines=Math.max(1,Math.min(3,+e.lines||1));
+    const s0=e.caps?up(str):str;
+    /* width-fit: what size makes the longest line exactly span the box? */
+    let longest=s0;
+    if(nlines>1){
+      const words=s0.split(/\s+/), per=Math.ceil(words.length/nlines);
+      longest='';
+      for(let i=0;i<words.length;i+=per){
+        const seg=words.slice(i,i+per).join(' ');
+        if(measure(seg,100,fam0,wt0,false,100*tr0)>measure(longest,100,fam0,wt0,false,100*tr0))longest=seg;
+      }
+    }
+    const w100=measure(longest,100,fam0,wt0,false,100*tr0)||1;
+    const sizeW=((bx1-bx0)*100)/w100;
+    const sizeH=((e.box.h||0.05)*H*0.9)/nlines;
+    const size=Math.max(MIN7,Math.min(sizeH,sizeW,H*0.24));
+    /* the box only widens if 7pt still cannot hold every word */
+    const need=measure(longest,MIN7,fam0,wt0,false,MIN7*tr0)+4;
+    const bw=Math.min(W-2*SM,Math.max(bx1-bx0,need));
     const a=e.align==='l'?'l':e.align==='r'?'r':'c';
-    const x=a==='l'?Math.min(bx0,W-SM-bw):a==='r'?Math.max(bx1,SM+bw):(bx0+bx1)/2;
-    const nlines=e.role==='wine'?Math.max(1,Math.min(2,+e.lines||1)):1;
-    const size=Math.max(MIN7,Math.min(H*0.2,((e.box.h||0.05)*H*0.82)/nlines));
-    body+=sBlock(str,{x,top:by0,maxW:bw,size,min:Math.max(MIN7,size*0.55),
-      f:fam0,w:+e.weight||400,
-      fill:guard(e.colour),a,caps:!!e.caps,tr:tr0,
-      halo:e.role==='legal',
-      lines:e.role==='wine'?2:nlines,lh:1.04}).svg;
+    const x=a==='l'?bx0:a==='r'?bx1:(bx0+bx1)/2;
+    body+=sBlock(str,{x,top:by0,maxW:bw,size,min:MIN7,
+      f:fam0,w:wt0,fill:guard(e.colour),a,caps:!!e.caps,tr:tr0,
+      halo:e.role==='legal',lines:nlines,lh:1.04}).svg;
   }
   // the legal line is law — if the dream forgot it, it prints anyway
   if(!seen.legal&&ROLE_TEXT.legal)

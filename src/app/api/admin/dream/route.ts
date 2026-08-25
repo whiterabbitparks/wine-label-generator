@@ -3,6 +3,8 @@ import { requestIsAuthenticated } from "@/lib/admin/session";
 import { generateOpenAIImage } from "@/lib/image-provider/openai";
 import { generateImageWithRetry, keyArtwork } from "@/lib/image-provider";
 import { getDb } from "@/lib/db";
+import { PNG } from "pngjs";
+import { analyzeArtwork } from "@/lib/admin/art-analysis";
 
 /* DREAM ENGINE v2 (owner directive 2026-08-25, branch POPIKA_ALTERNATIVE_ENGINE).
 
@@ -166,25 +168,72 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: `transcription failed: ${e instanceof Error ? e.message : e}` }, { status: 502 });
   }
 
-  // 2. artwork — the DREAM ITSELF is the visual reference (owner's choice):
-  //    same illustration, no text, white ground; then finished + keyed.
+  /* 1b. COLOURS ARE MEASURED, NEVER GUESSED (owner report 2026-08-25: the
+     vision model's hex guesses gave blue-grey text and an olive ground
+     where the dream is warm parchment). We own the dream's pixels: ground
+     = the dominant light tone of the page; each element's ink = the mean
+     of the dark glyph pixels inside its own transcribed box. */
+  try {
+    const m = dream.match(/^data:image\/png;base64,(.+)$/);
+    if (m) {
+      const png = PNG.sync.read(Buffer.from(m[1], "base64"));
+      const { width: PW, height: PH, data: px } = png;
+      const hex = (r: number, g: number, b: number) =>
+        "#" + [r, g, b].map((v) => Math.round(v).toString(16).padStart(2, "0")).join("").toUpperCase();
+      // ground: mean of light pixels across the page
+      let gr = 0, gg = 0, gb = 0, gn = 0;
+      for (let y = 0; y < PH; y += 7) for (let x = 0; x < PW; x += 7) {
+        const i = (y * PW + x) * 4;
+        if (Math.min(px[i], px[i + 1], px[i + 2]) > 150) { gr += px[i]; gg += px[i + 1]; gb += px[i + 2]; gn++; }
+      }
+      const sp = spec as { ground?: string; elements?: { box?: { x: number; y: number; w: number; h: number }; colour?: string }[] };
+      if (gn > 50) sp.ground = hex(gr / gn, gg / gn, gb / gn);
+      for (const e of sp.elements || []) {
+        const b = e.box; if (!b) continue;
+        const x0 = Math.max(0, Math.floor(b.x * PW)), x1 = Math.min(PW, Math.ceil((b.x + b.w) * PW));
+        const y0 = Math.max(0, Math.floor(b.y * PH)), y1 = Math.min(PH, Math.ceil((b.y + b.h) * PH));
+        let r = 0, g = 0, bb = 0, n = 0;
+        for (let y = y0; y < y1; y += 2) for (let x = x0; x < x1; x += 2) {
+          const i = (y * PW + x) * 4;
+          if (Math.min(px[i], px[i + 1], px[i + 2]) < 170) { r += px[i]; g += px[i + 1]; bb += px[i + 2]; n++; }
+        }
+        if (n > 12) e.colour = hex(r / n, g / n, bb / n);
+      }
+    }
+  } catch {}
+
+  // 2. artwork — the DREAM ITSELF is the visual reference (owner's choice),
+  //    generated IN THE ASPECT OF ITS REGION (a tall region needs a tall
+  //    artwork — the landscape-only default shrank the dream's full-height
+  //    illustration into a floating postcard, live-observed).
   let artwork: string | null = null;
-  const art = (spec as { artwork?: { subject?: string; palette?: string[] } }).artwork;
+  let artAlign = "xMidYMid";
+  const art = (spec as { artwork?: { subject?: string; palette?: string[]; box?: { w: number; h: number } } }).artwork;
   try {
     const palette = (art?.palette || []).filter((h) => /^#[0-9a-fA-F]{6}$/.test(h));
+    const bx = art?.box;
+    const regionAspect = bx && bx.h > 0 ? (bx.w * 1536) / (bx.h * 1024) : 1.5;
+    const size = regionAspect < 0.83 ? { w: 1024, h: 1536 } : regionAspect > 1.2 ? { w: 1536, h: 1024 } : { w: 1024, h: 1024 };
     const artPrompt =
       `Recreate ONLY the illustration from this label design — the exact same subject, composition, colours and technique — ` +
-      `as standalone artwork on a pure white background. ` +
+      `as standalone artwork filling the whole canvas. ` +
       (art?.subject ? `The illustration: ${art.subject}. ` : "") +
-      `Remove ALL text, letters, numbers and typography completely. No borders or frames; the artwork's edges dissolve into white.`;
+      `Remove ALL text, letters, numbers and typography completely. No borders or frames.`;
     const raw = await generateImageWithRetry({
-      prompt: artPrompt, size: "landscape", provider: "openai",
+      prompt: artPrompt, size, provider: "openai",
       reference: dream, paletteLock: palette.length ? palette : undefined,
     } as never);
+    // subject-aware cover-crop: aim the slice at the ink centroid so the
+    // crop never amputates the subject (live-observed: the man cut at the edge)
+    try {
+      const an = analyzeArtwork(raw);
+      const cx = an?.centroid?.x ?? 0.5, cy = an?.centroid?.y ?? 0.5;
+      artAlign = `x${cx < 0.42 ? "Min" : cx > 0.58 ? "Max" : "Mid"}Y${cy < 0.42 ? "Min" : cy > 0.58 ? "Max" : "Mid"}`;
+    } catch {}
     artwork = keyArtwork(raw);
   } catch {
     artwork = null;
   }
 
-  return NextResponse.json({ spec, artwork, fonts: GOOGLE_FONTS });
+  return NextResponse.json({ spec, artwork, artAlign, fonts: GOOGLE_FONTS });
 }
