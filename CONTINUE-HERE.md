@@ -1061,3 +1061,11 @@ composition-contract tightening, then customer wiring.
   full-bleed background reproduction can DRIFT badly (subject re-centred,
   scene ground dropped to white) — needs a mechanical composition check
   vs the dream with retry. Both are the named next fixes.
+- CLASSIC RUNS THE DREAM ENGINE (owner 2026-08-25): /classic keeps its UI
+  untouched; "Show Labels" now runs THREE dream flows (one per style,
+  parallel, ~2min, ~20-25¢) via /api/dream-label; renderStyleOptions is
+  patched at the host so the style cards/lightbox/resize render fitted
+  dream replicas (gen429 retry guards the parallel gpt burst). Notes:
+  "Layout alternatives" is inert in dream mode (specs are fixed per
+  generation); DEMO_FILL example values (e.g. "Margaux AOC") still leak
+  into dream briefs for empty fields — standing pre-launch revert item.

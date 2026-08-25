@@ -48,6 +48,20 @@ function labelTexts(d: Record<string, string>) {
 }
 
 
+/* three styles dream in parallel from the classic page — a burst can trip
+   the images rate limit; honour the hint and retry once */
+async function gen429<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (!/429|rate.?limit/i.test(msg)) throw e;
+    const hinted = msg.match(/try again in (\d+(?:\.\d+)?)s/i);
+    await new Promise((r) => setTimeout(r, hinted ? Math.ceil(parseFloat(hinted[1]) * 1000) + 1000 : 20000));
+    return fn();
+  }
+}
+
 export interface DreamParams { vision: string; style?: string; data: Record<string, string>; sketch?: string | null }
 export interface RebuildParams { dream: string; vision: string; data: Record<string, string>; style?: string }
 
@@ -100,7 +114,7 @@ export async function runDreamPhase(p: DreamParams): Promise<{ dream: string; pr
       const makeDream = async (extra = "") => {
         const job: Record<string, unknown> = { prompt: prompt + dr.clauses + extra, size: "landscape" };
         if (body.sketch && String(body.sketch).startsWith("data:image/")) job.reference = body.sketch;
-        return generateOpenAIImage(job as never);
+        return gen429(() => generateOpenAIImage(job as never));
       };
       let dream = await makeDream();
       try {
@@ -273,7 +287,7 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
         `and keep EVERYTHING else identical — the full scene, textures, colours, composition, edge to edge. ` +
         `Where text was, continue the underlying scene/texture naturally.` + styleLangF;
       const makeFull = (extra = "") =>
-        generateOpenAIImage({ prompt: fullPrompt + extra, size: { w: 1536, h: 1024 }, reference: dream } as never);
+        gen429(() => generateOpenAIImage({ prompt: fullPrompt + extra, size: { w: 1536, h: 1024 }, reference: dream } as never));
       const craftFull = (base: string) =>
         restyleWithFlux(
           base,
@@ -328,7 +342,7 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
       ` Single composition on a pure white background; its edges dissolve into white; no borders or frames.`;
 
     const makeBase = (extra = "") =>
-      generateOpenAIImage({ prompt: sketchPrompt + extra, size, reference: dream } as never);
+      gen429(() => generateOpenAIImage({ prompt: sketchPrompt + extra, size, reference: dream } as never));
     const craft = (base: string) =>
       restyleWithFlux(
         base,
