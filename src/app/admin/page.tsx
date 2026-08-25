@@ -1773,6 +1773,10 @@ function ProofBenchTab() {
   const [rej, setRej] = useState<Record<string, { chips: string[]; note: string }>>({});
   const [showZones, setShowZones] = useState(true);
   const [intg, setIntg] = useState(false);
+  const [dreamBusy, setDreamBusy] = useState(false);
+  const [dreamStyle, setDreamStyle] = useState("contemporary");
+  const [dreamErr, setDreamErr] = useState("");
+  const [dream, setDream] = useState<{ dream: string; svg: string; subject: string } | null>(null);
   const [engineReady, setEngineReady] = useState(false);
   const lastResult = useRef<{ images?: Record<string, { url: string; subStyleLabel?: string }>; layoutHints?: Record<string, { imgAnalysis?: ProofAnalysis }> } | null>(null);
 
@@ -1869,6 +1873,34 @@ function ProofBenchTab() {
     });
   }
 
+  async function dreamLabel() {
+    setDreamBusy(true); setDreamErr(""); setDream(null);
+    try {
+      // approved font family names ride to the transcriber
+      const h = await fetch("/api/layout-hints").then((r) => r.json());
+      const fam = new Set<string>();
+      for (const st of Object.values((h.hints || {}) as Record<string, Record<string, unknown>>)) {
+        for (const k of ["heroFonts", "secondaryFonts", "smallFonts"]) {
+          for (const fr of ((st as Record<string, unknown>)[k] as unknown[][]) || [])
+            if (Array.isArray(fr) && fr[0]) fam.add(String(fr[0]));
+        }
+      }
+      const res = await fetch("/api/admin/dream", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vision, style: dreamStyle, data: briefData(), fonts: [...fam] }),
+      });
+      const b = await res.json();
+      if (!res.ok) throw new Error(b.error || `dream failed (${res.status})`);
+      const w = window as unknown as { LabelEngine: { renderDreamSpec: (spec: unknown, d: unknown, o: unknown, art: string | null) => string; ensureFonts: () => Promise<void> } };
+      await w.LabelEngine.ensureFonts();
+      const svg = w.LabelEngine.renderDreamSpec(b.spec, briefData(), { widthMM: 110, heightMM: 80 }, b.artwork);
+      setDream({ dream: b.dream, svg, subject: b.spec?.artwork?.subject || "" });
+    } catch (e) {
+      setDreamErr(e instanceof Error ? e.message : String(e));
+    }
+    setDreamBusy(false);
+  }
+
   async function submit(style: string, verdict: "approve" | "reject") {
     const r = rej[style] || { chips: [], note: "" };
     const c = cards.find((x) => x.style === style);
@@ -1919,6 +1951,35 @@ function ProofBenchTab() {
           </div>}
         </div>
         {err && <p style={{ color: "#a03030", fontSize: 13 }}>{err}</p>}
+      </div>
+
+      <div style={S.card}>
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          <b style={{ fontSize: 13 }}>Dream mode</b>
+          <span style={{ fontSize: 11.5, color: "#8a887e" }}>the model designs the whole label; the engine rebuilds it as rule-true vector with your real text</span>
+          <select style={{ ...S.input, width: 150 }} value={dreamStyle} onChange={(e) => setDreamStyle(e.target.value)}>
+            {PROOF_STYLES.map((k) => <option key={k} value={k}>{k}</option>)}
+          </select>
+          <button style={S.btn} disabled={dreamBusy || !engineReady} onClick={dreamLabel}>
+            {dreamBusy ? "Dreaming…" : "Dream a label"}
+          </button>
+        </div>
+        {dreamErr && <p style={{ color: "#a03030", fontSize: 13 }}>{dreamErr}</p>}
+        {dream && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
+            <div>
+              <div style={{ fontSize: 11, color: "#8a887e", marginBottom: 4 }}>the dream (sketch — typos allowed)</div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={dream.dream} alt="dream" style={{ width: "100%", border: "1px solid #e2e1da" }} />
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: "#8a887e", marginBottom: 4 }}>the rebuild (real text, vector, rules enforced)</div>
+              <div style={{ border: "1px solid #e2e1da" }}
+                dangerouslySetInnerHTML={{ __html: dream.svg.replace(/width="110mm" height="80mm"/, 'width="100%"') }} />
+              {dream.subject && <div style={{ fontSize: 10.5, color: "#8a887e", marginTop: 4 }}>artwork commissioned from: “{dream.subject}”</div>}
+            </div>
+          </div>
+        )}
       </div>
 
       {cards.map((c) => (

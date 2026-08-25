@@ -2274,6 +2274,81 @@ function withLook(key,seed,fn){
   FORCED_V=isFinite(+L.variant)?+L.variant:null;
   try{return fn(+L.seed||0);}finally{STYLE_HINTS[key]=prev;FORCED_V=null;}
 }
+/* DREAM SPEC RENDERER (owner GO 2026-08-25, POPIKA_ALTERNATIVE_ENGINE).
+   Rebuilds a transcribed dream layout as REAL vector type: the spec brings
+   geometry, fonts, colours; the BRIEF brings every word (typos impossible);
+   this renderer brings the law — 5mm text margins, 7pt floor (sBlock),
+   contrast guard, and a complete legal line even when the dream forgot it.
+   Never reached by any normal render path (goldens/parity untouched). */
+function renderDreamSpec(spec,d,opts,artSrc){
+  opts=opts||{};
+  const twMM=Math.max(30,(+opts.widthMM||110)), thMM=Math.max(30,(+opts.heightMM||80));
+  const W=twMM*10, H=thMM*10, f=sFields(d);
+  const g0=hslOf(spec&&spec.ground)?String(spec.ground).toUpperCase():'#FFFFFF';
+  const gc=hslOf(g0);
+  const ROLE_TEXT={
+    wine:f.wine, producer:f.producer, appellation:f.appellation, grape:f.grape,
+    vintage:f.vintage, region:[f.region,f.special].filter(Boolean).join(' \u00b7 '),
+    classification:f.classification, special:f.special,
+    legal:[(f.descriptor||'').replace(/,/g,''),f.alc].filter(Boolean).join(' / ')
+  };
+  const guard=(hex)=>{ // ΔL≥0.32 from the ground, same law as palAdapt
+    let v=hslOf(hex)?String(hex):'#1E1B18';
+    const towardWhite=gc.L<0.5;
+    for(let t=0;t<6;t++){
+      const c=hslOf(v); if(!c||Math.abs(c.L-gc.L)>=0.32)break;
+      const n=parseInt(v.slice(1),16),r=(n>>16)&255,gg=(n>>8)&255,b=n&255;
+      const mix=(x)=>Math.round(towardWhite?x+(255-x)*0.3:x*0.7);
+      v='#'+[mix(r),mix(gg),mix(b)].map(x=>x.toString(16).padStart(2,'0')).join('').toUpperCase();
+    }
+    return v;
+  };
+  let body='';
+  // artwork at the dream's position (exact placement — no sliding)
+  const ab=spec&&spec.artwork&&spec.artwork.box;
+  if(artSrc&&ab&&ab.w>0&&ab.h>0){
+    /* inflate slightly: 'meet' letterboxing plus the artwork's own white
+       fringe otherwise renders visibly smaller than the dream's mass */
+    const inf=1.12, aw=Math.min(W*1.04,ab.w*W*inf), ah=Math.min(H*1.04,ab.h*H*inf);
+    const ax=Math.max(-0.02*W,ab.x*W-(aw-ab.w*W)/2), ay=Math.max(-0.02*H,ab.y*H-(ah-ab.h*H)/2);
+    const sp=gc.L<0.60;
+    body+=`<image x="${ax.toFixed(1)}" y="${ay.toFixed(1)}" width="${aw.toFixed(1)}" height="${ah.toFixed(1)}" preserveAspectRatio="xMidYMid meet" xlink:href="${artSrc}" href="${artSrc}"${sp?' data-sp="1"':''} style="mix-blend-mode:${sp?'normal':'multiply'}"/>`;
+  }
+  const els=(spec&&Array.isArray(spec.elements)?spec.elements:[]).filter(e=>e&&e.box&&ROLE_TEXT[e.role]);
+  const seen={};
+  for(const e of els){
+    if(seen[e.role])continue; seen[e.role]=1;
+    const str=ROLE_TEXT[e.role]; if(!str)continue;
+    // clamp the box inside the 5mm text margins (hard rule)
+    const bx0=Math.max(SM,Math.min(W-SM,e.box.x*W)), bx1=Math.max(SM,Math.min(W-SM,(e.box.x+e.box.w)*W));
+    const by0=Math.max(SM,Math.min(H-SM,e.box.y*H));
+    /* WORD LOSS IS FORBIDDEN: narrow spec boxes must widen, never drop
+       words (wrapFit silently drops trailing words at the 7pt floor —
+       live-observed "Kakheti," and a truncated legal line). Floors: any
+       element ≥34% of the label width, the legal line ≥60% with a halo
+       so it survives crossing artwork; the wine name may take 2 lines. */
+    const floorW=e.role==='legal'?W*0.6:W*0.34;
+    const bw=Math.max(floorW,bx1-bx0);
+    const a=e.align==='l'?'l':e.align==='r'?'r':'c';
+    const x=a==='l'?Math.min(bx0,W-SM-bw):a==='r'?Math.max(bx1,SM+bw):(bx0+bx1)/2;
+    const size=Math.max(MIN7,Math.min(H*0.2,(e.box.h||0.05)*H*0.78));
+    body+=sBlock(str,{x,top:by0,maxW:bw,size,min:Math.max(MIN7,size*0.55),
+      f:e.font?`'${String(e.font).replace(/'/g,'')}'`:SF.jost,w:+e.weight||400,
+      fill:guard(e.colour),a,caps:!!e.caps,tr:+e.tracking>0?Math.min(0.4,+e.tracking):0,
+      halo:e.role==='legal',
+      lines:e.role==='wine'?2:1,lh:1.08}).svg;
+  }
+  // the legal line is law — if the dream forgot it, it prints anyway
+  if(!seen.legal&&ROLE_TEXT.legal)
+    body+=sBlock(ROLE_TEXT.legal,{x:W/2,top:H-SM-H*0.024,maxW:W-2*SM,size:H*0.022,min:MIN7,
+      f:SF.jost,w:400,fill:guard('#555555'),a:'c'}).svg;
+  if(!seen.wine&&f.wine)
+    body+=sBlock(f.wine,{x:W/2,top:H*0.42,maxW:W-2*SM,size:H*0.09,min:MIN7,f:SF.fraunces,w:600,
+      fill:guard('#1E1B18'),a:'c',lines:2}).svg;
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W.toFixed(1)} ${H.toFixed(1)}" width="${twMM}mm" height="${thMM}mm">`+
+    `<defs><style><![CDATA[@import url('${FONTS_URL}');${EXTRA_FONTS_URL?`@import url('${EXTRA_FONTS_URL}');`:''}]]></style></defs>`+
+    `<rect x="0" y="0" width="${W.toFixed(1)}" height="${H.toFixed(1)}" fill="${g0}"/>`+body+`</svg>`;
+}
 function renderStyleOptions(d,order,opts){
   opts=opts||{}; const seed=opts.seed|0;
   const twMM=Math.max(30,(+opts.widthMM||110)), thMM=Math.max(30,(+opts.heightMM||80));
@@ -2309,5 +2384,5 @@ function variantFor(key,seed){
   if(key==='punk')return pickVariant('punk',seed,STYLE_BOXES.punk.length);
   return 0;
 }
-window.LabelEngine={FONTS_URL,ensureFonts,renderPriorityOptions,renderStyleOptions,STYLE_LIST,styleZones,setStyleHints,variantFor,previewLayout,renderOptions,renderLabel,LC_COMPS};
+window.LabelEngine={FONTS_URL,ensureFonts,renderPriorityOptions,renderStyleOptions,renderDreamSpec,STYLE_LIST,styleZones,setStyleHints,variantFor,previewLayout,renderOptions,renderLabel,LC_COMPS};
 })();

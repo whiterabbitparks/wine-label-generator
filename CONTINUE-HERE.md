@@ -962,3 +962,27 @@ then the LLM composer emitting engine specs.
   artwork. Reachable only via the __integrated hint flag (Proof Bench
   "Integrated preview" toggle) — customers/goldens/parity untouched until
   the owner blesses the direction. stackUp forwards halo.
+
+## 11. BRANCH POPIKA_ALTERNATIVE_ENGINE (owner GO 2026-08-25)
+
+The pivot after the owner's experiment (raw gpt-image whole-label beat our
+comps artistically): the model becomes the COMPOSER, its output a BLUEPRINT
+never material. Pipeline v1 (all live in Proof Bench "Dream mode"):
+  DREAM  /api/admin/dream: gpt-image designs the complete label (sketch,
+         typos allowed; prompt carries real brief text + approved-font
+         spirit + style mood).
+  TRANSCRIBE  gpt-4o reads the dream as GEOMETRY → JSON spec: per element
+         role/box/align/caps/tracking/nearest-approved-font/weight/colour;
+         ground; artwork {box, subject, palette}. One element per role
+         (split wine names covered by one box).
+  ARTWORK  clean gen from the dream's subject (openai path, palette lock,
+         finish, keying).
+  REBUILD  engine renderDreamSpec(): REAL brief text as vector type at the
+         transcribed geometry — 5mm margins clamped, 7pt floor, contrast
+         guard, wine may wrap 2 lines, legal line always prints (halo),
+         word-dropping forbidden (min widths 34%/60%). Artwork placed
+         exactly (inflated 1.12 vs 'meet' letterboxing), multiply/screen-
+         print by ground. Never reached by normal paths (goldens 72/72).
+Cost ~5-8¢ + ~60s per dream at dev quality. Next: fidelity score
+(overlay-compare), approve-as-look for dream specs, richer font library,
+composition-contract tightening, then customer wiring.
