@@ -1086,14 +1086,3 @@ composition-contract tightening, then customer wiring.
   silently rendering an empty label. NOTE: composition cards exist only
   for boards analyzed after this — re-run "Analyze board" for
   contemporary and punk.
-- FLUX/LoRA RETIRED (owner 2026-08-26; ROLLBACK ANCHOR: git tag
-  phase-flux-lora): the dream engine's artwork is ChatGPT-only now — the
-  dream's own crop as reference + card/charter language + rules/verify.
-  IMAGE_PROVIDER=openai (NOTE: .env.local is cross-branch — old demo
-  branches would need hybrid restored to behave as before). Image Refs /
-  Image Play / per-reference card system all KEPT and still steer via
-  language; Train-LoRA button remains but nothing consumes LoRAs. Cost
-  ~5-6¢/label. First gpt-only E2E: artwork style faithful (engraved
-  vignette held); open items — arched text unsupported (dream heroes on
-  traditional arc often), and an intermittent transcription drop lost the
-  bottom text stack (fidelity 71% reflected it).
