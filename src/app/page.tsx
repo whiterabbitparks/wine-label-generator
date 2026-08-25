@@ -107,9 +107,9 @@ export default function DreamPage() {
           await new Promise((r) => setTimeout(r, 900));
         }
       }
-      const w = window as unknown as { LabelEngine: { renderDreamSpec: (spec: unknown, d: unknown, o: unknown, art: string | null, align?: string, mode?: string) => string } };
-      const svg = w.LabelEngine.renderDreamSpec(result.spec, briefData(), { widthMM: 110, heightMM: 80 }, result.artwork, result.artAlign, result.artworkMode);
-      setResults((rs) => [{ dream: result!.dream, svg }, ...rs]);
+      const w = window as unknown as { LabelEngine: { renderDreamFitted: (spec: unknown, d: unknown, o: unknown, art: string | null, align?: string, mode?: string) => { svg: string } } };
+      const fit = w.LabelEngine.renderDreamFitted(result.spec, briefData(), { widthMM: 110, heightMM: 80 }, result.artwork, result.artAlign, result.artworkMode);
+      setResults((rs) => [{ dream: result!.dream, svg: fit.svg }, ...rs]);
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
     }

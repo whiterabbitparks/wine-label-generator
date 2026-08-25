@@ -1046,3 +1046,18 @@ composition-contract tightening, then customer wiring.
   style pills with counts. Known weak point unchanged: small text over
   busy scene areas is marginal (halo only) — local-luminance placement
   remains the named next fix.
+- DREAM RULES + FIDELITY LOOP (owner GO 2026-08-25): lib/dream/rules.ts —
+  curated built-ins (no frames · no invented medals/crests/dates/extra
+  text · no ligature/decorative lettering · no ornaments around texts ·
+  flat label no mockup · no gloss · timeless · qvevri), story outranks
+  rules, owner editor in Rules tab (settings dream-rules, verified like
+  image rules, one strict redream on violation). Fidelity: ink-snap
+  (colour-keyed glyph-block measurement replaces the vision model's
+  guessed boxes), measured text heights drive font size, renderDreamFitted
+  runs up to 2 correction passes and reports a geometry score.
+  HONEST FINDINGS from the first E2E: (1) the score EXCLUDES artwork
+  placement, so it can read ~95% while a misplaced artwork sits under
+  correctly-placed text — score must include artwork deviation; (2) the
+  full-bleed background reproduction can DRIFT badly (subject re-centred,
+  scene ground dropped to white) — needs a mechanical composition check
+  vs the dream with retry. Both are the named next fixes.

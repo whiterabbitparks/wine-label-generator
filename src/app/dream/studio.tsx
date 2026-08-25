@@ -31,7 +31,7 @@ interface DreamCard {
   verdict?: string;
   comment: string;
   rebuilding?: boolean;
-  rebuilt?: { svg: string; artwork: string | null };
+  rebuilt?: { svg: string; artwork: string | null; fidelity?: number | null };
   rebuildErr?: string;
   overlay?: boolean;
 }
@@ -115,9 +115,9 @@ export function StudioCore() {
           await new Promise((r) => setTimeout(r, 900)); // let the faces land
         }
       }
-      const w = window as unknown as { LabelEngine: { renderDreamSpec: (spec: unknown, d: unknown, o: unknown, art: string | null, align?: string, mode?: string) => string } };
-      const svg = w.LabelEngine.renderDreamSpec(b.spec, briefData(), { widthMM: 110, heightMM: 80 }, b.artwork, b.artAlign, b.artworkMode);
-      setCards((cs) => cs.map((x) => (x.id === id ? { ...x, rebuilding: false, rebuilt: { svg, artwork: b.artwork } } : x)));
+      const w = window as unknown as { LabelEngine: { renderDreamFitted: (spec: unknown, d: unknown, o: unknown, art: string | null, align?: string, mode?: string) => { svg: string; fidelity: number | null } } };
+      const fit = w.LabelEngine.renderDreamFitted(b.spec, briefData(), { widthMM: 110, heightMM: 80 }, b.artwork, b.artAlign, b.artworkMode);
+      setCards((cs) => cs.map((x) => (x.id === id ? { ...x, rebuilding: false, rebuilt: { svg: fit.svg, artwork: b.artwork, fidelity: fit.fidelity } } : x)));
     } catch (e) {
       setCards((cs) => cs.map((x) => (x.id === id ? { ...x, rebuilding: false, rebuildErr: e instanceof Error ? e.message : String(e) } : x)));
     }
@@ -166,7 +166,7 @@ export function StudioCore() {
               {c.rebuilt ? (
                 <div>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                    <div style={S.sub}>the replica (real text · vector · 7pt + 5mm laws only)</div>
+                    <div style={S.sub}>the replica (real text · vector · 7pt + 5mm laws only){typeof c.rebuilt.fidelity === "number" ? ` · geometry fidelity ~${c.rebuilt.fidelity}%` : ""}</div>
                     <button style={{ ...S.btnGhost, padding: "2px 8px", fontSize: 11 }}
                       onClick={() => setCards((cs) => cs.map((x) => (x.id === c.id ? { ...x, overlay: !x.overlay } : x)))}>
                       {c.overlay ? "overlay off" : "overlay dream"}

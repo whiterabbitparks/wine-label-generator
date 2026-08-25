@@ -2194,6 +2194,39 @@ function styleIntegrated(f,W,H,seed,twMM,thMM,styleKey){
     {str:[reg,desc,alc].filter(Boolean).join(' / '),size:H*0.022,f:F3?F3[0]:(SF.jost),w:F3?F3[1]:(400),fill:INK,halo:true,caps:capsFor(F3,false)}],SM,H-SM-2,H*0.008,'l',cW*0.72).svg;
   return sWrap(W,H,twMM,thMM,BG,body);
 }
+/* FITTED DREAM RENDER (owner GO 2026-08-25): the closed loop. Render,
+   compare every placed text block against its measured target from the
+   dream, nudge position (and size where the width-fit allows), render
+   again — then report an honest fidelity score instead of hoping. */
+function renderDreamFitted(spec,d,opts,artSrc,artAlign,artMode){
+  const els=(spec&&Array.isArray(spec.elements))?spec.elements:[];
+  let svg='', placed=[];
+  for(let pass=0;pass<3;pass++){
+    PLACED=[];
+    svg=renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode);
+    placed=PLACED; PLACED=null;
+    if(pass===2)break;
+    let adjusted=false;
+    for(const p of placed){
+      const e=els.find(x=>x&&x.role===p.role); if(!e||!e.snapped)continue;
+      const dy=p.ty-p.y;                       // fraction of label height
+      if(Math.abs(dy)>0.004){e.__dy=(+e.__dy||0)+dy*(opts&&opts.heightMM?opts.heightMM*10:800);adjusted=true;}
+      const hr=p.th>0?p.h/p.th:1;              // placed vs target height
+      if(hr>1.12||hr<0.88){e.__ds=Math.min(1.6,Math.max(0.5,(+e.__ds||1)/hr));adjusted=true;}
+    }
+    if(!adjusted)break;
+  }
+  /* fidelity: mean deviation of placed vs target, position + size */
+  let err=0,n=0;
+  for(const p of placed){
+    if(!(p.tw>0&&p.th>0))continue;
+    const exy=Math.hypot(p.x+p.w/2-(p.tx+p.tw/2),p.y+p.h/2-(p.ty+p.th/2));
+    const eh=p.th>0?Math.min(1,Math.abs(p.h-p.th)/p.th):0;
+    err+=Math.min(1,exy*3+eh*0.5);n++;
+  }
+  const fidelity=n?Math.round(100*(1-err/n)):null;
+  return {svg,fidelity,placed};
+}
 const STYLE_LIST=[
   {key:'traditional',name:'Traditional'},
   {key:'contemporary',name:'Contemporary'},
@@ -2281,6 +2314,7 @@ function withLook(key,seed,fn){
    this renderer brings the law — 5mm text margins, 7pt floor (sBlock),
    contrast guard, and a complete legal line even when the dream forgot it.
    Never reached by any normal render path (goldens/parity untouched). */
+let PLACED=null;
 function renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode){
   opts=opts||{};
   const twMM=Math.max(30,(+opts.widthMM||110)), thMM=Math.max(30,(+opts.heightMM||80));
@@ -2345,16 +2379,28 @@ function renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode){
     }
     const w100=measure(longest,100,fam0,wt0,false,100*tr0)||1;
     const sizeW=((bx1-bx0)*100)/w100;
-    const sizeH=((e.box.h||0.05)*H*0.9)/nlines;
+    /* measured size (owner GO 2026-08-25): when the box was ink-snapped,
+       textH is the TRUE glyph-block height in the dream — convert to font
+       size (caps ≈ cap-height = 0.72em; mixed case spans ascender+descender
+       ≈ 1.0em per line). Falls back to the box heuristic otherwise. */
+    const sizeH=e.textH>0
+      ?((e.textH*H)/nlines)*(e.caps?1.30:0.96)
+      :((e.box.h||0.05)*H*0.9)/nlines;
     const size=Math.max(MIN7,Math.min(sizeH,sizeW,H*0.24));
     /* the box only widens if 7pt still cannot hold every word */
     const need=measure(longest,MIN7,fam0,wt0,false,MIN7*tr0)+4;
     const bw=Math.min(W-2*SM,Math.max(bx1-bx0,need));
     const a=e.align==='l'?'l':e.align==='r'?'r':'c';
     const x=a==='l'?bx0:a==='r'?bx1:(bx0+bx1)/2;
-    body+=sBlock(str,{x,top:by0,maxW:bw,size,min:MIN7,
+    const preIR=INK_RECTS.length;
+    body+=sBlock(str,{x,top:by0+(+e.__dy||0),maxW:bw,size:size*(+e.__ds||1),min:MIN7,
       f:fam0,w:wt0,fill:guard(e.colour),a,caps:!!e.caps,tr:tr0,
       halo:e.role==='legal'||(artMode==='full'&&e.role!=='wine'),lines:nlines,lh:1.04}).svg;
+    if(PLACED&&INK_RECTS.length>preIR){
+      const r=INK_RECTS[INK_RECTS.length-1];
+      PLACED.push({role:e.role,x:r.x/W,y:r.y/H,w:(r.x2-r.x)/W,h:(r.y2-r.y)/H,
+        tx:e.box.x,ty:e.box.y,tw:e.box.w,th:e.box.h,snapped:!!e.snapped});
+    }
   }
   // the legal line is law — if the dream forgot it, it prints anyway
   if(!seen.legal&&ROLE_TEXT.legal)
@@ -2402,6 +2448,6 @@ function variantFor(key,seed){
   if(key==='punk')return pickVariant('punk',seed,STYLE_BOXES.punk.length);
   return 0;
 }
-window.LabelEngine={FONTS_URL,ensureFonts,renderPriorityOptions,renderStyleOptions,renderDreamSpec,STYLE_LIST,styleZones,setStyleHints,variantFor,previewLayout,renderOptions,renderLabel,LC_COMPS};
+window.LabelEngine={FONTS_URL,ensureFonts,renderPriorityOptions,renderStyleOptions,renderDreamSpec,renderDreamFitted,STYLE_LIST,styleZones,setStyleHints,variantFor,previewLayout,renderOptions,renderLabel,LC_COMPS};
 })();
 

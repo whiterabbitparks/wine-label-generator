@@ -4,6 +4,7 @@ import { restyleWithFlux } from "@/lib/image-provider/flux";
 import { getProfiles } from "@/lib/admin/style-refs";
 import { feedbackAggregates } from "@/lib/admin/feedback";
 import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, WHITE_BG_RULE, NO_BORDER_RULE } from "@/lib/admin/image-rules";
+import { assembleDreamRules } from "@/lib/dream/rules";
 import { analyzeArtwork } from "@/lib/admin/art-analysis";
 import { getDb } from "@/lib/db";
 import { PNG } from "pngjs";
@@ -92,9 +93,21 @@ export async function runDreamPhase(p: DreamParams): Promise<{ dream: string; pr
       `Integrated, gallery-quality composition — type and image designed as one whole.` +
       guidance;
     try {
-      const job: Record<string, unknown> = { prompt, size: "landscape" };
-      if (body.sketch && String(body.sketch).startsWith("data:image/")) job.reference = body.sketch;
-      const dream = await generateOpenAIImage(job as never);
+      /* DREAM RULES (owner 2026-08-25): the same rule-then-verify treatment
+         the image pipeline always had — prompt clauses, a vision check on
+         the dream, one strict regeneration on violation. */
+      const dr = await assembleDreamRules(vision);
+      const makeDream = async (extra = "") => {
+        const job: Record<string, unknown> = { prompt: prompt + dr.clauses + extra, size: "landscape" };
+        if (body.sketch && String(body.sketch).startsWith("data:image/")) job.reference = body.sketch;
+        return generateOpenAIImage(job as never);
+      };
+      let dream = await makeDream();
+      try {
+        const check = await verifyImage(dream, dr.checks as never);
+        if (!check.ok)
+          dream = await makeDream(` STRICT — the previous design violated: ${check.violations.join(" | ")}. Follow every design law exactly.`);
+      } catch {}
       return { dream, prompt };
     } catch (e) {
       throw new Error(`dream failed: ${e instanceof Error ? e.message : e}`);
@@ -175,7 +188,7 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
         const i = (y * PW + x) * 4;
         if (Math.min(px[i], px[i + 1], px[i + 2]) > 150) { gr += px[i]; gg += px[i + 1]; gb += px[i + 2]; gn++; }
       }
-      const sp = spec as { ground?: string; elements?: { box?: { x: number; y: number; w: number; h: number }; colour?: string }[] };
+      const sp = spec as { ground?: string; elements?: { box?: { x: number; y: number; w: number; h: number }; colour?: string; caps?: boolean; lines?: number; snapped?: boolean; textH?: number }[] };
       if (gn > 50) sp.ground = hex(gr / gn, gg / gn, gb / gn);
       for (const e of sp.elements || []) {
         const b = e.box; if (!b) continue;
@@ -187,6 +200,40 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
           if (Math.min(px[i], px[i + 1], px[i + 2]) < 170) { r += px[i]; g += px[i + 1]; bb += px[i + 2]; n++; }
         }
         if (n > 12) e.colour = hex(r / n, g / n, bb / n);
+
+        /* INK SNAP (owner GO 2026-08-25): the vision model's box is only a
+           locator — its coordinates are routinely 5-10% off, and every size
+           inherits the error. Measure the TRUE glyph block instead: within
+           the box inflated 18%, collect pixels close to the element's own
+           sampled ink colour (colour-keying separates text from scene in
+           full-bleed dreams) and snap the box to their tight bounds. */
+        if (n > 12 && e.colour) {
+          const cN = parseInt(e.colour.slice(1), 16);
+          const cr = (cN >> 16) & 255, cg = (cN >> 8) & 255, cb = cN & 255;
+          const ix0 = Math.max(0, Math.floor((b.x - b.w * 0.18) * PW)), ix1 = Math.min(PW, Math.ceil((b.x + b.w * 1.18) * PW));
+          const iy0 = Math.max(0, Math.floor((b.y - b.h * 0.18) * PH)), iy1 = Math.min(PH, Math.ceil((b.y + b.h * 1.18) * PH));
+          let sx0 = PW, sy0 = PH, sx1 = -1, sy1 = -1, sn = 0;
+          for (let y = iy0; y < iy1; y++) for (let x = ix0; x < ix1; x++) {
+            const i = (y * PW + x) * 4;
+            if (Math.abs(px[i] - cr) + Math.abs(px[i + 1] - cg) + Math.abs(px[i + 2] - cb) < 150) {
+              sn++;
+              if (x < sx0) sx0 = x; if (x > sx1) sx1 = x;
+              if (y < sy0) sy0 = y; if (y > sy1) sy1 = y;
+            }
+          }
+          if (sn > 40 && sx1 > sx0 && sy1 > sy0) {
+            const nb = { x: sx0 / PW, y: sy0 / PH, w: (sx1 - sx0 + 1) / PW, h: (sy1 - sy0 + 1) / PH };
+            // sanity: the snap must stay near the located box
+            const ov =
+              Math.max(0, Math.min(nb.x + nb.w, b.x + b.w) - Math.max(nb.x, b.x)) *
+              Math.max(0, Math.min(nb.y + nb.h, b.y + b.h) - Math.max(nb.y, b.y));
+            if (ov > 0.3 * b.w * b.h) {
+              e.box = nb;
+              e.textH = nb.h; // measured glyph-block height (fraction of image)
+              e.snapped = true;
+            }
+          }
+        }
       }
     }
   } catch {}

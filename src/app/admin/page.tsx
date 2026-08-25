@@ -21,10 +21,42 @@ type Tab = (typeof TABS)[number];
 /* Rules for the NEW engine: the two fixed laws, plus the verified image
    rules (merged in below). Min-gap and artwork-fill are retired — the
    dream's geometry decides those now. */
+function DreamRulesCard() {
+  const [text, setText] = useState("");
+  const [saved, setSaved] = useState(false);
+  useEffect(() => { fetch("/api/admin/dream-rules").then((r) => r.json()).then((b) => setText(b.global || "")); }, []);
+  async function save() {
+    const r = await fetch("/api/admin/dream-rules", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ global: text }),
+    });
+    if (r.ok) { setSaved(true); setTimeout(() => setSaved(false), 2500); }
+  }
+  return (
+    <div style={S.card}>
+      <label style={{ ...S.label, margin: 0 }}>Dream rules</label>
+      <p style={{ fontSize: 12, color: "#6b6a60", margin: "6px 0 10px" }}>
+        One rule per line, plain English — every dream is <b>inspected against them</b> and regenerated
+        once on violation. Built-ins already active: no frames/borders · no invented medals, crests,
+        dates or extra text · no ligature/decorative lettering · no ornaments around texts · flat label,
+        no mockups · handmade print, no gloss · timeless neutrality · qvevri anatomy. The customer&rsquo;s
+        story always outranks a rule.
+      </p>
+      <textarea value={text} placeholder="e.g. never use pastel colours" onChange={(e) => setText(e.target.value)}
+        style={{ ...S.input, minHeight: 70 }} />
+      <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 8 }}>
+        <button style={S.btn} onClick={save}>Save dream rules</button>
+        {saved && <span style={{ fontSize: 12, color: "#5a6b3b" }}>Saved ✓ — applies to the next dream</span>}
+      </div>
+    </div>
+  );
+}
+
 function RulesTab() {
   const row = { display: "flex", gap: 12, alignItems: "center", padding: "10px 0", borderBottom: "1px solid #e5e4dc", fontSize: 13 } as const;
   return (
     <>
+      <DreamRulesCard />
       <div style={S.card}>
         <p style={{ fontSize: 13, color: "#4a4a42", marginTop: 0 }}>
           Hard rules — <b>enforced in the rendering engine</b>, not wishes:
