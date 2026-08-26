@@ -9,7 +9,7 @@ export const maxDuration = 300;
 
 export async function POST(req: Request) {
   if (!(await requestIsAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  let body: { phase?: string; vision?: string; style?: string; data?: Record<string, string>; dream?: string; sketch?: string | null };
+  let body: { phase?: string; vision?: string; style?: string; data?: Record<string, string>; dream?: string; sketch?: string | null; reuseArtwork?: string | null };
   try {
     body = await req.json();
   } catch {
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     if (body.phase === "rebuild") {
       const dream = String(body.dream || "");
       if (!dream.startsWith("data:image/")) return NextResponse.json({ error: "rebuild needs the dream image" }, { status: 400 });
-      const r = await runRebuildPhase({ dream, vision: String(body.vision || ""), data: body.data || {}, style: body.style });
+      const r = await runRebuildPhase({ dream, vision: String(body.vision || ""), data: body.data || {}, style: body.style, reuseArtwork: body.reuseArtwork });
       return NextResponse.json(r);
     }
     const r = await runDreamPhase({ vision: String(body.vision || ""), style: body.style, data: body.data || {}, sketch: body.sketch });

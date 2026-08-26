@@ -2244,8 +2244,23 @@ function renderDreamFitted(spec,d,opts,artSrc,artAlign,artMode,artInk){
     if(Math.min(a.x+a.w,b2.x+b2.w)-Math.max(a.x,b2.x)>0.01&&
        Math.min(a.y+a.h,b2.y+b2.h)-Math.max(a.y,b2.y)>0.004)overlaps++;
   }
-  const fidelity=n?Math.max(0,Math.round(100*(1-err/n))-overlaps*15):null;
-  return {svg,fidelity,placed,overlaps};
+  /* art swallowing text is the worst failure — punish it hardest */
+  let artOver=0;
+  if(LAST_ART_RECT){
+    const Wpx=(opts&&opts.widthMM?opts.widthMM*10:1100), Hpx2=(opts&&opts.heightMM?opts.heightMM*10:800);
+    const ar={x:LAST_ART_RECT.x/Wpx,y:LAST_ART_RECT.y/Hpx2,w:LAST_ART_RECT.w/Wpx,h:LAST_ART_RECT.h/Hpx2};
+    for(const p of placed){
+      const e=els.find(x=>x&&x.role===p.role);
+      const dreamOverlap=e&&e.box&&spec&&spec.artwork&&spec.artwork.box&&(()=>{const b3=e.box,a3=spec.artwork.box;
+        const ix=Math.min(b3.x+b3.w,a3.x+a3.w)-Math.max(b3.x,a3.x);
+        const iy=Math.min(b3.y+b3.h,a3.y+a3.h)-Math.max(b3.y,a3.y);
+        return Math.max(0,ix)*Math.max(0,iy)>=0.25*b3.w*b3.h;})();
+      if(dreamOverlap)continue;
+      if(p.x<ar.x+ar.w&&p.x+p.w>ar.x&&p.y<ar.y+ar.h&&p.y+p.h>ar.y)artOver++;
+    }
+  }
+  const fidelity=n?Math.max(0,Math.round(100*(1-err/n))-overlaps*15-artOver*20):null;
+  return {svg,fidelity,placed,overlaps,artOver};
 }
 const STYLE_LIST=[
   {key:'traditional',name:'Traditional'},
@@ -2334,8 +2349,9 @@ function withLook(key,seed,fn){
    this renderer brings the law — 5mm text margins, 7pt floor (sBlock),
    contrast guard, and a complete legal line even when the dream forgot it.
    Never reached by any normal render path (goldens/parity untouched). */
-let PLACED=null;
+let PLACED=null, LAST_ART_RECT=null;
 function renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode,artInk){
+  LAST_ART_RECT=null;
   opts=opts||{};
   const twMM=Math.max(30,(+opts.widthMM||110)), thMM=Math.max(30,(+opts.heightMM||80));
   const W=twMM*10, H=thMM*10, f=sFields(d);
@@ -2362,21 +2378,42 @@ function renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode,artInk){
   if(artSrc&&artMode!=='full'&&ab&&ab.w>0&&ab.h>0){
     const sp=gc.L<0.60;
     if(artInk&&artInk.w>0.05&&artInk.h>0.05){
-      /* CONTENT-PINNED (owner round 3): stretch the image rect so its
-         measured INK bbox lands EXACTLY on the dream's measured artwork
-         box. The rect may overhang (margins are white/keyed); the content
-         cannot wander. Ink and box aspects are near-equal by construction
-         (artwork is generated at the region's aspect), so the anisotropic
-         stretch is negligible. */
+      /* CONTENT-PINNED + THE HARD LAW (owner 2026-08-26): the ink lands on
+         the dream's measured box — and if a text block was CLEAR of the
+         artwork in the dream, it stays clear in the replica. Text never
+         moves for art; the art shrinks toward the box centre until every
+         such block is clear. */
       const tx=ab.x*W, ty=ab.y*H, tw=ab.w*W, th=ab.h*H;
+      const cxm=tx+tw/2, cym=ty+th/2;
       let Wr=tw/artInk.w, Hr=th/artInk.h;
-      /* overhang clamp (live-observed: the hero drowned under an
-         over-stretched scene): the rect may not exceed 112% of its box —
-         shrink uniformly and recentre the ink on the box. */
       if(Wr>tw*1.12){const k=(tw*1.12)/Wr;Wr*=k;Hr*=k;}
       if(Hr>th*1.12){const k=(th*1.12)/Hr;Wr*=k;Hr*=k;}
-      const rx=(tx+tw/2)-(artInk.x+artInk.w/2)*Wr, ry=(ty+th/2)-(artInk.y+artInk.h/2)*Hr;
+      /* text boxes that the DREAM kept clear of the artwork */
+      const clear=[];
+      for(const e of (spec&&spec.elements||[])){
+        if(!e||!e.box||!ROLE_TEXT[e.role])continue;
+        const b2=e.box;
+        const ix=Math.min(b2.x+b2.w,ab.x+ab.w)-Math.max(b2.x,ab.x);
+        const iy=Math.min(b2.y+b2.h,ab.y+ab.h)-Math.max(b2.y,ab.y);
+        const inter=Math.max(0,ix)*Math.max(0,iy);
+        if(inter<0.25*b2.w*b2.h) clear.push({x:b2.x*W,y:b2.y*H,w:b2.w*W,h:b2.h*H});
+      }
+      const PAD=6;
+      const clearOK=(w2,h2)=>{
+        const rx2=cxm-(artInk.x+artInk.w/2)*w2, ry2=cym-(artInk.y+artInk.h/2)*h2;
+        for(const c of clear){
+          if(rx2<c.x+c.w+PAD&&rx2+w2>c.x-PAD&&ry2<c.y+c.h+PAD&&ry2+h2>c.y-PAD)return false;
+        }
+        return true;
+      };
+      if(!clearOK(Wr,Hr)){
+        let lo=0.3, hi=1;
+        for(let k2=0;k2<18;k2++){const mid=(lo+hi)/2; if(clearOK(Wr*mid,Hr*mid))lo=mid; else hi=mid;}
+        Wr*=lo; Hr*=lo;
+      }
+      const rx=cxm-(artInk.x+artInk.w/2)*Wr, ry=cym-(artInk.y+artInk.h/2)*Hr;
       body+=`<image x="${rx.toFixed(1)}" y="${ry.toFixed(1)}" width="${Wr.toFixed(1)}" height="${Hr.toFixed(1)}" preserveAspectRatio="none" xlink:href="${artSrc}" href="${artSrc}"${sp?' data-sp="1"':''} style="mix-blend-mode:${sp?'normal':'multiply'}"/>`;
+      LAST_ART_RECT={x:rx,y:ry,w:Wr,h:Hr};
     }else{
       const ax=ab.x*W, ay=ab.y*H, aw=ab.w*W, ah=ab.h*H;
       const pa=/^x(Min|Mid|Max)Y(Min|Mid|Max)$/.test(String(artAlign))?artAlign:'xMidYMid';
@@ -2449,9 +2486,18 @@ function renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode,artInk){
     const a=e.align==='l'?'l':e.align==='r'?'r':'c';
     const x=a==='l'?bx0:a==='r'?bx1:(bx0+bx1)/2;
     const preIR=INK_RECTS.length;
-    body+=sBlock(str,{x,top:by0+(+e.__dy||0),maxW:bw,size:size*(+e.__ds||1),min:MIN7,
-      f:fam0,w:wt0,fill:guard(e.colour),a,caps:!!e.caps,tr:tr0,
-      halo:e.role==='legal'||(artMode==='full'&&e.role!=='wine'),lines:nlines,lh:1.04}).svg;
+    if(e.arc&&nlines===1){
+      /* arched baseline (dream trait, previously straightened): radius from
+         the chord width and a sagitta ≈ the box height */
+      const chord=bx1-bx0, sag=Math.max(6,(e.box.h||0.04)*H*0.55);
+      const R=Math.max(chord*0.6,(chord*chord)/(8*sag)+sag/2);
+      body+=sArcText(s0,(bx0+bx1)/2,by0+(+e.__dy||0)+size*0.9,R,{f:fam0,w:wt0,size:Math.max(MIN7,size*(+e.__ds||1)),fill:guard(e.colour),tr:tr0});
+      INK_RECTS.push({x:bx0,y:by0,x2:bx1,y2:by0+(e.box.h||0.04)*H});
+    }else{
+      body+=sBlock(str,{x,top:by0+(+e.__dy||0),maxW:bw,size:size*(+e.__ds||1),min:MIN7,
+        f:fam0,w:wt0,fill:guard(e.colour),a,caps:!!e.caps,tr:tr0,
+        halo:e.role==='legal'||(artMode==='full'&&e.role!=='wine'),lines:nlines,lh:1.04}).svg;
+    }
     if(PLACED&&INK_RECTS.length>preIR){
       const r=INK_RECTS[INK_RECTS.length-1];
       PLACED.push({role:e.role,x:r.x/W,y:r.y/H,w:(r.x2-r.x)/W,h:(r.y2-r.y)/H,

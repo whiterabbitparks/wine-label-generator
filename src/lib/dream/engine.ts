@@ -9,6 +9,8 @@ import { analyzeArtwork } from "@/lib/admin/art-analysis";
 import { getDb } from "@/lib/db";
 import { PNG } from "pngjs";
 import sharp from "sharp";
+import fs from "node:fs";
+import path from "node:path";
 
 /* DREAM ENGINE CORE (extracted 2026-08-25 so the admin studio and the
    public customer flow share one implementation — see the admin route
@@ -83,7 +85,7 @@ async function gen429<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 export interface DreamParams { vision: string; style?: string; data: Record<string, string>; sketch?: string | null }
-export interface RebuildParams { dream: string; vision: string; data: Record<string, string>; style?: string }
+export interface RebuildParams { dream: string; vision: string; data: Record<string, string>; style?: string; reuseArtwork?: string | null }
 
 export async function runDreamPhase(p: DreamParams): Promise<{ dream: string; prompt: string }> {
   const body = { style: p.style, sketch: p.sketch };
@@ -178,7 +180,7 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
     "Also: ground (label background hex) and artwork {coverage, box, subject (one sentence, the illustration only), palette (up to 4 hex)}. " +
     "coverage is \"full\" when the illustration/scenery/texture extends behind or around the text across most of the label (the text sits INSIDE the scene), " +
     "or \"contained\" when the illustration occupies its own clear region separate from the text; for full coverage, box = the main subject's area. " +
-    'Strict JSON: {"ground":"#..","elements":[{"role":"..","box":{"x":..,"y":..,"w":..,"h":..},"align":"c","caps":true,"tracking":0.1,"font":"..","fontAlts":["..",".."],"weight":600,"colour":"#..","lines":1}],"artwork":{"box":{..},"subject":"..","palette":["#.."]}} ' +
+    'Strict JSON: {"ground":"#..","elements":[{"role":"..","box":{"x":..,"y":..,"w":..,"h":..},"align":"c","caps":true,"arc":false,"tracking":0.1,"font":"..","fontAlts":["..",".."],"weight":600,"colour":"#..","lines":1}],"artwork":{"box":{..},"subject":"..","palette":["#.."]}} ' +
     "Every ROLE at most once — a text split across blocks gets ONE element whose box covers all its parts.";
   let spec: Record<string, unknown> = {};
   try {
@@ -261,6 +263,21 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
               if (y < sy0) sy0 = y; if (y > sy1) sy1 = y;
             }
           }
+          if (sn <= 40) {
+            // colour-key found nothing (guessed box missed the glyphs) —
+            // fall back to plain dark-ink snapping in a wider window
+            sx0 = PW; sy0 = PH; sx1 = -1; sy1 = -1; sn = 0;
+            const jx0 = Math.max(0, Math.floor((b.x - b.w * 0.35) * PW)), jx1 = Math.min(PW, Math.ceil((b.x + b.w * 1.35) * PW));
+            const jy0 = Math.max(0, Math.floor((b.y - b.h * 0.35) * PH)), jy1 = Math.min(PH, Math.ceil((b.y + b.h * 1.35) * PH));
+            for (let y = jy0; y < jy1; y++) for (let x = jx0; x < jx1; x++) {
+              const i = (y * PW + x) * 4;
+              if (Math.min(px[i], px[i + 1], px[i + 2]) < 175) {
+                sn++;
+                if (x < sx0) sx0 = x; if (x > sx1) sx1 = x;
+                if (y < sy0) sy0 = y; if (y > sy1) sy1 = y;
+              }
+            }
+          }
           if (sn > 40 && sx1 > sx0 && sy1 > sy0) {
             const nb = { x: sx0 / PW, y: sy0 / PH, w: (sx1 - sx0 + 1) / PW, h: (sy1 - sy0 + 1) / PH };
             // sanity: the snap must stay near the located box
@@ -295,28 +312,50 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
         const gN = sp.ground ? parseInt(sp.ground.slice(1), 16) : 0xffffff;
         const gr2 = (gN >> 16) & 255, gg2 = (gN >> 8) & 255, gb2 = gN & 255;
         const tboxes = (sp.elements || []).map((e) => e.box).filter(Boolean) as { x: number; y: number; w: number; h: number }[];
-        let ax0 = PW, ay0 = PH, ax1 = -1, ay1 = -1, an = 0;
-        for (let y = 0; y < PH; y += 3) {
-          const fy = y / PH;
-          for (let x = 0; x < PW; x += 3) {
-            const i = (y * PW + x) * 4;
-            if (Math.abs(px[i] - gr2) + Math.abs(px[i + 1] - gg2) + Math.abs(px[i + 2] - gb2) < 90) continue;
+        /* DENSE-CLUSTER extent (owner failure 2026-08-26: parchment texture
+           and corner vignettes counted as artwork, inflating the box): a
+           grid cell counts as artwork only when a substantial share of its
+           pixels clearly differs from the ground; the outer 2% border is
+           ignored entirely. */
+        const GC = 32, GR = 20;
+        const cellHit: number[][] = Array.from({ length: GR }, () => Array(GC).fill(0));
+        const cellTot: number[][] = Array.from({ length: GR }, () => Array(GC).fill(0));
+        for (let y = Math.floor(PH * 0.02); y < PH * 0.98; y += 2) {
+          const fy = y / PH, gy = Math.min(GR - 1, Math.floor((y * GR) / PH));
+          for (let x = Math.floor(PW * 0.02); x < PW * 0.98; x += 2) {
             const fx = x / PW;
             let inText = false;
             for (const tb of tboxes) {
               if (fx >= tb.x - 0.015 && fx <= tb.x + tb.w + 0.015 && fy >= tb.y - 0.015 && fy <= tb.y + tb.h + 0.015) { inText = true; break; }
             }
             if (inText) continue;
-            an++;
-            if (x < ax0) ax0 = x; if (x > ax1) ax1 = x;
-            if (y < ay0) ay0 = y; if (y > ay1) ay1 = y;
+            const gx = Math.min(GC - 1, Math.floor((x * GC) / PW));
+            cellTot[gy][gx]++;
+            const i = (y * PW + x) * 4;
+            if (Math.abs(px[i] - gr2) + Math.abs(px[i + 1] - gg2) + Math.abs(px[i + 2] - gb2) > 110) cellHit[gy][gx]++;
           }
         }
-        if (spArt && an > 300 && ax1 > ax0 && ay1 > ay0) {
-          const nb = { x: ax0 / PW, y: ay0 / PH, w: (ax1 - ax0 + 1) / PW, h: (ay1 - ay0 + 1) / PH };
-          spArt.box = nb;
-          const share = (an * 9) / (PW * PH); // stride-3 sampling
-          spArt.coverage = nb.w > 0.88 && nb.h > 0.82 && share > 0.45 ? "full" : "contained";
+        let cx0 = GC, cy0 = GR, cx1 = -1, cy1 = -1, artCells = 0;
+        for (let gy = 0; gy < GR; gy++) for (let gx = 0; gx < GC; gx++) {
+          if (cellTot[gy][gx] > 8 && cellHit[gy][gx] / cellTot[gy][gx] > 0.18) {
+            artCells++;
+            if (gx < cx0) cx0 = gx; if (gx > cx1) cx1 = gx;
+            if (gy < cy0) cy0 = gy; if (gy > cy1) cy1 = gy;
+          }
+        }
+        if (spArt && artCells > 6 && cx1 >= cx0 && cy1 >= cy0) {
+          const nb = { x: cx0 / GC, y: cy0 / GR, w: (cx1 - cx0 + 1) / GC, h: (cy1 - cy0 + 1) / GR };
+          const share = artCells / (GC * GR);
+          const modelBox = spArt.box; // the transcriber's opinion
+          const plausibleFull = nb.w > 0.88 && nb.h > 0.82 && share > 0.5;
+          /* a "contained" artwork measuring near-full-height means the
+             measurement is contaminated (stray glyphs, texture) — in that
+             case the transcriber's box is the safer truth (owner failure
+             2026-08-26: a full-height phantom box disabled the no-overlap
+             law and stretched the art over the hero) */
+          if (plausibleFull) { spArt.box = nb; spArt.coverage = "full"; }
+          else if (nb.h < 0.92 && nb.w < 0.95) { spArt.box = nb; spArt.coverage = "contained"; }
+          else if (modelBox) { spArt.coverage = "contained"; /* keep modelBox */ }
         }
       } catch {}
     }
@@ -333,6 +372,24 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
   let artworkError: string | undefined;
   let artAlign = "xMidYMid";
   let artInk: { x: number; y: number; w: number; h: number } | null = null;
+  let artworkMode2: "contained" | "full" = "contained";
+  if (p.reuseArtwork && p.reuseArtwork.startsWith("data:image/")) {
+    // offline iteration path: reuse a saved artwork, skip all generation
+    try {
+      const an = analyzeArtwork(p.reuseArtwork);
+      if (an?.bboxFull || an?.bbox) artInk = (an.bboxFull || an.bbox) as { x: number; y: number; w: number; h: number };
+      const cx = an?.centroid?.x ?? 0.5, cy = an?.centroid?.y ?? 0.5;
+      artAlign = `x${cx < 0.42 ? "Min" : cx > 0.58 ? "Max" : "Mid"}Y${cy < 0.42 ? "Min" : cy > 0.58 ? "Max" : "Mid"}`;
+    } catch {}
+    artwork = p.reuseArtwork;
+    artworkMode2 = (spec as { artwork?: { coverage?: string } }).artwork?.coverage === "full" ? "full" : "contained";
+    const resultR: RebuildResult = { spec, artwork, artAlign, artworkMode: artworkMode2, styleKey: p.style || "contemporary", fonts: GOOGLE_FONTS, artInk };
+    try {
+      fs.mkdirSync(path.join(process.cwd(), "data", "debug"), { recursive: true });
+      fs.writeFileSync(path.join(process.cwd(), "data", "debug", "last-rebuild.json"), JSON.stringify({ dream, ...resultR }));
+    } catch {}
+    return resultR;
+  }
   let artworkMode: "contained" | "full" = "contained";
   const art = (spec as { artwork?: { subject?: string; palette?: string[]; box?: { w: number; h: number }; coverage?: string } }).artwork;
   const styleKey = ["traditional", "contemporary", "punk"].includes(String(body.style)) ? String(body.style) : "contemporary";
@@ -475,5 +532,12 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
     artworkError = e instanceof Error ? e.message : String(e);
   }
 
-  return { spec, artwork, artAlign, artworkMode, styleKey, fonts: GOOGLE_FONTS, artworkError, artInk };
+  const result: RebuildResult = { spec, artwork, artAlign, artworkMode, styleKey, fonts: GOOGLE_FONTS, artworkError, artInk };
+  /* every rebuild is dumped so renderer work iterates on SAVED data —
+     never on fresh paid generations (owner, 2026-08-26) */
+  try {
+    fs.mkdirSync(path.join(process.cwd(), "data", "debug"), { recursive: true });
+    fs.writeFileSync(path.join(process.cwd(), "data", "debug", "last-rebuild.json"), JSON.stringify({ dream, ...result }));
+  } catch {}
+  return result;
 }

@@ -1105,3 +1105,16 @@ composition-contract tightening, then customer wiring.
   selector (1-4, parallel) in the studio. Verified: fidelity 87%,
   composition/fonts/artwork all holding; residual nit — occasional
   near-touch in the small stack (2023/SAPERAVI).
+- HARD LAW + MEASUREMENT SELF-HEALING (owner escalation 2026-08-26):
+  process change first — every rebuild dumps to data/debug/last-rebuild
+  .json and rebuild accepts reuseArtwork, so renderer iteration is FREE
+  (no owner money on repeats). Fixes: dense-cluster art measurement
+  (texture/vignette immune) + plausibility guard (near-full-height
+  "contained" measurement = contaminated → transcriber box wins); snap
+  fallback (dark-ink window when colour-key misses); THE HARD LAW — a
+  text block clear of art in the dream stays clear in the replica, text
+  never moves, art shrinks (binary search); arc flag + arched rendering;
+  score punishes art-over-text (-20 each). HONEST STATE on the same
+  failing dream (free reprocess): 60% → 69%, structure now correct (no
+  art/text crossings), residuals: artwork renders smaller than the
+  dream's, bottom stack compresses/near-touches, hero case missed once.
