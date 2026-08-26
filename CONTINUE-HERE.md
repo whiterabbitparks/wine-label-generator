@@ -1118,3 +1118,15 @@ composition-contract tightening, then customer wiring.
   failing dream (free reprocess): 60% → 69%, structure now correct (no
   art/text crossings), residuals: artwork renders smaller than the
   dream's, bottom stack compresses/near-touches, hero case missed once.
+- DIAGNOSTIC SWEEP (owner 2026-08-26): dead-code audit came back clean
+  (lint clean, no dead loops in the dream path); one vestige fixed —
+  invalid styles no longer fall back to the retired "free" mode
+  (traditional now). Bug fixes, all verified FREE on the saved failing
+  pair: (1) the hard law now judges the artwork's INK region instead of
+  the full image rect (white margins shrank art chronically); (2)
+  minimum-gap cascade (0.8% H) replaces overlap-only resolution — no
+  more near-touches; (3) case detector tests CASE x TRACKING jointly
+  (spaced caps no longer read as mixed; adopted pair wins). Same dream:
+  60% → 69% → 90%, 0 overlaps, 0 art-over-text. Goldens 72/72, hard
+  rules PASS. Residuals, stated honestly: hero case still missed on this
+  pair (caps rendered mixed), artwork mass ~10% under the dream's.

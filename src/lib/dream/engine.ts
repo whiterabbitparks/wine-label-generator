@@ -91,7 +91,7 @@ export async function runDreamPhase(p: DreamParams): Promise<{ dream: string; pr
   const body = { style: p.style, sketch: p.sketch };
   const vision = p.vision;
   const texts = labelTexts(p.data);
-    const style = STYLE_MOOD[String(body.style)] ? String(body.style) : "free";
+    const style = ["traditional", "contemporary", "punk"].includes(String(body.style)) ? String(body.style) : "traditional";
     // the owner's dream-refinement corpus steers future dreams
     let guidance = "";
     let composition = "";

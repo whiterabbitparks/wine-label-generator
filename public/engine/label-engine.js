@@ -2214,17 +2214,20 @@ function renderDreamFitted(spec,d,opts,artSrc,artAlign,artMode,artInk){
       const hr=p.th>0?p.h/p.th:1;              // placed vs target height
       if(hr>1.12||hr<0.88){e.__ds=Math.min(1.6,Math.max(0.5,(+e.__ds||1)/hr));adjusted=true;}
     }
-    /* COLLISIONS ARE RESOLVED, NOT SHIPPED (owner 2026-08-25: "2023" over
-       "Saperavi"): overlapping text pairs push the lower block down. */
+    /* COLLISIONS AND NEAR-TOUCHES ARE RESOLVED, NOT SHIPPED (owner
+       2026-08-26): vertically adjacent blocks sharing horizontal span keep
+       a minimum breathing gap; the lower block yields, cascading. */
     const Hpx=(opts&&opts.heightMM?opts.heightMM*10:800);
+    const MINGAP_F=0.008;
     const byY=[...placed].sort((a,b2)=>a.y-b2.y);
     for(let i=0;i<byY.length;i++)for(let j=i+1;j<byY.length;j++){
       const a=byY[i],b2=byY[j];
       const ox=Math.min(a.x+a.w,b2.x+b2.w)-Math.max(a.x,b2.x);
-      const oy=Math.min(a.y+a.h,b2.y+b2.h)-Math.max(a.y,b2.y);
-      if(ox>0.01&&oy>0.004){
+      if(ox<=0.01)continue;
+      const gap=b2.y-(a.y+a.h);
+      if(gap<MINGAP_F){
         const e2=els.find(x=>x&&x.role===b2.role);
-        if(e2){e2.__dy=(+e2.__dy||0)+(oy+0.008)*Hpx;adjusted=true;}
+        if(e2){e2.__dy=(+e2.__dy||0)+(MINGAP_F-gap)*Hpx;adjusted=true;}
       }
     }
     if(!adjusted)break;
@@ -2399,10 +2402,15 @@ function renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode,artInk){
         if(inter<0.25*b2.w*b2.h) clear.push({x:b2.x*W,y:b2.y*H,w:b2.w*W,h:b2.h*H});
       }
       const PAD=6;
+      /* the law judges the INK region, not the image rect — margins are
+         white/keyed and invisible; testing the full rect shrank the
+         artwork chronically (owner residual 2026-08-26) */
       const clearOK=(w2,h2)=>{
         const rx2=cxm-(artInk.x+artInk.w/2)*w2, ry2=cym-(artInk.y+artInk.h/2)*h2;
+        const ix0=rx2+artInk.x*w2, iy0=ry2+artInk.y*h2;
+        const ix1=ix0+artInk.w*w2, iy1=iy0+artInk.h*h2;
         for(const c of clear){
-          if(rx2<c.x+c.w+PAD&&rx2+w2>c.x-PAD&&ry2<c.y+c.h+PAD&&ry2+h2>c.y-PAD)return false;
+          if(ix0<c.x+c.w+PAD&&ix1>c.x-PAD&&iy0<c.y+c.h+PAD&&iy1>c.y-PAD)return false;
         }
         return true;
       };
@@ -2443,21 +2451,27 @@ function renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode,artInk){
        case hypotheses — at the size each implies, whose predicted width
        matches the measured block? Only when the string actually differs. */
     if(e.snapped&&e.textH>0&&str!==up(str)){
+      /* joint CASE x TRACKING test (owner residual 2026-08-26: widely
+         letter-spaced caps measured as mixed because tracking was assumed
+         zero) — the winning pair is adopted together */
       const bw0=(Math.min(W-SM,(e.box.x+e.box.w)*W)-Math.max(SM,e.box.x*W))||1;
-      let bestC=e.caps,bestD=Infinity;
+      const tr9=+e.tracking>0?Math.min(0.4,+e.tracking):0;
+      let bestC=e.caps,bestT=tr9,bestD=Infinity;
       for(const hyp of [true,false]){
-        const sz=((e.textH*H)/nlines)*(hyp?1.30:0.96);
-        const t=hyp?up(str):str;
-        const wds=t.split(/\s+/), per=Math.ceil(wds.length/nlines);
-        let lg='';
-        for(let i=0;i<wds.length;i+=per){
-          const seg=wds.slice(i,i+per).join(' ');
-          if(measure(seg,sz,fam0,wt0,false,sz*tr0)>measure(lg,sz,fam0,wt0,false,sz*tr0))lg=seg;
+        for(const tt of [tr9,0.18,0.32]){
+          const sz=((e.textH*H)/nlines)*(hyp?1.30:0.96);
+          const t=hyp?up(str):str;
+          const wds=t.split(/\s+/), per=Math.ceil(wds.length/nlines);
+          let lg='';
+          for(let i=0;i<wds.length;i+=per){
+            const seg=wds.slice(i,i+per).join(' ');
+            if(measure(seg,sz,fam0,wt0,false,sz*tt)>measure(lg,sz,fam0,wt0,false,sz*tt))lg=seg;
+          }
+          const d=Math.abs(measure(lg,sz,fam0,wt0,false,sz*tt)-bw0);
+          if(d<bestD){bestD=d;bestC=hyp;bestT=tt;}
         }
-        const d=Math.abs(measure(lg,sz,fam0,wt0,false,sz*tr0)-bw0);
-        if(d<bestD){bestD=d;bestC=hyp;}
       }
-      e.caps=bestC;
+      e.caps=bestC; e.tracking=bestT;
     }
     const s0=e.caps?up(str):str;
     /* width-fit: what size makes the longest line exactly span the box? */
