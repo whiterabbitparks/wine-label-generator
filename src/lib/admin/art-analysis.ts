@@ -21,8 +21,10 @@ export interface ArtAnalysis {
   cols: number; rows: number;
   /** overall ink coverage 0..1 */
   inkShare: number;
-  /** ink bounding box + density centroid, all as fractions */
+  /** significant-ink bounding box + density centroid, all as fractions */
   bbox: { x: number; y: number; w: number; h: number } | null;
+  /** FULL ink bbox incl. light strokes — content-pinning uses this */
+  bboxFull: { x: number; y: number; w: number; h: number } | null;
   centroid: { x: number; y: number } | null;
   /** up to 3 non-overlapping quiet rectangles, biggest first */
   quiet: QuietZone[];
@@ -51,6 +53,7 @@ export function analyzeArtwork(dataUrl: string): ArtAnalysis | null {
   const counts: number[][] = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
   let inkPx = 0, sw = 0, sx = 0, sy = 0;
   let bx0 = W, by0 = H, bx1 = -1, by1 = -1;
+  let fx0 = W, fy0 = H, fx1 = -1, fy1 = -1; // FULL ink incl. light strokes
   for (let y = 0; y < H; y++) {
     const gy = Math.min(ROWS - 1, Math.floor((y * ROWS) / H));
     for (let x = 0; x < W; x++) {
@@ -63,6 +66,8 @@ export function analyzeArtwork(dataUrl: string): ArtAnalysis | null {
       grid[gy][gx] += d; counts[gy][gx]++;
       if (d > 0) {
         inkPx++;
+        if (x < fx0) fx0 = x; if (x > fx1) fx1 = x;
+        if (y < fy0) fy0 = y; if (y > fy1) fy1 = y;
         if (m < 200) { // significant ink only for the bbox (matches finishArtwork)
           if (x < bx0) bx0 = x; if (x > bx1) bx1 = x;
           if (y < by0) by0 = y; if (y > by1) by1 = y;
@@ -78,6 +83,9 @@ export function analyzeArtwork(dataUrl: string): ArtAnalysis | null {
 
   const bbox = bx1 >= bx0
     ? { x: bx0 / W, y: by0 / H, w: (bx1 - bx0 + 1) / W, h: (by1 - by0 + 1) / H }
+    : null;
+  const bboxFull = fx1 >= fx0
+    ? { x: fx0 / W, y: fy0 / H, w: (fx1 - fx0 + 1) / W, h: (fy1 - fy0 + 1) / H }
     : null;
   const centroid = sw > 0 ? { x: sx / sw / W, y: sy / sw / H } : null;
 
@@ -133,6 +141,6 @@ export function analyzeArtwork(dataUrl: string): ArtAnalysis | null {
     grid: grid.map((r) => r.map((v) => Math.round(v * 100) / 100)),
     cols: COLS, rows: ROWS,
     inkShare: Math.round((inkPx / (W * H)) * 1000) / 1000,
-    bbox, centroid, quiet, openSide,
+    bbox, bboxFull, centroid, quiet, openSide,
   };
 }

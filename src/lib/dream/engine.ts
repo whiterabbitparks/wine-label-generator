@@ -156,6 +156,7 @@ export interface RebuildResult {
   spec: Record<string, unknown>; artwork: string | null; artAlign: string;
   artworkMode: "contained" | "full"; styleKey: string; fonts: string[];
   artworkError?: string;
+  artInk?: { x: number; y: number; w: number; h: number } | null;
 }
 export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> {
   const key = process.env.OPENAI_API_KEY;
@@ -172,12 +173,12 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
     "box {x,y,w,h} as fractions of the image (x,y top-left corner of the text block), " +
     "role matched against the known texts (wine, producer, appellation, grape, vintage, region, classification, special, legal), " +
     "align l|c|r (relative to its own box), caps true/false, tracking 0-0.4, " +
-    "font = the visually CLOSEST match from the allowed list (look at serifs, weight, width, script character), " +
+    "font = the visually CLOSEST match from the allowed list, plus fontAlts = the 2 next-closest candidates (look at serifs, weight, width, script character), " +
     "weight 300-800, colour as exact hex sampled from the glyphs, lines (how many lines the element occupies). " +
     "Also: ground (label background hex) and artwork {coverage, box, subject (one sentence, the illustration only), palette (up to 4 hex)}. " +
     "coverage is \"full\" when the illustration/scenery/texture extends behind or around the text across most of the label (the text sits INSIDE the scene), " +
     "or \"contained\" when the illustration occupies its own clear region separate from the text; for full coverage, box = the main subject's area. " +
-    'Strict JSON: {"ground":"#..","elements":[{"role":"..","box":{"x":..,"y":..,"w":..,"h":..},"align":"c","caps":true,"tracking":0.1,"font":"..","weight":600,"colour":"#..","lines":1}],"artwork":{"box":{..},"subject":"..","palette":["#.."]}} ' +
+    'Strict JSON: {"ground":"#..","elements":[{"role":"..","box":{"x":..,"y":..,"w":..,"h":..},"align":"c","caps":true,"tracking":0.1,"font":"..","fontAlts":["..",".."],"weight":600,"colour":"#..","lines":1}],"artwork":{"box":{..},"subject":"..","palette":["#.."]}} ' +
     "Every ROLE at most once — a text split across blocks gets ONE element whose box covers all its parts.";
   let spec: Record<string, unknown> = {};
   try {
@@ -331,6 +332,7 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
   let artwork: string | null = null;
   let artworkError: string | undefined;
   let artAlign = "xMidYMid";
+  let artInk: { x: number; y: number; w: number; h: number } | null = null;
   let artworkMode: "contained" | "full" = "contained";
   const art = (spec as { artwork?: { subject?: string; palette?: string[]; box?: { w: number; h: number }; coverage?: string } }).artwork;
   const styleKey = ["traditional", "contemporary", "punk"].includes(String(body.style)) ? String(body.style) : "contemporary";
@@ -460,6 +462,11 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
       const an = analyzeArtwork(raw);
       const cx = an?.centroid?.x ?? 0.5, cy = an?.centroid?.y ?? 0.5;
       artAlign = `x${cx < 0.42 ? "Min" : cx > 0.58 ? "Max" : "Mid"}Y${cy < 0.42 ? "Min" : cy > 0.58 ? "Max" : "Mid"}`;
+      /* CONTENT-PINNED PLACEMENT (owner round 3): the generated artwork has
+         its own internal margins — aligning its rectangle to the dream box
+         still lets the subject wander. Ship the INK bbox so the engine can
+         map the content itself onto the dream's measured artwork box. */
+      if (an?.bboxFull || an?.bbox) artInk = (an.bboxFull || an.bbox) as { x: number; y: number; w: number; h: number };
     } catch {}
     artwork = keyArtwork(raw);
   } catch (e) {
@@ -468,5 +475,5 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
     artworkError = e instanceof Error ? e.message : String(e);
   }
 
-  return { spec, artwork, artAlign, artworkMode, styleKey, fonts: GOOGLE_FONTS, artworkError };
+  return { spec, artwork, artAlign, artworkMode, styleKey, fonts: GOOGLE_FONTS, artworkError, artInk };
 }

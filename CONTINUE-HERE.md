@@ -1091,3 +1091,17 @@ composition-contract tightening, then customer wiring.
   sketch → FLUX+LoRA craft again, IMAGE_PROVIDER=hybrid. The gpt-only
   experiment remains reachable in history; the tag phase-flux-lora marks
   the last pre-experiment state.
+- REPLICATION ROUND 3 (owner 2026-08-26): (1) ASPECT — studio replicas now
+  render at the dream's 3:2 (110×73.3); the fixed 110×80 canvas had been
+  silently squeezing all geometry ~9% vertically. OPEN DECISION: customer
+  pages still render label sizes (110×80) — either labels adopt 3:2 or
+  dreams must adapt per size. (2) FONTS MEASURED — transcriber returns 3
+  candidates per element; the studio renders a case-matched sample in each
+  and pixel-compares against the dream's glyph crop; winner wins. (3)
+  ARTWORK CONTENT-PINNED — server ships the artwork's FULL-ink bbox
+  (analyzeArtwork bboxFull); the engine stretches the image so its ink
+  lands exactly on the dream's measured box, with a 112% overhang clamp
+  (first pass drowned the hero, live-observed, fixed). (4) Dream count
+  selector (1-4, parallel) in the studio. Verified: fidelity 87%,
+  composition/fonts/artwork all holding; residual nit — occasional
+  near-touch in the small stack (2023/SAPERAVI).

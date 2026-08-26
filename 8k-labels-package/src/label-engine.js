@@ -2197,12 +2197,12 @@ function styleIntegrated(f,W,H,seed,twMM,thMM,styleKey){
    compare every placed text block against its measured target from the
    dream, nudge position (and size where the width-fit allows), render
    again — then report an honest fidelity score instead of hoping. */
-function renderDreamFitted(spec,d,opts,artSrc,artAlign,artMode){
+function renderDreamFitted(spec,d,opts,artSrc,artAlign,artMode,artInk){
   const els=(spec&&Array.isArray(spec.elements))?spec.elements:[];
   let svg='', placed=[];
   for(let pass=0;pass<3;pass++){
     PLACED=[];
-    svg=renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode);
+    svg=renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode,artInk);
     placed=PLACED; PLACED=null;
     if(pass===2)break;
     let adjusted=false;
@@ -2334,7 +2334,7 @@ function withLook(key,seed,fn){
    contrast guard, and a complete legal line even when the dream forgot it.
    Never reached by any normal render path (goldens/parity untouched). */
 let PLACED=null;
-function renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode){
+function renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode,artInk){
   opts=opts||{};
   const twMM=Math.max(30,(+opts.widthMM||110)), thMM=Math.max(30,(+opts.heightMM||80));
   const W=twMM*10, H=thMM*10, f=sFields(d);
@@ -2359,13 +2359,28 @@ function renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode){
   // artwork at the dream's position (exact placement — no sliding)
   const ab=spec&&spec.artwork&&spec.artwork.box;
   if(artSrc&&artMode!=='full'&&ab&&ab.w>0&&ab.h>0){
-    /* v3: the artwork fills the dream's region EXACTLY — cover-fit (slice)
-       into the transcribed box; the artwork is generated in this region's
-       aspect upstream so cropping is minimal. Trust the dream. */
-    const ax=ab.x*W, ay=ab.y*H, aw=ab.w*W, ah=ab.h*H;
     const sp=gc.L<0.60;
-    const pa=/^x(Min|Mid|Max)Y(Min|Mid|Max)$/.test(String(artAlign))?artAlign:'xMidYMid';
-    body+=`<image x="${ax.toFixed(1)}" y="${ay.toFixed(1)}" width="${aw.toFixed(1)}" height="${ah.toFixed(1)}" preserveAspectRatio="${pa} slice" xlink:href="${artSrc}" href="${artSrc}"${sp?' data-sp="1"':''} style="mix-blend-mode:${sp?'normal':'multiply'}"/>`;
+    if(artInk&&artInk.w>0.05&&artInk.h>0.05){
+      /* CONTENT-PINNED (owner round 3): stretch the image rect so its
+         measured INK bbox lands EXACTLY on the dream's measured artwork
+         box. The rect may overhang (margins are white/keyed); the content
+         cannot wander. Ink and box aspects are near-equal by construction
+         (artwork is generated at the region's aspect), so the anisotropic
+         stretch is negligible. */
+      const tx=ab.x*W, ty=ab.y*H, tw=ab.w*W, th=ab.h*H;
+      let Wr=tw/artInk.w, Hr=th/artInk.h;
+      /* overhang clamp (live-observed: the hero drowned under an
+         over-stretched scene): the rect may not exceed 112% of its box —
+         shrink uniformly and recentre the ink on the box. */
+      if(Wr>tw*1.12){const k=(tw*1.12)/Wr;Wr*=k;Hr*=k;}
+      if(Hr>th*1.12){const k=(th*1.12)/Hr;Wr*=k;Hr*=k;}
+      const rx=(tx+tw/2)-(artInk.x+artInk.w/2)*Wr, ry=(ty+th/2)-(artInk.y+artInk.h/2)*Hr;
+      body+=`<image x="${rx.toFixed(1)}" y="${ry.toFixed(1)}" width="${Wr.toFixed(1)}" height="${Hr.toFixed(1)}" preserveAspectRatio="none" xlink:href="${artSrc}" href="${artSrc}"${sp?' data-sp="1"':''} style="mix-blend-mode:${sp?'normal':'multiply'}"/>`;
+    }else{
+      const ax=ab.x*W, ay=ab.y*H, aw=ab.w*W, ah=ab.h*H;
+      const pa=/^x(Min|Mid|Max)Y(Min|Mid|Max)$/.test(String(artAlign))?artAlign:'xMidYMid';
+      body+=`<image x="${ax.toFixed(1)}" y="${ay.toFixed(1)}" width="${aw.toFixed(1)}" height="${ah.toFixed(1)}" preserveAspectRatio="${pa} slice" xlink:href="${artSrc}" href="${artSrc}"${sp?' data-sp="1"':''} style="mix-blend-mode:${sp?'normal':'multiply'}"/>`;
+    }
   }
   const els=(spec&&Array.isArray(spec.elements)?spec.elements:[]).filter(e=>e&&e.box&&ROLE_TEXT[e.role]);
   const seen={};

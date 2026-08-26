@@ -36,6 +36,58 @@ interface DreamCard {
   overlay?: boolean;
 }
 
+/* Render a case-matched sample in each candidate font and pixel-compare
+   against the dream's glyph crop; the winner replaces the guess. */
+async function matchFontsAgainstDream(dreamUrl: string, spec: { elements?: { role?: string; box?: { x: number; y: number; w: number; h: number }; font?: string; fontAlts?: string[]; weight?: number; caps?: boolean; snapped?: boolean }[] }) {
+  const els = (spec.elements || []).filter((e) => e.snapped && e.box && (e.fontAlts?.length || 0) > 0);
+  if (!els.length) return;
+  const img = new Image();
+  await new Promise<void>((res, rej) => { img.onload = () => res(); img.onerror = () => rej(); img.src = dreamUrl; });
+  const fams = [...new Set(els.flatMap((e) => [e.font, ...(e.fontAlts || [])]).filter(Boolean))] as string[];
+  const href = "https://fonts.googleapis.com/css2?" + fams.map((f) => `family=${encodeURIComponent(f).replace(/%20/g, "+")}:wght@300;400;500;600;700;800`).join("&") + "&display=swap";
+  if (!document.querySelector(`link[href="${href}"]`)) {
+    const l = document.createElement("link"); l.rel = "stylesheet"; l.href = href;
+    document.head.appendChild(l);
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  const SAMPLE_W = 96, SAMPLE_H = 24;
+  const gray = (cv: HTMLCanvasElement) => {
+    const g = cv.getContext("2d")!.getImageData(0, 0, SAMPLE_W, SAMPLE_H).data;
+    const out = new Float32Array(SAMPLE_W * SAMPLE_H);
+    for (let i = 0; i < out.length; i++) out[i] = (g[i * 4] + g[i * 4 + 1] + g[i * 4 + 2]) / 765;
+    let mn = 1, mx = 0;
+    for (const v of out) { if (v < mn) mn = v; if (v > mx) mx = v; }
+    const sp = mx - mn || 1;
+    for (let i = 0; i < out.length; i++) out[i] = (out[i] - mn) / sp;
+    return out;
+  };
+  for (const e of els) {
+    const b = e.box!;
+    const crop = document.createElement("canvas"); crop.width = SAMPLE_W; crop.height = SAMPLE_H;
+    crop.getContext("2d")!.drawImage(img, b.x * img.width, b.y * img.height, b.w * img.width, b.h * img.height, 0, 0, SAMPLE_W, SAMPLE_H);
+    const target = gray(crop);
+    const candidates = [...new Set([e.font, ...(e.fontAlts || [])])].filter(Boolean) as string[];
+    if (candidates.length < 2) continue;
+    const sample = e.caps ? "RESERVE CELLARS" : "Reserve Cellars";
+    let best = candidates[0], bestScore = -Infinity;
+    for (const fam of candidates) {
+      const cv = document.createElement("canvas"); cv.width = SAMPLE_W; cv.height = SAMPLE_H;
+      const cx = cv.getContext("2d")!;
+      cx.fillStyle = "#fff"; cx.fillRect(0, 0, SAMPLE_W, SAMPLE_H);
+      cx.fillStyle = "#000"; cx.textBaseline = "middle";
+      cx.font = `${e.weight || 400} ${Math.round(SAMPLE_H * 0.8)}px '${fam}'`;
+      const tw = cx.measureText(sample).width || 1;
+      cx.save(); cx.scale(Math.min(1, (SAMPLE_W - 4) / tw), 1);
+      cx.fillText(sample, 2, SAMPLE_H / 2); cx.restore();
+      const got = gray(cv);
+      let score = 0;
+      for (let i = 0; i < got.length; i++) score -= Math.abs(got[i] - target[i]);
+      if (score > bestScore) { bestScore = score; best = fam; }
+    }
+    e.font = best;
+  }
+}
+
 export function StudioCore() {
   const [vision, setVision] = useState("An old man in a wool cap plays the panduri under a fig tree, a rooster pecking at his feet");
   const [wine, setWine] = useState("Saperavi Reserve");
@@ -45,6 +97,7 @@ export function StudioCore() {
   const [region, setRegion] = useState("Kakheti, Georgia");
   const [vintage, setVintage] = useState("2023");
   const [styleMood, setStyleMood] = useState("traditional");
+  const [count, setCount] = useState(1);
   const [sketch, setSketch] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -72,17 +125,18 @@ export function StudioCore() {
 
   async function dreamOne() {
     setBusy(true); setErr("");
-    try {
+    const one = async (i: number) => {
       const res = await fetch("/api/admin/dream", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phase: "dream", vision, style: styleMood, data: briefData(), sketch }),
       });
       const b = await res.json();
       if (!res.ok) throw new Error(b.error || `dream failed (${res.status})`);
-      setCards((cs) => [{ id: Date.now(), dream: b.dream, mood: styleMood, comment: "" }, ...cs]);
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : String(e));
-    }
+      setCards((cs) => [{ id: Date.now() + i, dream: b.dream, mood: styleMood, comment: "" }, ...cs]);
+    };
+    const settled = await Promise.allSettled(Array.from({ length: count }, (_, i) => one(i)));
+    const bad = settled.find((x) => x.status === "rejected") as PromiseRejectedResult | undefined;
+    if (bad) setErr(bad.reason instanceof Error ? bad.reason.message : String(bad.reason));
     setBusy(false);
   }
 
@@ -115,9 +169,14 @@ export function StudioCore() {
           await new Promise((r) => setTimeout(r, 900)); // let the faces land
         }
       }
-      const w = window as unknown as { LabelEngine: { renderDreamFitted: (spec: unknown, d: unknown, o: unknown, art: string | null, align?: string, mode?: string) => { svg: string; fidelity: number | null } } };
       if (b.artworkError) setErr(`artwork failed on this rebuild (${String(b.artworkError).slice(0, 90)}) — the text layout still rendered; rebuild again to retry`);
-      const fit = w.LabelEngine.renderDreamFitted(b.spec, briefData(), { widthMM: 110, heightMM: 80 }, b.artwork, b.artAlign, b.artworkMode);
+      // FONTS ARE MEASURED (owner round 3): render the real text in the
+      // candidate fonts and pixel-compare against the dream's glyph crop.
+      try { await matchFontsAgainstDream(c.dream, b.spec); } catch {}
+      const w = window as unknown as { LabelEngine: { renderDreamFitted: (spec: unknown, d: unknown, o: unknown, art: string | null, align?: string, mode?: string, ink?: unknown) => { svg: string; fidelity: number | null } } };
+      // replica renders at the DREAM'S aspect — the fixed 110x80 canvas was
+      // silently squeezing every position ~9% vertically
+      const fit = w.LabelEngine.renderDreamFitted(b.spec, briefData(), { widthMM: 110, heightMM: 73.3 }, b.artwork, b.artAlign, b.artworkMode, b.artInk);
       setCards((cs) => cs.map((x) => (x.id === id ? { ...x, rebuilding: false, rebuilt: { svg: fit.svg, artwork: b.artwork, fidelity: fit.fidelity } } : x)));
     } catch (e) {
       setCards((cs) => cs.map((x) => (x.id === id ? { ...x, rebuilding: false, rebuildErr: e instanceof Error ? e.message : String(e) } : x)));
@@ -150,7 +209,10 @@ export function StudioCore() {
               }} /></div>
           </div>
           <div style={{ marginTop: 12, display: "flex", gap: 10, alignItems: "center" }}>
-            <button style={S.btn} disabled={busy} onClick={dreamOne}>{busy ? "Dreaming…" : "Dream a label"}</button>
+            <select style={{ ...S.input, width: 64 }} value={count} onChange={(e) => setCount(Number(e.target.value))}>
+              {[1, 2, 3, 4].map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+            <button style={S.btn} disabled={busy} onClick={dreamOne}>{busy ? "Dreaming…" : count > 1 ? `Dream ${count} labels` : "Dream a label"}</button>
             <span style={S.sub}>each dream ≈ a few cents · comment + verdict teaches the next dreams</span>
           </div>
           {err && <p style={{ color: "#a03030", fontSize: 13 }}>{err}</p>}
@@ -174,7 +236,7 @@ export function StudioCore() {
                     </button>
                   </div>
                   <div style={{ border: `2px solid ${INK}`, marginTop: 4, position: "relative" }}>
-                    <div dangerouslySetInnerHTML={{ __html: c.rebuilt.svg.replace(/width="110mm" height="80mm"/, 'width="100%"') }} />
+                    <div dangerouslySetInnerHTML={{ __html: c.rebuilt.svg.replace(/width="[\d.]+mm" height="[\d.]+mm"/, 'width="100%"') }} />
                     {c.overlay && (
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img src={c.dream} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "fill", opacity: 0.35, pointerEvents: "none" }} />
