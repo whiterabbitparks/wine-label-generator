@@ -1130,3 +1130,23 @@ composition-contract tightening, then customer wiring.
   60% → 69% → 90%, 0 overlaps, 0 art-over-text. Goldens 72/72, hard
   rules PASS. Residuals, stated honestly: hero case still missed on this
   pair (caps rendered mixed), artwork mass ~10% under the dream's.
+- BAND ERA + THE REAL DIAGNOSIS (owner escalation 2026-08-27): halo
+  outlines REMOVED from dream replicas (owner: dream has none). Per-
+  element ink-snap replaced by global line-band detection (row profile,
+  run-length text/art discrimination, tall-band splitting, order-
+  preserving DP matching, geometric coverage). Verified on the owner's
+  saved pair across FIVE free reprocesses: small lines (producer,
+  vintage, region, legal) now found reliably; BUT results still vary
+  run-to-run because EVERY reprocess re-runs the vision transcription,
+  whose boxes/coverage wobble — each mechanical layer that anchors on
+  any part of it (artGuess for band exclusion) inherits the wobble, and
+  textured artwork (woodcut stipple = short runs) defeats the run-length
+  test. CONCLUSION, stated plainly: heuristics anchored to the noisy
+  transcription cannot converge. THE FIX WITH GUARANTEES: segment the
+  dream ONCE with proper 2-D connected-component analysis (stroke
+  geometry separates glyphs from art deterministically — standard OCR
+  preprocessing, pure JS, no model in the loop); the vision model keeps
+  only role/font labelling. Deterministic: same dream → same regions,
+  every time. ~Half-day build; testable free on saved pairs. Current
+  honest state on the owner's pair: 75%, textured-art rows still
+  misclassify.

@@ -2420,7 +2420,8 @@ function renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode,artInk){
       }
       const rx=cxm-(artInk.x+artInk.w/2)*Wr, ry=cym-(artInk.y+artInk.h/2)*Hr;
       body+=`<image x="${rx.toFixed(1)}" y="${ry.toFixed(1)}" width="${Wr.toFixed(1)}" height="${Hr.toFixed(1)}" preserveAspectRatio="none" xlink:href="${artSrc}" href="${artSrc}"${sp?' data-sp="1"':''} style="mix-blend-mode:${sp?'normal':'multiply'}"/>`;
-      LAST_ART_RECT={x:rx,y:ry,w:Wr,h:Hr};
+      /* the metric judges the same thing the law does: the INK region */
+      LAST_ART_RECT={x:rx+artInk.x*Wr,y:ry+artInk.y*Hr,w:artInk.w*Wr,h:artInk.h*Hr};
     }else{
       const ax=ab.x*W, ay=ab.y*H, aw=ab.w*W, ah=ab.h*H;
       const pa=/^x(Min|Mid|Max)Y(Min|Mid|Max)$/.test(String(artAlign))?artAlign:'xMidYMid';
@@ -2509,7 +2510,7 @@ function renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode,artInk){
     }else{
       body+=sBlock(str,{x,top:by0+(+e.__dy||0),maxW:bw,size:size*(+e.__ds||1),min:MIN7,
         f:fam0,w:wt0,fill:guard(e.colour),a,caps:!!e.caps,tr:tr0,
-        halo:e.role==='legal'||(artMode==='full'&&e.role!=='wine'),lines:nlines,lh:1.04}).svg;
+        lines:nlines,lh:1.04}).svg;
     }
     if(PLACED&&INK_RECTS.length>preIR){
       const r=INK_RECTS[INK_RECTS.length-1];
