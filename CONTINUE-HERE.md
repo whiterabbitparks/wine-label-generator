@@ -1196,3 +1196,18 @@ composition-contract tightening, then customer wiring.
   identical geometry AND typography; rendered pair shows arc producer,
   caps hero, correct stack order, full-size artwork. Gates: parity
   0.000%, hard rules PASS, goldens 72/72.
+- CENTRING + CASE HARDENED (owner 2026-08-27, second pair): two defects,
+  both structural fixes. (1) A dust speck at the canvas edge shared the
+  producer row's height and stretched its box to x=0.005 — glyphs
+  touching the outer 0.8% of the canvas are now rejected, AND each line
+  is split at x-gaps wider than 2.5 glyph-heights keeping the dominant
+  cluster (a speck can never stretch a box again), AND snapped text now
+  anchors at its measured ink CENTRE (the dream's ink is the alignment —
+  the transcriber's align flag only applies to guessed boxes). (2) The
+  digit/capital-heavy legal line read as caps by glyph heights — case
+  now uses DESCENDERS when the text predicts them (mixed case would
+  show g/j/p/q/y below the baseline; caps never do; arc lines keep the
+  height rule since their baseline bends). Proof: 3 reprocesses
+  identical, pair rendered — producer centred, legal mixed like the
+  dream, fidelity 92. Gates: parity 0.000%, hard rules PASS, goldens
+  72/72.

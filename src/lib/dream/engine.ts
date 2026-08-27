@@ -287,7 +287,8 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
           if (stroke > 0.45 * h) return false;              // blobs are art
           return true;
         };
-        const glyphs = comps.filter(isGlyph);
+        const glyphs = comps.filter(isGlyph).filter((c) =>
+          c.x0 > PW * 0.008 && c.y0 > PH * 0.008 && c.x1 < PW * 0.992 && c.y1 < PH * 0.992);
         const artComps = comps.filter((c) => !isGlyph(c) && c.area > PW * PH * 0.0004);
         /* glyphs → text lines: cluster by vertical overlap of bboxes */
         interface Line { y0: number; y1: number; x0: number; x1: number; n: number; r: number; g: number; b: number; area: number; used?: boolean; gs: Comp[] }
@@ -306,6 +307,28 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
           } else {
             lines.push({ y0: g.y0, y1: g.y1, x0: g.x0, x1: g.x1, n: 1, area: g.area, r: g.r, g: g.g, b: g.b, gs: [g] });
           }
+        }
+        /* a line is one run of letters — a speck that merely shares the
+           row's height must not stretch its box. Split each line at
+           x-gaps far wider than the letter spacing and keep the dominant
+           cluster. */
+        for (const ln of lines) {
+          if (ln.gs.length < 3) continue;
+          const byX = [...ln.gs].sort((a2, b3) => a2.x0 - b3.x0);
+          const hMed0 = byX.map((g2) => g2.y1 - g2.y0 + 1).sort((a2, b3) => a2 - b3)[Math.floor(byX.length / 2)];
+          const clusters: Comp[][] = [[byX[0]]];
+          for (let gi = 1; gi < byX.length; gi++) {
+            const gap = byX[gi].x0 - byX[gi - 1].x1;
+            if (gap > 2.5 * hMed0) clusters.push([byX[gi]]);
+            else clusters[clusters.length - 1].push(byX[gi]);
+          }
+          if (clusters.length < 2) continue;
+          const keep = clusters.reduce((a2, b3) => (b3.length > a2.length ? b3 : a2));
+          ln.gs = keep; ln.n = keep.length;
+          ln.x0 = Math.min(...keep.map((g2) => g2.x0)); ln.x1 = Math.max(...keep.map((g2) => g2.x1));
+          ln.y0 = Math.min(...keep.map((g2) => g2.y0)); ln.y1 = Math.max(...keep.map((g2) => g2.y1));
+          ln.area = keep.reduce((a2, g2) => a2 + g2.area, 0);
+          ln.r = keep.reduce((a2, g2) => a2 + g2.r, 0); ln.g = keep.reduce((a2, g2) => a2 + g2.g, 0); ln.b = keep.reduce((a2, g2) => a2 + g2.b, 0);
         }
         /* artwork bbox from art components */
         let ax0 = PW, ay0 = PH, ax1 = -1, ay1 = -1, artArea = 0;
@@ -439,10 +462,28 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
                 const hs = gs.map((g2) => g2.y1 - g2.y0 + 1).sort((a2, b3) => a2 - b3);
                 const hMax = hs[hs.length - 1];
                 const hMed = hs[Math.floor(hs.length / 2)];
-                /* caps (incl. SMALL CAPS: taller initials) keep the median
-                   glyph near the tallest; true lowercase has an x-height
-                   around half the ascender */
-                const capsSeg = hMed >= 0.62 * hMax;
+                const cy = (g2: Comp) => (g2.y0 + g2.y1) / 2;
+                const third = Math.max(1, Math.floor(gs.length / 3));
+                const byX0 = [...gs].sort((a2, b3) => a2.x0 - b3.x0);
+                const endY0 = (byX0.slice(0, third).map(cy).reduce((a2, b3) => a2 + b3, 0) +
+                               byX0.slice(-third).map(cy).reduce((a2, b3) => a2 + b3, 0)) / (2 * third);
+                const midY0 = byX0.slice(third, byX0.length - third).map(cy);
+                const midYm0 = midY0.length ? midY0.reduce((a2, b3) => a2 + b3, 0) / midY0.length : endY0;
+                const arcHere = (Number(e.lines) || 1) === 1 && endY0 - midYm0 > 0.55 * hMed;
+                /* CASE: descenders are the honest witness (owner defect
+                   2026-08-27: digit-heavy legal read as caps by heights
+                   alone). We know the text — if set in mixed case it
+                   WOULD have descenders (g j p q y), and caps never do.
+                   Arc lines keep the height rule (their baseline bends).
+                   Height rule: caps (incl. SMALL CAPS) keep the median
+                   glyph near the tallest; lowercase x-height sits near
+                   half the ascender. */
+                const hRule = hMed >= 0.62 * hMax;
+                const baseLn = gs.map((g2) => g2.y1).sort((a2, b3) => a2 - b3)[Math.floor(gs.length / 2)];
+                const descCount = gs.filter((g2) =>
+                  g2.y1 - baseLn > 0.18 * hMed && (g2.y1 - g2.y0 + 1) > 0.35 * hMax).length;
+                const txt0 = roleText[e.role || ""] || "";
+                const capsSeg = arcHere || !/[gjpqy]/.test(txt0) ? hRule : descCount === 0;
                 const byX = [...gs].sort((a2, b3) => a2.x0 - b3.x0);
                 const gaps: number[] = [];
                 for (let gi = 1; gi < byX.length; gi++) {
@@ -452,13 +493,8 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
                 gaps.sort((a2, b3) => a2 - b3);
                 const gapMed = gaps.length ? gaps[Math.floor(gaps.length / 2)] : 0;
                 const trackSeg = gapMed / Math.max(1, hMed) > 0.5 ? 0.32 : gapMed / Math.max(1, hMed) > 0.3 ? 0.18 : 0;
-                const cy = (g2: Comp) => (g2.y0 + g2.y1) / 2;
-                const third = Math.max(1, Math.floor(byX.length / 3));
-                const endY = (byX.slice(0, third).map(cy).reduce((a2, b3) => a2 + b3, 0) +
-                              byX.slice(-third).map(cy).reduce((a2, b3) => a2 + b3, 0)) / (2 * third);
-                const midY = byX.slice(third, byX.length - third).map(cy);
-                const midYm = midY.length ? midY.reduce((a2, b3) => a2 + b3, 0) / midY.length : endY;
-                const arcSeg = (Number(e.lines) || 1) === 1 && endY - midYm > 0.55 * hMed;
+                const arcSeg = arcHere;
+                const endY = endY0, midYm = midYm0;
                 e.caps = capsSeg; e.capsSeg = capsSeg;
                 e.tracking = trackSeg; e.trackSeg = trackSeg;
                 if (arcSeg) { e.arc = true; e.textH = hMed / PH; e.arcSag = (endY - midYm) / PH; }

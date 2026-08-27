@@ -2517,7 +2517,11 @@ function renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode,artInk){
     const szReq=Math.max(MIN7,size*(+e.__ds||1));
     const need=measure(longest,MIN7,fam0,wt0,false,szReq*tr0)+4;
     const bw=Math.min(W-2*SM,Math.max(bx1-bx0,need));
-    const a=e.align==='l'?'l':e.align==='r'?'r':'c';
+    /* a snapped box IS the dream's ink — centring on it reproduces any
+       alignment the dream chose; only guessed boxes fall back to the
+       transcriber's align flag (owner defect 2026-08-27: a stray box
+       edge left text off-centre) */
+    const a=e.snapped?'c':e.align==='l'?'l':e.align==='r'?'r':'c';
     const x=a==='l'?bx0:a==='r'?bx1:(bx0+bx1)/2;
     const preIR=INK_RECTS.length;
     if(e.arc&&nlines===1){
