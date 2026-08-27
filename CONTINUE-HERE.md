@@ -1211,3 +1211,33 @@ composition-contract tightening, then customer wiring.
   identical, pair rendered — producer centred, legal mixed like the
   dream, fidelity 92. Gates: parity 0.000%, hard rules PASS, goldens
   72/72.
+- EFFICIENCY PACKAGE (owner GO 2026-08-28, three fronts):
+  (1) LAYOUT VARIETY: root cause found in the stored composition cards —
+  the analyzer had flattened diverse references into near-identical
+  "centred illustration, name below" prose, and punk card 8 carried the
+  reference's SUBJECT ("open mouth") which a dealt card then painted.
+  Card prompt rewritten to geometry-only vocabulary (zones, fractions,
+  alignment axes, scale contrasts, bleed edges, arcs; subjects and
+  technique words banned); charter prompt bans depicted subjects (style
+  is HOW, never WHAT). All three boards re-analyzed: cards now diverse
+  (bleeds, vertical text, left columns, arcs). Quoted words/years from
+  references are sanitized at save ("House Party" → "a text element");
+  stored cards cleaned one-time.
+  (2) REPLICATION: ground = modal page colour and ink = distance-from-
+  ground with HYSTERESIS (strong ink seeds shapes, weak pixels only
+  join), so coloured grounds (yellow punk) segment properly and paper
+  grain can't spawn phantoms; full-bleed dreams now get the same line
+  matching (they used to fall back to transcriber guesses — the yellow-
+  pair failure); glyph colours weighted by ink-ness² (core decides, not
+  antialiased edge); art bbox = 96% ink-mass box (specks can't stretch
+  it); hard law licences are PER GLYPH (art may weave between words as
+  the dream did, never over letters); ROLE_TEXT recipes now match the
+  server prompt exactly (legal said "Dry Red" not "Dry Red Wine";
+  special printed twice when it had its own line); empty transcription
+  retries once then fails loudly (used to render a bare label
+  silently — one of the "unstable" reports). Proof: Margaux pair, 3
+  reprocesses identical, all 7 roles on true lines, fidelity 93.
+  (3) GLITCHES: NO_GLITCH_RULE (two heads, fused bodies, hybrids) added
+  to image-rules and wired into both artwork verify lists with the
+  existing strict retry.
+  Gates: parity 0.000%, hard rules PASS, goldens 72/72.

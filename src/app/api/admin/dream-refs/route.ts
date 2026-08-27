@@ -70,6 +70,9 @@ export async function POST(req: Request) {
               "Describe their SHARED VISUAL DESIGN LANGUAGE as a compact style guide (max 140 words): " +
               "typography character, colour and mood, illustration technique, level of ornament. " +
               "Do NOT describe layout or composition — that is captured separately per example. " +
+              "STRICTLY FORBIDDEN: naming anything depicted — no objects, people, animals, body parts, " +
+              "buildings or scenery. Style is HOW it is made, never WHAT is shown; a design in this " +
+              "style must be able to depict any subject. " +
               "Phrase it as positive guidance for creating new, original designs in a similar spirit. " +
               "Do not reference the specific products, names or texts shown.",
           },
@@ -107,11 +110,15 @@ export async function POST(req: Request) {
             {
               role: "system",
               content:
-                "You are a graphic design analyst. Describe ONLY the LAYOUT / COMPOSITION of this label design, " +
-                "in max 60 words, as instructions for arranging a new design the same way: " +
-                "whether the illustration fills the whole label or sits contained (and where, and roughly what fraction of the label it occupies), " +
-                "where the main name sits relative to the illustration and how large, where the smaller text blocks sit, " +
-                "the alignment scheme, and the level of ornament. Never mention the specific subject, products or words shown.",
+                "You are a graphic design analyst. Describe ONLY the LAYOUT GEOMETRY of this label design, " +
+                "in max 60 words, as instructions for arranging a NEW design the same way. " +
+                "Use ONLY geometric vocabulary: zones (top/middle/bottom third, left/right half), fractions of the label, " +
+                "alignment axes (left-aligned column, centred stack, right-ragged, asymmetric), scale contrasts " +
+                "(name huge vs small), which edges the illustration bleeds off or whether it sits contained, " +
+                "stacking order, arcs. Always call the picture simply 'the illustration'. " +
+                "STRICTLY FORBIDDEN: naming anything depicted — no objects, people, animals, body parts, scenery; " +
+                "no style or technique words (captured elsewhere). Geometry only. " +
+                "Make the scheme SPECIFIC and distinctive to THIS example — if the name sits in an unusual place, say so plainly.",
             },
             { role: "user", content: [{ type: "image_url", image_url: { url: `data:image/png;base64,${buf2.toString("base64")}`, detail: "low" } }] },
           ],
@@ -120,7 +127,13 @@ export async function POST(req: Request) {
       if (!cres.ok) continue;
       const cj = (await cres.json()) as { choices?: { message?: { content?: string } }[] };
       const arr = String(cj.choices?.[0]?.message?.content || "").slice(0, 600);
-      if (arr.length > 30 && !/\b(i'?m sorry|i can'?t|cannot assist)\b/i.test(arr.slice(0, 80))) cards.push({ key: r.id, arrangement: arr });
+      /* sanitize: quoted words and year tokens from the reference must never
+         reach a dream prompt — a card once said "House Party" and the dream
+         could typeset it (owner 2026-08-28) */
+      const clean = arr
+        .replace(/["'\u201c\u201d\u2018\u2019][^"'\u201c\u201d\u2018\u2019]{1,40}["'\u201c\u201d\u2018\u2019]/g, "a text element")
+        .replace(/\b(19|20)\d{2}\b/g, "the vintage");
+      if (clean.length > 30 && !/\b(i'?m sorry|i can'?t|cannot assist)\b/i.test(clean.slice(0, 80))) cards.push({ key: r.id, arrangement: clean });
     }
     await db.collection("settings").updateOne(
       { _id: `dream-cards-${style}` } as never,

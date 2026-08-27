@@ -2359,11 +2359,16 @@ function renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode,artInk){
   const W=twMM*10, H=thMM*10, f=sFields(d);
   const g0=hslOf(spec&&spec.ground)?String(spec.ground).toUpperCase():'#FFFFFF';
   const gc=hslOf(g0);
+  /* text recipes MATCH THE DREAM PROMPT exactly (owner 2026-08-28: the
+     replica said "Dry Red" where the dream said "Dry Red Wine", and
+     "special" printed twice) — legal uses the server's own formula, and
+     region only absorbs special when the dream gave it no line of its own */
+  const hasSpecial=(spec&&spec.elements||[]).some(e=>e&&e.role==='special'&&e.box);
   const ROLE_TEXT={
     wine:f.wine, producer:f.producer, appellation:f.appellation, grape:f.grape,
-    vintage:f.vintage, region:[f.region,f.special].filter(Boolean).join(' \u00b7 '),
+    vintage:f.vintage, region:hasSpecial?f.region:[f.region,f.special].filter(Boolean).join(' \u00b7 '),
     classification:f.classification, special:f.special,
-    legal:[(f.descriptor||'').replace(/,/g,''),f.alc].filter(Boolean).join(' / ')
+    legal:[[d.sweetness,d.wineColorName,'Wine'].map(x=>String(x==null?'':x).trim()).filter(Boolean).join(' '),f.alc].filter(Boolean).join(' / ')
   };
   /* v2 (owner 2026-08-25): REPLICATE the dream — colours verbatim, no
      contrast guard, no palette law. Only 7pt, 5mm text margins and the
@@ -2393,7 +2398,16 @@ function renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode,artInk){
       /* text boxes that the DREAM kept clear of the artwork */
       const clear=[];
       for(const e of (spec&&spec.elements||[])){
-        if(!e||!e.box||!ROLE_TEXT[e.role])continue;
+        if(!e||!ROLE_TEXT[e.role])continue;
+        /* per-glyph licences (owner 2026-08-28): the law protects the
+           LETTERS, each carrying how much the dream's art already touched
+           it — a curve of glyphs is guarded exactly, and art may weave
+           between words as the dream did, never over them */
+        if(Array.isArray(e.clearGlyphs)&&e.clearGlyphs.length){
+          for(const g of e.clearGlyphs) clear.push({x:g.x*W,y:g.y*H,w:g.w*W,h:g.h*H,allow:+g.allow||0});
+          continue;
+        }
+        if(!e.box)continue;
         const b2=e.box;
         const ix=Math.min(b2.x+b2.w,ab.x+ab.w)-Math.max(b2.x,ab.x);
         const iy=Math.min(b2.y+b2.h,ab.y+ab.h)-Math.max(b2.y,ab.y);

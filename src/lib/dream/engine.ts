@@ -3,7 +3,7 @@ import { finishArtwork, keyArtwork } from "@/lib/image-provider";
 import { restyleWithFlux } from "@/lib/image-provider/flux";
 import { getProfiles } from "@/lib/admin/style-refs";
 import { feedbackAggregates } from "@/lib/admin/feedback";
-import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, WHITE_BG_RULE, NO_BORDER_RULE } from "@/lib/admin/image-rules";
+import { getImageRules, ruleLines, verifyImage, NO_TEXT_RULE, WHITE_BG_RULE, NO_BORDER_RULE, NO_GLITCH_RULE } from "@/lib/admin/image-rules";
 import { assembleDreamRules } from "@/lib/dream/rules";
 import { analyzeArtwork } from "@/lib/admin/art-analysis";
 import { getDb } from "@/lib/db";
@@ -211,6 +211,31 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
   } catch (e) {
     throw new Error(`transcription failed: ${e instanceof Error ? e.message : e}`);
   }
+  /* an empty transcription must retry once, then fail LOUDLY — geometry no
+     longer depends on it, but roles/fonts do, and a silent empty spec used
+     to render a bare label (owner 2026-08-28: back-to-back runs flaked) */
+  if (!Array.isArray((spec as { elements?: unknown[] }).elements) || !(spec as { elements: unknown[] }).elements.length) {
+    try {
+      const res2 = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model, response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: sysPrompt },
+            { role: "user", content: [
+              { type: "text", text: `Known label texts:\n${JSON.stringify(texts, null, 1)}\nAllowed fonts:\n${GOOGLE_FONTS.join(", ")}` },
+              { type: "image_url", image_url: { url: dream, detail: "high" } },
+            ] },
+          ],
+        }),
+      });
+      const json2 = (await res2.json()) as { choices?: { message?: { content?: string } }[] };
+      spec = JSON.parse(json2.choices?.[0]?.message?.content || "{}");
+    } catch {}
+    if (!Array.isArray((spec as { elements?: unknown[] }).elements) || !(spec as { elements: unknown[] }).elements.length)
+      throw new Error("transcription returned no elements twice — not rendering a bare label");
+  }
 
   /* 1b. COLOURS ARE MEASURED, NEVER GUESSED (owner report 2026-08-25: the
      vision model's hex guesses gave blue-grey text and an olive ground
@@ -224,13 +249,33 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
       const { width: PW, height: PH, data: px } = png;
       const hex = (r: number, g: number, b: number) =>
         "#" + [r, g, b].map((v) => Math.round(v).toString(16).padStart(2, "0")).join("").toUpperCase();
-      // ground: mean of light pixels across the page
+      /* ground = the DOMINANT colour of the page (owner escalation
+         2026-08-28: a yellow punk ground read as "dark" under the old
+         light-pixel test, so the whole label became artwork). Modal
+         histogram bin, falling back to light-pixel mean on busy pages. */
       let gr = 0, gg = 0, gb = 0, gn = 0;
-      for (let y = 0; y < PH; y += 7) for (let x = 0; x < PW; x += 7) {
-        const i = (y * PW + x) * 4;
-        if (Math.min(px[i], px[i + 1], px[i + 2]) > 150) { gr += px[i]; gg += px[i + 1]; gb += px[i + 2]; gn++; }
+      {
+        const bins = new Map<number, { r: number; g: number; b: number; n: number }>();
+        let samples = 0;
+        for (let y = 0; y < PH; y += 5) for (let x = 0; x < PW; x += 5) {
+          const i = (y * PW + x) * 4;
+          samples++;
+          const k = ((px[i] >> 4) << 8) | ((px[i + 1] >> 4) << 4) | (px[i + 2] >> 4);
+          const b0 = bins.get(k) || { r: 0, g: 0, b: 0, n: 0 };
+          b0.r += px[i]; b0.g += px[i + 1]; b0.b += px[i + 2]; b0.n++;
+          bins.set(k, b0);
+        }
+        let top: { r: number; g: number; b: number; n: number } | null = null;
+        for (const b0 of bins.values()) if (!top || b0.n > top.n) top = b0;
+        if (top && top.n > samples * 0.08) { gr = top.r; gg = top.g; gb = top.b; gn = top.n; }
+        else {
+          for (let y = 0; y < PH; y += 7) for (let x = 0; x < PW; x += 7) {
+            const i = (y * PW + x) * 4;
+            if (Math.min(px[i], px[i + 1], px[i + 2]) > 150) { gr += px[i]; gg += px[i + 1]; gb += px[i + 2]; gn++; }
+          }
+        }
       }
-      const sp = spec as { ground?: string; elements?: { role?: string; box?: { x: number; y: number; w: number; h: number }; colour?: string; caps?: boolean; lines?: number; snapped?: boolean; textH?: number; capsSeg?: boolean; tracking?: number; trackSeg?: number; arc?: boolean; arcSag?: number }[] };
+      const sp = spec as { ground?: string; elements?: { role?: string; box?: { x: number; y: number; w: number; h: number }; colour?: string; caps?: boolean; lines?: number; snapped?: boolean; textH?: number; capsSeg?: boolean; tracking?: number; trackSeg?: number; arc?: boolean; arcSag?: number; clearGlyphs?: { x: number; y: number; w: number; h: number; allow: number }[] }[] };
       if (gn > 50) sp.ground = hex(gr / gn, gg / gn, gb / gn);
       /* DETERMINISTIC SEGMENTATION (owner GO 2026-08-27): the dream is
          segmented ONCE, from pixels alone, with connected-component
@@ -242,28 +287,40 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
          regions on every run. The transcriber only labels roles/fonts. */
       const spArtPre = (spec as { artwork?: { box?: { x: number; y: number; w: number; h: number }; coverage?: string } }).artwork;
       {
-        const DARK = 180;
-        const lbl = new Int32Array(PW * PH); // 0 = unvisited/light
+        const G0 = gn > 0 ? { r: gr / gn, g: gg / gn, b: gb / gn } : { r: 245, g: 242, b: 235 };
+        const lbl = new Int32Array(PW * PH); // 0 = unvisited/ground
         const stack = new Int32Array(PW * PH);
-        interface Comp { x0: number; y0: number; x1: number; y1: number; area: number; per: number; r: number; g: number; b: number }
+        interface Comp { x0: number; y0: number; x1: number; y1: number; area: number; per: number; r: number; g: number; b: number; ws: number }
         const comps: Comp[] = [];
-        const isDark = (x: number, y: number) => {
+        /* ink = anything far from the ground colour — dark serif on cream
+           AND pink display caps on yellow (owner escalation 2026-08-28).
+           HYSTERESIS: only strong ink SEEDS a shape; weaker pixels may
+           only join one — so faint paper grain and light stipple cannot
+           spawn phantom shapes, while true strokes keep their edges. */
+        const gDist = (x: number, y: number) => {
           const i = (y * PW + x) * 4;
-          return Math.min(px[i], px[i + 1], px[i + 2]) < DARK;
+          return Math.abs(px[i] - G0.r) + Math.abs(px[i + 1] - G0.g) + Math.abs(px[i + 2] - G0.b);
         };
+        const isDark = (x: number, y: number) => gDist(x, y) > 120;
+        const isSeed = (x: number, y: number) => gDist(x, y) > 210;
         let nextLbl = 0;
         for (let sy = 0; sy < PH; sy++) for (let sx = 0; sx < PW; sx++) {
           const si = sy * PW + sx;
-          if (lbl[si] !== 0 || !isDark(sx, sy)) continue;
+          if (lbl[si] !== 0 || !isSeed(sx, sy)) continue;
           nextLbl++;
-          const c: Comp = { x0: sx, y0: sy, x1: sx, y1: sy, area: 0, per: 0, r: 0, g: 0, b: 0 };
+          const c: Comp = { x0: sx, y0: sy, x1: sx, y1: sy, area: 0, per: 0, r: 0, g: 0, b: 0, ws: 0 };
           let sp2 = 0; stack[sp2++] = si; lbl[si] = nextLbl;
           while (sp2 > 0) {
             const ci = stack[--sp2];
             const cx = ci % PW, cy = (ci / PW) | 0;
             c.area++;
             const pi = ci * 4;
-            c.r += px[pi]; c.g += px[pi + 1]; c.b += px[pi + 2];
+            /* colour weighted by ink-ness squared: the glyph CORE decides
+               the colour, not the antialiased edge blended with ground
+               (owner: "almost never the colours are replicated") */
+            const dg = Math.abs(px[pi] - G0.r) + Math.abs(px[pi + 1] - G0.g) + Math.abs(px[pi + 2] - G0.b);
+            const wq = dg * dg;
+            c.r += px[pi] * wq; c.g += px[pi + 1] * wq; c.b += px[pi + 2] * wq; c.ws += wq;
             if (cx < c.x0) c.x0 = cx; if (cx > c.x1) c.x1 = cx;
             if (cy < c.y0) c.y0 = cy; if (cy > c.y1) c.y1 = cy;
             for (let d = 0; d < 4; d++) {
@@ -291,7 +348,7 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
           c.x0 > PW * 0.008 && c.y0 > PH * 0.008 && c.x1 < PW * 0.992 && c.y1 < PH * 0.992);
         const artComps = comps.filter((c) => !isGlyph(c) && c.area > PW * PH * 0.0004);
         /* glyphs → text lines: cluster by vertical overlap of bboxes */
-        interface Line { y0: number; y1: number; x0: number; x1: number; n: number; r: number; g: number; b: number; area: number; used?: boolean; gs: Comp[] }
+        interface Line { y0: number; y1: number; x0: number; x1: number; n: number; r: number; g: number; b: number; area: number; ws: number; used?: boolean; gs: Comp[] }
         const lines: Line[] = [];
         const byY = [...glyphs].sort((a, b2) => (a.y0 + a.y1) - (b2.y0 + b2.y1));
         for (const g of byY) {
@@ -303,9 +360,9 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
           if (home) {
             home.y0 = Math.min(home.y0, g.y0); home.y1 = Math.max(home.y1, g.y1);
             home.x0 = Math.min(home.x0, g.x0); home.x1 = Math.max(home.x1, g.x1);
-            home.n++; home.area += g.area; home.r += g.r; home.g += g.g; home.b += g.b; home.gs.push(g);
+            home.n++; home.area += g.area; home.ws += g.ws; home.r += g.r; home.g += g.g; home.b += g.b; home.gs.push(g);
           } else {
-            lines.push({ y0: g.y0, y1: g.y1, x0: g.x0, x1: g.x1, n: 1, area: g.area, r: g.r, g: g.g, b: g.b, gs: [g] });
+            lines.push({ y0: g.y0, y1: g.y1, x0: g.x0, x1: g.x1, n: 1, area: g.area, ws: g.ws, r: g.r, g: g.g, b: g.b, gs: [g] });
           }
         }
         /* a line is one run of letters — a speck that merely shares the
@@ -328,15 +385,29 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
           ln.x0 = Math.min(...keep.map((g2) => g2.x0)); ln.x1 = Math.max(...keep.map((g2) => g2.x1));
           ln.y0 = Math.min(...keep.map((g2) => g2.y0)); ln.y1 = Math.max(...keep.map((g2) => g2.y1));
           ln.area = keep.reduce((a2, g2) => a2 + g2.area, 0);
+          ln.ws = keep.reduce((a2, g2) => a2 + g2.ws, 0);
           ln.r = keep.reduce((a2, g2) => a2 + g2.r, 0); ln.g = keep.reduce((a2, g2) => a2 + g2.g, 0); ln.b = keep.reduce((a2, g2) => a2 + g2.b, 0);
         }
         /* artwork bbox from art components */
-        let ax0 = PW, ay0 = PH, ax1 = -1, ay1 = -1, artArea = 0;
+        let artArea = 0;
+        const colM = new Float64Array(PW), rowM = new Float64Array(PH);
         for (const c of artComps) {
           artArea += c.area;
-          if (c.x0 < ax0) ax0 = c.x0; if (c.x1 > ax1) ax1 = c.x1;
-          if (c.y0 < ay0) ay0 = c.y0; if (c.y1 > ay1) ay1 = c.y1;
+          const cw = c.x1 - c.x0 + 1, chh = c.y1 - c.y0 + 1;
+          for (let x = c.x0; x <= c.x1; x++) colM[x] += c.area / cw;
+          for (let y = c.y0; y <= c.y1; y++) rowM[y] += c.area / chh;
         }
+        /* the measured box holds 96% of the ink mass — outlier specks and
+           stray bushes at the edges no longer stretch it (owner
+           2026-08-28: "image ink area often changes in replica") */
+        const trim = artArea * 0.02;
+        const walk = (m: Float64Array, len: number, dir: 1 | -1) => {
+          let cum = 0, i = dir === 1 ? 0 : len - 1;
+          while (i >= 0 && i < len && cum + m[i] <= trim) { cum += m[i]; i += dir; }
+          return i;
+        };
+        const ax0 = walk(colM, PW, 1), ax1 = walk(colM, PW, -1);
+        const ay0 = walk(rowM, PH, 1), ay1 = walk(rowM, PH, -1);
         const haveArt = ax1 > ax0 && ay1 > ay0 && artArea > PW * PH * 0.01;
         const artBB = haveArt ? { x: ax0 / PW, y: ay0 / PH, w: (ax1 - ax0 + 1) / PW, h: (ay1 - ay0 + 1) / PH } : null;
         const coverageFull = !!artBB && artBB.w > 0.88 && artBB.h > 0.82 && artArea / (PW * PH) > 0.4;
@@ -368,7 +439,7 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
           spArtPre.box = artBB;
           spArtPre.coverage = coverageFull ? "full" : "contained";
         }
-        if (!coverageFull && textLines.length) {
+        if (textLines.length) {
           /* DETERMINISTIC ASSIGNMENT (owner GO 2026-08-27, final anchor
              removed): roles are identified from the BRIEF, not from the
              transcriber's wobbly coordinates. Each line's width/height
@@ -441,13 +512,14 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
                   const aMerged = Math.abs(Math.log((((mx1 - mx0 + 1) / (nx.y1 - y0 + 1)) * 2) / exp));
                   if (aMerged < aSingle) {
                     nx.used = true; y1 = nx.y1; x0 = mx0; x1 = mx1; e.lines = 2;
+                    ln.gs = ln.gs.concat(nx.gs); ln.ws += nx.ws; ln.r += nx.r; ln.g += nx.g; ln.b += nx.b;
                   }
                 }
               }
               e.box = { x: x0 / PW, y: y0 / PH, w: (x1 - x0 + 1) / PW, h: (y1 - y0 + 1) / PH };
               e.textH = (y1 - y0 + 1) / PH;
               e.snapped = true;
-              const n3 = Math.max(1, ln.area);
+              const n3 = Math.max(1, ln.ws);
               e.colour = hex(ln.r / n3, ln.g / n3, ln.b / n3);
               /* TYPOGRAPHY IS MEASURED, NOT GUESSED (owner escalation
                  2026-08-27): the glyph shapes themselves say how the line
@@ -500,6 +572,22 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
                 if (arcSeg) { e.arc = true; e.textH = hMed / PH; e.arcSag = (endY - midYm) / PH; }
                 else e.arc = false;
               }
+              /* per-glyph law licences (owner 2026-08-28: foliage crashed
+                 into the arched producer): each letter box carries how much
+                 the DREAM's artwork already touched it — the replica may
+                 touch exactly that much and no more. Whole-box tests were
+                 blind to letters on a curve. */
+              e.clearGlyphs = ln.gs.slice(0, 100).map((g2) => {
+                const ga = (g2.x1 - g2.x0 + 1) * (g2.y1 - g2.y0 + 1);
+                let cov = 0;
+                for (const ac of artComps) {
+                  const iw = Math.min(g2.x1, ac.x1) - Math.max(g2.x0, ac.x0) + 1;
+                  const ih = Math.min(g2.y1, ac.y1) - Math.max(g2.y0, ac.y0) + 1;
+                  if (iw > 0 && ih > 0) cov += iw * ih;
+                }
+                return { x: g2.x0 / PW, y: g2.y0 / PH, w: (g2.x1 - g2.x0 + 1) / PW, h: (g2.y1 - g2.y0 + 1) / PH,
+                         allow: +Math.min(1, cov / Math.max(1, ga)).toFixed(2) };
+              });
             }
           }
         }
@@ -510,12 +598,13 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
           const b = e.box;
           const x0 = Math.max(0, Math.floor(b.x * PW)), x1 = Math.min(PW, Math.ceil((b.x + b.w) * PW));
           const y0 = Math.max(0, Math.floor(b.y * PH)), y1 = Math.min(PH, Math.ceil((b.y + b.h) * PH));
-          let r = 0, g = 0, bb = 0, n = 0;
+          let r = 0, g = 0, bb = 0, wsum = 0, n = 0;
           for (let y = y0; y < y1; y += 2) for (let x = x0; x < x1; x += 2) {
             const i = (y * PW + x) * 4;
-            if (Math.min(px[i], px[i + 1], px[i + 2]) < 170) { r += px[i]; g += px[i + 1]; bb += px[i + 2]; n++; }
+            const dg = Math.abs(px[i] - gr / Math.max(1, gn)) + Math.abs(px[i + 1] - gg / Math.max(1, gn)) + Math.abs(px[i + 2] - gb / Math.max(1, gn));
+            if (dg > 110) { const wq = dg * dg; r += px[i] * wq; g += px[i + 1] * wq; bb += px[i + 2] * wq; wsum += wq; n++; }
           }
-          if (n > 12) e.colour = hex(r / n, g / n, bb / n);
+          if (n > 12) e.colour = hex(r / wsum, g / wsum, bb / wsum);
         }
       }
     }
@@ -585,7 +674,7 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
         ).catch(() => base);
       let raw = await craftFull(await makeFull());
       try {
-        const check = await verifyImage(raw, [NO_TEXT_RULE]);
+        const check = await verifyImage(raw, [NO_TEXT_RULE, NO_GLITCH_RULE]);
         if (!check.ok) raw = await craftFull(await makeFull(` STRICT: the previous attempt still contained lettering — ${check.violations.join(" | ")}.`));
       } catch {}
       artwork = finishArtwork(raw); // opaque full background — no keying
@@ -671,7 +760,7 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
     let raw = await craft(await makeBase());
     // verify the core laws (text leakage from the dream is the big one)
     try {
-      const check = await verifyImage(raw, [NO_TEXT_RULE, WHITE_BG_RULE, NO_BORDER_RULE]);
+      const check = await verifyImage(raw, [NO_TEXT_RULE, WHITE_BG_RULE, NO_BORDER_RULE, NO_GLITCH_RULE]);
       if (!check.ok) raw = await craft(await makeBase(` STRICT — the previous attempt violated: ${check.violations.join(" | ")}.`));
     } catch {}
     raw = finishArtwork(raw); // soft palette hint only — no mechanical lock (owner)

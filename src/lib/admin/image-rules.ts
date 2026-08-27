@@ -352,6 +352,17 @@ export const TIMELESS_RULE: CompiledRule = {
    inherit their references' toned paper (live-observed: tan ground from
    Recraft) — under multiply a tan block prints. The check makes the
    regenerate loop enforce it on every provider. */
+/* GLITCH GUARD (owner 2026-08-28: two-headed rooster, man/rooster fusion):
+   generation artifacts, verified like every other law. */
+export const NO_GLITCH_RULE: CompiledRule = {
+  src: "no anatomical glitches (built-in)",
+  positive:
+    "Every figure, person and animal is anatomically coherent — one head each, the right number of limbs, no fused or merged bodies, no accidental human-animal hybrids.",
+  negative: "two heads, extra limbs, fused bodies, merged creatures, anatomical glitch, mutation",
+  check:
+    "Does any person, animal or creature show duplicated or fused anatomy — two heads, extra or missing limbs, bodies merged together, or an unrequested human-animal hybrid? Stylised simplification is fine; answer yes only for genuine glitches.",
+};
+
 export const WHITE_BG_RULE: CompiledRule = {
   src: "pure white background (built-in)",
   positive:
