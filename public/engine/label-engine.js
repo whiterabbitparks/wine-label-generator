@@ -2399,7 +2399,11 @@ function renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode,artInk){
         const ix=Math.min(b2.x+b2.w,ab.x+ab.w)-Math.max(b2.x,ab.x);
         const iy=Math.min(b2.y+b2.h,ab.y+ab.h)-Math.max(b2.y,ab.y);
         const inter=Math.max(0,ix)*Math.max(0,iy);
-        if(inter<0.25*b2.w*b2.h) clear.push({x:b2.x*W,y:b2.y*H,w:b2.w*W,h:b2.h*H});
+        /* the dream's own interpenetration is the licence: a block the
+           dream kept fully clear stays fully clear, but where the art
+           legitimately reached into a text box (leaves beside an arched
+           name), the replica may reach exactly that far too */
+        if(inter<0.25*b2.w*b2.h) clear.push({x:b2.x*W,y:b2.y*H,w:b2.w*W,h:b2.h*H,allow:inter/Math.max(1e-9,b2.w*b2.h)});
       }
       const PAD=6;
       /* the law judges the INK region, not the image rect — margins are
@@ -2410,7 +2414,14 @@ function renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode,artInk){
         const ix0=rx2+artInk.x*w2, iy0=ry2+artInk.y*h2;
         const ix1=ix0+artInk.w*w2, iy1=iy0+artInk.h*h2;
         for(const c of clear){
-          if(ix0<c.x+c.w+PAD&&ix1>c.x-PAD&&iy0<c.y+c.h+PAD&&iy1>c.y-PAD)return false;
+          if(c.allow<0.02){
+            if(ix0<c.x+c.w+PAD&&ix1>c.x-PAD&&iy0<c.y+c.h+PAD&&iy1>c.y-PAD)return false;
+          }else{
+            const ox=Math.min(ix1,c.x+c.w)-Math.max(ix0,c.x);
+            const oy=Math.min(iy1,c.y+c.h)-Math.max(iy0,c.y);
+            const oa=Math.max(0,ox)*Math.max(0,oy);
+            if(oa>(c.allow+0.03)*c.w*c.h)return false;
+          }
         }
         return true;
       };
@@ -2451,7 +2462,12 @@ function renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode,artInk){
        hero came back ALL CAPS): when the block was ink-snapped, test both
        case hypotheses — at the size each implies, whose predicted width
        matches the measured block? Only when the string actually differs. */
-    if(e.snapped&&e.textH>0&&str!==up(str)){
+    if(e.capsSeg!=null){
+      /* the segmentation MEASURED case and tracking from the letter shapes
+         (owner escalation 2026-08-27) — the width guesser must not
+         second-guess it */
+      e.tracking=+e.trackSeg||0;
+    }else if(e.snapped&&e.textH>0&&str!==up(str)){
       /* joint CASE x TRACKING test (owner residual 2026-08-26: widely
          letter-spaced caps measured as mixed because tracking was assumed
          zero) — the winning pair is adopted together */
@@ -2508,7 +2524,7 @@ function renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode,artInk){
     if(e.arc&&nlines===1){
       /* arched baseline (dream trait, previously straightened): radius from
          the chord width and a sagitta ≈ the box height */
-      const chord=bx1-bx0, sag=Math.max(6,(e.box.h||0.04)*H*0.55);
+      const chord=bx1-bx0, sag=+e.arcSag>0?Math.max(6,e.arcSag*H):Math.max(6,(e.box.h||0.04)*H*0.55);
       const R=Math.max(chord*0.6,(chord*chord)/(8*sag)+sag/2);
       body+=sArcText(s0,(bx0+bx1)/2,by0+(+e.__dy||0)+size*0.9,R,{f:fam0,w:wt0,size:Math.max(MIN7,size*(+e.__ds||1)),fill:guard(e.colour),tr:tr0});
       INK_RECTS.push({x:bx0,y:by0,x2:bx1,y2:by0+(e.box.h||0.04)*H});

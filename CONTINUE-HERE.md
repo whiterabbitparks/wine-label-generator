@@ -1176,3 +1176,23 @@ composition-contract tightening, then customer wiring.
   line — the law wins); artwork style drift is a FLUX-craft matter, not
   geometry; arced lines may fragment into short segments (unmatched →
   transcriber fallback box).
+- MEASURED TYPOGRAPHY (owner escalation 2026-08-27, "are you making fun
+  of me"): three real defects found in the saved failing pair and fixed,
+  all verified free. (1) Grape latched onto a phantom line (grass tufts
+  42% inside artwork, 8 components = same count as SAPERAVI) — the
+  art-cover rejection tightened 0.45→0.30. (2) The client width-guess
+  case test overrode the server's correct caps — RETIRED whenever the
+  segmentation measured the line; case now comes from glyph heights
+  (median ≥ 62% of max = caps, which also reads SMALL CAPS correctly;
+  true lowercase x-height sits near half). Tracking measured from median
+  ink gap between neighbouring letters. (3) Arc measured from letter
+  centres (ends sitting lower than the middle by >0.55 glyph heights =
+  arched); arc lines get textH from the glyph height, not the inflated
+  line box, and the measured sagitta drives the curve. Plus: the hard
+  law now licenses the dream's own interpenetration — a text box the
+  dream let leaves reach into allows the replica exactly that much
+  overlap (truly clear boxes still get full PAD clearance), which
+  stopped the chronic artwork under-sizing. Proof: 3 reprocesses →
+  identical geometry AND typography; rendered pair shows arc producer,
+  caps hero, correct stack order, full-size artwork. Gates: parity
+  0.000%, hard rules PASS, goldens 72/72.

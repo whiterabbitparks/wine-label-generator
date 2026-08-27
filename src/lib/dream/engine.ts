@@ -230,7 +230,7 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
         const i = (y * PW + x) * 4;
         if (Math.min(px[i], px[i + 1], px[i + 2]) > 150) { gr += px[i]; gg += px[i + 1]; gb += px[i + 2]; gn++; }
       }
-      const sp = spec as { ground?: string; elements?: { role?: string; box?: { x: number; y: number; w: number; h: number }; colour?: string; caps?: boolean; lines?: number; snapped?: boolean; textH?: number }[] };
+      const sp = spec as { ground?: string; elements?: { role?: string; box?: { x: number; y: number; w: number; h: number }; colour?: string; caps?: boolean; lines?: number; snapped?: boolean; textH?: number; capsSeg?: boolean; tracking?: number; trackSeg?: number; arc?: boolean; arcSag?: number }[] };
       if (gn > 50) sp.ground = hex(gr / gn, gg / gn, gb / gn);
       /* DETERMINISTIC SEGMENTATION (owner GO 2026-08-27): the dream is
          segmented ONCE, from pixels alone, with connected-component
@@ -290,7 +290,7 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
         const glyphs = comps.filter(isGlyph);
         const artComps = comps.filter((c) => !isGlyph(c) && c.area > PW * PH * 0.0004);
         /* glyphs → text lines: cluster by vertical overlap of bboxes */
-        interface Line { y0: number; y1: number; x0: number; x1: number; n: number; r: number; g: number; b: number; area: number; used?: boolean }
+        interface Line { y0: number; y1: number; x0: number; x1: number; n: number; r: number; g: number; b: number; area: number; used?: boolean; gs: Comp[] }
         const lines: Line[] = [];
         const byY = [...glyphs].sort((a, b2) => (a.y0 + a.y1) - (b2.y0 + b2.y1));
         for (const g of byY) {
@@ -302,9 +302,9 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
           if (home) {
             home.y0 = Math.min(home.y0, g.y0); home.y1 = Math.max(home.y1, g.y1);
             home.x0 = Math.min(home.x0, g.x0); home.x1 = Math.max(home.x1, g.x1);
-            home.n++; home.area += g.area; home.r += g.r; home.g += g.g; home.b += g.b;
+            home.n++; home.area += g.area; home.r += g.r; home.g += g.g; home.b += g.b; home.gs.push(g);
           } else {
-            lines.push({ y0: g.y0, y1: g.y1, x0: g.x0, x1: g.x1, n: 1, area: g.area, r: g.r, g: g.g, b: g.b });
+            lines.push({ y0: g.y0, y1: g.y1, x0: g.x0, x1: g.x1, n: 1, area: g.area, r: g.r, g: g.g, b: g.b, gs: [g] });
           }
         }
         /* artwork bbox from art components */
@@ -333,7 +333,7 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
         };
         const textLines = lines
           .filter((ln) => ln.n >= 2 && (ln.x1 - ln.x0) > 1.5 * (ln.y1 - ln.y0))
-          .filter((ln) => artCover(ln.x0, ln.y0, ln.x1, ln.y1) < 0.45)
+          .filter((ln) => artCover(ln.x0, ln.y0, ln.x1, ln.y1) < 0.3)
           .sort((a, b2) => a.y0 - b2.y0);
         (sp as { segLines?: unknown }).segLines = lines.map((ln) => ({
           y: +(ln.y0 / PH).toFixed(3), h: +((ln.y1 - ln.y0 + 1) / PH).toFixed(3),
@@ -426,6 +426,44 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
               e.snapped = true;
               const n3 = Math.max(1, ln.area);
               e.colour = hex(ln.r / n3, ln.g / n3, ln.b / n3);
+              /* TYPOGRAPHY IS MEASURED, NOT GUESSED (owner escalation
+                 2026-08-27): the glyph shapes themselves say how the line
+                 is set. Caps: capital letters are all one height, so most
+                 glyphs reach near the tallest. Tracking: the ink gap
+                 between neighbouring letters, in units of glyph height.
+                 Arc: on an arched line the end letters sit lower than the
+                 middle ones. All deterministic; the client must not
+                 second-guess any of it. */
+              const gs = ln.gs.filter((g2) => (g2.y1 - g2.y0 + 1) > 0.25 * (ln.y1 - ln.y0 + 1));
+              if (gs.length >= 3) {
+                const hs = gs.map((g2) => g2.y1 - g2.y0 + 1).sort((a2, b3) => a2 - b3);
+                const hMax = hs[hs.length - 1];
+                const hMed = hs[Math.floor(hs.length / 2)];
+                /* caps (incl. SMALL CAPS: taller initials) keep the median
+                   glyph near the tallest; true lowercase has an x-height
+                   around half the ascender */
+                const capsSeg = hMed >= 0.62 * hMax;
+                const byX = [...gs].sort((a2, b3) => a2.x0 - b3.x0);
+                const gaps: number[] = [];
+                for (let gi = 1; gi < byX.length; gi++) {
+                  const gp = byX[gi].x0 - byX[gi - 1].x1;
+                  if (gp > 0 && gp < 2.2 * hMed) gaps.push(gp);
+                }
+                gaps.sort((a2, b3) => a2 - b3);
+                const gapMed = gaps.length ? gaps[Math.floor(gaps.length / 2)] : 0;
+                const trackSeg = gapMed / Math.max(1, hMed) > 0.5 ? 0.32 : gapMed / Math.max(1, hMed) > 0.3 ? 0.18 : 0;
+                const cy = (g2: Comp) => (g2.y0 + g2.y1) / 2;
+                const third = Math.max(1, Math.floor(byX.length / 3));
+                const endY = (byX.slice(0, third).map(cy).reduce((a2, b3) => a2 + b3, 0) +
+                              byX.slice(-third).map(cy).reduce((a2, b3) => a2 + b3, 0)) / (2 * third);
+                const midY = byX.slice(third, byX.length - third).map(cy);
+                const midYm = midY.length ? midY.reduce((a2, b3) => a2 + b3, 0) / midY.length : endY;
+                const arcSeg = (Number(e.lines) || 1) === 1 && endY - midYm > 0.55 * hMed;
+                e.caps = capsSeg; e.capsSeg = capsSeg;
+                e.tracking = trackSeg; e.trackSeg = trackSeg;
+                if (arcSeg) { e.arc = true; e.textH = hMed / PH; e.arcSag = (endY - midYm) / PH; }
+                else e.arc = false;
+              }
             }
           }
         }
