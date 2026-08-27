@@ -2495,7 +2495,11 @@ function renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode,artInk){
       :((e.box.h||0.05)*H*0.9)/nlines;
     const size=Math.max(MIN7,Math.min(sizeH,sizeW,H*0.24));
     /* the box only widens if 7pt still cannot hold every word */
-    const need=measure(longest,MIN7,fam0,wt0,false,MIN7*tr0)+4;
+    /* the box only widens against the SAME letter-spacing sBlock applies —
+       sBlock derives tracking from the requested (correction-scaled) size,
+       so measuring with 7pt-tracking here under-counted and words dropped */
+    const szReq=Math.max(MIN7,size*(+e.__ds||1));
+    const need=measure(longest,MIN7,fam0,wt0,false,szReq*tr0)+4;
     const bw=Math.min(W-2*SM,Math.max(bx1-bx0,need));
     const a=e.align==='l'?'l':e.align==='r'?'r':'c';
     const x=a==='l'?bx0:a==='r'?bx1:(bx0+bx1)/2;

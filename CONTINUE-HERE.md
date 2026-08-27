@@ -1150,3 +1150,29 @@ composition-contract tightening, then customer wiring.
   every time. ~Half-day build; testable free on saved pairs. Current
   honest state on the owner's pair: 75%, textured-art rows still
   misclassify.
+- CC SEGMENTATION ERA (owner "go" 2026-08-27): the promised deterministic
+  fix, DELIVERED WITH PROOF. Geometry now comes from one connected-
+  component pass over the dream pixels (flood-fill labelling of the dark
+  mask, glyph vs artwork by component size/stroke-width, glyphs clustered
+  into lines, art bbox from art components; lines buried >45% inside art
+  components are artwork texture, not text). The matcher no longer uses
+  the transcriber's coordinates AT ALL: each component ≈ one printed
+  character, so a line's GLYPH COUNT identifies its text against the
+  brief (plus width-ratio at 0.3 weight, hero→tallest, legal→lowest,
+  producer→topmost; exact min-cost assignment). The vision model is
+  demoted to role/font/caps/arc labelling only. PROOF on the owner's
+  saved pair: three reprocesses → three byte-identical geometries, every
+  element on its true dream line (producer/hero/2023/SAPERAVI/KAKHETI,
+  GEORGIA/legal), segmentation glyph counts literally matching the text
+  lengths (18/15/4/8/14/33). Renderer fix: sBlock's letter-spacing comes
+  from the correction-scaled size, so the box-widen `need` now measures
+  with that same tracking — "CELLARS" no longer drops at the 7pt floor.
+  Debug: spec.segLines lists every candidate line (y/h/w/n/artCover/
+  kept) in the free-iteration dump. Gates: parity 0.000%, hard rules
+  PASS, goldens 72/72. test-imagegen/test-autogen are N/A on this branch
+  (they test the retired generate-label-set flow; /classic now runs
+  dream flows — old flow lives on the old branches). Honest residuals:
+  legal renders at the 7pt law floor (bigger than the dream's tiny
+  line — the law wins); artwork style drift is a FLUX-craft matter, not
+  geometry; arced lines may fragment into short segments (unmatched →
+  transcriber fallback box).

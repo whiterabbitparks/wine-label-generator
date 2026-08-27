@@ -232,170 +232,208 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
       }
       const sp = spec as { ground?: string; elements?: { role?: string; box?: { x: number; y: number; w: number; h: number }; colour?: string; caps?: boolean; lines?: number; snapped?: boolean; textH?: number }[] };
       if (gn > 50) sp.ground = hex(gr / gn, gg / gn, gb / gn);
-      /* LINE-BAND DETECTION (owner escalation 2026-08-27, replaces the
-         per-element ink snap that stole neighbouring lines or missed —
-         live-observed: "legal" swallowed two lines and rendered double
-         size while grape/region floated at guessed spots). The correct
-         tool: find EVERY text line in the dream globally — horizontal
-         bands of dark ink outside the artwork region — each with its
-         exact y, height, x-extent and colour; then match bands to
-         elements one-to-one in reading order. No guessing, no stealing. */
+      /* DETERMINISTIC SEGMENTATION (owner GO 2026-08-27): the dream is
+         segmented ONCE, from pixels alone, with connected-component
+         analysis — the technique OCR has used for decades. Every ink shape
+         is found and classified as GLYPH or ARTWORK by stroke geometry
+         (letters are small, thin-stroked, row-aligned; artwork is large or
+         thick or dense); glyphs cluster into text lines. No vision-model
+         coordinate touches geometry: the same dream yields the same
+         regions on every run. The transcriber only labels roles/fonts. */
       const spArtPre = (spec as { artwork?: { box?: { x: number; y: number; w: number; h: number }; coverage?: string } }).artwork;
-      const artGuess = spArtPre?.box || null;
-      const isFullPre = !!artGuess && artGuess.w > 0.85 && artGuess.h > 0.8;
-      if (!isFullPre) {
-        const inArt = (fx: number, fy: number) =>
-          !!artGuess && fx >= artGuess.x - 0.015 && fx <= artGuess.x + artGuess.w + 0.015 &&
-          fy >= artGuess.y - 0.015 && fy <= artGuess.y + artGuess.h + 0.015;
-        // dark-ink row profile outside the (provisional) artwork region
-        const rowCount = new Int32Array(PH);
-        const rowX0 = new Int32Array(PH).fill(PW), rowX1 = new Int32Array(PH).fill(-1);
-        /* TEXT vs ARTWORK, structurally (owner failure 2026-08-27: artwork
-           rows became phantom text bands whenever the art-box guess
-           wobbled): glyph rows are made of SHORT ink runs; artwork rows
-           carry long continuous strokes. A row with any run longer than 9%
-           of the width is artwork, whatever any box says. */
-        const MAXRUN = Math.floor(PW * 0.09);
-        for (let y = Math.floor(PH * 0.01); y < PH * 0.99; y++) {
-          const fy = y / PH;
-          let run = 0, maxRun = 0, cnt = 0, rx0 = PW, rx1 = -1;
-          for (let x = Math.floor(PW * 0.01); x < PW * 0.99; x++) {
-            const i = (y * PW + x) * 4;
-            const dark = Math.min(px[i], px[i + 1], px[i + 2]) < 180 && !inArt(x / PW, fy);
-            if (dark) {
-              run++; cnt++;
-              if (x < rx0) rx0 = x;
-              if (x > rx1) rx1 = x;
-            } else {
-              if (run > maxRun) maxRun = run;
-              run = 0;
+      {
+        const DARK = 180;
+        const lbl = new Int32Array(PW * PH); // 0 = unvisited/light
+        const stack = new Int32Array(PW * PH);
+        interface Comp { x0: number; y0: number; x1: number; y1: number; area: number; per: number; r: number; g: number; b: number }
+        const comps: Comp[] = [];
+        const isDark = (x: number, y: number) => {
+          const i = (y * PW + x) * 4;
+          return Math.min(px[i], px[i + 1], px[i + 2]) < DARK;
+        };
+        let nextLbl = 0;
+        for (let sy = 0; sy < PH; sy++) for (let sx = 0; sx < PW; sx++) {
+          const si = sy * PW + sx;
+          if (lbl[si] !== 0 || !isDark(sx, sy)) continue;
+          nextLbl++;
+          const c: Comp = { x0: sx, y0: sy, x1: sx, y1: sy, area: 0, per: 0, r: 0, g: 0, b: 0 };
+          let sp2 = 0; stack[sp2++] = si; lbl[si] = nextLbl;
+          while (sp2 > 0) {
+            const ci = stack[--sp2];
+            const cx = ci % PW, cy = (ci / PW) | 0;
+            c.area++;
+            const pi = ci * 4;
+            c.r += px[pi]; c.g += px[pi + 1]; c.b += px[pi + 2];
+            if (cx < c.x0) c.x0 = cx; if (cx > c.x1) c.x1 = cx;
+            if (cy < c.y0) c.y0 = cy; if (cy > c.y1) c.y1 = cy;
+            for (let d = 0; d < 4; d++) {
+              const nx = cx + (d === 0 ? 1 : d === 1 ? -1 : 0);
+              const ny = cy + (d === 2 ? 1 : d === 3 ? -1 : 0);
+              if (nx < 0 || ny < 0 || nx >= PW || ny >= PH) { c.per++; continue; }
+              const ni = ny * PW + nx;
+              if (!isDark(nx, ny)) { c.per++; continue; }
+              if (lbl[ni] === 0) { lbl[ni] = nextLbl; stack[sp2++] = ni; }
             }
           }
-          if (run > maxRun) maxRun = run;
-          if (maxRun > MAXRUN) continue; // artwork row, not text
-          rowCount[y] = cnt; rowX0[y] = rx0; rowX1[y] = rx1;
+          if (c.area >= 6) comps.push(c);
         }
-        // rows → bands (close small gaps, drop slivers)
-        const thr = Math.max(10, Math.floor(PW * 0.018)); // sparse scene-edge spill must not register as text
-        interface Band { y0: number; y1: number; x0: number; x1: number; colour?: string; used?: boolean }
-        const bands: Band[] = [];
-        let cur: Band | null = null, gapRows = 0;
-        const GAP = Math.max(2, Math.floor(PH * 0.006));
-        for (let y = 0; y < PH; y++) {
-          if (rowCount[y] >= thr) {
-            if (!cur) cur = { y0: y, y1: y, x0: rowX0[y], x1: rowX1[y] };
-            else { cur.y1 = y; cur.x0 = Math.min(cur.x0, rowX0[y]); cur.x1 = Math.max(cur.x1, rowX1[y]); }
-            gapRows = 0;
-          } else if (cur) {
-            gapRows++;
-            if (gapRows > GAP) { bands.push(cur); cur = null; gapRows = 0; }
+        /* classify: glyph vs artwork by stroke geometry */
+        const isGlyph = (c: Comp) => {
+          const h = c.y1 - c.y0 + 1, w = c.x1 - c.x0 + 1;
+          if (h < PH * 0.006 || h > PH * 0.13) return false;
+          if (w > PW * 0.28) return false;
+          if (c.area > PW * PH * 0.012) return false;
+          const stroke = (2 * c.area) / Math.max(1, c.per); // ~stroke width
+          if (stroke > 0.45 * h) return false;              // blobs are art
+          return true;
+        };
+        const glyphs = comps.filter(isGlyph);
+        const artComps = comps.filter((c) => !isGlyph(c) && c.area > PW * PH * 0.0004);
+        /* glyphs → text lines: cluster by vertical overlap of bboxes */
+        interface Line { y0: number; y1: number; x0: number; x1: number; n: number; r: number; g: number; b: number; area: number; used?: boolean }
+        const lines: Line[] = [];
+        const byY = [...glyphs].sort((a, b2) => (a.y0 + a.y1) - (b2.y0 + b2.y1));
+        for (const g of byY) {
+          let home: Line | null = null;
+          for (const ln of lines) {
+            const ov = Math.min(ln.y1, g.y1) - Math.max(ln.y0, g.y0);
+            if (ov > 0.5 * Math.min(ln.y1 - ln.y0, g.y1 - g.y0)) { home = ln; break; }
+          }
+          if (home) {
+            home.y0 = Math.min(home.y0, g.y0); home.y1 = Math.max(home.y1, g.y1);
+            home.x0 = Math.min(home.x0, g.x0); home.x1 = Math.max(home.x1, g.x1);
+            home.n++; home.area += g.area; home.r += g.r; home.g += g.g; home.b += g.b;
+          } else {
+            lines.push({ y0: g.y0, y1: g.y1, x0: g.x0, x1: g.x1, n: 1, area: g.area, r: g.r, g: g.g, b: g.b });
           }
         }
-        if (cur) bands.push(cur);
-        const MINH = Math.max(4, Math.floor(PH * 0.007));
-        let clean = bands.filter((bd) => bd.y1 - bd.y0 >= MINH && bd.x1 > bd.x0);
-        /* a text line is never taller than ~12% of the page — taller bands
-           are merges (hero + scene spill): split at the weakest row */
-        const MAXH = Math.floor(PH * 0.12);
-        for (let guard = 0; guard < 8; guard++) {
-          const tall = clean.findIndex((bd) => bd.y1 - bd.y0 > MAXH);
-          if (tall < 0) break;
-          const bd = clean[tall];
-          let cutY = -1, cutV = Infinity;
-          for (let y = bd.y0 + MINH; y <= bd.y1 - MINH; y++) {
-            if (rowCount[y] < cutV) { cutV = rowCount[y]; cutY = y; }
+        /* artwork bbox from art components */
+        let ax0 = PW, ay0 = PH, ax1 = -1, ay1 = -1, artArea = 0;
+        for (const c of artComps) {
+          artArea += c.area;
+          if (c.x0 < ax0) ax0 = c.x0; if (c.x1 > ax1) ax1 = c.x1;
+          if (c.y0 < ay0) ay0 = c.y0; if (c.y1 > ay1) ay1 = c.y1;
+        }
+        const haveArt = ax1 > ax0 && ay1 > ay0 && artArea > PW * PH * 0.01;
+        const artBB = haveArt ? { x: ax0 / PW, y: ay0 / PH, w: (ax1 - ax0 + 1) / PW, h: (ay1 - ay0 + 1) / PH } : null;
+        const coverageFull = !!artBB && artBB.w > 0.88 && artBB.h > 0.82 && artArea / (PW * PH) > 0.4;
+        /* a real text line has several glyphs, is wider than tall, and is
+           NOT buried inside the artwork — stippled textures shed small
+           components that mimic letters, so any line mostly covered by
+           artwork components is part of the picture, not typesetting */
+        const artCover = (x0: number, y0: number, x1: number, y1: number) => {
+          const a = Math.max(1, (x1 - x0 + 1) * (y1 - y0 + 1));
+          let cov = 0;
+          for (const c of artComps) {
+            const iw = Math.min(x1, c.x1) - Math.max(x0, c.x0) + 1;
+            const ih = Math.min(y1, c.y1) - Math.max(y0, c.y0) + 1;
+            if (iw > 0 && ih > 0) cov += iw * ih;
           }
-          if (cutY < 0) break;
-          const mk = (a: number, b2: number): Band => {
-            let x0 = PW, x1 = -1;
-            for (let y = a; y <= b2; y++) { if (rowCount[y] >= thr) { x0 = Math.min(x0, rowX0[y]); x1 = Math.max(x1, rowX1[y]); } }
-            return { y0: a, y1: b2, x0: x0 === PW ? bd.x0 : x0, x1: x1 < 0 ? bd.x1 : x1 };
+          return Math.min(1, cov / a);
+        };
+        const textLines = lines
+          .filter((ln) => ln.n >= 2 && (ln.x1 - ln.x0) > 1.5 * (ln.y1 - ln.y0))
+          .filter((ln) => artCover(ln.x0, ln.y0, ln.x1, ln.y1) < 0.45)
+          .sort((a, b2) => a.y0 - b2.y0);
+        (sp as { segLines?: unknown }).segLines = lines.map((ln) => ({
+          y: +(ln.y0 / PH).toFixed(3), h: +((ln.y1 - ln.y0 + 1) / PH).toFixed(3),
+          x: +(ln.x0 / PW).toFixed(3), w: +((ln.x1 - ln.x0 + 1) / PW).toFixed(3),
+          n: ln.n, art: +artCover(ln.x0, ln.y0, ln.x1, ln.y1).toFixed(2),
+          kept: textLines.includes(ln),
+        }));
+        if (spArtPre && artBB) {
+          spArtPre.box = artBB;
+          spArtPre.coverage = coverageFull ? "full" : "contained";
+        }
+        if (!coverageFull && textLines.length) {
+          /* DETERMINISTIC ASSIGNMENT (owner GO 2026-08-27, final anchor
+             removed): roles are identified from the BRIEF, not from the
+             transcriber's wobbly coordinates. Each line's width/height
+             ratio predicts how many characters it holds — and we know
+             every element's text. The tallest line leans hero, the lowest
+             leans legal, the topmost leans producer. Same dream + same
+             brief = same assignment, every run. */
+          const els = (sp.elements || []).filter((e) => e.box && e.role);
+          const roleText: Record<string, string> = {
+            wine: texts.wine, producer: texts.producer, appellation: texts.appellation,
+            grape: texts.grape, vintage: texts.vintage, region: texts.region,
+            classification: texts.classification, special: texts.special, legal: texts.legal,
           };
-          clean.splice(tall, 1, mk(bd.y0, cutY - 1), mk(cutY + 1, bd.y1));
-          clean = clean.filter((b2) => b2.y1 - b2.y0 >= MINH);
-        }
-        // per-band ink colour
-        for (const bd of clean) {
-          let r = 0, g = 0, bb = 0, n = 0;
-          for (let y = bd.y0; y <= bd.y1; y += 2) for (let x = bd.x0; x <= bd.x1; x += 2) {
-            const i = (y * PW + x) * 4;
-            if (Math.min(px[i], px[i + 1], px[i + 2]) < 180 && !inArt(x / PW, y / PH)) { r += px[i]; g += px[i + 1]; bb += px[i + 2]; n++; }
-          }
-          if (n > 8) bd.colour = hex(r / n, g / n, bb / n);
-        }
-        // ORDER-PRESERVING alignment (owner failure 2026-08-27: greedy
-        // nearest-match swapped roles when the transcriber's guesses
-        // wobbled — the hero's band went to "vintage"). Elements and bands
-        // both run top-to-bottom: match them monotonically via DP, so role
-        // order can never invert; the tallest band leans toward the hero.
-        const els = (sp.elements || []).filter((e) => e.box);
-        const byY = [...els].sort((a, b2) => (a.box!.y - b2.box!.y));
-        if (clean.length) {
-          const sorted = [...clean].sort((a, b2) => a.y0 - b2.y0);
-          const maxH = Math.max(...sorted.map((bd) => bd.y1 - bd.y0));
-          const N = byY.length, M = sorted.length, SKIP = 0.11;
-          const cost = (i: number, j: number) => {
-            const e = byY[i], bd = sorted[j];
-            const gy = e.box!.y + e.box!.h / 2, by = (bd.y0 + bd.y1) / 2 / PH;
-            let c = Math.abs(by - gy);
-            if (e.role === "wine") c += (bd.y1 - bd.y0) === maxH ? -0.06 : 0.05;
+          const maxH = Math.max(...textLines.map((ln) => ln.y1 - ln.y0));
+          const minY = Math.min(...textLines.map((ln) => ln.y0));
+          const maxY1 = Math.max(...textLines.map((ln) => ln.y1));
+          /* each connected component ≈ one printed character, so a line's
+             glyph COUNT identifies its text far more sharply than any
+             width heuristic — '2023' is 4 components, the legal line ~33 */
+          const lineCost = (e: { role?: string }, ln: { y0: number; y1: number; x0: number; x1: number; n: number }) => {
+            const txt = roleText[e.role || ""] || "";
+            if (!txt) return 9;
+            const expChars = Math.max(1, txt.replace(/\s+/g, "").length);
+            const expAspect = Math.max(1, 0.6 * txt.length);
+            const lnAspect = (ln.x1 - ln.x0 + 1) / Math.max(1, ln.y1 - ln.y0 + 1);
+            let c = Math.abs(Math.log(ln.n / expChars)) + 0.3 * Math.abs(Math.log(lnAspect / expAspect));
+            if (e.role === "wine") c += (ln.y1 - ln.y0) === maxH ? -0.8 : 0.4;
+            if (e.role === "legal") c += ln.y1 === maxY1 ? -0.5 : 0.2;
+            if (e.role === "producer") c += ln.y0 === minY ? -0.3 : 0;
             return c;
           };
-          const dp: number[][] = Array.from({ length: N + 1 }, () => Array(M + 1).fill(0));
-          for (let i = 1; i <= N; i++) dp[i][0] = i * SKIP;
-          for (let j = 1; j <= M; j++) dp[0][j] = j * SKIP;
-          for (let i = 1; i <= N; i++) for (let j = 1; j <= M; j++)
-            dp[i][j] = Math.min(dp[i - 1][j - 1] + cost(i - 1, j - 1), dp[i - 1][j] + SKIP, dp[i][j - 1] + SKIP);
-          const pairs: [number, number][] = [];
-          let i = N, j = M;
-          while (i > 0 && j > 0) {
-            if (dp[i][j] === dp[i - 1][j - 1] + cost(i - 1, j - 1)) { pairs.push([i - 1, j - 1]); i--; j--; }
-            else if (dp[i][j] === dp[i - 1][j] + SKIP) i--;
-            else j--;
-          }
-          pairs.reverse();
-          for (const [ei, bj] of pairs) {
-            const e = byY[ei];
-            const best = sorted[bj];
-            if (Math.abs((best.y0 + best.y1) / 2 / PH - (e.box!.y + e.box!.h / 2)) > 0.25) continue;
-            best.used = true;
-            let y0 = best.y0, y1 = best.y1, x0 = best.x0, x1 = best.x1;
-            // a two-line hero may claim the adjacent unclaimed band — but
-            // ONLY when the transcriber saw two lines (owner pair: a
-            // one-line hero merged scene spill and wrapped into two)
-            if (e.role === "wine" && (Number(e.lines) || 1) >= 2) {
-              const idx = clean.indexOf(best);
-              const nb = clean[idx + 1];
-              if (nb && !nb.used && nb.y0 - y1 < 1.3 * (y1 - y0) &&
-                  Math.min(x1, nb.x1) - Math.max(x0, nb.x0) > 0.5 * (x1 - x0)) {
-                nb.used = true; y1 = nb.y1; x0 = Math.min(x0, nb.x0); x1 = Math.max(x1, nb.x1);
-                e.lines = 2;
-              }
+          /* exact min-cost injective assignment (tiny sizes — DFS) */
+          const N = els.length, M = textLines.length;
+          let bestAsn: number[] | null = null, bestCost = Infinity;
+          const cur: number[] = Array(N).fill(-1);
+          const usedLn: boolean[] = Array(M).fill(false);
+          const dfs = (i: number, acc: number) => {
+            if (acc >= bestCost) return;
+            if (i === N) { bestCost = acc; bestAsn = [...cur]; return; }
+            // option: leave element unmatched (penalty)
+            cur[i] = -1; dfs(i + 1, acc + 1.2);
+            for (let j = 0; j < M; j++) {
+              if (usedLn[j]) continue;
+              usedLn[j] = true; cur[i] = j;
+              dfs(i + 1, acc + lineCost(els[i], textLines[j]));
+              usedLn[j] = false; cur[i] = -1;
             }
-            e.box = { x: x0 / PW, y: y0 / PH, w: (x1 - x0 + 1) / PW, h: (y1 - y0 + 1) / PH };
-            e.textH = (y1 - y0 + 1) / PH;
-            e.snapped = true;
-            if (best.colour) e.colour = best.colour;
+          };
+          dfs(0, 0);
+          if (bestAsn) {
+            const asn = bestAsn as number[];
+            for (let i = 0; i < N; i++) {
+              const j = asn[i];
+              if (j < 0) continue;
+              const e = els[i];
+              const ln = textLines[j];
+              ln.used = true;
+              let y0 = ln.y0, y1 = ln.y1, x0 = ln.x0, x1 = ln.x1;
+              /* two-line hero: deterministic merge — claim the adjacent
+                 unclaimed line when doing so matches the expected shape
+                 better than the single line does */
+              if (e.role === "wine") {
+                const idx = textLines.indexOf(ln);
+                const nx = textLines[idx + 1];
+                if (nx && !asn.includes(idx + 1) && !nx.used &&
+                    nx.y0 - y1 < 1.3 * (y1 - y0) && (nx.y1 - nx.y0) > 0.6 * (y1 - y0)) {
+                  const exp = Math.max(1, 0.6 * (roleText.wine || "").length);
+                  const aSingle = Math.abs(Math.log(((x1 - x0 + 1) / (y1 - y0 + 1)) / exp));
+                  const mx0 = Math.min(x0, nx.x0), mx1 = Math.max(x1, nx.x1);
+                  const aMerged = Math.abs(Math.log((((mx1 - mx0 + 1) / (nx.y1 - y0 + 1)) * 2) / exp));
+                  if (aMerged < aSingle) {
+                    nx.used = true; y1 = nx.y1; x0 = mx0; x1 = mx1; e.lines = 2;
+                  }
+                }
+              }
+              e.box = { x: x0 / PW, y: y0 / PH, w: (x1 - x0 + 1) / PW, h: (y1 - y0 + 1) / PH };
+              e.textH = (y1 - y0 + 1) / PH;
+              e.snapped = true;
+              const n3 = Math.max(1, ln.area);
+              e.colour = hex(ln.r / n3, ln.g / n3, ln.b / n3);
+            }
           }
         }
-        // anything unmatched keeps the transcriber's box and colour-samples it
-        for (const e of els) {
-          if (e.snapped) continue;
-          const b = e.box!;
-          const x0 = Math.max(0, Math.floor(b.x * PW)), x1 = Math.min(PW, Math.ceil((b.x + b.w) * PW));
-          const y0 = Math.max(0, Math.floor(b.y * PH)), y1 = Math.min(PH, Math.ceil((b.y + b.h) * PH));
-          let r = 0, g = 0, bb = 0, n = 0;
-          for (let y = y0; y < y1; y += 2) for (let x = x0; x < x1; x += 2) {
-            const i = (y * PW + x) * 4;
-            if (Math.min(px[i], px[i + 1], px[i + 2]) < 170) { r += px[i]; g += px[i + 1]; bb += px[i + 2]; n++; }
-          }
-          if (n > 12) e.colour = hex(r / n, g / n, bb / n);
-        }
-      } else {
-        // full-bleed: text sits inside the scene — bands are unusable; keep
-        // the transcriber boxes and sample colours within them
+        /* anything unmatched (or full-bleed dreams) keeps the transcriber's
+           box and samples its colour there */
         for (const e of sp.elements || []) {
-          const b = e.box; if (!b) continue;
+          if (e.snapped || !e.box) continue;
+          const b = e.box;
           const x0 = Math.max(0, Math.floor(b.x * PW)), x1 = Math.min(PW, Math.ceil((b.x + b.w) * PW));
           const y0 = Math.max(0, Math.floor(b.y * PH)), y1 = Math.min(PH, Math.ceil((b.y + b.h) * PH));
           let r = 0, g = 0, bb = 0, n = 0;
@@ -406,63 +444,6 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
           if (n > 12) e.colour = hex(r / n, g / n, bb / n);
         }
       }
-
-      /* ARTWORK EXTENT IS MEASURED, NOT GUESSED (owner 2026-08-25: the
-         replica shrank a half-label illustration into a floating block).
-         Every pixel that differs from the ground and lies outside the text
-         boxes is artwork; its bbox replaces the transcribed art box, and
-         the coverage call (full vs contained) comes from the same numbers. */
-      try {
-        const spArt = (spec as { artwork?: { box?: { x: number; y: number; w: number; h: number }; coverage?: string } }).artwork;
-        const gN = sp.ground ? parseInt(sp.ground.slice(1), 16) : 0xffffff;
-        const gr2 = (gN >> 16) & 255, gg2 = (gN >> 8) & 255, gb2 = gN & 255;
-        const tboxes = (sp.elements || []).map((e) => e.box).filter(Boolean) as { x: number; y: number; w: number; h: number }[];
-        /* DENSE-CLUSTER extent (owner failure 2026-08-26: parchment texture
-           and corner vignettes counted as artwork, inflating the box): a
-           grid cell counts as artwork only when a substantial share of its
-           pixels clearly differs from the ground; the outer 2% border is
-           ignored entirely. */
-        const GC = 32, GR = 20;
-        const cellHit: number[][] = Array.from({ length: GR }, () => Array(GC).fill(0));
-        const cellTot: number[][] = Array.from({ length: GR }, () => Array(GC).fill(0));
-        for (let y = Math.floor(PH * 0.02); y < PH * 0.98; y += 2) {
-          const fy = y / PH, gy = Math.min(GR - 1, Math.floor((y * GR) / PH));
-          for (let x = Math.floor(PW * 0.02); x < PW * 0.98; x += 2) {
-            const fx = x / PW;
-            let inText = false;
-            for (const tb of tboxes) {
-              if (fx >= tb.x - 0.015 && fx <= tb.x + tb.w + 0.015 && fy >= tb.y - 0.015 && fy <= tb.y + tb.h + 0.015) { inText = true; break; }
-            }
-            if (inText) continue;
-            const gx = Math.min(GC - 1, Math.floor((x * GC) / PW));
-            cellTot[gy][gx]++;
-            const i = (y * PW + x) * 4;
-            if (Math.abs(px[i] - gr2) + Math.abs(px[i + 1] - gg2) + Math.abs(px[i + 2] - gb2) > 110) cellHit[gy][gx]++;
-          }
-        }
-        let cx0 = GC, cy0 = GR, cx1 = -1, cy1 = -1, artCells = 0;
-        for (let gy = 0; gy < GR; gy++) for (let gx = 0; gx < GC; gx++) {
-          if (cellTot[gy][gx] > 8 && cellHit[gy][gx] / cellTot[gy][gx] > 0.18) {
-            artCells++;
-            if (gx < cx0) cx0 = gx; if (gx > cx1) cx1 = gx;
-            if (gy < cy0) cy0 = gy; if (gy > cy1) cy1 = gy;
-          }
-        }
-        if (spArt && artCells > 6 && cx1 >= cx0 && cy1 >= cy0) {
-          const nb = { x: cx0 / GC, y: cy0 / GR, w: (cx1 - cx0 + 1) / GC, h: (cy1 - cy0 + 1) / GR };
-          const share = artCells / (GC * GR);
-          const modelBox = spArt.box; // the transcriber's opinion
-          const plausibleFull = nb.w > 0.88 && nb.h > 0.82 && share > 0.5;
-          /* a "contained" artwork measuring near-full-height means the
-             measurement is contaminated (stray glyphs, texture) — in that
-             case the transcriber's box is the safer truth (owner failure
-             2026-08-26: a full-height phantom box disabled the no-overlap
-             law and stretched the art over the hero) */
-          if (plausibleFull) { spArt.box = nb; spArt.coverage = "full"; }
-          else if (nb.h < 0.92 && nb.w < 0.95) { spArt.box = nb; spArt.coverage = "contained"; }
-          else if (modelBox) { spArt.coverage = "contained"; /* keep modelBox */ }
-        }
-      } catch {}
     }
   } catch {}
 
