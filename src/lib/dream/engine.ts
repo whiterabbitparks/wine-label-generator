@@ -606,7 +606,8 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
           .filter((ln) => ln.n >= 2 && (ln.x1 - ln.x0) > 1.5 * (ln.y1 - ln.y0))
           .filter((ln) => buried(ln) < 0.4)
           .sort((a, b2) => a.y0 - b2.y0);
-        const eraseJobs: { gs: Comp[]; bx0: number; by0: number; bx1: number; by1: number; ir: number; ig: number; ib: number }[] = [];
+        interface EraseJob { gs: Comp[]; bx0: number; by0: number; bx1: number; by1: number; ir: number; ig: number; ib: number; el: { snapped?: boolean; paintedBox?: object; box?: { x: number; y: number; w: number; h: number } } }
+        const eraseJobs: EraseJob[] = [];
         const artIds2 = new Set<number>();
         for (const ac of artComps) artIds2.add(ac.id);
         const artIds = artIds2;
@@ -749,7 +750,7 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
               e.snapped = true;
               const n3 = Math.max(1, ln.ws);
               e.colour = hex(ln.r / n3, ln.g / n3, ln.b / n3);
-              eraseJobs.push({ gs: ln.gs, bx0: x0, by0: y0, bx1: x1, by1: y1, ir: ln.r / n3, ig: ln.g / n3, ib: ln.b / n3 });
+              eraseJobs.push({ gs: ln.gs, bx0: x0, by0: y0, bx1: x1, by1: y1, ir: ln.r / n3, ig: ln.g / n3, ib: ln.b / n3, el: e });
               /* TYPOGRAPHY IS MEASURED, NOT GUESSED (owner escalation
                  2026-08-27): the glyph shapes themselves say how the line
                  is set. Caps: capital letters are all one height, so most
@@ -825,32 +826,56 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
            foliage chains keep their pixels. Each glyph fills with its own
            ring colour; then the whole claimed band is swept for pixels of
            that line's ink colour, catching letters the tracer missed. */
+        /* TWO-PHASE VALIDATED ERASE (owner 2026-08-31, "visible artefacts,
+           some texts doubled"): the erase is PLANNED first — every pixel
+           it would remove goes into a mask — then the band is audited for
+           painted ink the plan would MISS. If ghosts would survive, the
+           element is un-typeset and keeps the dream's painting: a text is
+           set in vector ONLY when its painted original provably vanishes.
+           Only validated plans touch the pixels. */
         for (const job of eraseJobs) {
-          for (const g2 of job.gs) {
-            let rr = 0, rg = 0, rb = 0, rn = 0;
-            const m2 = 3;
-            const probe2 = (x: number, y: number) => {
-              if (x < 0 || y < 0 || x >= PW || y >= PH || gDist(x, y) > 70) return;
-              const i = (y * PW + x) * 4;
-              rr += px[i]; rg += px[i + 1]; rb += px[i + 2]; rn++;
-            };
-            for (let x = g2.x0 - m2; x <= g2.x1 + m2; x++) { probe2(x, g2.y0 - m2); probe2(x, g2.y1 + m2); }
-            for (let y = g2.y0 - m2; y <= g2.y1 + m2; y++) { probe2(g2.x0 - m2, y); probe2(g2.x1 + m2, y); }
-            const fr = rn ? rr / rn : G0.r, fg = rn ? rg / rn : G0.g, fb = rn ? rb / rn : G0.b;
-            for (let y = Math.max(0, g2.y0 - 2); y <= Math.min(PH - 1, g2.y1 + 2); y++)
-              for (let x = Math.max(0, g2.x0 - 2); x <= Math.min(PW - 1, g2.x1 + 2); x++) {
-                if (gDist(x, y) <= 45) continue;
-                if (artIds.has(lbl[y * PW + x])) continue;
-                const i = (y * PW + x) * 4;
-                px[i] = fr; px[i + 1] = fg; px[i + 2] = fb;
-              }
-          }
-          /* fill = blend of the clean pixels straight above and below the
-             column — follows sky gradients instead of tile blobs */
           const p2 = 8;
           const yT = Math.max(0, job.by0 - p2), yB = Math.min(PH - 1, job.by1 + p2);
           const xL = Math.max(0, job.bx0 - p2), xR = Math.min(PW - 1, job.bx1 + p2);
-          const colTop = new Float64Array((xR - xL + 1) * 3), colBot = new Float64Array((xR - xL + 1) * 3);
+          const bw2 = xR - xL + 1, bh2 = yB - yT + 1;
+          const plan = new Uint8Array(bw2 * bh2);
+          const inPlan = (x: number, y: number) => x >= xL && x <= xR && y >= yT && y <= yB && plan[(y - yT) * bw2 + (x - xL)] === 1;
+          const mark = (x: number, y: number) => { if (x >= xL && x <= xR && y >= yT && y <= yB) plan[(y - yT) * bw2 + (x - xL)] = 1; };
+          // phase 1a: each glyph's padded bbox (ghost edges included: low threshold)
+          for (const g2 of job.gs)
+            for (let y = Math.max(0, g2.y0 - 3); y <= Math.min(PH - 1, g2.y1 + 3); y++)
+              for (let x = Math.max(0, g2.x0 - 3); x <= Math.min(PW - 1, g2.x1 + 3); x++) {
+                if (gDist(x, y) <= 32) continue;
+                if (artIds.has(lbl[y * PW + x])) continue;
+                mark(x, y);
+              }
+          // phase 1b: band sweep for same-ink pixels the tracer missed
+          for (let y = yT; y <= yB; y++)
+            for (let x = xL; x <= xR; x++) {
+              const i = (y * PW + x) * 4;
+              if (gDist(x, y) <= 45) continue;
+              if (artIds.has(lbl[y * PW + x])) continue;
+              if (Math.abs(px[i] - job.ir) + Math.abs(px[i + 1] - job.ig) + Math.abs(px[i + 2] - job.ib) > 160) continue;
+              mark(x, y);
+            }
+          // phase 2: audit — same-ink pixels in the band the plan does NOT cover
+          let leftover = 0, planned = 0;
+          for (let y = yT; y <= yB; y++)
+            for (let x = xL; x <= xR; x++) {
+              if (inPlan(x, y)) { planned++; continue; }
+              const i = (y * PW + x) * 4;
+              if (gDist(x, y) <= 60) continue;
+              if (artIds.has(lbl[y * PW + x])) continue;
+              if (Math.abs(px[i] - job.ir) + Math.abs(px[i + 1] - job.ig) + Math.abs(px[i + 2] - job.ib) > 130) continue;
+              leftover++;
+            }
+          if (leftover > Math.max(60, 0.1 * planned)) {
+            job.el.snapped = false;
+            if (job.el.box) job.el.paintedBox = { ...job.el.box };
+            continue;
+          }
+          // phase 3: apply — column-blend fill over exactly the planned pixels
+          const colTop = new Float64Array(bw2 * 3), colBot = new Float64Array(bw2 * 3);
           for (let x = xL; x <= xR; x++) {
             const o = (x - xL) * 3;
             let fy = -1;
@@ -864,13 +889,8 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
           }
           for (let y = yT; y <= yB; y++)
             for (let x = xL; x <= xR; x++) {
+              if (!inPlan(x, y)) continue;
               const i = (y * PW + x) * 4;
-              if (gDist(x, y) <= 60) continue;
-              /* never sweep artwork pixels — the figure's jacket may share
-                 the hero's ink colour, but it is an ART component and the
-                 component map knows it (owner 2026-08-31) */
-              if (artIds.has(lbl[y * PW + x])) continue;
-              if (Math.abs(px[i] - job.ir) + Math.abs(px[i + 1] - job.ig) + Math.abs(px[i + 2] - job.ib) > 140) continue;
               const o = (x - xL) * 3, t = (y - yT) / Math.max(1, yB - yT);
               px[i] = colTop[o] * (1 - t) + colBot[o] * t;
               px[i + 1] = colTop[o + 1] * (1 - t) + colBot[o + 1] * t;
@@ -940,7 +960,12 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
      no generation, no cost. The sketch/FLUX paths below stay for rollback
      but are normally unreachable. */
   if (canvasArt) {
-    return { spec, artwork: canvasArt, artAlign, artworkMode: "canvas", styleKey, fonts: GOOGLE_FONTS, artInk };
+    const resultC: RebuildResult = { spec, artwork: canvasArt, artAlign, artworkMode: "canvas", styleKey, fonts: GOOGLE_FONTS, artInk };
+    try {
+      fs.writeFileSync(path.join(process.cwd(), "data", "debug", "last-rebuild.json"), JSON.stringify({ dream, ...resultC }));
+      archivePair(dream, resultC);
+    } catch {}
+    return resultC;
   }
 
   /* FULL-BLEED DREAMS (owner report 2026-08-25: a full-scene dream was

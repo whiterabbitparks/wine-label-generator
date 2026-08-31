@@ -2204,6 +2204,10 @@ function renderDreamFitted(spec,d,opts,artSrc,artAlign,artMode,artInk){
     PLACED=[];
     svg=renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode,artInk);
     placed=PLACED; PLACED=null;
+    /* canvas mode (owner 2026-08-31): the background IS the dream — every
+       measured position is already true, and any "correction" would slide
+       text over the image. One pass, no nudges, no cascade. */
+    if(artMode==='canvas')break;
     if(pass===2)break;
     let adjusted=false;
     for(const p of placed){

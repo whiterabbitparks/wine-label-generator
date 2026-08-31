@@ -1317,3 +1317,17 @@ composition-contract tightening, then customer wiring.
   contained" across the deck; contemporary/punk keep their genuine
   bleed cards. Smoke-tested: traditional dream measured at 13% contained
   top-centre artwork (pixel measurement, not eyeballing).
+- VALIDATED ERASE + STILL CANVAS (owner 2026-08-31, "artefacts, doubled
+  texts, web page text over image"): (1) The erase is now TWO-PHASE: it
+  PLANS every pixel it would remove, AUDITS the band for painted ink the
+  plan would miss, and only then applies — if ghosts would survive, the
+  element is un-typeset and keeps the dream's painting. Invariant: vector
+  text exists ONLY where its painted original provably vanished — doubles
+  and artefacts are impossible by construction. Verified: every typeset
+  band audits 0.0% leftover ink. (2) renderDreamFitted runs a SINGLE pass
+  in canvas mode — the old 3-pass nudges/min-gap cascade slid text over
+  the fixed canvas (the web-page overlap). (3) The canvas return path now
+  writes last-rebuild.json + the pairs/ archive (it had skipped both — a
+  whole day of owner runs went unrecorded). Gates: parity 0.000%, hard
+  rules PASS, goldens 72/72. NOTE: the owner tests on his OWN server —
+  it must be rebuilt+restarted to pick any of this up.
