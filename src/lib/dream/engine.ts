@@ -663,7 +663,7 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
                  double. The dream's own painted text stays instead. */
               const txt2 = roleText[e.role || ""] || "";
               const expW = Math.max(1, txt2.replace(/\s+/g, "").length) * 0.62 * (ln.y1 - ln.y0 + 1);
-              if ((ln.x1 - ln.x0 + 1) < 0.65 * Math.min(PW * 0.96, expW)) { claimed.delete(ln); continue; }
+              if ((ln.x1 - ln.x0 + 1) < 0.65 * Math.min(PW * 0.96, expW)) { claimed.delete(ln); (e as { paintedBox?: object }).paintedBox = { x: ln.x0 / PW, y: ln.y0 / PH, w: (ln.x1 - ln.x0 + 1) / PW, h: (ln.y1 - ln.y0 + 1) / PH }; continue; }
               /* fragment check by INK CENSUS: same-colour ink in the band
                  but OUTSIDE the traced box means the tracer caught only
                  part of the name — erasing would leave ghosts and the
@@ -684,7 +684,7 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
                   if (Math.abs(px[i] - ir2) + Math.abs(px[i + 1] - ig2) + Math.abs(px[i + 2] - ib2) > 130) continue;
                   if (ownIds.has(l3)) inside++; else outside++;
                 }
-                if (outside > 0.3 * Math.max(1, inside)) { claimed.delete(ln); continue; }
+                if (outside > 0.3 * Math.max(1, inside)) { claimed.delete(ln); (e as { paintedBox?: object }).paintedBox = { x: ln.x0 / PW, y: ln.y0 / PH, w: (ln.x1 - ln.x0 + 1) / PW, h: (ln.y1 - ln.y0 + 1) / PH }; continue; }
               }
               /* THE SAFE-ERASE RULE (owner GO 2026-08-31, final): typeset
                  only where erasing is safe — a band free of artwork. When
@@ -698,7 +698,7 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
                     tot2++;
                     if (artIds2.has(lbl[y * PW + x])) artPx++;
                   }
-                if (artPx > 0.12 * Math.max(1, tot2)) { claimed.delete(ln); continue; }
+                if (artPx > 0.12 * Math.max(1, tot2)) { claimed.delete(ln); (e as { paintedBox?: object }).paintedBox = { x: ln.x0 / PW, y: ln.y0 / PH, w: (ln.x1 - ln.x0 + 1) / PW, h: (ln.y1 - ln.y0 + 1) / PH }; continue; }
               }
               ln.used = true;
               let y0 = ln.y0, y1 = ln.y1, x0 = ln.x0, x1 = ln.x1;
@@ -853,7 +853,10 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
               px[i + 2] = colTop[o + 2] * (1 - t) + colBot[o + 2] * t;
             }
         }
-        if (eraseJobs.length) canvasArt = "data:image/png;base64," + PNG.sync.write(png).toString("base64");
+        /* canvas is UNCONDITIONAL (owner law 2026-08-31 "never let texts
+           overlap"): even when no text can be safely typeset, the label is
+           the dream itself — the generation path must never run again */
+        canvasArt = "data:image/png;base64," + PNG.sync.write(png).toString("base64");
         /* anything unmatched (or full-bleed dreams) keeps the transcriber's
            box and samples its colour there */
         for (const e of sp.elements || []) {

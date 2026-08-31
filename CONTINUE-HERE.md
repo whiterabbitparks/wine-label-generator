@@ -1273,3 +1273,15 @@ composition-contract tightening, then customer wiring.
   canvas mode: painted IS printed. Gates: parity 0.000%, hard rules
   PASS, goldens 72/72. OPEN: print-resolution upscale of the canvas;
   arc-hero vector typesetting (kept-painted for now); FLUX/LoRA idle.
+- NO-OVERLAP LAW (owner 2026-08-31, standing rule "never let texts
+  overlap"): (1) canvas is now UNCONDITIONAL — even a rebuild that can
+  typeset nothing ships the dream itself as the label; the FLUX/sketch
+  generation path is unreachable (a zero-typeset run used to fall back to
+  it — that produced the owner's overlapping label). (2) Kept-painted
+  lines export their measured pixel boxes (element.paintedBox); the
+  renderer treats them plus already-placed text as immovable obstacles:
+  every typeset block is constrained to the free span between obstacles
+  in its band — it shrinks, shifts its anchor, or wraps to one more line,
+  but can never print over another text. Verified on the punk pair:
+  canvas mode, 2 vector lines set between 4 painted ones, fidelity 99.
+  Gates: parity 0.000%, hard rules PASS, goldens 72/72.

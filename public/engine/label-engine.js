@@ -2458,6 +2458,13 @@ function renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode,artInk){
       body+=`<image x="${ax.toFixed(1)}" y="${ay.toFixed(1)}" width="${aw.toFixed(1)}" height="${ah.toFixed(1)}" preserveAspectRatio="${pa} slice" xlink:href="${artSrc}" href="${artSrc}"${sp?' data-sp="1"':''} style="mix-blend-mode:${sp?'normal':'multiply'}"/>`;
     }
   }
+  /* NO-OVERLAP LAW (owner 2026-08-31): kept-painted lines are immovable
+     obstacles — typeset text fits the free span between them (shrink,
+     shift or wrap) but NEVER prints over another text */
+  const OBST=[];
+  if(artMode==='canvas')for(const e of (spec&&spec.elements||[])){
+    if(e&&e.paintedBox)OBST.push({x:e.paintedBox.x*W,y:e.paintedBox.y*H,x2:(e.paintedBox.x+e.paintedBox.w)*W,y2:(e.paintedBox.y+e.paintedBox.h)*H});
+  }
   const els=(spec&&Array.isArray(spec.elements)?spec.elements:[]).filter(e=>e&&e.box&&ROLE_TEXT[e.role]);
   const seen={};
   for(const e of els){
@@ -2540,7 +2547,23 @@ function renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode,artInk){
        so measuring with 7pt-tracking here under-counted and words dropped */
     const szReq=Math.max(MIN7,size*(+e.__ds||1));
     const need=measure(longest,MIN7,fam0,wt0,false,szReq*tr0)+4;
-    const bw=Math.min(W-2*SM,Math.max(bx1-bx0,need));
+    let bw=Math.min(W-2*SM,Math.max(bx1-bx0,need));
+    /* free span between painted obstacles in this band + already-placed text */
+    let spanL=SM,spanR=W-SM,nlinesEff=nlines;
+    {
+      const bandT=by0-2, bandB=by0+size*1.3*nlines+2, ax=(bx0+bx1)/2;
+      const obs=OBST.concat(INK_RECTS.map(r=>({x:r.x,y:r.y,x2:r.x2,y2:r.y2})));
+      for(const o of obs){
+        if(o.y2<bandT||o.y>bandB)continue;
+        const oc=(o.x+o.x2)/2;
+        if(oc<=ax)spanL=Math.max(spanL,o.x2+8);else spanR=Math.min(spanR,o.x-8);
+      }
+      if(spanR-spanL<20){spanL=SM;spanR=W-SM;} // degenerate — fall back
+      if(bw>spanR-spanL){
+        bw=spanR-spanL;
+        if(need>bw)nlinesEff=Math.min(3,nlines+1); // wrap before ever overlapping
+      }
+    }
     /* a snapped box IS the dream's ink — centring on it reproduces any
        alignment the dream chose; only guessed boxes fall back to the
        transcriber's align flag (owner defect 2026-08-27: a stray box
@@ -2549,7 +2572,7 @@ function renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode,artInk){
     /* the anchor shifts inward when the widened text would cross a margin
        (owner 2026-08-31: the legal line ran off the right edge) */
     let x=a==='l'?bx0:a==='r'?bx1:(bx0+bx1)/2;
-    if(a==='c'){const half=bw/2;x=Math.max(SM+half,Math.min(W-SM-half,x));}
+    if(a==='c'){const half=bw/2;x=Math.max(spanL+half,Math.min(spanR-half,x));}
     const preIR=INK_RECTS.length;
     if(e.arc&&nlines===1){
       /* arched baseline (dream trait, previously straightened): radius from
@@ -2561,7 +2584,7 @@ function renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode,artInk){
     }else{
       body+=sBlock(str,{x,top:by0+(+e.__dy||0),maxW:bw,size:size*(+e.__ds||1),min:MIN7,
         f:fam0,w:wt0,fill:guard(e.colour),a,caps:!!e.caps,tr:tr0,
-        lines:nlines,lh:1.04}).svg;
+        lines:nlinesEff,lh:1.04}).svg;
     }
     if(PLACED&&INK_RECTS.length>preIR){
       const r=INK_RECTS[INK_RECTS.length-1];
