@@ -1241,3 +1241,35 @@ composition-contract tightening, then customer wiring.
   to image-rules and wired into both artwork verify lists with the
   existing strict retry.
   Gates: parity 0.000%, hard rules PASS, goldens 72/72.
+- DREAM-AS-CANVAS ERA (owner GO 2026-08-31, after "I am out of hopes"):
+  ARCHITECTURE CHANGE. The dream image itself now becomes the label
+  (artworkMode "canvas") — art fidelity is guaranteed by construction
+  because every non-text pixel IS the dream. The engine erases ONLY the
+  dream's painted letters (pure pixel work — no model touches the image:
+  per-glyph fill from each glyph's own ring colour, then a band sweep for
+  same-ink pixels, art components protected via the component map, fill
+  blended from clean pixels above/below each column) and sets real vector
+  type on the measured boxes. Generation paths (sketch/FLUX contained +
+  full-bleed restyle) remain in code for rollback but are unreachable;
+  per-label cost DROPS (no image generation — only transcription).
+  Segmentation upgrades proven on the owner's punk arc-hero dream (the
+  hardest specimen yet): LOCAL grounds (per-tile modal colour, bilinear —
+  pink sky + yellow earth both read correctly), colour-constrained flood
+  fill (a purple letter can't fuse with a teal leaf it touches), LINE
+  TRACING (a text line = a left-to-right run of similar-height glyphs
+  with continuous baseline — follows arcs, refuses foliage), sibling-
+  aware burial (only ARTWORK ink buries a glyph), ORDER-PRESERVING DP
+  match (vision reading order + pixel glyph counts; skipping decoration
+  is free) — 5/5 identical correct assignments across runs. THE SAFE-
+  ERASE RULE: an element is typeset ONLY when its traced line is whole
+  (width + glyph-census checks) and its band is art-free; otherwise the
+  dream's own painted text stays (it already carries the customer's real
+  words — the dream is prompted with them). On the punk pair that means
+  vintage+grape in vector, hero/producer/region/legal kept painted —
+  fidelity 99, no doubles, no smears. Topology ensemble: 3 parallel
+  transcriptions, median box per role; empty transcription retries then
+  fails loudly. Every rebuild archives its pair to data/debug/pairs/
+  (regression corpus — failing dreams are never lost). Legal-line law in
+  canvas mode: painted IS printed. Gates: parity 0.000%, hard rules
+  PASS, goldens 72/72. OPEN: print-resolution upscale of the canvas;
+  arc-hero vector typesetting (kept-painted for now); FLUX/LoRA idle.

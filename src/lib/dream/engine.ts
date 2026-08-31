@@ -84,6 +84,19 @@ async function gen429<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
+/* every processed pair joins a small regression corpus — a failing dream
+   must never be lost to the next run's overwrite (owner 2026-08-31) */
+function archivePair(dream: string, result: unknown) {
+  try {
+    const dir = path.join(process.cwd(), "data", "debug", "pairs");
+    fs.mkdirSync(dir, { recursive: true });
+    let h = 0;
+    for (let i = 0; i < Math.min(4096, dream.length); i++) h = (h * 31 + dream.charCodeAt(i)) >>> 0;
+    const f = path.join(dir, `pair-${h.toString(16)}.json`);
+    if (!fs.existsSync(f)) fs.writeFileSync(f, JSON.stringify({ dream, ...(result as object) }));
+  } catch {}
+}
+
 export interface DreamParams { vision: string; style?: string; data: Record<string, string>; sketch?: string | null }
 export interface RebuildParams { dream: string; vision: string; data: Record<string, string>; style?: string; reuseArtwork?: string | null }
 
@@ -156,7 +169,7 @@ export async function runDreamPhase(p: DreamParams): Promise<{ dream: string; pr
 
 export interface RebuildResult {
   spec: Record<string, unknown>; artwork: string | null; artAlign: string;
-  artworkMode: "contained" | "full"; styleKey: string; fonts: string[];
+  artworkMode: "contained" | "full" | "canvas"; styleKey: string; fonts: string[];
   artworkError?: string;
   artInk?: { x: number; y: number; w: number; h: number } | null;
 }
@@ -236,7 +249,49 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
     if (!Array.isArray((spec as { elements?: unknown[] }).elements) || !(spec as { elements: unknown[] }).elements.length)
       throw new Error("transcription returned no elements twice — not rendering a bare label");
   }
+  /* TOPOLOGY ENSEMBLE (owner escalation 2026-08-31): one vision reading
+     sometimes returns a wildly wrong box and the snap inherits it. Two
+     extra readings run in parallel and each role keeps the MEDIAN box
+     centre — a single bad reading can never win. (~2¢; canvas mode saved
+     far more by retiring generation.) */
+  try {
+    const readOnce = async () => {
+      const rr = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model, response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: sysPrompt },
+            { role: "user", content: [
+              { type: "text", text: `Known label texts:\n${JSON.stringify(texts, null, 1)}\nAllowed fonts:\n${GOOGLE_FONTS.join(", ")}` },
+              { type: "image_url", image_url: { url: dream, detail: "high" } },
+            ] },
+          ],
+        }),
+      });
+      if (!rr.ok) return null;
+      const jj = (await rr.json()) as { choices?: { message?: { content?: string } }[] };
+      try { return JSON.parse(jj.choices?.[0]?.message?.content || "{}") as Record<string, unknown>; } catch { return null; }
+    };
+    const extras = (await Promise.all([readOnce(), readOnce()])).filter(Boolean) as Record<string, unknown>[];
+    const all = [spec, ...extras];
+    type El = { role?: string; box?: { x: number; y: number; w: number; h: number } };
+    const els0 = ((spec as { elements?: El[] }).elements || []);
+    for (const e of els0) {
+      if (!e.role || !e.box) continue;
+      const boxes = all
+        .map((sp2) => ((sp2 as { elements?: El[] }).elements || []).find((e2) => e2.role === e.role)?.box)
+        .filter((b): b is { x: number; y: number; w: number; h: number } => !!b && b.w > 0 && b.h > 0);
+      if (boxes.length < 2) continue;
+      const med = (vs: number[]) => vs.sort((a, b2) => a - b2)[Math.floor(vs.length / 2)];
+      const cx = med(boxes.map((b) => b.x + b.w / 2)), cyv = med(boxes.map((b) => b.y + b.h / 2));
+      const wv = med(boxes.map((b) => b.w)), hv = med(boxes.map((b) => b.h));
+      e.box = { x: cx - wv / 2, y: cyv - hv / 2, w: wv, h: hv };
+    }
+  } catch {}
 
+  let canvasArt: string | null = null;
   /* 1b. COLOURS ARE MEASURED, NEVER GUESSED (owner report 2026-08-25: the
      vision model's hex guesses gave blue-grey text and an olive ground
      where the dream is warm parchment). We own the dream's pixels: ground
@@ -288,9 +343,40 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
       const spArtPre = (spec as { artwork?: { box?: { x: number; y: number; w: number; h: number }; coverage?: string } }).artwork;
       {
         const G0 = gn > 0 ? { r: gr / gn, g: gg / gn, b: gb / gn } : { r: 245, g: 242, b: 235 };
+        /* LOCAL grounds (owner failure 2026-08-31: pink sky + yellow earth —
+           one global ground made half the page read as ink and the giant
+           hero drowned in it): per-tile modal colour, bilinearly blended,
+           so ink = "different from the paper RIGHT HERE" */
+        const TX = 12, TY = 8;
+        const tileG = new Float64Array(TX * TY * 3);
+        {
+          for (let ty = 0; ty < TY; ty++) for (let tx = 0; tx < TX; tx++) {
+            const x0t = Math.floor((tx * PW) / TX), x1t = Math.floor(((tx + 1) * PW) / TX);
+            const y0t = Math.floor((ty * PH) / TY), y1t = Math.floor(((ty + 1) * PH) / TY);
+            const bins = new Map<number, { r: number; g: number; b: number; n: number }>();
+            for (let y = y0t; y < y1t; y += 3) for (let x = x0t; x < x1t; x += 3) {
+              const i = (y * PW + x) * 4;
+              const k = ((px[i] >> 4) << 8) | ((px[i + 1] >> 4) << 4) | (px[i + 2] >> 4);
+              const b0 = bins.get(k) || { r: 0, g: 0, b: 0, n: 0 };
+              b0.r += px[i]; b0.g += px[i + 1]; b0.b += px[i + 2]; b0.n++;
+              bins.set(k, b0);
+            }
+            let top: { r: number; g: number; b: number; n: number } | null = null;
+            for (const b0 of bins.values()) if (!top || b0.n > top.n) top = b0;
+            const o = (ty * TX + tx) * 3;
+            tileG[o] = top ? top.r / top.n : G0.r; tileG[o + 1] = top ? top.g / top.n : G0.g; tileG[o + 2] = top ? top.b / top.n : G0.b;
+          }
+        }
+        const localG = (x: number, y: number, ch: number) => {
+          const fx = Math.min(TX - 1.001, Math.max(0, (x / PW) * TX - 0.5));
+          const fy = Math.min(TY - 1.001, Math.max(0, (y / PH) * TY - 0.5));
+          const ix = Math.floor(fx), iy = Math.floor(fy), ax = fx - ix, ay = fy - iy;
+          const v = (xx: number, yy: number) => tileG[(yy * TX + xx) * 3 + ch];
+          return (v(ix, iy) * (1 - ax) + v(ix + 1, iy) * ax) * (1 - ay) + (v(ix, iy + 1) * (1 - ax) + v(ix + 1, iy + 1) * ax) * ay;
+        };
         const lbl = new Int32Array(PW * PH); // 0 = unvisited/ground
         const stack = new Int32Array(PW * PH);
-        interface Comp { x0: number; y0: number; x1: number; y1: number; area: number; per: number; r: number; g: number; b: number; ws: number }
+        interface Comp { x0: number; y0: number; x1: number; y1: number; area: number; per: number; r: number; g: number; b: number; ws: number; id: number }
         const comps: Comp[] = [];
         /* ink = anything far from the ground colour — dark serif on cream
            AND pink display caps on yellow (owner escalation 2026-08-28).
@@ -299,7 +385,7 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
            spawn phantom shapes, while true strokes keep their edges. */
         const gDist = (x: number, y: number) => {
           const i = (y * PW + x) * 4;
-          return Math.abs(px[i] - G0.r) + Math.abs(px[i + 1] - G0.g) + Math.abs(px[i + 2] - G0.b);
+          return Math.abs(px[i] - localG(x, y, 0)) + Math.abs(px[i + 1] - localG(x, y, 1)) + Math.abs(px[i + 2] - localG(x, y, 2));
         };
         const isDark = (x: number, y: number) => gDist(x, y) > 120;
         const isSeed = (x: number, y: number) => gDist(x, y) > 210;
@@ -307,8 +393,10 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
         for (let sy = 0; sy < PH; sy++) for (let sx = 0; sx < PW; sx++) {
           const si = sy * PW + sx;
           if (lbl[si] !== 0 || !isSeed(sx, sy)) continue;
+          const spi = si * 4;
+          const sr = px[spi], sg = px[spi + 1], sb = px[spi + 2];
           nextLbl++;
-          const c: Comp = { x0: sx, y0: sy, x1: sx, y1: sy, area: 0, per: 0, r: 0, g: 0, b: 0, ws: 0 };
+          const c: Comp = { x0: sx, y0: sy, x1: sx, y1: sy, area: 0, per: 0, r: 0, g: 0, b: 0, ws: 0, id: nextLbl };
           let sp2 = 0; stack[sp2++] = si; lbl[si] = nextLbl;
           while (sp2 > 0) {
             const ci = stack[--sp2];
@@ -318,7 +406,7 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
             /* colour weighted by ink-ness squared: the glyph CORE decides
                the colour, not the antialiased edge blended with ground
                (owner: "almost never the colours are replicated") */
-            const dg = Math.abs(px[pi] - G0.r) + Math.abs(px[pi + 1] - G0.g) + Math.abs(px[pi + 2] - G0.b);
+            const dg = Math.abs(px[pi] - localG(cx, cy, 0)) + Math.abs(px[pi + 1] - localG(cx, cy, 1)) + Math.abs(px[pi + 2] - localG(cx, cy, 2));
             const wq = dg * dg;
             c.r += px[pi] * wq; c.g += px[pi + 1] * wq; c.b += px[pi + 2] * wq; c.ws += wq;
             if (cx < c.x0) c.x0 = cx; if (cx > c.x1) c.x1 = cx;
@@ -329,6 +417,12 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
               if (nx < 0 || ny < 0 || nx >= PW || ny >= PH) { c.per++; continue; }
               const ni = ny * PW + nx;
               if (!isDark(nx, ny)) { c.per++; continue; }
+              /* colour-constrained growth (owner failure 2026-08-31): a
+                 letter TOUCHING artwork must not fuse with it — grow only
+                 into pixels of similar colour to the seed, so a purple
+                 glyph stops at a teal leaf even where they meet */
+              const npi = ni * 4;
+              if (Math.abs(px[npi] - sr) + Math.abs(px[npi + 1] - sg) + Math.abs(px[npi + 2] - sb) > 150) { c.per++; continue; }
               if (lbl[ni] === 0) { lbl[ni] = nextLbl; stack[sp2++] = ni; }
             }
           }
@@ -337,9 +431,13 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
         /* classify: glyph vs artwork by stroke geometry */
         const isGlyph = (c: Comp) => {
           const h = c.y1 - c.y0 + 1, w = c.x1 - c.x0 + 1;
-          if (h < PH * 0.006 || h > PH * 0.13) return false;
-          if (w > PW * 0.28) return false;
-          if (c.area > PW * PH * 0.012) return false;
+          /* ceiling raised to display size (owner failure 2026-08-31: a
+             giant arced hero read as ARTWORK, so the wine name matched a
+             bottom line instead) — the stroke test still keeps art blobs
+             out: letters are thin relative to their height, blobs are not */
+          if (h < PH * 0.006 || h > PH * 0.24) return false;
+          if (w > PW * 0.4) return false;
+          if (c.area > PW * PH * 0.035) return false;
           const stroke = (2 * c.area) / Math.max(1, c.per); // ~stroke width
           if (stroke > 0.45 * h) return false;              // blobs are art
           return true;
@@ -349,21 +447,44 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
         const artComps = comps.filter((c) => !isGlyph(c) && c.area > PW * PH * 0.0004);
         /* glyphs → text lines: cluster by vertical overlap of bboxes */
         interface Line { y0: number; y1: number; x0: number; x1: number; n: number; r: number; g: number; b: number; area: number; ws: number; used?: boolean; gs: Comp[] }
+        /* LINE TRACING (owner failure 2026-08-31: loose vertical-overlap
+           clustering chained a huge arced hero together with every leaf
+           into one mega-blob). A text line is a RUN: similar-height shapes
+           marching left to right, each close behind the last, baseline
+           continuous — that follows an arc and refuses scattered foliage. */
         const lines: Line[] = [];
-        const byY = [...glyphs].sort((a, b2) => (a.y0 + a.y1) - (b2.y0 + b2.y1));
-        for (const g of byY) {
-          let home: Line | null = null;
-          for (const ln of lines) {
-            const ov = Math.min(ln.y1, g.y1) - Math.max(ln.y0, g.y0);
-            if (ov > 0.5 * Math.min(ln.y1 - ln.y0, g.y1 - g.y0)) { home = ln; break; }
+        const byX = [...glyphs].sort((a, b2) => a.x0 - b2.x0 || a.y0 - b2.y0);
+        const usedG = new Set<Comp>();
+        for (const g0 of byX) {
+          if (usedG.has(g0)) continue;
+          const chain: Comp[] = [g0]; usedG.add(g0);
+          let cur = g0;
+          for (;;) {
+            let best: Comp | null = null, bestGap = Infinity;
+            for (const g of byX) {
+              if (usedG.has(g) || g.x0 <= cur.x0) continue;
+              const h1 = cur.y1 - cur.y0 + 1, h2 = g.y1 - g.y0 + 1;
+              const hm = Math.max(h1, h2);
+              const gap = g.x0 - cur.x1;
+              /* 3.5×: small legal text has wide " / " separators */
+              if (g.x0 - cur.x1 > 3.5 * (cur.y1 - cur.y0 + 1) && g.x0 - cur.x1 > 3.5 * hm) break;
+              if (gap > 3.5 * hm) continue;
+              if (gap < -0.5 * hm) continue;
+              if (Math.abs((g.y0 + g.y1) / 2 - (cur.y0 + cur.y1) / 2) > 0.75 * hm) continue;
+              const hr = h2 / h1;
+              if (hr < 0.45 || hr > 2.2) continue;
+              if (gap < bestGap) { bestGap = gap; best = g; }
+            }
+            if (!best) break;
+            chain.push(best); usedG.add(best); cur = best;
           }
-          if (home) {
-            home.y0 = Math.min(home.y0, g.y0); home.y1 = Math.max(home.y1, g.y1);
-            home.x0 = Math.min(home.x0, g.x0); home.x1 = Math.max(home.x1, g.x1);
-            home.n++; home.area += g.area; home.ws += g.ws; home.r += g.r; home.g += g.g; home.b += g.b; home.gs.push(g);
-          } else {
-            lines.push({ y0: g.y0, y1: g.y1, x0: g.x0, x1: g.x1, n: 1, area: g.area, ws: g.ws, r: g.r, g: g.g, b: g.b, gs: [g] });
+          const ln: Line = { y0: chain[0].y0, y1: chain[0].y1, x0: chain[0].x0, x1: chain[0].x1, n: 0, area: 0, ws: 0, r: 0, g: 0, b: 0, gs: [] };
+          for (const g of chain) {
+            ln.y0 = Math.min(ln.y0, g.y0); ln.y1 = Math.max(ln.y1, g.y1);
+            ln.x0 = Math.min(ln.x0, g.x0); ln.x1 = Math.max(ln.x1, g.x1);
+            ln.n++; ln.area += g.area; ln.ws += g.ws; ln.r += g.r; ln.g += g.g; ln.b += g.b; ln.gs.push(g);
           }
+          lines.push(ln);
         }
         /* a line is one run of letters — a speck that merely shares the
            row's height must not stretch its box. Split each line at
@@ -425,14 +546,50 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
           }
           return Math.min(1, cov / a);
         };
+        /* a glyph is BURIED when its immediate surroundings are ink — the
+           local truth (owner failure 2026-08-31: an arced hero's bounding
+           box contains the tree canopy, so box-overlap rejected the whole
+           name; meanwhile stipple phantoms sit in dense strokes on every
+           side). Ring of 3px outside the glyph bbox, foreign-ink fraction. */
+        /* only ARTWORK ink counts as burial: a letter's neighbours are its
+           sibling letters (any candidate line's glyphs) and they must not
+           bury it — foliage has no such alibi (owner 2026-08-31) */
+        const candGlyphIds = new Set<number>();
+        for (const ln of lines) if (ln.n >= 2 && (ln.x1 - ln.x0) > 1.5 * (ln.y1 - ln.y0)) for (const g2 of ln.gs) candGlyphIds.add(g2.id);
+        const ringInk = (g2: Comp) => {
+          let ink = 0, tot = 0;
+          const m = 3;
+          const probe = (x: number, y: number) => {
+            if (x < 0 || y < 0 || x >= PW || y >= PH) return;
+            tot++;
+            const l2 = lbl[y * PW + x];
+            if (l2 !== g2.id && !candGlyphIds.has(l2) && gDist(x, y) > 120) ink++;
+          };
+          for (let x = g2.x0 - m; x <= g2.x1 + m; x += 2) { probe(x, g2.y0 - m); probe(x, g2.y1 + m); }
+          for (let y = g2.y0 - m; y <= g2.y1 + m; y += 2) { probe(g2.x0 - m, y); probe(g2.x1 + m, y); }
+          return tot ? ink / tot : 1;
+        };
+        const buriedCache = new Map<object, number>();
+        const buried = (ln: { gs: Comp[] }) => {
+          const hit = buriedCache.get(ln);
+          if (hit !== undefined) return hit;
+          const fr = ln.gs.map(ringInk);
+          const v = fr.reduce((a2, b3) => a2 + b3, 0) / Math.max(1, fr.length);
+          buriedCache.set(ln, v);
+          return v;
+        };
         const textLines = lines
           .filter((ln) => ln.n >= 2 && (ln.x1 - ln.x0) > 1.5 * (ln.y1 - ln.y0))
-          .filter((ln) => artCover(ln.x0, ln.y0, ln.x1, ln.y1) < 0.3)
+          .filter((ln) => buried(ln) < 0.4)
           .sort((a, b2) => a.y0 - b2.y0);
+        const eraseJobs: { gs: Comp[]; bx0: number; by0: number; bx1: number; by1: number; ir: number; ig: number; ib: number }[] = [];
+        const artIds2 = new Set<number>();
+        for (const ac of artComps) artIds2.add(ac.id);
+        const artIds = artIds2;
         (sp as { segLines?: unknown }).segLines = lines.map((ln) => ({
           y: +(ln.y0 / PH).toFixed(3), h: +((ln.y1 - ln.y0 + 1) / PH).toFixed(3),
           x: +(ln.x0 / PW).toFixed(3), w: +((ln.x1 - ln.x0 + 1) / PW).toFixed(3),
-          n: ln.n, art: +artCover(ln.x0, ln.y0, ln.x1, ln.y1).toFixed(2),
+          n: ln.n, art: +buried(ln).toFixed(2),
           kept: textLines.includes(ln),
         }));
         if (spArtPre && artBB) {
@@ -456,55 +613,102 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
           const maxH = Math.max(...textLines.map((ln) => ln.y1 - ln.y0));
           const minY = Math.min(...textLines.map((ln) => ln.y0));
           const maxY1 = Math.max(...textLines.map((ln) => ln.y1));
-          /* each connected component ≈ one printed character, so a line's
-             glyph COUNT identifies its text far more sharply than any
-             width heuristic — '2023' is 4 components, the legal line ~33 */
-          const lineCost = (e: { role?: string }, ln: { y0: number; y1: number; x0: number; x1: number; n: number }) => {
+          /* ORDER-PRESERVING MATCH (owner escalation 2026-08-31, final
+             form): vision coordinates scatter on wild art styles, but the
+             transcriber's READING ORDER of roles is stable run to run —
+             and the pixel counts of true lines are exact. Elements in
+             vision reading order align to ink lines top-to-bottom by
+             letter count and cleanliness; skipping a foliage chain is
+             free, so decoration between text rows costs nothing. */
+          const ordEls = [...els].sort((a, b2) => (a.box!.y + a.box!.h / 2) - (b2.box!.y + b2.box!.h / 2));
+          const lineCost = (e: { role?: string }, ln: Line) => {
             const txt = roleText[e.role || ""] || "";
             if (!txt) return 9;
             const expChars = Math.max(1, txt.replace(/\s+/g, "").length);
             const expAspect = Math.max(1, 0.6 * txt.length);
             const lnAspect = (ln.x1 - ln.x0 + 1) / Math.max(1, ln.y1 - ln.y0 + 1);
-            let c = Math.abs(Math.log(ln.n / expChars)) + 0.3 * Math.abs(Math.log(lnAspect / expAspect));
-            if (e.role === "wine") c += (ln.y1 - ln.y0) === maxH ? -0.8 : 0.4;
-            if (e.role === "legal") c += ln.y1 === maxY1 ? -0.5 : 0.2;
-            if (e.role === "producer") c += ln.y0 === minY ? -0.3 : 0;
+            let c = 0.5 * Math.abs(Math.log(ln.n / expChars)) + buried(ln) + 0.15 * Math.abs(Math.log(lnAspect / expAspect));
+            const maxH2 = Math.max(...textLines.map((l2) => l2.y1 - l2.y0));
+            if (e.role === "wine") c += (ln.y1 - ln.y0) === maxH2 ? -0.3 : 0.15;
+            if (e.role === "legal") c += ln.y1 === Math.max(...textLines.map((l2) => l2.y1)) ? -0.3 : 0.1;
             return c;
           };
-          /* exact min-cost injective assignment (tiny sizes — DFS) */
-          const N = els.length, M = textLines.length;
-          let bestAsn: number[] | null = null, bestCost = Infinity;
-          const cur: number[] = Array(N).fill(-1);
-          const usedLn: boolean[] = Array(M).fill(false);
-          const dfs = (i: number, acc: number) => {
-            if (acc >= bestCost) return;
-            if (i === N) { bestCost = acc; bestAsn = [...cur]; return; }
-            // option: leave element unmatched (penalty)
-            cur[i] = -1; dfs(i + 1, acc + 1.2);
-            for (let j = 0; j < M; j++) {
-              if (usedLn[j]) continue;
-              usedLn[j] = true; cur[i] = j;
-              dfs(i + 1, acc + lineCost(els[i], textLines[j]));
-              usedLn[j] = false; cur[i] = -1;
+          const N = ordEls.length, M = textLines.length, ESKIP = 0.9;
+          const dp: number[][] = Array.from({ length: N + 1 }, () => Array(M + 1).fill(0));
+          for (let i = 1; i <= N; i++) dp[i][0] = i * ESKIP;
+          for (let i = 1; i <= N; i++) for (let j = 1; j <= M; j++)
+            dp[i][j] = Math.min(dp[i - 1][j - 1] + lineCost(ordEls[i - 1], textLines[j - 1]), dp[i][j - 1], dp[i - 1][j] + ESKIP);
+          {
+            let i = N, j = M;
+            const claimed = new Set<Line>();
+            while (i > 0) {
+              if (j > 0 && Math.abs(dp[i][j] - (dp[i - 1][j - 1] + lineCost(ordEls[i - 1], textLines[j - 1]))) < 1e-12) {
+                if (lineCost(ordEls[i - 1], textLines[j - 1]) < 1.15) {
+                  (ordEls[i - 1] as { __ln?: Line }).__ln = textLines[j - 1];
+                  claimed.add(textLines[j - 1]);
+                }
+                i--; j--;
+              } else if (j > 0 && Math.abs(dp[i][j] - dp[i][j - 1]) < 1e-12) j--;
+              else i--;
             }
-          };
-          dfs(0, 0);
-          if (bestAsn) {
-            const asn = bestAsn as number[];
-            for (let i = 0; i < N; i++) {
-              const j = asn[i];
-              if (j < 0) continue;
-              const e = els[i];
-              const ln = textLines[j];
+
+            for (const e of ordEls) {
+              const ln = (e as { __ln?: Line }).__ln;
+              if (!ln) continue;
+              delete (e as { __ln?: Line }).__ln;
+              /* KEEP-PAINTED (owner GO 2026-08-31): the dream was generated
+                 WITH the customer's real words — when tracing only caught
+                 fragments of a display name (line much narrower than the
+                 vision box), erasing would smear and the typeset would
+                 double. The dream's own painted text stays instead. */
+              const txt2 = roleText[e.role || ""] || "";
+              const expW = Math.max(1, txt2.replace(/\s+/g, "").length) * 0.62 * (ln.y1 - ln.y0 + 1);
+              if ((ln.x1 - ln.x0 + 1) < 0.65 * Math.min(PW * 0.96, expW)) { claimed.delete(ln); continue; }
+              /* fragment check by INK CENSUS: same-colour ink in the band
+                 but OUTSIDE the traced box means the tracer caught only
+                 part of the name — erasing would leave ghosts and the
+                 typeset would double. Keep the dream's painting. */
+              {
+                const nI = Math.max(1, ln.ws);
+                const ir2 = ln.r / nI, ig2 = ln.g / nI, ib2 = ln.b / nI;
+                /* missed letters are unchained GLYPH components of the
+                   same colour in the extended band — colour census alone
+                   missed arc ends below the traced rows */
+                const ownIds = new Set(ln.gs.map((g2) => g2.id));
+                const ext = Math.round((ln.y1 - ln.y0 + 1) * 0.35);
+                let inside = 0, outside = 0;
+                for (let y = Math.max(0, ln.y0 - ext); y <= Math.min(PH - 1, ln.y1 + ext); y += 2) for (let x = 0; x < PW; x += 2) {
+                  const l3 = lbl[y * PW + x];
+                  if (l3 === 0 || !candGlyphIds.has(l3)) continue;
+                  const i = (y * PW + x) * 4;
+                  if (Math.abs(px[i] - ir2) + Math.abs(px[i + 1] - ig2) + Math.abs(px[i + 2] - ib2) > 130) continue;
+                  if (ownIds.has(l3)) inside++; else outside++;
+                }
+                if (outside > 0.3 * Math.max(1, inside)) { claimed.delete(ln); continue; }
+              }
+              /* THE SAFE-ERASE RULE (owner GO 2026-08-31, final): typeset
+                 only where erasing is safe — a band free of artwork. When
+                 art weaves through the letters (leaves between an arced
+                 hero), the dream's own painting stays: it already says the
+                 customer's words. Clean-paper text gets true vector type. */
+              {
+                let artPx = 0, tot2 = 0;
+                for (let y = Math.max(0, ln.y0 - 4); y <= Math.min(PH - 1, ln.y1 + 4); y += 2)
+                  for (let x = Math.max(0, ln.x0 - 4); x <= Math.min(PW - 1, ln.x1 + 4); x += 2) {
+                    tot2++;
+                    if (artIds2.has(lbl[y * PW + x])) artPx++;
+                  }
+                if (artPx > 0.12 * Math.max(1, tot2)) { claimed.delete(ln); continue; }
+              }
               ln.used = true;
               let y0 = ln.y0, y1 = ln.y1, x0 = ln.x0, x1 = ln.x1;
               /* two-line hero: deterministic merge — claim the adjacent
                  unclaimed line when doing so matches the expected shape
                  better than the single line does */
               if (e.role === "wine") {
-                const idx = textLines.indexOf(ln);
-                const nx = textLines[idx + 1];
-                if (nx && !asn.includes(idx + 1) && !nx.used &&
+                const below = textLines.filter((l2) => !claimed.has(l2) && !l2.used && l2.y0 > y0).sort((a2, b3) => a2.y0 - b3.y0);
+                const nx = below[0];
+                if (nx &&
                     nx.y0 - y1 < 1.3 * (y1 - y0) && (nx.y1 - nx.y0) > 0.6 * (y1 - y0)) {
                   const exp = Math.max(1, 0.6 * (roleText.wine || "").length);
                   const aSingle = Math.abs(Math.log(((x1 - x0 + 1) / (y1 - y0 + 1)) / exp));
@@ -521,6 +725,7 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
               e.snapped = true;
               const n3 = Math.max(1, ln.ws);
               e.colour = hex(ln.r / n3, ln.g / n3, ln.b / n3);
+              eraseJobs.push({ gs: ln.gs, bx0: x0, by0: y0, bx1: x1, by1: y1, ir: ln.r / n3, ig: ln.g / n3, ib: ln.b / n3 });
               /* TYPOGRAPHY IS MEASURED, NOT GUESSED (owner escalation
                  2026-08-27): the glyph shapes themselves say how the line
                  is set. Caps: capital letters are all one height, so most
@@ -591,6 +796,64 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
             }
           }
         }
+        /* DREAM-AS-CANVAS ERASE (owner GO 2026-08-31, corrected): erase runs
+           AFTER matching and touches ONLY lines a text actually claimed —
+           foliage chains keep their pixels. Each glyph fills with its own
+           ring colour; then the whole claimed band is swept for pixels of
+           that line's ink colour, catching letters the tracer missed. */
+        for (const job of eraseJobs) {
+          for (const g2 of job.gs) {
+            let rr = 0, rg = 0, rb = 0, rn = 0;
+            const m2 = 3;
+            const probe2 = (x: number, y: number) => {
+              if (x < 0 || y < 0 || x >= PW || y >= PH || gDist(x, y) > 70) return;
+              const i = (y * PW + x) * 4;
+              rr += px[i]; rg += px[i + 1]; rb += px[i + 2]; rn++;
+            };
+            for (let x = g2.x0 - m2; x <= g2.x1 + m2; x++) { probe2(x, g2.y0 - m2); probe2(x, g2.y1 + m2); }
+            for (let y = g2.y0 - m2; y <= g2.y1 + m2; y++) { probe2(g2.x0 - m2, y); probe2(g2.x1 + m2, y); }
+            const fr = rn ? rr / rn : G0.r, fg = rn ? rg / rn : G0.g, fb = rn ? rb / rn : G0.b;
+            for (let y = Math.max(0, g2.y0 - 2); y <= Math.min(PH - 1, g2.y1 + 2); y++)
+              for (let x = Math.max(0, g2.x0 - 2); x <= Math.min(PW - 1, g2.x1 + 2); x++) {
+                if (gDist(x, y) <= 45) continue;
+                if (artIds.has(lbl[y * PW + x])) continue;
+                const i = (y * PW + x) * 4;
+                px[i] = fr; px[i + 1] = fg; px[i + 2] = fb;
+              }
+          }
+          /* fill = blend of the clean pixels straight above and below the
+             column — follows sky gradients instead of tile blobs */
+          const p2 = 8;
+          const yT = Math.max(0, job.by0 - p2), yB = Math.min(PH - 1, job.by1 + p2);
+          const xL = Math.max(0, job.bx0 - p2), xR = Math.min(PW - 1, job.bx1 + p2);
+          const colTop = new Float64Array((xR - xL + 1) * 3), colBot = new Float64Array((xR - xL + 1) * 3);
+          for (let x = xL; x <= xR; x++) {
+            const o = (x - xL) * 3;
+            let fy = -1;
+            for (let y = yT - 1; y >= Math.max(0, yT - 50); y--) if (gDist(x, y) <= 60) { fy = y; break; }
+            if (fy >= 0) { const i = (fy * PW + x) * 4; colTop[o] = px[i]; colTop[o + 1] = px[i + 1]; colTop[o + 2] = px[i + 2]; }
+            else { colTop[o] = localG(x, yT, 0); colTop[o + 1] = localG(x, yT, 1); colTop[o + 2] = localG(x, yT, 2); }
+            fy = -1;
+            for (let y = yB + 1; y <= Math.min(PH - 1, yB + 50); y++) if (gDist(x, y) <= 60) { fy = y; break; }
+            if (fy >= 0) { const i = (fy * PW + x) * 4; colBot[o] = px[i]; colBot[o + 1] = px[i + 1]; colBot[o + 2] = px[i + 2]; }
+            else { colBot[o] = colTop[o]; colBot[o + 1] = colTop[o + 1]; colBot[o + 2] = colTop[o + 2]; }
+          }
+          for (let y = yT; y <= yB; y++)
+            for (let x = xL; x <= xR; x++) {
+              const i = (y * PW + x) * 4;
+              if (gDist(x, y) <= 60) continue;
+              /* never sweep artwork pixels — the figure's jacket may share
+                 the hero's ink colour, but it is an ART component and the
+                 component map knows it (owner 2026-08-31) */
+              if (artIds.has(lbl[y * PW + x])) continue;
+              if (Math.abs(px[i] - job.ir) + Math.abs(px[i + 1] - job.ig) + Math.abs(px[i + 2] - job.ib) > 140) continue;
+              const o = (x - xL) * 3, t = (y - yT) / Math.max(1, yB - yT);
+              px[i] = colTop[o] * (1 - t) + colBot[o] * t;
+              px[i + 1] = colTop[o + 1] * (1 - t) + colBot[o + 1] * t;
+              px[i + 2] = colTop[o + 2] * (1 - t) + colBot[o + 2] * t;
+            }
+        }
+        if (eraseJobs.length) canvasArt = "data:image/png;base64," + PNG.sync.write(png).toString("base64");
         /* anything unmatched (or full-bleed dreams) keeps the transcriber's
            box and samples its colour there */
         for (const e of sp.elements || []) {
@@ -621,7 +884,7 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
   let artworkError: string | undefined;
   let artAlign = "xMidYMid";
   let artInk: { x: number; y: number; w: number; h: number } | null = null;
-  let artworkMode2: "contained" | "full" = "contained";
+  let artworkMode2: "contained" | "full" | "canvas" = "contained";
   if (p.reuseArtwork && p.reuseArtwork.startsWith("data:image/")) {
     // offline iteration path: reuse a saved artwork, skip all generation
     try {
@@ -631,17 +894,27 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
       artAlign = `x${cx < 0.42 ? "Min" : cx > 0.58 ? "Max" : "Mid"}Y${cy < 0.42 ? "Min" : cy > 0.58 ? "Max" : "Mid"}`;
     } catch {}
     artwork = p.reuseArtwork;
-    artworkMode2 = (spec as { artwork?: { coverage?: string } }).artwork?.coverage === "full" ? "full" : "contained";
+    artworkMode2 = canvasArt ? "canvas" : (spec as { artwork?: { coverage?: string } }).artwork?.coverage === "full" ? "full" : "contained";
+    if (canvasArt) artwork = canvasArt;
     const resultR: RebuildResult = { spec, artwork, artAlign, artworkMode: artworkMode2, styleKey: p.style || "contemporary", fonts: GOOGLE_FONTS, artInk };
     try {
       fs.mkdirSync(path.join(process.cwd(), "data", "debug"), { recursive: true });
       fs.writeFileSync(path.join(process.cwd(), "data", "debug", "last-rebuild.json"), JSON.stringify({ dream, ...resultR }));
+      archivePair(dream, resultR);
     } catch {}
     return resultR;
   }
-  let artworkMode: "contained" | "full" = "contained";
+  let artworkMode: "contained" | "full" | "canvas" = "contained";
   const art = (spec as { artwork?: { subject?: string; palette?: string[]; box?: { w: number; h: number }; coverage?: string } }).artwork;
   const styleKey = ["traditional", "contemporary", "punk"].includes(String(body.style)) ? String(body.style) : "contemporary";
+
+  /* DREAM-AS-CANVAS (owner GO 2026-08-31): when the pixel erase produced a
+     clean canvas, the dream IS the artwork — art fidelity by construction,
+     no generation, no cost. The sketch/FLUX paths below stay for rollback
+     but are normally unreachable. */
+  if (canvasArt) {
+    return { spec, artwork: canvasArt, artAlign, artworkMode: "canvas", styleKey, fonts: GOOGLE_FONTS, artInk };
+  }
 
   /* FULL-BLEED DREAMS (owner report 2026-08-25: a full-scene dream was
      crushed into a pasted rectangle on flat ground): when the illustration
@@ -787,6 +1060,7 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
   try {
     fs.mkdirSync(path.join(process.cwd(), "data", "debug"), { recursive: true });
     fs.writeFileSync(path.join(process.cwd(), "data", "debug", "last-rebuild.json"), JSON.stringify({ dream, ...result }));
+    archivePair(dream, result);
   } catch {}
   return result;
 }

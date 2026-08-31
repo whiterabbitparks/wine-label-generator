@@ -2378,12 +2378,16 @@ function renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode,artInk){
   let body='';
   /* FULL-BLEED mode (owner 2026-08-25): the illustration IS the label —
      it covers everything, opaque, edge to edge; text is set into it. */
-  if(artSrc&&artMode==='full'){
-    body+=`<image x="0" y="0" width="${W.toFixed(1)}" height="${H.toFixed(1)}" preserveAspectRatio="xMidYMid slice" xlink:href="${artSrc}" href="${artSrc}"/>`;
+  if(artSrc&&(artMode==='full'||artMode==='canvas')){
+    /* canvas mode (owner 2026-08-31): the erased dream IS the label — drawn
+       aspect-exact so the measured boxes land on the same pixels; text over
+       imagery is the dream's own choice, so no art-overlap penalty */
+    const par=artMode==='canvas'?'none':'xMidYMid slice';
+    body+=`<image x="0" y="0" width="${W.toFixed(1)}" height="${H.toFixed(1)}" preserveAspectRatio="${par}" xlink:href="${artSrc}" href="${artSrc}"/>`;
   }
   // artwork at the dream's position (exact placement — no sliding)
   const ab=spec&&spec.artwork&&spec.artwork.box;
-  if(artSrc&&artMode!=='full'&&ab&&ab.w>0&&ab.h>0){
+  if(artSrc&&artMode!=='full'&&artMode!=='canvas'&&ab&&ab.w>0&&ab.h>0){
     const sp=gc.L<0.60;
     if(artInk&&artInk.w>0.05&&artInk.h>0.05){
       /* CONTENT-PINNED + THE HARD LAW (owner 2026-08-26): the ink lands on
@@ -2459,6 +2463,11 @@ function renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode,artInk){
   for(const e of els){
     if(seen[e.role])continue; seen[e.role]=1;
     const str=ROLE_TEXT[e.role]; if(!str)continue;
+    /* canvas mode (owner 2026-08-31): if the line wasn't found in the
+       dream's pixels, do NOT typeset it at a guessed spot over the
+       canvas — the dream's own painting stays and already carries the
+       words (the legal line included: painted IS printed). */
+    if(artMode==='canvas'&&!e.snapped)continue;
     // clamp the box inside the 5mm text margins (hard rule)
     const bx0=Math.max(SM,Math.min(W-SM,e.box.x*W)), bx1=Math.max(SM,Math.min(W-SM,(e.box.x+e.box.w)*W));
     const by0=Math.max(SM,Math.min(H-SM,e.box.y*H));
@@ -2537,7 +2546,10 @@ function renderDreamSpec(spec,d,opts,artSrc,artAlign,artMode,artInk){
        transcriber's align flag (owner defect 2026-08-27: a stray box
        edge left text off-centre) */
     const a=e.snapped?'c':e.align==='l'?'l':e.align==='r'?'r':'c';
-    const x=a==='l'?bx0:a==='r'?bx1:(bx0+bx1)/2;
+    /* the anchor shifts inward when the widened text would cross a margin
+       (owner 2026-08-31: the legal line ran off the right edge) */
+    let x=a==='l'?bx0:a==='r'?bx1:(bx0+bx1)/2;
+    if(a==='c'){const half=bw/2;x=Math.max(SM+half,Math.min(W-SM-half,x));}
     const preIR=INK_RECTS.length;
     if(e.arc&&nlines===1){
       /* arched baseline (dream trait, previously straightened): radius from
