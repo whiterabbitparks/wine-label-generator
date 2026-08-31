@@ -108,6 +108,7 @@ export async function runDreamPhase(p: DreamParams): Promise<{ dream: string; pr
     // the owner's dream-refinement corpus steers future dreams
     let guidance = "";
     let composition = "";
+    let compositionCheck = "";
     try {
       const db = await getDb();
       // the dream charter: the board's spirit, distilled — never the images.
@@ -118,7 +119,16 @@ export async function runDreamPhase(p: DreamParams): Promise<{ dream: string; pr
         if (ch?.text) guidance += ` House design spirit for this style (learned from the art director's reference labels): ${ch.text}`;
         const cd = (await db.collection("settings").findOne({ _id: `dream-cards-${style}` } as never)) as { cards?: { key: string; arrangement: string }[] } | null;
         const card = dealCompositionCard(style, cd?.cards || []);
-        if (card) composition = ` COMPOSITION — arrange the label exactly in this scheme: ${card.arrangement}`;
+        if (card) {
+          const contained = !/bleed/i.test(card.arrangement);
+          composition =
+            ` COMPOSITION — NON-NEGOTIABLE, follow this scheme exactly: ${card.arrangement}` +
+            (contained
+              ? " The illustration is CONTAINED: a discrete image surrounded by clean, flat label ground on every side — it must NOT fill the label, must NOT become a full scene, and must NOT touch any edge."
+              : "");
+          if (contained) compositionCheck =
+            "Does the illustration spread to fill most of the label or reach the label edges, instead of sitting contained with clear label ground around it?";
+        }
       }
       /* THE REORGANISATION (owner 2026-08-31): the illustration inside the
          dream IS the final art now, so the whole image-quality system —
@@ -163,6 +173,7 @@ export async function runDreamPhase(p: DreamParams): Promise<{ dream: string; pr
          the image pipeline always had — prompt clauses, a vision check on
          the dream, one strict regeneration on violation. */
       const dr = await assembleDreamRules(vision);
+      if (compositionCheck) dr.checks.push({ src: "composition card (contained)", check: compositionCheck });
       const makeDream = async (extra = "") => {
         const job: Record<string, unknown> = { prompt: prompt + dr.clauses + extra, size: "landscape" };
         if (body.sketch && String(body.sketch).startsWith("data:image/")) job.reference = body.sketch;

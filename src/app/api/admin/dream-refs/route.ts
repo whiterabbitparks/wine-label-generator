@@ -53,7 +53,7 @@ export async function POST(req: Request) {
       const p = path.join(DREAM_REFS_DIR, path.basename(r.file));
       if (!fs.existsSync(p)) continue;
       const buf = await sharp(fs.readFileSync(p)).resize(640, 640, { fit: "inside" }).png().toBuffer();
-      images.push({ type: "image_url", image_url: { url: `data:image/png;base64,${buf.toString("base64")}`, detail: "low" } });
+      images.push({ type: "image_url", image_url: { url: `data:image/png;base64,${buf.toString("base64")}`, detail: "high" } });
     }
     const vmodel = process.env.OPENAI_VISION_MODEL || "gpt-4o";
     // 1) the style charter — shared typographic/colour spirit
@@ -112,15 +112,16 @@ export async function POST(req: Request) {
               content:
                 "You are a graphic design analyst. Describe ONLY the LAYOUT GEOMETRY of this label design, " +
                 "in max 60 words, as instructions for arranging a NEW design the same way. " +
-                "Use ONLY geometric vocabulary: zones (top/middle/bottom third, left/right half), fractions of the label, " +
-                "alignment axes (left-aligned column, centred stack, right-ragged, asymmetric), scale contrasts " +
-                "(name huge vs small), which edges the illustration bleeds off or whether it sits contained, " +
-                "stacking order, arcs. Always call the picture simply 'the illustration'. " +
+                "START with the illustration: give its area as a fraction of the label (e.g. 'about one quarter') " +
+                "and its position. Say it BLEEDS off an edge ONLY if its ink truly touches that edge — " +
+                "when in doubt, it is CONTAINED (surrounded by label ground). Most classic labels are contained. " +
+                "Then: zones (thirds/halves), alignment axes, scale contrasts (name huge vs small), stacking order, arcs. " +
+                "Always call the picture simply 'the illustration'. " +
                 "STRICTLY FORBIDDEN: naming anything depicted — no objects, people, animals, body parts, scenery; " +
-                "no style or technique words (captured elsewhere). Geometry only. " +
-                "Make the scheme SPECIFIC and distinctive to THIS example — if the name sits in an unusual place, say so plainly.",
+                "no style or technique words; NEVER mention borders or frames (a separate house law governs those). " +
+                "Make the scheme SPECIFIC and distinctive to THIS example.",
             },
-            { role: "user", content: [{ type: "image_url", image_url: { url: `data:image/png;base64,${buf2.toString("base64")}`, detail: "low" } }] },
+            { role: "user", content: [{ type: "image_url", image_url: { url: `data:image/png;base64,${buf2.toString("base64")}`, detail: "high" } }] },
           ],
         }),
       });
@@ -132,7 +133,8 @@ export async function POST(req: Request) {
          could typeset it (owner 2026-08-28) */
       const clean = arr
         .replace(/["'\u201c\u201d\u2018\u2019][^"'\u201c\u201d\u2018\u2019]{1,40}["'\u201c\u201d\u2018\u2019]/g, "a text element")
-        .replace(/\b(19|20)\d{2}\b/g, "the vintage");
+        .replace(/\b(19|20)\d{2}\b/g, "the vintage")
+        .replace(/[^.]*\b(border|frame|cartouche)s?\b[^.]*\.?/gi, "");
       if (clean.length > 30 && !/\b(i'?m sorry|i can'?t|cannot assist)\b/i.test(clean.slice(0, 80))) cards.push({ key: r.id, arrangement: clean });
     }
     await db.collection("settings").updateOne(

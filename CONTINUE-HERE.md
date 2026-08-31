@@ -1301,3 +1301,19 @@ composition-contract tightening, then customer wiring.
   explains the merge. Image Play remains as a style lab: its feedback
   weights are exactly what the dream prompt consumes. Smoke-tested: dream
   generates, prompt carries the house illustration style line.
+- LAYOUT OBEDIENCE (owner 2026-08-31, "dream is not listening to the
+  references"): root cause was the CARD ANALYSIS reading references at
+  detail:"low" (thumbnail vision) — it hallucinated "bleeding off edges"
+  on 4 of 5 traditional references that are actually contained centred
+  images, and even dictated "border encloses design" against the
+  no-frames law. Fixes: (1) analysis at detail:"high", prompt leads with
+  the illustration's AREA FRACTION and position, bleed only when ink
+  truly touches an edge, border/frame talk banned + sanitised out.
+  (2) The dealt card is now the DOMINANT prompt clause ("COMPOSITION —
+  NON-NEGOTIABLE") and contained cards append an explicit containment
+  directive. (3) Contained cards add a VERIFY check — a full-bleed dream
+  against a contained card is redreamed once, strictly. All three boards
+  re-analysed: traditional now reads "one fifth/one third, centred,
+  contained" across the deck; contemporary/punk keep their genuine
+  bleed cards. Smoke-tested: traditional dream measured at 13% contained
+  top-centre artwork (pixel measurement, not eyeballing).
