@@ -57,6 +57,12 @@ export const DREAM_BUILTINS: DreamRule[] = [
   },
   {
     clause:
+      "Every figure, person and animal in the illustration is anatomically coherent — one head each, the right number of limbs, no fused or merged bodies, no accidental human-animal hybrids.",
+    check:
+      "Does any person, animal or creature show duplicated or fused anatomy — two heads, extra or missing limbs, bodies merged together, or an unrequested human-animal hybrid? Stylised simplification is fine; answer yes only for genuine glitches.",
+  },
+  {
+    clause:
       "Unless the story names a time, culture or ethnicity, people and settings read modern-but-neutral or timeless: no period or folk costume, no era-specific props.",
     check:
       "Does a person wear clearly historical, period, folk or national costume, or does the setting unmistakably evoke a specific historical era not requested? If no people appear, answer no.",

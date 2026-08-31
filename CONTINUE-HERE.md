@@ -1285,3 +1285,19 @@ composition-contract tightening, then customer wiring.
   but can never print over another text. Verified on the punk pair:
   canvas mode, 2 vector lines set between 4 painted ones, fidelity 99.
   Gates: parity 0.000%, hard rules PASS, goldens 72/72.
+- SYSTEM REORGANISED AROUND THE CANVAS (owner 2026-08-31, "reorganize the
+  system so it makes sense"): the illustration inside the dream IS the
+  final art, so every image-quality asset changed address, not purpose:
+  (1) Image Refs boards → style profiles/cards, weighted by Image Play
+  feedback, now steer the DREAM prompt directly ("the ILLUSTRATION inside
+  the label is executed in the house illustration style: …"). (2) The
+  anatomy-glitch law moved into DREAM_BUILTINS (its old home, the craft
+  verify, is unreachable) — every dream is inspected for fused creatures
+  and redreamed once on violation. (3) NO_TEXT and WHITE_BG stay LEGACY-
+  ONLY laws: a dream is a complete label and rightly contains its texts;
+  there is no separate keyed artwork any more (the "artwork on pure white
+  + multiply" law is thereby retired for the dream engine — still active
+  in the legacy/classic engine; flagged to the owner). (4) Rules tab copy
+  explains the merge. Image Play remains as a style lab: its feedback
+  weights are exactly what the dream prompt consumes. Smoke-tested: dream
+  generates, prompt carries the house illustration style line.

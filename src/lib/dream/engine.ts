@@ -120,6 +120,19 @@ export async function runDreamPhase(p: DreamParams): Promise<{ dream: string; pr
         const card = dealCompositionCard(style, cd?.cards || []);
         if (card) composition = ` COMPOSITION — arrange the label exactly in this scheme: ${card.arrangement}`;
       }
+      /* THE REORGANISATION (owner 2026-08-31): the illustration inside the
+         dream IS the final art now, so the whole image-quality system —
+         reference boards, derived style cards, Image Play feedback
+         weights — steers the DREAM's illustration directly. Nothing built
+         was wasted; it changed address. */
+      try {
+        const prof = (await getProfiles())[style];
+        const aggD = (await feedbackAggregates())[style];
+        const liveCards = (prof?.variants || []).filter((c) => (aggD?.weights?.[c.key] ?? 1) >= 0.5);
+        const cardI = liveCards.length ? liveCards[Math.floor(Math.random() * liveCards.length)] : null;
+        const lang = cardI ? ((cardI as { language?: string }).language || [cardI.medium, cardI.mood].filter(Boolean).join("; ")) : prof?.charter?.slice(0, 400);
+        if (lang) guidance += ` The ILLUSTRATION inside the label is executed in the house illustration style: ${lang}.`;
+      } catch {}
       const rows = (await db.collection("dream_feedback")
         .find({ comment: { $ne: "" } }, { projection: { _id: 0, verdict: 1, comment: 1 } })
         .sort({ at: -1 }).limit(12).toArray()) as unknown as { verdict: string; comment: string }[];

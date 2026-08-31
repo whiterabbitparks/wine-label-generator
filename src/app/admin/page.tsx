@@ -39,8 +39,13 @@ function DreamRulesCard() {
         One rule per line, plain English — every dream is <b>inspected against them</b> and regenerated
         once on violation. Built-ins already active: no frames/borders · no invented medals, crests,
         dates or extra text · no ligature/decorative lettering · no ornaments around texts · flat label,
-        no mockups · handmade print, no gloss · timeless neutrality · qvevri anatomy. The customer&rsquo;s
-        story always outranks a rule.
+        no mockups · handmade print, no gloss · anatomy coherent (no fused creatures) · timeless
+        neutrality · qvevri anatomy. The customer&rsquo;s story always outranks a rule.
+        <br /><br />
+        <b>Since the dream became the label (2026-08-31):</b> the Image Refs boards and Image Play
+        feedback steer the dream&rsquo;s <b>illustration style</b> directly — nothing separate is generated
+        any more. The old image-only rules &ldquo;no text in artwork&rdquo; and &ldquo;white background&rdquo;
+        apply only to the legacy engine: a dream is a complete label and rightly contains its texts.
       </p>
       <textarea value={text} placeholder="e.g. never use pastel colours" onChange={(e) => setText(e.target.value)}
         style={{ ...S.input, minHeight: 70 }} />
