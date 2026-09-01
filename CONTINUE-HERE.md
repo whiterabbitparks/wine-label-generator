@@ -1331,3 +1331,23 @@ composition-contract tightening, then customer wiring.
   whole day of owner runs went unrecorded). Gates: parity 0.000%, hard
   rules PASS, goldens 72/72. NOTE: the owner tests on his OWN server —
   it must be rebuilt+restarted to pick any of this up.
+- CLEANUP ROUND (owner 2026-08-31, "artifacts everywhere, nothing is
+  working"): THE BIG FINDING — the owner's web server on :3000 had been
+  running since AUG 16, two weeks before the canvas engine existed; every
+  "web" label came from the ancient build. It now runs the current build
+  (kill via lsof, PORT=3000 npm run start — keep BOTH :3000 and :3200
+  current after every ship). Real fixes on the new build: (1) SUB-STYLE
+  DECK — illustration style cards now deal from a shuffled bag per style
+  (full coverage before repeat, like composition cards); random selection
+  repeated the same look. (2) ERASE, FINAL FORM — the three heuristic
+  keep-paint pre-gates (width, glyph census, art-share) are DELETED;
+  one honest gate remains: every erase is PLANNED (glyphs + touching
+  outline/shadow components + same-ink sweep), all plans union, and each
+  job is audited across the FULL label width of its arc-extended rows —
+  neighbour text doesn't scare the audit because neighbours' own plans
+  cover it. Only provably-clean erases apply; failures keep the painting.
+  Verified on 4 archived owner pairs: ZERO ghost bands in every style
+  (vector counts are conservative on chaotic punk art — painted text is
+  correct text). Layout sameness note: traditional's references ARE
+  similar (one-fifth/one-third centred) so its deck is honestly narrow —
+  diversity there needs more diverse references, not code.

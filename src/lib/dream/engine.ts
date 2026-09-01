@@ -139,7 +139,14 @@ export async function runDreamPhase(p: DreamParams): Promise<{ dream: string; pr
         const prof = (await getProfiles())[style];
         const aggD = (await feedbackAggregates())[style];
         const liveCards = (prof?.variants || []).filter((c) => (aggD?.weights?.[c.key] ?? 1) >= 0.5);
-        const cardI = liveCards.length ? liveCards[Math.floor(Math.random() * liveCards.length)] : null;
+        /* SUB-STYLE DECK (owner 2026-08-31, "the shuffle is not happening"):
+           illustration styles deal from a shuffled bag exactly like the
+           composition cards — every sub-style appears before any repeats,
+           so consecutive dreams cannot share a look by accident */
+        const dealtI = liveCards.length
+          ? dealCompositionCard(`ill-${style}`, liveCards.map((c) => ({ key: c.key, arrangement: c.key })))
+          : null;
+        const cardI = dealtI ? liveCards.find((c) => c.key === dealtI.key) || null : null;
         const lang = cardI ? ((cardI as { language?: string }).language || [cardI.medium, cardI.mood].filter(Boolean).join("; ")) : prof?.charter?.slice(0, 400);
         if (lang) guidance += ` The ILLUSTRATION inside the label is executed in the house illustration style: ${lang}.`;
       } catch {}
@@ -681,50 +688,6 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
               const ln = (e as { __ln?: Line }).__ln;
               if (!ln) continue;
               delete (e as { __ln?: Line }).__ln;
-              /* KEEP-PAINTED (owner GO 2026-08-31): the dream was generated
-                 WITH the customer's real words — when tracing only caught
-                 fragments of a display name (line much narrower than the
-                 vision box), erasing would smear and the typeset would
-                 double. The dream's own painted text stays instead. */
-              const txt2 = roleText[e.role || ""] || "";
-              const expW = Math.max(1, txt2.replace(/\s+/g, "").length) * 0.62 * (ln.y1 - ln.y0 + 1);
-              if ((ln.x1 - ln.x0 + 1) < 0.65 * Math.min(PW * 0.96, expW)) { claimed.delete(ln); (e as { paintedBox?: object }).paintedBox = { x: ln.x0 / PW, y: ln.y0 / PH, w: (ln.x1 - ln.x0 + 1) / PW, h: (ln.y1 - ln.y0 + 1) / PH }; continue; }
-              /* fragment check by INK CENSUS: same-colour ink in the band
-                 but OUTSIDE the traced box means the tracer caught only
-                 part of the name — erasing would leave ghosts and the
-                 typeset would double. Keep the dream's painting. */
-              {
-                const nI = Math.max(1, ln.ws);
-                const ir2 = ln.r / nI, ig2 = ln.g / nI, ib2 = ln.b / nI;
-                /* missed letters are unchained GLYPH components of the
-                   same colour in the extended band — colour census alone
-                   missed arc ends below the traced rows */
-                const ownIds = new Set(ln.gs.map((g2) => g2.id));
-                const ext = Math.round((ln.y1 - ln.y0 + 1) * 0.35);
-                let inside = 0, outside = 0;
-                for (let y = Math.max(0, ln.y0 - ext); y <= Math.min(PH - 1, ln.y1 + ext); y += 2) for (let x = 0; x < PW; x += 2) {
-                  const l3 = lbl[y * PW + x];
-                  if (l3 === 0 || !candGlyphIds.has(l3)) continue;
-                  const i = (y * PW + x) * 4;
-                  if (Math.abs(px[i] - ir2) + Math.abs(px[i + 1] - ig2) + Math.abs(px[i + 2] - ib2) > 130) continue;
-                  if (ownIds.has(l3)) inside++; else outside++;
-                }
-                if (outside > 0.3 * Math.max(1, inside)) { claimed.delete(ln); (e as { paintedBox?: object }).paintedBox = { x: ln.x0 / PW, y: ln.y0 / PH, w: (ln.x1 - ln.x0 + 1) / PW, h: (ln.y1 - ln.y0 + 1) / PH }; continue; }
-              }
-              /* THE SAFE-ERASE RULE (owner GO 2026-08-31, final): typeset
-                 only where erasing is safe — a band free of artwork. When
-                 art weaves through the letters (leaves between an arced
-                 hero), the dream's own painting stays: it already says the
-                 customer's words. Clean-paper text gets true vector type. */
-              {
-                let artPx = 0, tot2 = 0;
-                for (let y = Math.max(0, ln.y0 - 4); y <= Math.min(PH - 1, ln.y1 + 4); y += 2)
-                  for (let x = Math.max(0, ln.x0 - 4); x <= Math.min(PW - 1, ln.x1 + 4); x += 2) {
-                    tot2++;
-                    if (artIds2.has(lbl[y * PW + x])) artPx++;
-                  }
-                if (artPx > 0.12 * Math.max(1, tot2)) { claimed.delete(ln); (e as { paintedBox?: object }).paintedBox = { x: ln.x0 / PW, y: ln.y0 / PH, w: (ln.x1 - ln.x0 + 1) / PW, h: (ln.y1 - ln.y0 + 1) / PH }; continue; }
-              }
               ln.used = true;
               let y0 = ln.y0, y1 = ln.y1, x0 = ln.x0, x1 = ln.x1;
               /* two-line hero: deterministic merge — claim the adjacent
@@ -826,76 +789,103 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
            foliage chains keep their pixels. Each glyph fills with its own
            ring colour; then the whole claimed band is swept for pixels of
            that line's ink colour, catching letters the tracer missed. */
-        /* TWO-PHASE VALIDATED ERASE (owner 2026-08-31, "visible artefacts,
-           some texts doubled"): the erase is PLANNED first — every pixel
-           it would remove goes into a mask — then the band is audited for
-           painted ink the plan would MISS. If ghosts would survive, the
-           element is un-typeset and keeps the dream's painting: a text is
-           set in vector ONLY when its painted original provably vanishes.
-           Only validated plans touch the pixels. */
-        for (const job of eraseJobs) {
-          const p2 = 8;
-          const yT = Math.max(0, job.by0 - p2), yB = Math.min(PH - 1, job.by1 + p2);
-          const xL = Math.max(0, job.bx0 - p2), xR = Math.min(PW - 1, job.bx1 + p2);
-          const bw2 = xR - xL + 1, bh2 = yB - yT + 1;
-          const plan = new Uint8Array(bw2 * bh2);
-          const inPlan = (x: number, y: number) => x >= xL && x <= xR && y >= yT && y <= yB && plan[(y - yT) * bw2 + (x - xL)] === 1;
-          const mark = (x: number, y: number) => { if (x >= xL && x <= xR && y >= yT && y <= yB) plan[(y - yT) * bw2 + (x - xL)] = 1; };
-          // phase 1a: each glyph's padded bbox (ghost edges included: low threshold)
-          for (const g2 of job.gs)
-            for (let y = Math.max(0, g2.y0 - 3); y <= Math.min(PH - 1, g2.y1 + 3); y++)
-              for (let x = Math.max(0, g2.x0 - 3); x <= Math.min(PW - 1, g2.x1 + 3); x++) {
-                if (gDist(x, y) <= 32) continue;
-                if (artIds.has(lbl[y * PW + x])) continue;
+        /* VALIDATED ERASE, FINAL FORM (owner 2026-08-31 "good clean up"):
+           ONE honest gate instead of three heuristics. Every job PLANS its
+           erase (glyphs + touching outline components + same-ink sweep);
+           all plans union into one mask; each job is AUDITED across the
+           FULL label width of its (arc-extended) rows for same-ink text
+           the union would miss — neighbours' ink doesn't scare it because
+           their own plans cover them. Only passing jobs erase; failures
+           keep the dream's painting. Typeset ⇒ provably erased. */
+        {
+          const unionMask = new Uint8Array(PW * PH);
+          interface Plan { job: EraseJob; pxs: number[]; yT: number; yB: number; xL: number; xR: number }
+          const plans: Plan[] = [];
+          for (const job of eraseJobs) {
+            const p2 = 8;
+            const yT = Math.max(0, job.by0 - p2), yB = Math.min(PH - 1, job.by1 + p2);
+            const xL = Math.max(0, job.bx0 - p2), xR = Math.min(PW - 1, job.bx1 + p2);
+            const pxs: number[] = [];
+            const mark = (x: number, y: number) => {
+              const idx = y * PW + x;
+              if (unionMask[idx]) return;
+              unionMask[idx] = 1; pxs.push(idx);
+            };
+            for (const g2 of job.gs)
+              for (let y = Math.max(0, g2.y0 - 3); y <= Math.min(PH - 1, g2.y1 + 3); y++)
+                for (let x = Math.max(0, g2.x0 - 3); x <= Math.min(PW - 1, g2.x1 + 3); x++) {
+                  if (gDist(x, y) <= 32 || artIds.has(lbl[y * PW + x])) continue;
+                  mark(x, y);
+                }
+            for (const c2 of comps) {
+              if (artIds.has(c2.id)) continue;
+              let touches = false;
+              for (const g2 of job.gs)
+                if (c2.x0 <= g2.x1 + 4 && c2.x1 >= g2.x0 - 4 && c2.y0 <= g2.y1 + 4 && c2.y1 >= g2.y0 - 4) { touches = true; break; }
+              if (!touches) continue;
+              for (let y = Math.max(0, c2.y0 - 2); y <= Math.min(PH - 1, c2.y1 + 2); y++)
+                for (let x = Math.max(0, c2.x0 - 2); x <= Math.min(PW - 1, c2.x1 + 2); x++) {
+                  if (gDist(x, y) <= 32 || artIds.has(lbl[y * PW + x])) continue;
+                  mark(x, y);
+                }
+            }
+            for (let y = yT; y <= yB; y++)
+              for (let x = xL; x <= xR; x++) {
+                const i = (y * PW + x) * 4;
+                if (gDist(x, y) <= 45 || artIds.has(lbl[y * PW + x])) continue;
+                if (Math.abs(px[i] - job.ir) + Math.abs(px[i + 1] - job.ig) + Math.abs(px[i + 2] - job.ib) > 160) continue;
                 mark(x, y);
               }
-          // phase 1b: band sweep for same-ink pixels the tracer missed
-          for (let y = yT; y <= yB; y++)
-            for (let x = xL; x <= xR; x++) {
-              const i = (y * PW + x) * 4;
-              if (gDist(x, y) <= 45) continue;
-              if (artIds.has(lbl[y * PW + x])) continue;
-              if (Math.abs(px[i] - job.ir) + Math.abs(px[i + 1] - job.ig) + Math.abs(px[i + 2] - job.ib) > 160) continue;
-              mark(x, y);
-            }
-          // phase 2: audit — same-ink pixels in the band the plan does NOT cover
-          let leftover = 0, planned = 0;
-          for (let y = yT; y <= yB; y++)
-            for (let x = xL; x <= xR; x++) {
-              if (inPlan(x, y)) { planned++; continue; }
-              const i = (y * PW + x) * 4;
-              if (gDist(x, y) <= 60) continue;
-              if (artIds.has(lbl[y * PW + x])) continue;
-              if (Math.abs(px[i] - job.ir) + Math.abs(px[i + 1] - job.ig) + Math.abs(px[i + 2] - job.ib) > 130) continue;
-              leftover++;
-            }
-          if (leftover > Math.max(60, 0.1 * planned)) {
-            job.el.snapped = false;
-            if (job.el.box) job.el.paintedBox = { ...job.el.box };
-            continue;
+            plans.push({ job, pxs, yT, yB, xL, xR });
           }
-          // phase 3: apply — column-blend fill over exactly the planned pixels
-          const colTop = new Float64Array(bw2 * 3), colBot = new Float64Array(bw2 * 3);
-          for (let x = xL; x <= xR; x++) {
-            const o = (x - xL) * 3;
-            let fy = -1;
-            for (let y = yT - 1; y >= Math.max(0, yT - 50); y--) if (gDist(x, y) <= 60) { fy = y; break; }
-            if (fy >= 0) { const i = (fy * PW + x) * 4; colTop[o] = px[i]; colTop[o + 1] = px[i + 1]; colTop[o + 2] = px[i + 2]; }
-            else { colTop[o] = localG(x, yT, 0); colTop[o + 1] = localG(x, yT, 1); colTop[o + 2] = localG(x, yT, 2); }
-            fy = -1;
-            for (let y = yB + 1; y <= Math.min(PH - 1, yB + 50); y++) if (gDist(x, y) <= 60) { fy = y; break; }
-            if (fy >= 0) { const i = (fy * PW + x) * 4; colBot[o] = px[i]; colBot[o + 1] = px[i + 1]; colBot[o + 2] = px[i + 2]; }
-            else { colBot[o] = colTop[o]; colBot[o + 1] = colTop[o + 1]; colBot[o + 2] = colTop[o + 2]; }
+          for (const plan of plans) {
+            const { job } = plan;
+            const ext = Math.round((job.by1 - job.by0 + 1) * 0.5);
+            const aT = Math.max(0, job.by0 - ext), aB = Math.min(PH - 1, job.by1 + ext);
+            let leftover = 0;
+            for (let y = aT; y <= aB; y++)
+              for (let x = 0; x < PW; x++) {
+                const idx = y * PW + x;
+                if (unionMask[idx] || artIds.has(lbl[idx])) continue;
+                const i = idx * 4;
+                if (gDist(x, y) <= 55) continue;
+                if (Math.abs(px[i] - job.ir) + Math.abs(px[i + 1] - job.ig) + Math.abs(px[i + 2] - job.ib) > 140) continue;
+                leftover++;
+              }
+            if (leftover > Math.max(240, 0.06 * plan.pxs.length)) {
+              job.el.snapped = false;
+              if (job.el.box) job.el.paintedBox = { ...job.el.box };
+              for (const idx of plan.pxs) unionMask[idx] = 0;
+              plan.pxs.length = 0;
+              continue;
+            }
           }
-          for (let y = yT; y <= yB; y++)
+          for (const plan of plans) {
+            if (!plan.pxs.length) continue;
+            const { yT, yB, xL, xR } = plan;
+            const bw2 = xR - xL + 1;
+            const colTop = new Float64Array(bw2 * 3), colBot = new Float64Array(bw2 * 3);
             for (let x = xL; x <= xR; x++) {
-              if (!inPlan(x, y)) continue;
-              const i = (y * PW + x) * 4;
+              const o = (x - xL) * 3;
+              let fy = -1;
+              for (let y = yT - 1; y >= Math.max(0, yT - 50); y--) if (gDist(x, y) <= 60) { fy = y; break; }
+              if (fy >= 0) { const i = (fy * PW + x) * 4; colTop[o] = px[i]; colTop[o + 1] = px[i + 1]; colTop[o + 2] = px[i + 2]; }
+              else { colTop[o] = localG(x, yT, 0); colTop[o + 1] = localG(x, yT, 1); colTop[o + 2] = localG(x, yT, 2); }
+              fy = -1;
+              for (let y = yB + 1; y <= Math.min(PH - 1, yB + 50); y++) if (gDist(x, y) <= 60) { fy = y; break; }
+              if (fy >= 0) { const i = (fy * PW + x) * 4; colBot[o] = px[i]; colBot[o + 1] = px[i + 1]; colBot[o + 2] = px[i + 2]; }
+              else { colBot[o] = colTop[o]; colBot[o + 1] = colTop[o + 1]; colBot[o + 2] = colTop[o + 2]; }
+            }
+            for (const idx of plan.pxs) {
+              const y = (idx / PW) | 0, x = idx % PW;
+              const i = idx * 4;
               const o = (x - xL) * 3, t = (y - yT) / Math.max(1, yB - yT);
+              if (o < 0 || o >= bw2 * 3) continue;
               px[i] = colTop[o] * (1 - t) + colBot[o] * t;
               px[i + 1] = colTop[o + 1] * (1 - t) + colBot[o + 1] * t;
               px[i + 2] = colTop[o + 2] * (1 - t) + colBot[o + 2] * t;
             }
+          }
         }
         /* canvas is UNCONDITIONAL (owner law 2026-08-31 "never let texts
            overlap"): even when no text can be safely typeset, the label is
