@@ -397,6 +397,24 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
             const o = (ty * TX + tx) * 3;
             tileG[o] = top ? top.r / top.n : G0.r; tileG[o + 1] = top ? top.g / top.n : G0.g; tileG[o + 2] = top ? top.b / top.n : G0.b;
           }
+          /* a huge display name can DOMINATE its tiles — the "ground"
+             becomes the ink colour and those letters turn invisible to
+             every later stage (owner ghost 2026-08-31). A 3×3 spatial
+             median per channel restores the true paper: an ink-dominated
+             tile is an outlier among its neighbours. */
+          const tileG2 = new Float64Array(tileG);
+          for (let ty = 0; ty < TY; ty++) for (let tx = 0; tx < TX; tx++) {
+            for (let ch = 0; ch < 3; ch++) {
+              const vals: number[] = [];
+              for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+                const ny = ty + dy, nx2 = tx + dx;
+                if (ny < 0 || nx2 < 0 || ny >= TY || nx2 >= TX) continue;
+                vals.push(tileG2[(ny * TX + nx2) * 3 + ch]);
+              }
+              vals.sort((a2, b3) => a2 - b3);
+              tileG[(ty * TX + tx) * 3 + ch] = vals[Math.floor(vals.length / 2)];
+            }
+          }
         }
         const localG = (x: number, y: number, ch: number) => {
           const fx = Math.min(TX - 1.001, Math.max(0, (x / PW) * TX - 0.5));
@@ -800,6 +818,7 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
         {
           const unionMask = new Uint8Array(PW * PH);
           interface Plan { job: EraseJob; pxs: number[]; yT: number; yB: number; xL: number; xR: number }
+          // (pxs is reassigned on failure/adoption — keep it a plain field)
           const plans: Plan[] = [];
           for (const job of eraseJobs) {
             const p2 = 8;
@@ -838,7 +857,11 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
               }
             plans.push({ job, pxs, yT, yB, xL, xR });
           }
-          for (const plan of plans) {
+          /* audits loop until STABLE (owner ghost 2026-08-31): when a job
+             fails and keeps its painting, the pixels it claimed are
+             re-offered to surviving neighbours and everyone re-audits —
+             a pass is only final when no failure can undermine it */
+          const auditOnce = (plan: Plan) => {
             const { job } = plan;
             const ext = Math.round((job.by1 - job.by0 + 1) * 0.5);
             const aT = Math.max(0, job.by0 - ext), aB = Math.min(PH - 1, job.by1 + ext);
@@ -852,14 +875,33 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
                 if (Math.abs(px[i] - job.ir) + Math.abs(px[i + 1] - job.ig) + Math.abs(px[i + 2] - job.ib) > 140) continue;
                 leftover++;
               }
-            if (leftover > Math.max(240, 0.06 * plan.pxs.length)) {
-              job.el.snapped = false;
-              if (job.el.box) job.el.paintedBox = { ...job.el.box };
-              for (const idx of plan.pxs) unionMask[idx] = 0;
-              plan.pxs.length = 0;
-              continue;
+            return leftover > Math.max(240, 0.06 * Math.max(1, plan.pxs.length));
+          };
+          const failedPlans = new Set<Plan>();
+          for (let round = 0; round < plans.length + 1; round++) {
+            let changed = false;
+            for (const plan of plans) {
+              if (failedPlans.has(plan)) continue;
+              if (!auditOnce(plan)) continue;
+              failedPlans.add(plan);
+              plan.job.el.snapped = false;
+              if (plan.job.el.box) plan.job.el.paintedBox = { ...plan.job.el.box };
+              const released = plan.pxs;
+              plan.pxs = [];
+              for (const idx of released) unionMask[idx] = 0;
+              for (const p2 of plans) {
+                if (p2 === plan || failedPlans.has(p2)) continue;
+                for (const idx of released) {
+                  if (unionMask[idx]) continue;
+                  const y = (idx / PW) | 0, x = idx % PW;
+                  if (x >= p2.xL && x <= p2.xR && y >= p2.yT && y <= p2.yB) { unionMask[idx] = 1; p2.pxs.push(idx); }
+                }
+              }
+              changed = true;
             }
+            if (!changed) break;
           }
+          const origs = new Map<Plan, Uint8Array>();
           for (const plan of plans) {
             if (!plan.pxs.length) continue;
             const { yT, yB, xL, xR } = plan;
@@ -876,6 +918,9 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
               if (fy >= 0) { const i = (fy * PW + x) * 4; colBot[o] = px[i]; colBot[o + 1] = px[i + 1]; colBot[o + 2] = px[i + 2]; }
               else { colBot[o] = colTop[o]; colBot[o + 1] = colTop[o + 1]; colBot[o + 2] = colTop[o + 2]; }
             }
+            const orig = new Uint8Array(plan.pxs.length * 3);
+            plan.pxs.forEach((idx, k) => { const i = idx * 4; orig[k * 3] = px[i]; orig[k * 3 + 1] = px[i + 1]; orig[k * 3 + 2] = px[i + 2]; });
+            origs.set(plan, orig);
             for (const idx of plan.pxs) {
               const y = (idx / PW) | 0, x = idx % PW;
               const i = idx * 4;
@@ -885,6 +930,40 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
               px[i + 1] = colTop[o + 1] * (1 - t) + colBot[o + 1] * t;
               px[i + 2] = colTop[o + 2] * (1 - t) + colBot[o + 2] * t;
             }
+          }
+          /* ABSOLUTE POST-CHECK, whole-batch (owner 2026-08-31): after ALL
+             fills, re-scan each band by PURE colour match — no ground model
+             a huge display name can blind. Ink still visible → restore that
+             band's original pixels and keep the painting; then one more
+             round so restored ink can demote anyone it now undermines. */
+          const still = (plan: Plan) => {
+            const { job } = plan;
+            const ext2 = Math.round((job.by1 - job.by0 + 1) * 0.5);
+            const aT2 = Math.max(0, job.by0 - ext2), aB2 = Math.min(PH - 1, job.by1 + ext2);
+            let n2 = 0;
+            for (let y = aT2; y <= aB2; y++)
+              for (let x = 0; x < PW; x++) {
+                const idx = y * PW + x;
+                if (artIds.has(lbl[idx])) continue;
+                const i = idx * 4;
+                if (Math.abs(px[i] - job.ir) + Math.abs(px[i + 1] - job.ig) + Math.abs(px[i + 2] - job.ib) > 120) continue;
+                n2++;
+              }
+            return n2 > Math.max(240, 0.06 * Math.max(1, plan.pxs.length));
+          };
+          for (let round = 0; round < 2; round++) {
+            let changed = false;
+            for (const plan of plans) {
+              if (!plan.pxs.length || failedPlans.has(plan)) continue;
+              if (!still(plan)) continue;
+              const orig = origs.get(plan);
+              if (orig) plan.pxs.forEach((idx, k) => { const i = idx * 4; px[i] = orig[k * 3]; px[i + 1] = orig[k * 3 + 1]; px[i + 2] = orig[k * 3 + 2]; });
+              plan.job.el.snapped = false;
+              if (plan.job.el.box) plan.job.el.paintedBox = { ...plan.job.el.box };
+              failedPlans.add(plan);
+              changed = true;
+            }
+            if (!changed) break;
           }
         }
         /* canvas is UNCONDITIONAL (owner law 2026-08-31 "never let texts

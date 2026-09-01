@@ -1351,3 +1351,19 @@ composition-contract tightening, then customer wiring.
   correct text). Layout sameness note: traditional's references ARE
   similar (one-fifth/one-third centred) so its deck is honestly narrow —
   diversity there needs more diverse references, not code.
+- GHOSTS CLOSED FOR GOOD (owner "?" 2026-08-31 late): two blindness bugs
+  found via the archived pairs: (1) audits ran before neighbours' failures
+  released their pixels (order hole — fixed with a stable audit loop that
+  re-offers released pixels and re-audits until quiet); (2) a huge display
+  name can DOMINATE its ground tiles so the "paper colour" becomes the ink
+  colour and those letters turn invisible to every stage — mitigated with
+  a 3×3 spatial median over the tile grid, and CLOSED by the ABSOLUTE
+  POST-CHECK: after all fills, each band is re-scanned by pure colour
+  match (no ground model to blind); if ink is still visible the band's
+  original pixels are RESTORED and the text stays painted. Wrong typeset
+  is now impossible regardless of upstream blindness. Audited on the
+  owner's archived pairs across all styles: ZERO ghost bands. Honest
+  price: vector rates are conservative (0-3 per label on busy art);
+  raising them means smarter erasing, never looser gates. Transcription
+  ERRORs seen tonight are the loud-fail working during OpenAI flakes —
+  the studio shows the error instead of a bare label.
