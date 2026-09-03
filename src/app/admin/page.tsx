@@ -104,12 +104,14 @@ const DREAM_STYLES = ["traditional", "contemporary", "punk", "minimalist"] as co
 function DreamRefsCard() {
   const [refs, setRefs] = useState<DreamRef[]>([]);
   const [charters, setCharters] = useState<Record<string, string>>({});
+  const [cardsMap, setCardsMap] = useState<Record<string, { key: string; arrangement: string }[]>>({});
   const [style, setStyle] = useState<string>("traditional");
   const [busy, setBusy] = useState("");
   const [err, setErr] = useState("");
+  const [savedTx, setSavedTx] = useState(false);
   const load = useCallback(async () => {
     const r = await fetch("/api/admin/dream-refs");
-    if (r.ok) { const b = await r.json(); setRefs(b.refs || []); setCharters(b.charters || {}); }
+    if (r.ok) { const b = await r.json(); setRefs(b.refs || []); setCharters(b.charters || {}); setCardsMap(b.cards || {}); }
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -137,6 +139,16 @@ function DreamRefsCard() {
   }
 
   const styleRefs = refs.filter((r) => r.style === style);
+  async function saveTexts() {
+    setBusy("save"); setErr("");
+    const r = await fetch("/api/admin/dream-refs", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ saveTexts: true, style, charter: charters[style] || "", cards: cardsMap[style] || [] }),
+    });
+    if (!r.ok) setErr((await r.json().catch(() => ({}))).error || "save failed");
+    else { setSavedTx(true); setTimeout(() => setSavedTx(false), 2500); }
+    setBusy("");
+  }
   return (
     <div style={S.card}>
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
@@ -175,11 +187,89 @@ function DreamRefsCard() {
           ))}
         </div>
       )}
-      {charters[style] && (
-        <p style={{ fontSize: 11.5, color: "#5a5a52", background: "#f4f3ee", border: "1px solid #e2e1da", borderRadius: 6, padding: 10, marginBottom: 0 }}>
-          <b>{style} charter (rides every {style} dream):</b> {charters[style]}
-        </p>
+      {(charters[style] || (cardsMap[style] || []).length > 0) && (
+        <div style={{ marginTop: 12, borderTop: "1px dashed #ccc", paddingTop: 10 }}>
+          <b style={{ fontSize: 12.5 }}>Steering texts — edit freely, they ride every {style} dream verbatim</b>
+          <p style={{ fontSize: 11, color: "#a06a2c", margin: "4px 0 8px" }}>
+            ⚠ &ldquo;Analyze board&rdquo; regenerates these from the images and OVERWRITES your edits — re-analyze only after changing the reference images.
+          </p>
+          <label style={{ ...S.label, marginTop: 4 }}>Charter (style spirit + Grounds)</label>
+          <textarea style={{ ...S.input, minHeight: 90, fontSize: 12 }} value={charters[style] || ""}
+            onChange={(e) => setCharters((m) => ({ ...m, [style]: e.target.value }))} />
+          {(cardsMap[style] || []).map((c, i) => (
+            <div key={c.key}>
+              <label style={{ ...S.label, marginTop: 6 }}>Layout card {i + 1}</label>
+              <textarea style={{ ...S.input, minHeight: 48, fontSize: 12 }} value={c.arrangement}
+                onChange={(e) => setCardsMap((m) => ({ ...m, [style]: (m[style] || []).map((x) => (x.key === c.key ? { ...x, arrangement: e.target.value } : x)) }))} />
+            </div>
+          ))}
+          <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 8 }}>
+            <button style={S.btn} disabled={busy === "save"} onClick={saveTexts}>{busy === "save" ? "Saving…" : "Save steering texts"}</button>
+            {savedTx && <span style={{ fontSize: 12, color: "#3f6d2a" }}>Saved ✓ — applies to the next dream</span>}
+          </div>
+        </div>
       )}
+    </div>
+  );
+}
+
+/* ILLUSTRATION STEERING TEXTS (owner 2026-09-03): the image boards' charter
+   and per-reference style cards, hand-editable — they feed the dream's
+   illustration-style line verbatim. Analyze overwrites. */
+function IllustrationTextsCard() {
+  const [style, setStyle] = useState<string>("traditional");
+  const [charter, setCharter] = useState("");
+  const [variants, setVariants] = useState<{ key: string; language: string }[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [err, setErr] = useState("");
+  const load = useCallback(async (st: string) => {
+    const r = await fetch("/api/admin/style-refs");
+    if (!r.ok) return;
+    const b = await r.json();
+    const prof = (b.profiles || {})[st] as { charter?: string; variants?: { key: string; language?: string; medium?: string; mood?: string }[] } | undefined;
+    setCharter(prof?.charter || "");
+    setVariants((prof?.variants || []).map((v) => ({ key: v.key, language: v.language || [v.medium, v.mood].filter(Boolean).join("; ") })));
+  }, []);
+  useEffect(() => { load(style); }, [style, load]);
+  async function save() {
+    setBusy(true); setErr("");
+    const r = await fetch("/api/admin/style-refs", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ saveTexts: true, style, charter, variants }),
+    });
+    if (!r.ok) setErr((await r.json().catch(() => ({}))).error || "save failed");
+    else { setSaved(true); setTimeout(() => setSaved(false), 2500); }
+    setBusy(false);
+  }
+  return (
+    <div style={S.card}>
+      <b style={{ fontSize: 13 }}>Illustration steering texts</b>
+      <span style={{ fontSize: 11.5, color: "#8a887e", marginLeft: 8 }}>
+        edit freely — the style cards feed the dream&rsquo;s illustration line verbatim; ⚠ Analyze overwrites edits
+      </span>
+      <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+        {DREAM_STYLES.map((st) => (
+          <button key={st} onClick={() => setStyle(st)}
+            style={{ font: "inherit", fontSize: 12, padding: "4px 12px", borderRadius: 12, cursor: "pointer", border: "1px solid #5a6b3b", background: style === st ? "#5a6b3b" : "transparent", color: style === st ? "#fff" : "#5a6b3b" }}>
+            {st}
+          </button>
+        ))}
+      </div>
+      {err && <p style={{ color: "#a33", fontSize: 12 }}>{err}</p>}
+      <label style={{ ...S.label, marginTop: 8 }}>Illustration charter</label>
+      <textarea style={{ ...S.input, minHeight: 80, fontSize: 12 }} value={charter} onChange={(e) => setCharter(e.target.value)} />
+      {variants.map((v, i) => (
+        <div key={v.key}>
+          <label style={{ ...S.label, marginTop: 6 }}>Style card {i + 1}</label>
+          <textarea style={{ ...S.input, minHeight: 44, fontSize: 12 }} value={v.language}
+            onChange={(e) => setVariants((vs) => vs.map((x) => (x.key === v.key ? { ...x, language: e.target.value } : x)))} />
+        </div>
+      ))}
+      <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 8 }}>
+        <button style={S.btn} disabled={busy} onClick={save}>{busy ? "Saving…" : "Save illustration texts"}</button>
+        {saved && <span style={{ fontSize: 12, color: "#3f6d2a" }}>Saved ✓ — applies to the next dream</span>}
+      </div>
     </div>
   );
 }
@@ -228,7 +318,7 @@ export default function DreamAdmin() {
             <StudioCore />
           </div>
         )}
-        {tab === "Image Refs" && <StylesTab />}
+        {tab === "Image Refs" && <><IllustrationTextsCard /><StylesTab /></>}
         {tab === "Image Play" && <PlaygroundTab />}
         {tab === "Rules" && <RulesTab />}
         {tab === "Generations" && <GenerationsTab />}

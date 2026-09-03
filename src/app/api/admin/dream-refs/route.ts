@@ -23,11 +23,14 @@ export async function GET() {
   const db = await getDb();
   const refs = (await db.collection("dreamRefs").find({}, { projection: { _id: 0 } }).sort({ at: 1 }).toArray()) as unknown as DreamRefDoc[];
   const charters: Record<string, string> = {};
+  const cardsByStyle: Record<string, { key: string; arrangement: string }[]> = {};
   for (const st of STYLES) {
     const c = (await db.collection("settings").findOne({ _id: `dream-charter-${st}` } as never)) as { text?: string } | null;
     if (c?.text) charters[st] = c.text;
+    const cd = (await db.collection("settings").findOne({ _id: `dream-cards-${st}` } as never)) as { cards?: { key: string; arrangement: string }[] } | null;
+    if (cd?.cards?.length) cardsByStyle[st] = cd.cards;
   }
-  return NextResponse.json({ refs, charters });
+  return NextResponse.json({ refs, charters, cards: cardsByStyle });
 }
 
 export async function POST(req: Request) {
@@ -40,6 +43,27 @@ export async function POST(req: Request) {
   }
   const db = await getDb();
   const style = (STYLES as readonly string[]).includes(String(body.style)) ? String(body.style) : null;
+
+  /* ---- saveTexts (owner 2026-09-03): the derived texts ARE the steering
+     inputs — the art director fine-tunes them by hand. Saved verbatim
+     (no sanitiser: these are deliberate edits). Analyze OVERWRITES. ---- */
+  const bt = body as { saveTexts?: boolean; style?: string; charter?: string; cards?: { key: string; arrangement: string }[] };
+  if (bt.saveTexts) {
+    const st = String(bt.style || "");
+    if (!(STYLES as readonly string[]).includes(st)) return NextResponse.json({ error: "unknown style" }, { status: 400 });
+    const db = await getDb();
+    if (typeof bt.charter === "string")
+      await db.collection("settings").updateOne(
+        { _id: `dream-charter-${st}` } as never,
+        { $set: { text: bt.charter.slice(0, 4000), editedAt: new Date().toISOString() } },
+        { upsert: true });
+    if (Array.isArray(bt.cards))
+      await db.collection("settings").updateOne(
+        { _id: `dream-cards-${st}` } as never,
+        { $set: { cards: bt.cards.slice(0, 24).map((c) => ({ key: String(c.key).slice(0, 80), arrangement: String(c.arrangement).slice(0, 800) })), editedAt: new Date().toISOString() } },
+        { upsert: true });
+    return NextResponse.json({ ok: true });
+  }
 
   /* ---- analyze: one style's board → that style's dream charter ---- */
   if (body.analyze) {

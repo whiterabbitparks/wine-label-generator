@@ -1474,3 +1474,13 @@ composition-contract tightening, then customer wiring.
   contained-card "clean flat ground" (layout, not colour), and the
   contrast law (safety, not aesthetics). Traditional staying mostly beige
   is faithfulness to its references.
+- EDITABLE STEERING TEXTS (owner 2026-09-03): every analysis-derived text
+  is now hand-editable in admin and saved VERBATIM (no sanitiser — these
+  are the art director's deliberate words). Dream side (Dream Studio
+  tab): per-style charter + each layout card, "Save steering texts";
+  API: dream-refs POST {saveTexts, style, charter, cards}. Illustration
+  side (Image Refs tab, new IllustrationTextsCard): per-style
+  illustration charter + each style card's language; API: style-refs
+  POST {saveTexts, style, charter, variants}. Both round-trip tested.
+  ⚠ shown in UI: "Analyze board" REGENERATES from images and overwrites
+  hand edits — re-analyze only after changing reference images.

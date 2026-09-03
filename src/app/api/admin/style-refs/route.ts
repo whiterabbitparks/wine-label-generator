@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requestIsAuthenticated } from "@/lib/admin/session";
 import { listRefs, addRef, deleteRef } from "@/lib/admin/style-refs";
 import { getProfiles } from "@/lib/admin/style-refs";
+import { getDb } from "@/lib/db";
 
 const STYLES = ["traditional", "contemporary", "punk"];
 
@@ -22,6 +23,22 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid JSON body" }, { status: 400 });
   }
   if (!STYLES.includes(String(body.style))) return NextResponse.json({ error: "unknown style" }, { status: 400 });
+  /* saveTexts (owner 2026-09-03): the derived illustration texts ARE the
+     steering inputs — hand edits persist verbatim. Analyze overwrites. */
+  const bt = body as { saveTexts?: boolean; charter?: string; variants?: { key: string; language: string }[] };
+  if (bt.saveTexts) {
+    const db = await getDb();
+    const st = String(body.style);
+    const prof = await db.collection("styleProfiles").findOne({ style: st }) as { variants?: { key: string; language?: string }[] } | null;
+    const set: Record<string, unknown> = { editedAt: new Date().toISOString() };
+    if (typeof bt.charter === "string") set.charter = bt.charter.slice(0, 4000);
+    if (Array.isArray(bt.variants) && prof?.variants) {
+      const edits = new Map(bt.variants.map((v) => [String(v.key), String(v.language).slice(0, 800)]));
+      set.variants = prof.variants.map((v) => (edits.has(v.key) ? { ...v, language: edits.get(v.key) } : v));
+    }
+    await db.collection("styleProfiles").updateOne({ style: st }, { $set: set }, { upsert: true });
+    return NextResponse.json({ ok: true });
+  }
   if (typeof body.imageDataUrl !== "string" || body.imageDataUrl.length > 12 * 1024 * 1024)
     return NextResponse.json({ error: "image missing or too large (12MB max)" }, { status: 400 });
   try {
