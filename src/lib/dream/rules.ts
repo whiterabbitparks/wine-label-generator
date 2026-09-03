@@ -1,5 +1,5 @@
 import { getDb } from "@/lib/db";
-import { mentionsEra, mentionsQvevri, qvevriOverridden } from "@/lib/admin/image-rules";
+import { getImageRules, mentionsEra, mentionsQvevri, qvevriOverridden } from "@/lib/admin/image-rules";
 
 /* DREAM RULES (owner GO 2026-08-25): the image pipeline never had the
    frames/ornament problem because every image was VERIFIED against rules.
@@ -89,9 +89,21 @@ export async function getOwnerDreamRules(): Promise<string[]> {
   }
 }
 
-export async function assembleDreamRules(vision: string): Promise<{ clauses: string; checks: { src: string; check: string }[] }> {
+export async function assembleDreamRules(vision: string, style?: string): Promise<{ clauses: string; checks: { src: string; check: string }[] }> {
   const active = DREAM_BUILTINS.filter((r) => !r.skipIf?.(vision));
-  const owner = await getOwnerDreamRules();
+  let owner = await getOwnerDreamRules();
+  /* branch POPIKA_No_Vector (owner 2026-09-03): the owner's IMAGE rules
+     apply to dreams directly — the dream's illustration IS the final art.
+     Lines that only made sense for standalone artwork (text bans, white
+     backgrounds) are filtered: a dream is a complete label. */
+  try {
+    const ir = await getImageRules();
+    const lines = [ir.global, style ? ir.perStyle?.[style] : ""].filter(Boolean).join("\n")
+      .split("\n").map((l) => l.trim()).filter(Boolean)
+      .filter((l) => !/\btexts?\b|\bletters?\b|\bwords?\b|white background|\bbackground\b.*\bwhite\b/i.test(l))
+      .slice(0, 30);
+    owner = [...new Set([...owner, ...lines])];
+  } catch {}
   const clauses =
     " Design laws: " + active.map((r) => r.clause).join(" ") +
     (owner.length ? " House rules: " + owner.map((l) => `${l}.`).join(" ") : "");

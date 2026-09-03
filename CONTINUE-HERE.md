@@ -1367,3 +1367,22 @@ composition-contract tightening, then customer wiring.
   raising them means smarter erasing, never looser gates. Transcription
   ERRORs seen tonight are the loud-fail working during OpenAI flakes —
   the studio shows the error instead of a bare label.
+- BRANCH POPIKA_No_Vector (owner 2026-09-03): NO VECTOR — the dream IS
+  the final label, full stop. (1) /api/dream-tiff converts any dream to
+  a 300dpi LZW TIFF download (1536px = ~355dpi at 110mm width — no
+  upscale needed); buttons in Dream Studio and the customer page.
+  (2) runDreamPhase also returns a ~170KB 1024w JPEG `preview` — admin
+  and customer views display it; the full PNG stays the print source.
+  (3) REPLICATION REMOVED from this branch's flows: studio has no
+  rebuild button (dream → judge → TIFF), /api/dream-label streams
+  dream-only (cheaper: no transcription), classic's style cards show
+  the dream images directly. runRebuildPhase and the whole vector
+  machinery remain in the code untouched — branch
+  POPIKA_ALTERNATIVE_ENGINE is the vector rollback anchor.
+  (4) Owner IMAGE rules (global + per-style) now verify dreams directly,
+  filtered of lines that only made sense for standalone artwork (text
+  bans / white-background); illustration boards + Image Play feedback
+  already steer the dream prompt. Smoke-tested end to end: dream →
+  preview → TIFF 300dpi (metadata verified). NOTE: MongoDB (charters,
+  cards, rules, feedback) is SHARED across branches — nothing was
+  deleted, so switching branches stays safe.

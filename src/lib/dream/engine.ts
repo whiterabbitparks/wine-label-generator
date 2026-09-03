@@ -100,7 +100,7 @@ function archivePair(dream: string, result: unknown) {
 export interface DreamParams { vision: string; style?: string; data: Record<string, string>; sketch?: string | null }
 export interface RebuildParams { dream: string; vision: string; data: Record<string, string>; style?: string; reuseArtwork?: string | null }
 
-export async function runDreamPhase(p: DreamParams): Promise<{ dream: string; prompt: string }> {
+export async function runDreamPhase(p: DreamParams): Promise<{ dream: string; prompt: string; preview?: string }> {
   const body = { style: p.style, sketch: p.sketch };
   const vision = p.vision;
   const texts = labelTexts(p.data);
@@ -179,7 +179,7 @@ export async function runDreamPhase(p: DreamParams): Promise<{ dream: string; pr
       /* DREAM RULES (owner 2026-08-25): the same rule-then-verify treatment
          the image pipeline always had — prompt clauses, a vision check on
          the dream, one strict regeneration on violation. */
-      const dr = await assembleDreamRules(vision);
+      const dr = await assembleDreamRules(vision, style);
       if (compositionCheck) dr.checks.push({ src: "composition card (contained)", check: compositionCheck });
       const makeDream = async (extra = "") => {
         const job: Record<string, unknown> = { prompt: prompt + dr.clauses + extra, size: "landscape" };
@@ -192,7 +192,17 @@ export async function runDreamPhase(p: DreamParams): Promise<{ dream: string; pr
         if (!check.ok)
           dream = await makeDream(` STRICT — the previous design violated: ${check.violations.join(" | ")}. Follow every design law exactly.`);
       } catch {}
-      return { dream, prompt };
+      /* medium-res JPEG for admin/refinement views (owner 2026-09-03) —
+         the full PNG stays the print source */
+      let preview: string | undefined;
+      try {
+        const b64 = dream.split(",")[1];
+        if (b64) {
+          const jb = await sharp(Buffer.from(b64, "base64")).resize(1024).jpeg({ quality: 82 }).toBuffer();
+          preview = "data:image/jpeg;base64," + jb.toString("base64");
+        }
+      } catch {}
+      return { dream, prompt, preview };
     } catch (e) {
       throw new Error(`dream failed: ${e instanceof Error ? e.message : e}`);
     }

@@ -1,4 +1,4 @@
-import { runDreamPhase, runRebuildPhase } from "@/lib/dream/engine";
+import { runDreamPhase } from "@/lib/dream/engine";
 
 /* PUBLIC customer endpoint (owner 2026-08-25): the whole dream flow in one
    streamed call — dream → transcribe → artwork → spec. NDJSON progress
@@ -36,14 +36,11 @@ export async function POST(req: Request) {
     async start(controller) {
       const send = (o: unknown) => controller.enqueue(enc.encode(JSON.stringify(o) + "\n"));
       try {
+        /* branch POPIKA_No_Vector (owner 2026-09-03): the dream IS the
+           label — no rebuild, no vector. Cheaper and simpler. */
         send({ type: "progress", stage: "dreaming" });
         const d = await runDreamPhase({ vision, style, data, sketch });
-        send({ type: "progress", stage: "reading" });
-        const r = await runRebuildPhase({
-          dream: d.dream, vision, data,
-          style: style === "free" ? "contemporary" : style,
-        });
-        send({ type: "result", dream: d.dream, ...r });
+        send({ type: "result", dream: d.dream, preview: d.preview || null });
       } catch (e) {
         send({ type: "error", error: e instanceof Error ? e.message : String(e) });
       }

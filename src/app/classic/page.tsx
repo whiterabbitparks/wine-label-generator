@@ -62,10 +62,7 @@ export default function Configurator() {
            dreamed designs, rule-verified, replicated as vector. The shell's
            own renderStyleOptions is patched to return the fitted dream
            replicas, so cards, lightbox and resizing all keep working. */
-        interface DreamRes {
-          dream: string; spec: { elements?: { font?: string }[] };
-          artwork: string | null; artAlign?: string; artworkMode?: string;
-        }
+        interface DreamRes { dream: string; preview?: string | null }
         const DREAM_STYLE_KEYS = ["traditional", "contemporary", "punk"];
         gen.setProvider = async (brief: unknown, onProgress?: (p: number) => void) => {
           const b = brief as { vision?: string; reference?: string | null; data?: Record<string, string> };
@@ -103,24 +100,14 @@ export default function Configurator() {
             const firstErr = settled.find((x) => x.status === "rejected") as PromiseRejectedResult | undefined;
             throw new Error(firstErr?.reason instanceof Error ? firstErr.reason.message : "all dream generations failed");
           }
-          // stash specs + load every chosen font before the repaint
-          const specs: Record<string, DreamRes> = Object.fromEntries(ok);
-          (window as unknown as { __DREAM_SPECS__?: Record<string, DreamRes> }).__DREAM_SPECS__ = specs;
-          const fams = [...new Set(ok.flatMap(([, r2]) => (r2.spec?.elements || []).map((e) => e.font).filter(Boolean)))] as string[];
-          if (fams.length) {
-            const href = "https://fonts.googleapis.com/css2?" + fams.map((f) => `family=${encodeURIComponent(f).replace(/%20/g, "+")}:wght@300;400;500;600;700;800`).join("&") + "&display=swap";
-            if (!document.querySelector(`link[href="${href}"]`)) {
-              const l = document.createElement("link"); l.rel = "stylesheet"; l.href = href;
-              document.head.appendChild(l);
-              await new Promise((res) => setTimeout(res, 900));
-            }
-          }
-          // patch the engine ONCE: styles with a dream spec render the
-          // fitted replica; everything else falls through to the original
+          /* branch POPIKA_No_Vector (owner 2026-09-03): the dream IS the
+             label. Style cards show the dream image itself — no vector
+             replica, no engine patching. */
+          const dreams: Record<string, DreamRes> = Object.fromEntries(ok);
+          (window as unknown as { __DREAM_IMAGES__?: Record<string, DreamRes> }).__DREAM_IMAGES__ = dreams;
           const w2 = window as unknown as {
             LabelEngine?: {
               renderStyleOptions: (d: unknown, o: unknown, opts: unknown) => { style: string; svg: string }[];
-              renderDreamFitted: (spec: unknown, d: unknown, o: unknown, art: string | null, align?: string, mode?: string) => { svg: string };
               __dreamPatched?: boolean;
             };
           };
@@ -129,21 +116,19 @@ export default function Configurator() {
             const orig = eng2.renderStyleOptions.bind(eng2);
             eng2.renderStyleOptions = (d: unknown, o: unknown, opts: unknown) => {
               const out = orig(d, o, opts);
-              const sp = (window as unknown as { __DREAM_SPECS__?: Record<string, DreamRes> }).__DREAM_SPECS__;
+              const sp = (window as unknown as { __DREAM_IMAGES__?: Record<string, DreamRes> }).__DREAM_IMAGES__;
               if (!sp) return out;
               return out.map((entry) => {
                 const dr = sp[entry.style];
                 if (!dr) return entry;
-                try {
-                  const fit = eng2.renderDreamFitted(dr.spec, d, opts, dr.artwork, dr.artAlign, dr.artworkMode);
-                  return { ...entry, svg: fit.svg };
-                } catch { return entry; }
+                const href = dr.preview || dr.dream;
+                const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1100 733" width="110mm" height="73.3mm"><image x="0" y="0" width="1100" height="733" preserveAspectRatio="none" xlink:href="${href}" href="${href}"/></svg>`;
+                return { ...entry, svg };
               });
             };
             eng2.__dreamPatched = true;
           }
-          // the shell keeps its images contract (artwork per style)
-          return Object.fromEntries(ok.map(([k, r2]) => [k, { url: r2.artwork || r2.dream }]));
+          return Object.fromEntries(ok.map(([k, r2]) => [k, { url: r2.preview || r2.dream }]));
         };
         gen.wired = true; // e2e tests wait for this before driving the UI
       })

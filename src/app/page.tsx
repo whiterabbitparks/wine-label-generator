@@ -1,14 +1,15 @@
 "use client";
 
-/* THE DREAM PAGE (owner 2026-08-25, branch POPIKA_ALTERNATIVE_ENGINE).
-   The customer flow on the new engine: story + label texts (their roles
-   carry the hierarchy) + optional sketch → the model designs the complete
-   label (charter-steered per style) → the engine replicates it as real
-   vector type over board-styled, LoRA-crafted artwork. The old
-   configurator lives on at /classic; house UI rules apply (Special
-   Elite, white ground, black 2px lines). */
+/* THE DREAM PAGE (branch POPIKA_No_Vector, owner 2026-09-03).
+   The customer flow: story + label texts (their roles carry the
+   hierarchy) + optional sketch → the model designs the complete label,
+   steered per style by layout cards, illustration style cards, image
+   rules and the art director's feedback. THE DREAM IS THE LABEL — the
+   final file is a 300dpi TIFF of the dream itself. The old configurator
+   lives on at /classic; house UI rules apply (Special Elite, white
+   ground, black 2px lines). */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 
 const INK = "#111";
 const S: Record<string, React.CSSProperties> = {
@@ -25,13 +26,10 @@ const S: Record<string, React.CSSProperties> = {
   bar: { height: 3, background: "#E3E3E1", width: "100%", position: "relative", marginTop: 14 },
 };
 
-const STAGES: Record<string, [string, number]> = {
-  dreaming: ["The designer is dreaming your label…", 0.35],
-  reading: ["Reading the design… setting your text in real type…", 0.75],
-};
-
 interface ResultState {
-  dream: string; svg: string;
+  dream: string;
+  preview: string | null;
+  downloading?: boolean;
 }
 
 export default function DreamPage() {
@@ -45,20 +43,8 @@ export default function DreamPage() {
   const [styleMood, setStyleMood] = useState("traditional");
   const [sketch, setSketch] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [stage, setStage] = useState("");
   const [err, setErr] = useState("");
   const [results, setResults] = useState<ResultState[]>([]);
-  const [engineReady, setEngineReady] = useState(false);
-  const [showDream, setShowDream] = useState<Record<number, boolean>>({});
-
-  useEffect(() => {
-    const w = window as unknown as { LabelEngine?: { ensureFonts: () => Promise<void> } };
-    if (w.LabelEngine) { setEngineReady(true); return; }
-    const sc = document.createElement("script");
-    sc.src = "/engine/label-engine.js";
-    sc.onload = () => { w.LabelEngine?.ensureFonts().then(() => setEngineReady(true)); };
-    document.body.appendChild(sc);
-  }, []);
 
   const briefData = useCallback(() => {
     const [reg, country] = region.split(",").map((x) => x.trim());
@@ -72,7 +58,7 @@ export default function DreamPage() {
 
   async function createLabel() {
     if (!wine.trim()) { setErr("give your wine a name — it goes biggest on the label"); return; }
-    setBusy(true); setErr(""); setStage("dreaming");
+    setBusy(true); setErr("");
     try {
       const res = await fetch("/api/dream-label", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -81,7 +67,7 @@ export default function DreamPage() {
       if (!res.ok || !res.body) throw new Error(`the press jammed (${res.status})`);
       const reader = res.body.getReader();
       const dec = new TextDecoder();
-      let buf = ""; let result: { dream: string; spec: unknown; artwork: string | null; artAlign?: string; artworkMode?: string } | null = null;
+      let buf = ""; let result: { dream: string; preview?: string | null } | null = null;
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -91,32 +77,38 @@ export default function DreamPage() {
           const line = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1);
           if (!line) continue;
           const msg = JSON.parse(line);
-          if (msg.type === "progress") setStage(msg.stage);
-          else if (msg.type === "result") result = msg;
+          if (msg.type === "result") result = msg;
           else if (msg.type === "error") throw new Error(msg.error || "generation failed");
         }
       }
       if (!result) throw new Error("the stream ended unexpectedly");
-      // load the fonts the design chose, then set the real text
-      const fams = [...new Set((((result.spec as { elements?: { font?: string }[] })?.elements) || []).map((e) => e.font).filter(Boolean))] as string[];
-      if (fams.length) {
-        const href = "https://fonts.googleapis.com/css2?" + fams.map((f) => `family=${encodeURIComponent(f).replace(/%20/g, "+")}:wght@300;400;500;600;700;800`).join("&") + "&display=swap";
-        if (!document.querySelector(`link[href="${href}"]`)) {
-          const l = document.createElement("link"); l.rel = "stylesheet"; l.href = href;
-          document.head.appendChild(l);
-          await new Promise((r) => setTimeout(r, 900));
-        }
-      }
-      const w = window as unknown as { LabelEngine: { renderDreamFitted: (spec: unknown, d: unknown, o: unknown, art: string | null, align?: string, mode?: string) => { svg: string } } };
-      const fit = w.LabelEngine.renderDreamFitted(result.spec, briefData(), { widthMM: 110, heightMM: 80 }, result.artwork, result.artAlign, result.artworkMode);
-      setResults((rs) => [{ dream: result!.dream, svg: fit.svg }, ...rs]);
+      setResults((rs) => [{ dream: result!.dream, preview: result!.preview || null }, ...rs]);
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
     }
-    setBusy(false); setStage("");
+    setBusy(false);
   }
 
-  const [stageText, stageFrac] = STAGES[stage] || ["", 0];
+  async function downloadTiff(i: number) {
+    const r = results[i]; if (!r) return;
+    setResults((rs) => rs.map((x, k) => (k === i ? { ...x, downloading: true } : x)));
+    try {
+      const res = await fetch("/api/dream-tiff", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: r.dream, name: wine || "label" }),
+      });
+      if (!res.ok) throw new Error("print file failed — try again");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = `${(wine || "label").replace(/[^\w-]+/g, "-")}-300dpi.tiff`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : String(e));
+    }
+    setResults((rs) => rs.map((x, k) => (k === i ? { ...x, downloading: false } : x)));
+  }
 
   return (
     <main style={S.page}>
@@ -151,37 +143,31 @@ export default function DreamPage() {
               }} /></div>
           </div>
           <div style={{ marginTop: 14, display: "flex", gap: 12, alignItems: "center" }}>
-            <button style={S.btn} disabled={busy || !engineReady} onClick={createLabel}>
-              {busy ? "At work…" : engineReady ? "Design my label" : "Warming up the press…"}
+            <button style={S.btn} disabled={busy} onClick={createLabel}>
+              {busy ? "The designer is dreaming your label…" : "Design my label"}
             </button>
-            {busy && <span style={S.sub}>{stageText} (about a minute — real design takes a moment)</span>}
+            {busy && <span style={S.sub}>about half a minute — real design takes a moment</span>}
           </div>
-          {busy && <div style={S.bar}><div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: `${Math.round(stageFrac * 100)}%`, background: INK, transition: "width .6s" }} /></div>}
+          {busy && <div style={S.bar}><div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "45%", background: INK, transition: "width .6s" }} /></div>}
           {err && <p style={{ color: "#a03030", fontSize: 13 }}>{err}</p>}
         </div>
 
         {results.map((r, i) => (
           <div key={results.length - i} style={S.card}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-              <span style={S.sub}>your label — real text, print-ready vector</span>
-              <button style={{ ...S.btnGhost, padding: "3px 10px", fontSize: 11 }}
-                onClick={() => setShowDream((m) => ({ ...m, [i]: !m[i] }))}>
-                {showDream[i] ? "hide the designer's sketch" : "see the designer's sketch"}
+              <span style={S.sub}>your label — designed for your story</span>
+              <button style={{ ...S.btnGhost, padding: "3px 10px", fontSize: 11 }} disabled={!!r.downloading}
+                onClick={() => downloadTiff(i)}>
+                {r.downloading ? "preparing…" : "download print file (300dpi TIFF)"}
               </button>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: showDream[i] ? "1fr 1fr" : "1fr", gap: 12, marginTop: 8 }}>
-              <div style={{ border: "1px solid #ddd" }}
-                dangerouslySetInnerHTML={{ __html: r.svg.replace(/width="110mm" height="80mm"/, 'width="100%"') }} />
-              {showDream[i] && (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={r.dream} alt="the designer's sketch" style={{ width: "100%", border: "1px solid #ddd", alignSelf: "start" }} />
-              )}
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={r.preview || r.dream} alt="your label" style={{ width: "100%", border: "1px solid #ddd", marginTop: 8 }} />
           </div>
         ))}
 
         <p style={{ fontSize: 10.5, color: "#8a887e", padding: "22px 0 14px", textAlign: "center" }}>
-          the dream engine — every label is designed for your story, then set in real type
+          the dream engine — every label is designed for your story
         </p>
       </div>
     </main>
