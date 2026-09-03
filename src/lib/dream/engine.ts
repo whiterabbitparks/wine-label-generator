@@ -35,9 +35,8 @@ const STYLE_MOOD: Record<string, string> = {
   contemporary:
     "modern boutique wine label — bold editorial typography, expressive illustration (linocut, silkscreen, collage, gouache), confident whitespace",
   punk:
-    "loud natural-wine label — raw expressive artwork, punchy type, fearless colour, poster energy. " +
-    "THE BACKGROUND IS PART OF THE PAINTING: a bold field of colour drawn from the illustration's own palette, " +
-    "the scene sitting in it naturally as one continuous painted world — never a neutral, beige or detached backdrop",
+    "loud natural-wine label — raw expressive artwork, punchy type, fearless colour, poster energy; " +
+    "background and illustration belong to one painted world",
   minimalist:
     "minimalist wine label — restraint above all: generous empty ground, very few elements, one quiet motif or subtle abstraction, precise understated typography, calm confident whitespace",
   free: "whatever serves the story best — full artistic freedom",
@@ -122,18 +121,6 @@ export async function runDreamPhase(p: DreamParams): Promise<{ dream: string; pr
       if (style !== "free") {
         const ch = (await db.collection("settings").findOne({ _id: `dream-charter-${style}` } as never)) as { text?: string } | null;
         if (ch?.text) guidance += ` House design spirit for this style (learned from the art director's reference labels): ${ch.text}`;
-        /* PUNK GROUNDS (owner 2026-09-03): deal a ground colour from the
-           board's own palette — deck discipline, so consecutive punk
-           labels land on different fields; the clause insists the ground
-           belongs to the painting, not behind it */
-        if (style === "punk" && ch?.text) {
-          const gm = ch.text.match(/Grounds?:\**\s*([^\n]+(?:\n[^\n*#]+)?)/i);
-          const colours = (gm ? gm[1] : "").split(/,|\band\b/).map((x) => x.trim().replace(/\.$/, "")).filter((x) => x && x.length < 40);
-          if (colours.length >= 2) {
-            const dealt = dealCompositionCard("ground-punk", colours.map((cName) => ({ key: cName, arrangement: cName })));
-            if (dealt) guidance += ` For THIS label, let the whole scene live on a field of ${dealt.key} — the background emerging from the illustration's own world, one painting edge to edge.`;
-          }
-        }
         const cd = (await db.collection("settings").findOne({ _id: `dream-cards-${style}` } as never)) as { cards?: { key: string; arrangement: string }[] } | null;
         const card = dealCompositionCard(style, cd?.cards || []);
         if (card) {

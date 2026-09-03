@@ -1464,3 +1464,13 @@ composition-contract tightening, then customer wiring.
   sinks into its background. Note: "cream"/"muted beige" sit in the punk
   deck because punk references contain them — prune those references if
   beige punk is unwanted.
+- GROUNDS UNCONTROLLED (owner GO 2026-09-03): the punk ground DECK is
+  removed (prescribing a field colour before the model knows what it
+  will paint = forced combinations) and punk's mood line softened to
+  "background and illustration belong to one painted world". Grounds now
+  emerge the same NATURAL way in all four styles: from the charter's
+  reference-derived "Grounds:" line + the model's own integrated image-
+  making. Still active (deliberately): charters' Grounds language,
+  contained-card "clean flat ground" (layout, not colour), and the
+  contrast law (safety, not aesthetics). Traditional staying mostly beige
+  is faithfulness to its references.
