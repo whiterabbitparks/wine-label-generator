@@ -257,14 +257,18 @@ async function analyzeOneRef(key: string, model: string, style: string, url: str
     "artist could reproduce its TECHNIQUE exactly — never its subject. " +
     "Return strict JSON: " +
     '{"label": 2-4 word technique name, ' +
-    '"language": 60-90 words of concrete process instruction: the exact ' +
-    "process/tool (engraving, riso, linocut, gouache, marker…), line weight " +
-    "behaviour, how ink sits on paper, halftone/hatching character, colour " +
-    "application, registration flaws, edge texture, what the eye notices " +
-    "first. Imperative voice. NEVER mention any depicted subject, object, " +
-    "animal, figure, building or scene — technique only, reusable for any " +
-    'subject, ' +
-    '"palette": the exact ink/colour treatment as hex-like plain words (e.g. "single oxblood ink", "tomato red + cobalt riso"), ' +
+    '"language": 60-90 words of concrete process instruction. THE FIRST ' +
+    "SENTENCE MUST STATE THE COLOUR STATE, binding: 'Strictly monochrome — " +
+    "<ink colour> only.' / 'Duotone — <colour> and <colour> only.' / " +
+    "'Limited palette — exactly <colours>.' / 'Full colour.' A monochrome " +
+    "reference must NEVER be described in a way that permits colour. Then: " +
+    "the exact process/tool (engraving, riso, linocut, gouache, marker…), " +
+    "line weight behaviour, how ink sits on paper, halftone/hatching " +
+    "character, colour application, registration flaws, edge texture, what " +
+    "the eye notices first. Imperative voice. NEVER mention any depicted " +
+    "subject, object, animal, figure, building or scene — technique only, " +
+    'reusable for any subject, ' +
+    '"palette": the exact ink/colour treatment ("monochrome: black only", "single oxblood ink", "tomato red + cobalt riso"), ' +
     '"composition": framing/density doctrine (never a scene), ' +
     '"mood": 4-6 words}. ' +
     GENERIC_BAN +

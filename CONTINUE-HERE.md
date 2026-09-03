@@ -1496,3 +1496,12 @@ composition-contract tightening, then customer wiring.
   #N" (or "reference removed"); illustration style cards show their
   reference's mini-thumbnail inline. Proven by round-trip: edit card +
   charter → re-analyze → both survive verbatim.
+- IMAGE PLAY + COLOUR-TRUE CARDS (owner 2026-09-03): Image Play results
+  now dominate the row (reference figure shrunk 110→64px). Style-card
+  analysis (analyzeOneRef) now REQUIRES the first sentence of the
+  language to declare the binding COLOUR STATE ("Strictly monochrome —
+  black only" / duotone / limited palette / full colour) so a monochrome
+  reference can no longer yield coloured results. NOTE: existing cards
+  keep their old texts (preservation logic) — to give an EXISTING
+  reference the colour-state, hand-edit its card (e.g. prepend "Strictly
+  monochrome — black ink only.") or delete+re-upload that reference.

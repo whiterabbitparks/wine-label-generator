@@ -669,10 +669,10 @@ function PlaygroundTab() {
                 <>
                   <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
                     {res.refUrl && (
-                      <figure style={{ margin: 0, width: 110, flexShrink: 0 }}>
+                      <figure style={{ margin: 0, width: 64, flexShrink: 0 }}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={res.refUrl} alt="reference" style={{ width: "100%", border: "1px solid #999" }} />
-                        <figcaption style={{ fontSize: 10, color: "#8a887e", textAlign: "center" }}>the reference it mimics</figcaption>
+                        <figcaption style={{ fontSize: 9, color: "#8a887e", textAlign: "center" }}>reference</figcaption>
                       </figure>
                     )}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
