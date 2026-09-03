@@ -174,20 +174,28 @@ function DreamRefsCard() {
       </div>
       {err && <p style={{ color: "#a33", fontSize: 12 }}>{err}</p>}
       {styleRefs.length > 0 && (
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
-          {styleRefs.map((r) => (
-            <div key={r.id} style={{ position: "relative" }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={r.thumb} alt={r.name} title={r.name} style={{ height: 84, border: "1px solid #ddd", display: "block" }} />
-              <span style={{ position: "absolute", bottom: 2, left: 2, fontSize: 11, background: "#111", color: "#fff", padding: "0 5px", lineHeight: 1.6 }}>
-                {styleRefs.indexOf(r) + 1}
-              </span>
-              <button
-                style={{ position: "absolute", top: 2, right: 2, font: "inherit", fontSize: 10, background: "#fff", border: "1px solid #a33", color: "#a33", cursor: "pointer", lineHeight: 1.4, padding: "0 4px" }}
-                onClick={async () => { await fetch(`/api/admin/dream-refs?id=${r.id}`, { method: "DELETE" }); load(); }}
-              >×</button>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))", gap: 12, marginTop: 10 }}>
+          {styleRefs.map((r, i) => {
+            const card = (cardsMap[style] || []).find((c) => c.key === r.id);
+            return (
+            <div key={r.id} style={{ border: "1px solid #ddd", padding: 8 }}>
+              <div style={{ position: "relative" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={r.thumb} alt={r.name} title={r.name} style={{ height: 110, maxWidth: "100%", border: "1px solid #ddd", display: "block" }} />
+                <span style={{ position: "absolute", bottom: 2, left: 2, fontSize: 11, background: "#111", color: "#fff", padding: "0 5px", lineHeight: 1.6 }}>{i + 1}</span>
+                <button
+                  style={{ position: "absolute", top: 2, right: 2, font: "inherit", fontSize: 10, background: "#fff", border: "1px solid #a33", color: "#a33", cursor: "pointer", lineHeight: 1.4, padding: "0 4px" }}
+                  onClick={async () => { await fetch(`/api/admin/dream-refs?id=${r.id}`, { method: "DELETE" }); load(); }}
+                >×</button>
+              </div>
+              {card ? (
+                <textarea style={{ ...S.input, minHeight: 84, fontSize: 11.5, marginTop: 6 }} value={card.arrangement}
+                  onChange={(e) => setCardsMap((m) => ({ ...m, [style]: (m[style] || []).map((x) => (x.key === card.key ? { ...x, arrangement: e.target.value } : x)) }))} />
+              ) : (
+                <p style={{ fontSize: 11, color: "#8a887e", margin: "6px 0 0" }}>no card yet — press Analyze</p>
+              )}
             </div>
-          ))}
+          ); })}
         </div>
       )}
       {(charters[style] || (cardsMap[style] || []).length > 0) && (
@@ -199,19 +207,9 @@ function DreamRefsCard() {
           <label style={{ ...S.label, marginTop: 4 }}>Charter (style spirit + Grounds)</label>
           <textarea style={{ ...S.input, minHeight: 90, fontSize: 12 }} value={charters[style] || ""}
             onChange={(e) => setCharters((m) => ({ ...m, [style]: e.target.value }))} />
-          {(cardsMap[style] || [])
-            .map((c) => ({ c, refNo: styleRefs.findIndex((r) => r.id === c.key) }))
-            .sort((a, b) => (a.refNo < 0 ? 99 : a.refNo) - (b.refNo < 0 ? 99 : b.refNo))
-            .map(({ c, refNo }) => {
-            return (
-            <div key={c.key}>
-              <label style={{ ...S.label, marginTop: 6 }}>
-                {refNo >= 0 ? `Card #${refNo + 1}` : "Card (reference removed — re-analyze to clean up)"}
-              </label>
-              <textarea style={{ ...S.input, minHeight: 48, fontSize: 12 }} value={c.arrangement}
-                onChange={(e) => setCardsMap((m) => ({ ...m, [style]: (m[style] || []).map((x) => (x.key === c.key ? { ...x, arrangement: e.target.value } : x)) }))} />
-            </div>
-          ); })}
+          <p style={{ fontSize: 11, color: "#8a887e", margin: "4px 0 0" }}>
+            each reference&rsquo;s layout card sits UNDER its thumbnail above — edit there, save here
+          </p>
           <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 8 }}>
             <button style={S.btn} disabled={busy === "save"} onClick={saveTexts}>{busy === "save" ? "Saving…" : "Save steering texts"}</button>
             {savedTx && <span style={{ fontSize: 12, color: "#3f6d2a" }}>Saved ✓ — applies to the next dream</span>}
@@ -272,17 +270,20 @@ function IllustrationTextsCard() {
       {err && <p style={{ color: "#a33", fontSize: 12 }}>{err}</p>}
       <label style={{ ...S.label, marginTop: 8 }}>Illustration charter</label>
       <textarea style={{ ...S.input, minHeight: 80, fontSize: 12 }} value={charter} onChange={(e) => setCharter(e.target.value)} />
-      {variants.map((v, i) => (
-        <div key={v.key} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginTop: 6 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          {thumbs[v.key] && <img src={thumbs[v.key]} alt="" style={{ height: 44, border: "1px solid #ddd", marginTop: 16 }} />}
-          <div style={{ flex: 1 }}>
-            <label style={{ ...S.label, margin: 0 }}>Style card {i + 1}</label>
-            <textarea style={{ ...S.input, minHeight: 44, fontSize: 12 }} value={v.language}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))", gap: 12, marginTop: 8 }}>
+        {variants.map((v, i) => (
+          <div key={v.key} style={{ border: "1px solid #ddd", padding: 8 }}>
+            <div style={{ position: "relative" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {thumbs[v.key] ? <img src={thumbs[v.key]} alt="" style={{ height: 110, maxWidth: "100%", border: "1px solid #ddd", display: "block" }} />
+                : <div style={{ height: 110, background: "#f4f3ee" }} />}
+              <span style={{ position: "absolute", bottom: 2, left: 2, fontSize: 11, background: "#111", color: "#fff", padding: "0 5px", lineHeight: 1.6 }}>{i + 1}</span>
+            </div>
+            <textarea style={{ ...S.input, minHeight: 84, fontSize: 11.5, marginTop: 6 }} value={v.language}
               onChange={(e) => setVariants((vs) => vs.map((x) => (x.key === v.key ? { ...x, language: e.target.value } : x)))} />
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
       <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 8 }}>
         <button style={S.btn} disabled={busy} onClick={save}>{busy ? "Saving…" : "Save illustration texts"}</button>
         {saved && <span style={{ fontSize: 12, color: "#3f6d2a" }}>Saved ✓ — applies to the next dream</span>}
