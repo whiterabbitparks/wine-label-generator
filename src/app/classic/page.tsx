@@ -122,13 +122,33 @@ export default function Configurator() {
                 const dr = sp[entry.style];
                 if (!dr) return entry;
                 const href = dr.preview || dr.dream;
-                const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1100 733" width="110mm" height="73.3mm"><image x="0" y="0" width="1100" height="733" preserveAspectRatio="none" xlink:href="${href}" href="${href}"/></svg>`;
+                const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1100 733" width="110mm" height="73.3mm" data-dream="${entry.style}"><image x="0" y="0" width="1100" height="733" preserveAspectRatio="none" xlink:href="${href}" href="${href}"/></svg>`;
                 return { ...entry, svg };
               });
             };
             eng2.__dreamPatched = true;
           }
           return Object.fromEntries(ok.map(([k, r2]) => [k, { url: r2.preview || r2.dream }]));
+        };
+        /* the shell's payment button calls this for dream labels — the
+           full-res dream becomes a 300dpi TIFF download */
+        (window as unknown as { __DREAM_TIFF__?: (style: string, nm: string) => void }).__DREAM_TIFF__ = async (style, nm) => {
+          const sp = (window as unknown as { __DREAM_IMAGES__?: Record<string, DreamRes> }).__DREAM_IMAGES__;
+          const dr = sp?.[style];
+          if (!dr) return;
+          try {
+            const res = await fetch("/api/dream-tiff", {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ image: dr.dream, name: nm }),
+            });
+            if (!res.ok) throw new Error(`print file failed (${res.status})`);
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url; a.download = `${nm}-300dpi.tiff`;
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+          } catch (e) { console.error(e); }
         };
         gen.wired = true; // e2e tests wait for this before driving the UI
       })

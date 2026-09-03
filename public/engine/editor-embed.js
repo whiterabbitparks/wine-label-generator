@@ -354,6 +354,10 @@ function boot(){
       payBtn.addEventListener('click',function(){
         if(shown&&selIdx>=0&&allOpts[selIdx]){
           var nm=(getLabelData().wine||'label').replace(/[^a-z0-9]+/gi,'_');
+          /* dream-image labels (data-dream marker) download as print files
+             via the host's hook; classic vector labels stay SVG */
+          var dm=String(allOpts[selIdx].svg||'').match(/data-dream="([a-z]+)"/);
+          if(dm&&window.__DREAM_TIFF__){window.__DREAM_TIFF__(dm[1],nm);return;}
           dl(allOpts[selIdx].svg,nm+'_'+String(allOpts[selIdx].name||'label').replace(/[^a-z0-9]+/gi,'_')+'.svg');
         }});}
   }

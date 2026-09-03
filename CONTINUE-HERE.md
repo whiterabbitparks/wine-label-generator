@@ -1386,3 +1386,13 @@ composition-contract tightening, then customer wiring.
   preview → TIFF 300dpi (metadata verified). NOTE: MongoDB (charters,
   cards, rules, feedback) is SHARED across branches — nothing was
   deleted, so switching branches stays safe.
+- CLASSIC IS THE ONLY WEB MODE (owner 2026-09-03): the alternative
+  customer UX is removed — the root page IS the classic configurator
+  (src/app/page.tsx re-exports classic/page; /classic stays as an alias
+  for parity captures and old links). The shell's "Proceed to Payment"
+  download is dream-aware: dream labels (wrapper SVGs carry a
+  data-dream="<style>" marker) hand off to window.__DREAM_TIFF__ — the
+  classic wiring posts the FULL-RES dream to /api/dream-tiff and
+  downloads a 300dpi TIFF; classic vector labels still download SVG (the
+  shell learned a hook, not an endpoint). Gates after the shell edit:
+  parity 0.000%, hard rules PASS, goldens 72/72.
