@@ -1484,3 +1484,15 @@ composition-contract tightening, then customer wiring.
   POST {saveTexts, style, charter, variants}. Both round-trip tested.
   ⚠ shown in UI: "Analyze board" REGENERATES from images and overwrites
   hand edits — re-analyze only after changing reference images.
+- STEERING SURVIVES RE-ANALYSIS + NUMBERED REFS (owner 2026-09-03):
+  Analyze board no longer destroys hand steering. Cards: a reference
+  that already has a card KEEPS its text (edits included) — only NEW
+  references are analyzed; deleted references' cards drop away. Charter:
+  kept whenever editedAt > analyzedAt (i.e. the owner touched it since
+  the last analysis), regenerated otherwise. Analyze now reads refs in
+  the SAME oldest-first order as the UI (was newest-first — card numbers
+  never matched the thumbnails), limit raised 8→16. UI: dream reference
+  thumbs carry number badges; each layout card is labelled "reference
+  #N" (or "reference removed"); illustration style cards show their
+  reference's mini-thumbnail inline. Proven by round-trip: edit card +
+  charter → re-analyze → both survive verbatim.

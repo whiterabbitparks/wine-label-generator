@@ -70,7 +70,8 @@ export async function POST(req: Request) {
     if (!style) return NextResponse.json({ error: "style required (traditional|contemporary|punk)" }, { status: 400 });
     const key = process.env.OPENAI_API_KEY;
     if (!key) return NextResponse.json({ error: "OPENAI_API_KEY not set" }, { status: 400 });
-    const refs = (await db.collection("dreamRefs").find({ style }).sort({ at: -1 }).limit(8).toArray()) as unknown as DreamRefDoc[];
+    /* UI order (oldest first) so card numbers match the thumbnails */
+    const refs = (await db.collection("dreamRefs").find({ style }).sort({ at: 1 }).limit(16).toArray()) as unknown as DreamRefDoc[];
     if (!refs.length) return NextResponse.json({ error: `upload ${style} dream references first` }, { status: 400 });
     const images: { type: string; image_url: { url: string; detail: string } }[] = [];
     for (const r of refs) {
@@ -80,7 +81,13 @@ export async function POST(req: Request) {
       images.push({ type: "image_url", image_url: { url: `data:image/png;base64,${buf.toString("base64")}`, detail: "high" } });
     }
     const vmodel = process.env.OPENAI_VISION_MODEL || "gpt-4o";
+    /* STEERING IS NEVER LOST (owner 2026-09-03): a charter the art
+       director edited after the last analysis is theirs — keep it. */
+    const prevCh = (await db.collection("settings").findOne({ _id: `dream-charter-${style}` } as never)) as { text?: string; editedAt?: string; analyzedAt?: string } | null;
+    const keepCharter = !!(prevCh?.text && prevCh.editedAt && (!prevCh.analyzedAt || prevCh.editedAt > prevCh.analyzedAt));
     // 1) the style charter — shared typographic/colour spirit
+    let text = prevCh?.text || "";
+    if (!keepCharter) {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
@@ -111,7 +118,7 @@ export async function POST(req: Request) {
     });
     if (!res.ok) return NextResponse.json({ error: `analysis failed (${res.status})` }, { status: 502 });
     const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-    const text = String(json.choices?.[0]?.message?.content || "").slice(0, 2000);
+    text = String(json.choices?.[0]?.message?.content || "").slice(0, 2000);
     // a refusal or an empty answer must never become the charter
     if (text.length < 60 || /\b(i'?m sorry|i can'?t|cannot assist|unable to)\b/i.test(text.slice(0, 120)))
       return NextResponse.json({ error: "the analyst refused this board — try again (or different references)" }, { status: 502 });
@@ -120,13 +127,21 @@ export async function POST(req: Request) {
       { $set: { text, analyzedAt: new Date().toISOString(), refCount: images.length } },
       { upsert: true }
     );
+    }
 
     /* 2) COMPOSITION CARDS (owner 2026-08-25): each reference becomes ONE
        arrangement direction — the layout-side mirror of the image cards.
        Every dream deals one card, so compositions vary AND stay true to
        the board (traditional refs = contained centred emblems, etc.). */
+    /* STEERING IS NEVER LOST (owner 2026-09-03): a reference that already
+       has a card keeps its text (including hand edits) — only NEW
+       references get analyzed; cards of deleted references drop away. */
+    const prevCards = (await db.collection("settings").findOne({ _id: `dream-cards-${style}` } as never)) as { cards?: { key: string; arrangement: string }[] } | null;
+    const keepMap = new Map((prevCards?.cards || []).map((c) => [c.key, c.arrangement]));
     const cards: { key: string; arrangement: string }[] = [];
     for (const r of refs) {
+      const kept = keepMap.get(r.id);
+      if (kept) { cards.push({ key: r.id, arrangement: kept }); continue; }
       const p2 = path.join(DREAM_REFS_DIR, path.basename(r.file));
       if (!fs.existsSync(p2)) continue;
       const buf2 = await sharp(fs.readFileSync(p2)).resize(640, 640, { fit: "inside" }).png().toBuffer();
