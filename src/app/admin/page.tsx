@@ -199,12 +199,14 @@ function DreamRefsCard() {
           <label style={{ ...S.label, marginTop: 4 }}>Charter (style spirit + Grounds)</label>
           <textarea style={{ ...S.input, minHeight: 90, fontSize: 12 }} value={charters[style] || ""}
             onChange={(e) => setCharters((m) => ({ ...m, [style]: e.target.value }))} />
-          {(cardsMap[style] || []).map((c, i) => {
-            const refNo = styleRefs.findIndex((r) => r.id === c.key);
+          {(cardsMap[style] || [])
+            .map((c) => ({ c, refNo: styleRefs.findIndex((r) => r.id === c.key) }))
+            .sort((a, b) => (a.refNo < 0 ? 99 : a.refNo) - (b.refNo < 0 ? 99 : b.refNo))
+            .map(({ c, refNo }) => {
             return (
             <div key={c.key}>
               <label style={{ ...S.label, marginTop: 6 }}>
-                Layout card {i + 1}{refNo >= 0 ? ` — reference #${refNo + 1}` : " — reference removed (re-analyze to clean up)"}
+                {refNo >= 0 ? `Card #${refNo + 1}` : "Card (reference removed — re-analyze to clean up)"}
               </label>
               <textarea style={{ ...S.input, minHeight: 48, fontSize: 12 }} value={c.arrangement}
                 onChange={(e) => setCardsMap((m) => ({ ...m, [style]: (m[style] || []).map((x) => (x.key === c.key ? { ...x, arrangement: e.target.value } : x)) }))} />
