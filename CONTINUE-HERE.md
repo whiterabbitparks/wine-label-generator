@@ -1451,3 +1451,16 @@ composition-contract tightening, then customer wiring.
   traditional board's grounds really ARE "soft cream, muted beige" —
   beige traditional labels are faithful, not a bug; more colourful
   traditional needs more colourful references.
+- PUNK GROUNDS + CONTRAST LAW (owner 2026-09-03): (1) punk's mood now
+  declares THE BACKGROUND IS PART OF THE PAINTING — a bold field from the
+  illustration's own palette, never a detached/beige backdrop. (2) Each
+  punk dream DEALS a ground colour from the board charter's "Grounds:"
+  palette (deck discipline — full coverage before repeats): deep orange,
+  cream, pastel yellow, vivid green, muted beige, bright blue, sunny
+  yellow; the clause insists the scene lives ON that field as one
+  painting. Re-analyzing the punk board refreshes the deck automatically.
+  (3) NEW ALL-STYLES LAW: healthy text contrast — dark grounds lift type
+  and imagery brighter; the verify pass redreams any label whose wording
+  sinks into its background. Note: "cream"/"muted beige" sit in the punk
+  deck because punk references contain them — prune those references if
+  beige punk is unwanted.

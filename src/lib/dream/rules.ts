@@ -61,6 +61,14 @@ export const DREAM_BUILTINS: DreamRule[] = [
     check: "Is the image a bottle photo, mockup, 3D render or perspective view instead of a flat straight-on label design?",
   },
   {
+    /* owner law 2026-09-03: legibility above all — dark grounds lift the
+       type and imagery brighter; contrast is always healthy */
+    clause:
+      "Every text keeps healthy, comfortable contrast against whatever sits behind it — on a dark ground the type and imagery turn brighter; no word ever sinks into its background.",
+    check:
+      "Is any text on the label hard to read — weak contrast between wording and the ground or imagery behind it, light-on-light or dark-on-dark? Answer yes if any line lacks healthy contrast.",
+  },
+  {
     clause:
       "Handmade print quality: real printmaking character, never glossy airbrushed digital rendering.",
     check: "Does the artwork look like glossy, airbrushed, smooth digital AI rendering rather than a handmade print technique?",
