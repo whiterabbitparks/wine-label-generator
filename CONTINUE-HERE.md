@@ -1396,3 +1396,10 @@ composition-contract tightening, then customer wiring.
   downloads a 300dpi TIFF; classic vector labels still download SVG (the
   shell learned a hook, not an endpoint). Gates after the shell edit:
   parity 0.000%, hard rules PASS, goldens 72/72.
+- NO SEPARATE DEVICES (owner law 2026-09-03): the illustration is ONLY
+  the story's scene and its entourage — no badges, stamps, roundels,
+  seals, emblems, leaf-in-a-circle marks, logos, floating motifs or
+  extra writings like "natural wine". New DREAM_BUILTINS rule (prompt
+  clause + verified check + strict redream on violation); skipped only
+  when the customer's story explicitly asks for such a device. Rules tab
+  copy lists it.

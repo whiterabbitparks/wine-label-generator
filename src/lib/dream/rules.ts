@@ -18,6 +18,7 @@ export interface DreamRule {
 }
 
 const wantsFrame = (v: string) => /\b(frame|framed|border|bordered|cartouche)\b/i.test(v);
+const wantsDevice = (v: string) => /\b(badge|emblem|stamp|seal|roundel|medallion|logo|crest)\b/i.test(v);
 
 export const DREAM_BUILTINS: DreamRule[] = [
   {
@@ -26,6 +27,15 @@ export const DREAM_BUILTINS: DreamRule[] = [
     check:
       "Is the design enclosed by a frame, border, rule line or cartouche around its edge? Edge-to-edge designs pass.",
     skipIf: wantsFrame,
+  },
+  {
+    /* owner law 2026-09-03: the image is ONLY the story and its
+       entourage — no separate decorative devices of any kind */
+    clause:
+      "The illustration is ONLY the story's scene and its natural surroundings. No separate decorative devices anywhere on the label: no badges, stamps, roundels, seals, emblems, icons, leaf-in-a-circle marks, logos, floating motifs or detached ornamental shapes, and no extra wording such as 'natural wine'.",
+    check:
+      "Apart from the story illustration and the label's given texts, does the design carry any separate decorative device — a badge, stamp, roundel, seal, emblem, icon, leaf-in-a-circle mark, logo, floating motif, detached ornamental shape, or extra wording like 'natural wine'? Elements that belong to the story scene itself pass.",
+    skipIf: wantsDevice,
   },
   {
     clause:

@@ -38,7 +38,9 @@ function DreamRulesCard() {
       <p style={{ fontSize: 12, color: "#6b6a60", margin: "6px 0 10px" }}>
         One rule per line, plain English — every dream is <b>inspected against them</b> and regenerated
         once on violation. Built-ins already active: no frames/borders · no invented medals, crests,
-        dates or extra text · no ligature/decorative lettering · no ornaments around texts · flat label,
+        dates or extra text · no separate decorative devices (badges, stamps, roundels, leaf-in-circle
+        marks, &ldquo;natural wine&rdquo; writings — the image is ONLY the story and its entourage) ·
+        no ligature/decorative lettering · no ornaments around texts · flat label,
         no mockups · handmade print, no gloss · anatomy coherent (no fused creatures) · timeless
         neutrality · qvevri anatomy. The customer&rsquo;s story always outranks a rule.
         <br /><br />
