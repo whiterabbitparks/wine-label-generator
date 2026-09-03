@@ -35,6 +35,8 @@ const STYLE_MOOD: Record<string, string> = {
   contemporary:
     "modern boutique wine label — bold editorial typography, expressive illustration (linocut, silkscreen, collage, gouache), confident whitespace",
   punk: "loud natural-wine label — raw expressive artwork, punchy type, fearless colour, poster energy",
+  minimalist:
+    "minimalist wine label — restraint above all: generous empty ground, very few elements, one quiet motif or subtle abstraction, precise understated typography, calm confident whitespace",
   free: "whatever serves the story best — full artistic freedom",
 };
 
@@ -104,7 +106,7 @@ export async function runDreamPhase(p: DreamParams): Promise<{ dream: string; pr
   const body = { style: p.style, sketch: p.sketch };
   const vision = p.vision;
   const texts = labelTexts(p.data);
-    const style = ["traditional", "contemporary", "punk"].includes(String(body.style)) ? String(body.style) : "traditional";
+    const style = ["traditional", "contemporary", "punk", "minimalist"].includes(String(body.style)) ? String(body.style) : "traditional";
     // the owner's dream-refinement corpus steers future dreams
     let guidance = "";
     let composition = "";
@@ -181,6 +183,16 @@ export async function runDreamPhase(p: DreamParams): Promise<{ dream: string; pr
          the dream, one strict regeneration on violation. */
       const dr = await assembleDreamRules(vision, style);
       if (compositionCheck) dr.checks.push({ src: "composition card (contained)", check: compositionCheck });
+      /* PROOFREAD (owner 2026-09-03): the label is all AI-painted text now —
+         every dream is spell-checked against the EXACT brief texts; typos,
+         doubled lines or invented wording trigger the strict redream */
+      dr.checks.push({
+        src: "proofread",
+        check:
+          `Compare every piece of wording on the label to EXACTLY these intended texts: ${JSON.stringify(texts)}. ` +
+          "Answer yes if any word is misspelled, doubled, truncated or garbled, if any line appears twice, " +
+          "or if wording appears that is not on the list. Ignore print too small to read.",
+      });
       const makeDream = async (extra = "") => {
         const job: Record<string, unknown> = { prompt: prompt + dr.clauses + extra, size: "landscape" };
         if (body.sketch && String(body.sketch).startsWith("data:image/")) job.reference = body.sketch;
@@ -1032,7 +1044,7 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
   }
   let artworkMode: "contained" | "full" | "canvas" = "contained";
   const art = (spec as { artwork?: { subject?: string; palette?: string[]; box?: { w: number; h: number }; coverage?: string } }).artwork;
-  const styleKey = ["traditional", "contemporary", "punk"].includes(String(body.style)) ? String(body.style) : "contemporary";
+  const styleKey = ["traditional", "contemporary", "punk", "minimalist"].includes(String(body.style)) ? String(body.style) : "contemporary";
 
   /* DREAM-AS-CANVAS (owner GO 2026-08-31): when the pixel erase produced a
      clean canvas, the dream IS the artwork — art fidelity by construction,

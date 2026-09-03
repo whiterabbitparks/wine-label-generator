@@ -223,6 +223,7 @@ function currentStyle(){var c=document.querySelector('.style-card.selected');ret
 function dl(svg,name){var b=new Blob([svg],{type:'image/svg+xml'});var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(function(){URL.revokeObjectURL(u);},1000);}
 let baseSeed=newSeed(), allOpts=[], selIdx=-1, galIdx=0, warned=false, shown=false;
 let altMode=null;   // {styleKey, base} — "See Alternatives": 6 seeds of ONE style
+let altHistory=[];  // Layout Alternatives (owner 2026-09-03): stack of {opts,sel} — back arrow restores
 let seedHist=[baseSeed], seedHistIdx=0;   // layout-set history for the prev/next arrows
 /* Generate the artwork set, then paint. While the set is generating, the
    Show Labels glass loader (Loader.pdf) fills in sync with REAL progress —
@@ -296,7 +297,7 @@ function paint(){if(!window.LabelEngine)return;shown=true;var d=getLabelData();v
     allOpts=window.LabelEngine.renderStyleOptions(d,order.slice(),{widthMM:dm.W,heightMM:dm.H,seed:baseSeed});
   }
   var grid=document.getElementById('frontThumbs');if(!grid)return;
-  grid.style.display='grid';grid.style.gridTemplateColumns='repeat(3,1fr)';grid.style.gap='34px 24px';grid.style.alignItems='start';grid.innerHTML='';
+  grid.style.display='grid';grid.style.gridTemplateColumns='repeat('+(allOpts.length>3?2:3)+',1fr)';grid.style.gap='34px 24px';grid.style.alignItems='start';grid.innerHTML='';
   allOpts.forEach(function(o,i){
     var cell=document.createElement('div');cell.className='eng-cell';
     var box=document.createElement('div');box.className='eng-lbl'+(selIdx===i?' sel':'');box.innerHTML=o.svg;box.title='Click to view larger';
@@ -314,6 +315,26 @@ function paint(){if(!window.LabelEngine)return;shown=true;var d=getLabelData();v
   // once labels exist, the "Front Label Previews" button is replaced by "Other options" (both sit before the grid)
   var pv=document.getElementById('frontPreviewBtn');if(pv)pv.style.display='';   // stays visible; the 'stale' class greys it until new input
   var eb=document.getElementById('engRegen');if(eb)eb.style.display='block';
+  /* LAYOUT ALTERNATIVES (owner 2026-09-03): with a style selected, deal 4
+     fresh layouts WITHIN that style (host hook provides them); they replace
+     the current cards; the back arrow restores the previous set. */
+  var altRow=document.getElementById('dreamAltRow');
+  if(!altRow&&grid.parentNode){altRow=document.createElement('div');altRow.id='dreamAltRow';altRow.style.cssText='display:flex;gap:10px;margin:16px 0 4px;justify-content:center;flex-wrap:wrap;';grid.parentNode.insertBefore(altRow,grid.nextSibling);}
+  if(altRow){altRow.innerHTML='';
+    var mkBtn=function(txt){var b=document.createElement('button');b.textContent=txt;b.style.cssText='font:inherit;font-size:13px;background:#fff;color:#111;border:2px solid #111;padding:8px 16px;cursor:pointer;';return b;};
+    if(altHistory.length){var bk=mkBtn('\u2190 Back to previous labels');
+      bk.addEventListener('click',function(){var st=altHistory.pop();allOpts=st.opts;selIdx=st.sel;paint();});
+      altRow.appendChild(bk);}
+    if(window.__DREAM_ALTS__&&selIdx>=0&&allOpts[selIdx]&&allOpts[selIdx].style){
+      var ab=mkBtn('Layout Alternatives \u2014 4 more '+(allOpts[selIdx].name||allOpts[selIdx].style)+' layouts');
+      ab.addEventListener('click',function(){ab.disabled=true;ab.textContent='Dreaming 4 layouts\u2026';
+        window.__DREAM_ALTS__(allOpts[selIdx].style).then(function(newOpts){
+          if(newOpts&&newOpts.length){altHistory.push({opts:allOpts,sel:selIdx});allOpts=newOpts;selIdx=-1;paint();}
+          else{paint();}
+        }).catch(function(){paint();});
+      });
+      altRow.appendChild(ab);}
+  }
 }
 
 /* ---------- boot ---------- */
@@ -356,7 +377,7 @@ function boot(){
           var nm=(getLabelData().wine||'label').replace(/[^a-z0-9]+/gi,'_');
           /* dream-image labels (data-dream marker) download as print files
              via the host's hook; classic vector labels stay SVG */
-          var dm=String(allOpts[selIdx].svg||'').match(/data-dream="([a-z]+)"/);
+          var dm=String(allOpts[selIdx].svg||'').match(/data-dream="([\w#-]+)"/);
           if(dm&&window.__DREAM_TIFF__){window.__DREAM_TIFF__(dm[1],nm);return;}
           dl(allOpts[selIdx].svg,nm+'_'+String(allOpts[selIdx].name||'label').replace(/[^a-z0-9]+/gi,'_')+'.svg');
         }});}

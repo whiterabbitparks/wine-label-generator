@@ -1403,3 +1403,21 @@ composition-contract tightening, then customer wiring.
   clause + verified check + strict redream on violation); skipped only
   when the customer's story explicitly asks for such a device. Rules tab
   copy lists it.
+- MINIMALIST + LAYOUT ALTERNATIVES + PROOFREAD (owner 2026-09-03):
+  (1) Fourth style "minimalist" everywhere: STYLE_MOOD, every style
+  validation list, dream-refs boards (upload references + Analyze to
+  give it a charter/cards — dreams run uncharted until then), admin
+  pills, studio mood select; classic's Show Labels now dreams FOUR
+  labels and the Minimalist card joins as the fourth (grid goes 2×2 at
+  4+ cards; legacy 3-card layout untouched — parity 0.000%).
+  (2) LAYOUT ALTERNATIVES: with a style selected in classic, the button
+  dreams 4 fresh labels WITHIN that style (each deals its own layout
+  card, so arrangements differ), REPLACING the cards; "← Back to
+  previous labels" restores the prior set (history stack). Shell learned
+  only hooks (__DREAM_ALTS__/__DREAM_TIFF__ with marker keys like
+  "punk#a3"); the wiring in classic/page.tsx owns the endpoints.
+  (3) PROOFREAD: every dream is spell-checked against the EXACT brief
+  texts inside the existing verify pass (typos, doubled lines, invented
+  wording → strict redream). Rough mistakes get caught for ~a cent;
+  microscopic print is excluded from the check honestly. Gates: parity
+  0.000%, hard rules PASS, goldens 72/72.

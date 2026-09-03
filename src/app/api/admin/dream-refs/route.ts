@@ -14,7 +14,7 @@ import { getDb } from "@/lib/db";
    reference images steer through derived language, never as image inputs. */
 
 const DREAM_REFS_DIR = path.join(process.cwd(), "data", "dream-refs");
-const STYLES = ["traditional", "contemporary", "punk"] as const;
+const STYLES = ["traditional", "contemporary", "punk", "minimalist"] as const;
 
 interface DreamRefDoc { id: string; name: string; file: string; thumb: string; at: string; style: string }
 

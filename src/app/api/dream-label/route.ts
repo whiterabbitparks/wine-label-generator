@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     const v = body.data?.[k];
     if (typeof v === "string") data[k] = v.slice(0, 200);
   }
-  const style = ["traditional", "contemporary", "punk", "free"].includes(String(body.style)) ? String(body.style) : "free";
+  const style = ["traditional", "contemporary", "punk", "minimalist", "free"].includes(String(body.style)) ? String(body.style) : "free";
   const sketch = typeof body.sketch === "string" && body.sketch.startsWith("data:image/") && body.sketch.length < 8_000_000
     ? body.sketch : null;
 

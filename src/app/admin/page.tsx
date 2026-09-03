@@ -100,7 +100,7 @@ function RulesTab() {
 /* Dream references: the taste school for whole-label dreams — one board
    and one charter PER STYLE (owner 2026-08-25). */
 interface DreamRef { id: string; name: string; thumb: string; style: string }
-const DREAM_STYLES = ["traditional", "contemporary", "punk"] as const;
+const DREAM_STYLES = ["traditional", "contemporary", "punk", "minimalist"] as const;
 function DreamRefsCard() {
   const [refs, setRefs] = useState<DreamRef[]>([]);
   const [charters, setCharters] = useState<Record<string, string>>({});
