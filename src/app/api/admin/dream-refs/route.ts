@@ -69,6 +69,11 @@ export async function POST(req: Request) {
               "You are a graphic design analyst. You receive examples of packaging label design. " +
               "Describe their SHARED VISUAL DESIGN LANGUAGE as a compact style guide (max 140 words): " +
               "typography character, colour and mood, illustration technique, level of ornament. " +
+              "Name what makes THIS board DIFFERENT from a generic wine label — avoid stock words like " +
+              "'elegant' or 'sophisticated' unless they are genuinely the board's edge. " +
+              "ALWAYS include one line 'Grounds:' listing the actual background colours seen across these " +
+              "references, stated plainly (e.g. 'Grounds: chalk white, vivid tomato red, deep bottle green') — " +
+              "never assume cream or beige unless the references truly show it. " +
               "Do NOT describe layout or composition — that is captured separately per example. " +
               "STRICTLY FORBIDDEN: naming anything depicted — no objects, people, animals, body parts, " +
               "buildings or scenery. Style is HOW it is made, never WHAT is shown; a design in this " +

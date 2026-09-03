@@ -152,8 +152,10 @@ export async function runDreamPhase(p: DreamParams): Promise<{ dream: string; pr
         const lang = cardI ? ((cardI as { language?: string }).language || [cardI.medium, cardI.mood].filter(Boolean).join("; ")) : prof?.charter?.slice(0, 400);
         if (lang) guidance += ` The ILLUSTRATION inside the label is executed in the house illustration style: ${lang}.`;
       } catch {}
+      /* comments steer ONLY their own style (owner 2026-09-03: a
+         minimalist "smaller image" note was homogenising every style) */
       const rows = (await db.collection("dream_feedback")
-        .find({ comment: { $ne: "" } }, { projection: { _id: 0, verdict: 1, comment: 1 } })
+        .find({ comment: { $ne: "" }, style }, { projection: { _id: 0, verdict: 1, comment: 1 } })
         .sort({ at: -1 }).limit(12).toArray()) as unknown as { verdict: string; comment: string }[];
       const like = rows.filter((r) => r.verdict === "approve").map((r) => r.comment);
       const avoid = rows.filter((r) => r.verdict === "reject").map((r) => r.comment);

@@ -1435,3 +1435,19 @@ composition-contract tightening, then customer wiring.
   old accidental string), and the prompt names the right aspect; classic
   style cards render at the label's true millimetres. Gates: parity
   0.000%, hard rules PASS, goldens 72/72.
+- HOMOGENISATION FIXED (owner 2026-09-03 "all styles look same, beige"):
+  audit of every steering corpus found two causes. (1) dream_feedback
+  comments were fed to EVERY style unfiltered — a minimalist "try even
+  smaller image" note was steering all four styles' compositions; the
+  query is now style-scoped. (2) Charters had drifted to the same generic
+  vocabulary (traditional AND contemporary both "elegant serif,
+  sophistication") and said nothing about backgrounds, so the model
+  defaulted everything to beige. Charter prompt now demands what makes
+  THIS board different (stock words banned) plus a mandatory "Grounds:"
+  line naming the references' actual background colours; all four boards
+  re-analysed — punk: "deep orange, cream, pastel yellow, vivid green,
+  bright blue…", contemporary adds soft gray/muted blue/rich burgundy,
+  minimalist creamy white/tan/soft orange/taupe. HONEST NOTE: the
+  traditional board's grounds really ARE "soft cream, muted beige" —
+  beige traditional labels are faithful, not a bug; more colourful
+  traditional needs more colourful references.
