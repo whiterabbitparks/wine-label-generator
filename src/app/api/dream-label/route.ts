@@ -30,6 +30,7 @@ export async function POST(req: Request) {
   const style = ["traditional", "contemporary", "punk", "minimalist", "free"].includes(String(body.style)) ? String(body.style) : "free";
   const sketch = typeof body.sketch === "string" && body.sketch.startsWith("data:image/") && body.sketch.length < 8_000_000
     ? body.sketch : null;
+  const aspect = ["landscape", "portrait", "square"].includes(String((body as { aspect?: string }).aspect)) ? String((body as { aspect?: string }).aspect) : "landscape";
 
   const enc = new TextEncoder();
   const stream = new ReadableStream({
@@ -39,7 +40,7 @@ export async function POST(req: Request) {
         /* branch POPIKA_No_Vector (owner 2026-09-03): the dream IS the
            label — no rebuild, no vector. Cheaper and simpler. */
         send({ type: "progress", stage: "dreaming" });
-        const d = await runDreamPhase({ vision, style, data, sketch });
+        const d = await runDreamPhase({ vision, style, data, sketch, aspect });
         send({ type: "result", dream: d.dream, preview: d.preview || null });
       } catch (e) {
         send({ type: "error", error: e instanceof Error ? e.message : String(e) });

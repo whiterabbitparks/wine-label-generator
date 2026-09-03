@@ -223,7 +223,6 @@ function currentStyle(){var c=document.querySelector('.style-card.selected');ret
 function dl(svg,name){var b=new Blob([svg],{type:'image/svg+xml'});var u=URL.createObjectURL(b);var a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(function(){URL.revokeObjectURL(u);},1000);}
 let baseSeed=newSeed(), allOpts=[], selIdx=-1, galIdx=0, warned=false, shown=false;
 let altMode=null;   // {styleKey, base} — "See Alternatives": 6 seeds of ONE style
-let altHistory=[];  // Layout Alternatives (owner 2026-09-03): stack of {opts,sel} — back arrow restores
 let seedHist=[baseSeed], seedHistIdx=0;   // layout-set history for the prev/next arrows
 /* Generate the artwork set, then paint. While the set is generating, the
    Show Labels glass loader (Loader.pdf) fills in sync with REAL progress —
@@ -246,27 +245,14 @@ function withArtwork(btn,go){var gen=window.EightKImageGen;
    and hero font per style, so presses never replay a fixed cycle. The
    artwork is untouched. __SEED0__ pins the sequence for parity/tests. */
 function newSeed(){return (typeof window.__SEED0__==='number')?window.__SEED0__:(1+Math.floor(Math.random()*100000));}
-function mkRegen(){var rb=document.createElement('button');rb.type='button';rb.className='eng-regen';rb.textContent='Layout alternatives';rb.addEventListener('click',function(){var b=this;if(window.__8kRefreshHints)window.__8kRefreshHints();withArtwork(b,function(){altMode=null;baseSeed=(typeof window.__SEED0__==='number')?baseSeed+2:newSeed();seedHist=seedHist.slice(0,seedHistIdx+1);seedHist.push(baseSeed);seedHistIdx=seedHist.length-1;selIdx=-1;paint();});});return rb;}
 function ensureExtras(){var reveal=document.getElementById('frontReveal');if(!reveal)return;
   var oldNote=document.getElementById('engStyleNote');if(oldNote)oldNote.remove();
   var oldTop=document.getElementById('engRegenTop');if(oldTop)oldTop.remove();
-  // "Layout alternatives" sits BELOW the labels grid, with a dashed rule under it
-  var grid=document.getElementById('frontThumbs');
-  if(grid&&!document.getElementById('engRegen')){
-    var nav=document.createElement('div');nav.id='engNav';nav.className='eng-nav';
-    var pb=document.createElement('button');pb.type='button';pb.id='engPrev';pb.className='eng-arrow';pb.innerHTML='&#10094;';
-    pb.addEventListener('click',function(){if(seedHistIdx>0){seedHistIdx--;baseSeed=seedHist[seedHistIdx];selIdx=-1;paint();}});
-    var rb=mkRegen();rb.id='engRegen';
-    var nb=document.createElement('button');nb.type='button';nb.id='engNext';nb.className='eng-arrow';nb.innerHTML='&#10095;';
-    nb.addEventListener('click',function(){if(seedHistIdx<seedHist.length-1){seedHistIdx++;baseSeed=seedHist[seedHistIdx];selIdx=-1;paint();}});
-    nav.appendChild(pb);nav.appendChild(rb);nav.appendChild(nb);
-    grid.parentNode.insertBefore(nav,grid.nextSibling);
-    var ds=document.createElement('div');ds.className='dash-sep';ds.id='engRegenSep';
-    nav.parentNode.insertBefore(ds,nav.nextSibling);
-  }
-  var pbtn=document.getElementById('engPrev'),nbtn=document.getElementById('engNext');
-  if(pbtn)pbtn.disabled=!(seedHistIdx>0);
-  if(nbtn)nbtn.disabled=!(seedHistIdx<seedHist.length-1);
+  /* Layout-alternatives UI removed entirely (owner 2026-09-03) — both the
+     legacy seed-reroll nav and the dream-era variant. Fresh layouts come
+     from pressing Show Labels again. */
+  var oldNav=document.getElementById('engNav');if(oldNav)oldNav.remove();
+  var oldSep=document.getElementById('engRegenSep');if(oldSep)oldSep.remove();
 }
 function galShow(i){var ov=document.getElementById('eng-gallery');if(!ov||!allOpts.length)return;galIdx=(i+allOpts.length)%allOpts.length;
   ov.querySelector('.eng-gv-stage').innerHTML=allOpts[galIdx].svg;ov.querySelector('.eng-gv-cap').textContent=(allOpts[galIdx].name||('Style '+(galIdx+1)))+' — '+(galIdx+1)+' of '+allOpts.length;
@@ -314,27 +300,6 @@ function paint(){if(!window.LabelEngine)return;shown=true;var d=getLabelData();v
   var pr=document.querySelector('#frontReveal .pricing');if(pr)pr.style.display=(selIdx>=0)?'':'none';
   // once labels exist, the "Front Label Previews" button is replaced by "Other options" (both sit before the grid)
   var pv=document.getElementById('frontPreviewBtn');if(pv)pv.style.display='';   // stays visible; the 'stale' class greys it until new input
-  var eb=document.getElementById('engRegen');if(eb)eb.style.display='block';
-  /* LAYOUT ALTERNATIVES (owner 2026-09-03): with a style selected, deal 4
-     fresh layouts WITHIN that style (host hook provides them); they replace
-     the current cards; the back arrow restores the previous set. */
-  var altRow=document.getElementById('dreamAltRow');
-  if(!altRow&&grid.parentNode){altRow=document.createElement('div');altRow.id='dreamAltRow';altRow.style.cssText='display:flex;gap:10px;margin:16px 0 4px;justify-content:center;flex-wrap:wrap;';grid.parentNode.insertBefore(altRow,grid.nextSibling);}
-  if(altRow){altRow.innerHTML='';
-    var mkBtn=function(txt){var b=document.createElement('button');b.textContent=txt;b.style.cssText='font:inherit;font-size:13px;background:#fff;color:#111;border:2px solid #111;padding:8px 16px;cursor:pointer;';return b;};
-    if(altHistory.length){var bk=mkBtn('\u2190 Back to previous labels');
-      bk.addEventListener('click',function(){var st=altHistory.pop();allOpts=st.opts;selIdx=st.sel;paint();});
-      altRow.appendChild(bk);}
-    if(window.__DREAM_ALTS__&&selIdx>=0&&allOpts[selIdx]&&allOpts[selIdx].style){
-      var ab=mkBtn('Layout Alternatives \u2014 4 more '+(allOpts[selIdx].name||allOpts[selIdx].style)+' layouts');
-      ab.addEventListener('click',function(){ab.disabled=true;ab.textContent='Dreaming 4 layouts\u2026';
-        window.__DREAM_ALTS__(allOpts[selIdx].style).then(function(newOpts){
-          if(newOpts&&newOpts.length){altHistory.push({opts:allOpts,sel:selIdx});allOpts=newOpts;selIdx=-1;paint();}
-          else{paint();}
-        }).catch(function(){paint();});
-      });
-      altRow.appendChild(ab);}
-  }
 }
 
 /* ---------- boot ---------- */
@@ -369,6 +334,12 @@ function boot(){
     var pf=document.getElementById('panel-front');
     if(pf&&!pf._freshWired){pf._freshWired=true;
       ['input','change'].forEach(function(ev){pf.addEventListener(ev,function(){if(window.__frontBtnFresh)window.__frontBtnFresh();},true);});}
+    /* label SIZE changes also re-arm (owner 2026-09-03: any change after
+       generation must lead to fresh labels with updated data) — the size
+       fields live outside the front panel */
+    ['le_wmm','le_hmm','widthMM','heightMM'].forEach(function(id){var el=document.getElementById(id);
+      if(el&&!el._freshWired){el._freshWired=true;
+        ['input','change'].forEach(function(ev){el.addEventListener(ev,function(){if(window.__frontBtnFresh)window.__frontBtnFresh();});});}});
     // Proceed to Payment downloads the SELECTED label's SVG
     var payBtn=document.querySelector('#panel-front .pay-btn');
     if(payBtn&&!payBtn._dlWired){payBtn._dlWired=true;

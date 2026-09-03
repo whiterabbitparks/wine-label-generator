@@ -99,7 +99,7 @@ function archivePair(dream: string, result: unknown) {
   } catch {}
 }
 
-export interface DreamParams { vision: string; style?: string; data: Record<string, string>; sketch?: string | null }
+export interface DreamParams { vision: string; style?: string; data: Record<string, string>; sketch?: string | null; aspect?: string }
 export interface RebuildParams { dream: string; vision: string; data: Record<string, string>; style?: string; reuseArtwork?: string | null }
 
 export async function runDreamPhase(p: DreamParams): Promise<{ dream: string; prompt: string; preview?: string }> {
@@ -162,7 +162,8 @@ export async function runDreamPhase(p: DreamParams): Promise<{ dream: string; pr
     } catch {}
     const prompt =
       `Design a complete, finished wine label — a flat, straight-on, full-bleed rectangular label design ` +
-      `(landscape 3:2). Not a bottle photo, not a mockup: the printed label artwork itself, edge to edge. ` +
+      `(${p.aspect === "portrait" ? "portrait 2:3" : p.aspect === "square" ? "square" : "landscape 3:2"}). ` +
+      `Not a bottle photo, not a mockup: the printed label artwork itself, edge to edge. ` +
       `Style: ${STYLE_MOOD[style]}. ` +
       (vision ? `The illustration tells this story: ${vision}. ` : "") +
       `The label carries these texts — respect this visual HIERARCHY, largest to smallest: ` +
@@ -194,7 +195,10 @@ export async function runDreamPhase(p: DreamParams): Promise<{ dream: string; pr
           "or if wording appears that is not on the list. Ignore print too small to read.",
       });
       const makeDream = async (extra = "") => {
-        const job: Record<string, unknown> = { prompt: prompt + dr.clauses + extra, size: "landscape" };
+        const job: Record<string, unknown> = {
+          prompt: prompt + dr.clauses + extra,
+          size: p.aspect === "portrait" ? { w: 1024, h: 1536 } : p.aspect === "square" ? { w: 1024, h: 1024 } : { w: 1536, h: 1024 },
+        };
         if (body.sketch && String(body.sketch).startsWith("data:image/")) job.reference = body.sketch;
         return gen429(() => generateOpenAIImage(job as never));
       };

@@ -65,16 +65,19 @@ export default function Configurator() {
         interface DreamRes { dream: string; preview?: string | null }
         const DREAM_STYLE_KEYS = ["traditional", "contemporary", "punk", "minimalist"];
         const STYLE_LABELS: Record<string, string> = { traditional: "Traditional", contemporary: "Contemporary", punk: "Punk", minimalist: "Minimalist" };
-        const wrapDream = (key: string, href: string) =>
-          `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1100 733" width="110mm" height="73.3mm" data-dream="${key}"><image x="0" y="0" width="1100" height="733" preserveAspectRatio="none" xlink:href="${href}" href="${href}"/></svg>`;
+        const wrapDream = (key: string, href: string, wMM = 110, hMM = 73.3) => {
+          const W = Math.round(wMM * 10), H = Math.round(hMM * 10);
+          return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${W} ${H}" width="${wMM}mm" height="${hMM}mm" data-dream="${key}"><image x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="none" xlink:href="${href}" href="${href}"/></svg>`;
+        };
         gen.setProvider = async (brief: unknown, onProgress?: (p: number) => void) => {
           const b = brief as { vision?: string; reference?: string | null; data?: Record<string, string> };
           let doneCount = 0;
+          const aspect = (b as { aspect?: string }).aspect || "landscape";
           const runOne = async (styleKey: string): Promise<[string, DreamRes]> => {
             const r = await fetch("/api/dream-label", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ vision: b.vision || "", style: styleKey, data: b.data || {}, sketch: b.reference || null }),
+              body: JSON.stringify({ vision: b.vision || "", style: styleKey, data: b.data || {}, sketch: b.reference || null, aspect }),
             });
             if (!r.ok || !r.body) throw new Error(`generation failed (${r.status})`);
             const reader = r.body.getReader();
@@ -121,63 +124,21 @@ export default function Configurator() {
               const out = orig(d, o, opts);
               const sp = (window as unknown as { __DREAM_IMAGES__?: Record<string, DreamRes> }).__DREAM_IMAGES__;
               if (!sp) return out;
+              const dims = opts as { widthMM?: number; heightMM?: number } | undefined;
+              const wMM = dims?.widthMM || 110, hMM = dims?.heightMM || 73.3;
               const mapped = out.map((entry) => {
                 const dr = sp[entry.style];
                 if (!dr) return entry;
-                return { ...entry, svg: wrapDream(entry.style, dr.preview || dr.dream) };
+                return { ...entry, svg: wrapDream(entry.style, dr.preview || dr.dream, wMM, hMM) };
               });
               /* minimalist has no legacy card — it joins as the fourth */
               if (sp.minimalist && !mapped.some((e) => e.style === "minimalist"))
-                mapped.push({ style: "minimalist", name: "Minimalist", svg: wrapDream("minimalist", sp.minimalist.preview || sp.minimalist.dream) } as (typeof mapped)[number]);
+                mapped.push({ style: "minimalist", name: "Minimalist", svg: wrapDream("minimalist", sp.minimalist.preview || sp.minimalist.dream, wMM, hMM) } as (typeof mapped)[number]);
               return mapped;
             };
             eng2.__dreamPatched = true;
           }
           return Object.fromEntries(ok.map(([k, r2]) => [k, { url: r2.preview || r2.dream }]));
-        };
-        /* LAYOUT ALTERNATIVES (owner 2026-09-03): the shell asks for 4
-           fresh dreams of ONE style; each deals its own layout card from
-           the deck, so the four differ in arrangement */
-        let altSeq = 0;
-        (window as unknown as { __DREAM_ALTS__?: (style: string) => Promise<{ style: string; name: string; svg: string }[]> }).__DREAM_ALTS__ = async (styleKey) => {
-          const runs = await Promise.allSettled(Array.from({ length: 4 }, async () => {
-            const r = await fetch("/api/dream-label", {
-              method: "POST", headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                vision: (window as unknown as { EightKImageGen?: { buildBrief?: () => { vision?: string; data?: Record<string, string>; reference?: string | null } } }).EightKImageGen?.buildBrief?.()?.vision || "",
-                style: styleKey,
-                data: (window as unknown as { EightKImageGen?: { buildBrief?: () => { data?: Record<string, string> } } }).EightKImageGen?.buildBrief?.()?.data || {},
-                sketch: (window as unknown as { EightKImageGen?: { buildBrief?: () => { reference?: string | null } } }).EightKImageGen?.buildBrief?.()?.reference || null,
-              }),
-            });
-            if (!r.ok || !r.body) throw new Error(`generation failed (${r.status})`);
-            const reader = r.body.getReader();
-            const dec = new TextDecoder();
-            let buf = ""; let result: DreamRes | null = null;
-            for (;;) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              buf += dec.decode(value, { stream: true });
-              let nl;
-              while ((nl = buf.indexOf("\n")) >= 0) {
-                const line = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1);
-                if (!line) continue;
-                const msg = JSON.parse(line) as { type: string; error?: string } & DreamRes;
-                if (msg.type === "result") result = msg;
-                else if (msg.type === "error") throw new Error(msg.error || "generation failed");
-              }
-            }
-            if (!result) throw new Error("stream ended unexpectedly");
-            return result;
-          }));
-          const ok = runs.filter((x): x is PromiseFulfilledResult<DreamRes> => x.status === "fulfilled").map((x) => x.value);
-          if (!ok.length) return [];
-          const store = ((window as unknown as { __DREAM_IMAGES__?: Record<string, DreamRes> }).__DREAM_IMAGES__ ||= {});
-          return ok.map((dr, i) => {
-            const key = `${styleKey}#a${++altSeq}`;
-            store[key] = dr;
-            return { style: styleKey, name: `${STYLE_LABELS[styleKey] || styleKey} ${i + 1}`, svg: wrapDream(key, dr.preview || dr.dream) };
-          });
         };
         /* the shell's payment button calls this for dream labels — the
            full-res dream becomes a 300dpi TIFF download */

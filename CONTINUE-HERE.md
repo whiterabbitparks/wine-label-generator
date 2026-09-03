@@ -1421,3 +1421,17 @@ composition-contract tightening, then customer wiring.
   wording → strict redream). Rough mistakes get caught for ~a cent;
   microscopic print is excluded from the check honestly. Gates: parity
   0.000%, hard rules PASS, goldens 72/72.
+- ALTERNATIVES REMOVED + SIZE-AWARE DREAMS (owner 2026-09-03): BOTH
+  layout-alternatives UIs are gone — the legacy seed-reroll nav
+  (engNav/engPrev/engRegen/engNext + mkRegen) and the dream-era button
+  with its history stack (__DREAM_ALTS__ hook deleted). Fresh layouts =
+  press Show Labels again. STALENESS: the label size fields
+  (le_wmm/le_hmm/widthMM/heightMM) now re-arm Show Labels like every
+  other input — any change after generation leads to fresh labels with
+  the updated data (buildBrief is read at press time). ASPECT: the
+  brief's labelAspect() now flows through /api/dream-label into
+  runDreamPhase — portrait labels dream at 1024×1536, square at
+  1024×1024, landscape at 1536×1024 (the provider needs {w,h}, not the
+  old accidental string), and the prompt names the right aspect; classic
+  style cards render at the label's true millimetres. Gates: parity
+  0.000%, hard rules PASS, goldens 72/72.
