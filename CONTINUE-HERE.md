@@ -1573,3 +1573,24 @@ composition-contract tightening, then customer wiring.
   renders into backThumbBox + "Download print file (300dpi TIFF)"
   button. E2E-verified with a real browser click-through. Wiring lives
   in classic/page.tsx (no shell edit).
+- BACK LABEL v4 — ZONES, NOT SAMPLES (owner 2026-09-04): the template is
+  now understood as ZONES with sample content, not fixed texts. (1) The
+  US warning area is THE REGULATORY ZONE — it carries only the SELECTED
+  markets' texts (no US warning unless US is picked; AU-only shows the
+  AU text there). (2) Allergen appears ONCE, spelling/language derived
+  from the market mix (SULFITES/SULPHITES combined, + CONTIENT for CA);
+  importer label adapts; PRODUIT DE joins product-of for CA. (3) FLOW
+  LAYOUT: zone order/rules/sizes from the template, but content flows
+  and the WIDTH climbs a ladder (80→230mm) until everything fits the
+  fixed height — wider face = longer paragraph lines = fewer rows;
+  regulatory content fills columns; no more empty bolted-on panels.
+  (4) FONT TRUTH: Archivo Narrow measured 0.51×size/char and physically
+  overflowed into the codes (the owner's overlap) — BARLOW CONDENSED
+  measured 0.398, matching the template's Avenir Next Condensed;
+  installed 400+500 (deploy note). Width model is measured + script-
+  aware (CJK 1.02, Hebrew 0.5, Georgian 0.55, Latin 0.41) with
+  character-level breaking for spaceless CJK sentences. Verified: 7
+  market mixes rasterized and machine-scanned — ZERO right-edge
+  overflow; codes band reserved (QR placed after measured allergen
+  text, EAN right-anchored). US-only = 90mm (the extra 10mm is honest:
+  Barlow is a touch wider than Avenir at 8pt).

@@ -31,12 +31,35 @@ export interface BackLabelData {
 
 const PT = 0.3528;
 const S12 = 12 * PT, S8 = 8 * PT, S7 = 7 * PT;
-const FAM = "'Archivo Narrow', 'Avenir Next Condensed', Helvetica, sans-serif";
+/* Barlow Condensed measured at 0.398×size per char — the only Google face
+   as narrow as the template's Avenir Next Condensed (Archivo Narrow ran
+   0.51 and physically overflowed into the codes) */
+const FAM = "'Barlow Condensed', 'Avenir Next Condensed', Helvetica, sans-serif";
 
 /* condensed-face width model (mm) */
-const tw = (t: string, size: number) => t.length * size * 0.46;
+/* script-aware width model (measured): condensed Latin 0.41×size; CJK and
+   Hangul glyphs are full-width; Hebrew/Georgian sit in between */
+const charW = (ch: string) => {
+  const c = ch.codePointAt(0) || 0;
+  if ((c >= 0x2e80 && c <= 0x9fff) || (c >= 0x3040 && c <= 0x30ff) || (c >= 0xac00 && c <= 0xd7af) || (c >= 0xff00 && c <= 0xffef) || c === 0x30fb) return 1.02;
+  if (c >= 0x0590 && c <= 0x05ff) return 0.5;   // Hebrew
+  if (c >= 0x10a0 && c <= 0x10ff) return 0.55;  // Georgian
+  return 0.41;
+};
+const tw = (t: string, size: number) => { let w = 0; for (const ch of t) w += charW(ch) * size; return w; };
 function wrap(text: string, size: number, maxW: number): string[] {
-  const words = text.split(/\s+/).filter(Boolean);
+  /* CJK sentences carry no spaces — break oversized tokens by character */
+  const words = text.split(/\s+/).filter(Boolean).flatMap((w) => {
+    if (tw(w, size) <= maxW) return [w];
+    const parts: string[] = [];
+    let cur = "";
+    for (const ch of w) {
+      if (tw(cur + ch, size) > maxW && cur) { parts.push(cur); cur = ch; }
+      else cur += ch;
+    }
+    if (cur) parts.push(cur);
+    return parts;
+  });
   const out: string[] = [];
   let cur = "";
   for (const w of words) {
@@ -85,61 +108,43 @@ export const MARKETS: Record<string, { name: string; confidence: "high" | "mediu
   GE: { name: "Georgia (domestic)", confidence: "low" },
 };
 
-/* markets beyond the base face (US lives ON the template) */
-function extraMarketLines(codes: string[], d: Required<BackLabelData>): { title: string; lines: string[] }[] {
-  const out: { title: string; lines: string[] }[] = [];
+/* REGULATORY ZONE content (owner 2026-09-04): the template's US warning
+   area is THE regulatory zone — it holds the SELECTED markets' texts.
+   Allergen, importer, product-of live once in their own zones; blocks
+   here carry only what is unique to each market. */
+function regulatoryBlocks(codes: string[], d: Required<BackLabelData>): string[] {
+  const out: string[] = [];
   const imp = d.importer.toUpperCase();
-  const origin = d.countryOfOrigin.toUpperCase();
-  if (codes.includes("EU")) out.push({ title: "EU", lines: [
-    "CONTAINS SULPHITES.",
-    `E ${Math.round(+d.energyKcal * 4.184)} KJ / ${d.energyKcal} KCAL PER 100 ML`,
-    "INGREDIENTS & NUTRITION: SCAN THE QR CODE (E-LABEL).",
-    `IMPORTED BY (EU): ${imp}`, `L${d.lot}`,
-  ] });
-  if (codes.includes("GB")) out.push({ title: "UK", lines: [
-    "CONTAINS SULPHITES.", `IMPORTED BY (UK): ${imp}`, `PRODUCT OF ${origin}.`,
-  ] });
-  if (codes.includes("CA")) out.push({ title: "CANADA", lines: [
-    "CONTAINS: SULPHITES / CONTIENT : SULFITES",
-    `IMPORTED BY / IMPORTÉ PAR : ${imp}`,
-    `PRODUCT OF ${origin} / PRODUIT DE ${origin}`,
-  ] });
-  if (codes.includes("AU") || codes.includes("NZ")) out.push({ title: "AUSTRALIA / NEW ZEALAND", lines: [
-    "PREGNANCY WARNING: ALCOHOL CAN CAUSE LIFELONG HARM TO YOUR BABY. [OFFICIAL PICTOGRAM REQUIRED]",
-    "CONTAINS SULPHITES.",
-    `CONTAINS APPROX. ${(Number(d.volume) * Number(d.alcohol) / 100 / 12.7).toFixed(1)} STANDARD DRINKS.`,
-    `IMPORTED BY (AU/NZ): ${imp}`,
-  ] });
-  if (codes.includes("JP")) out.push({ title: "JAPAN", lines: [
-    `果実酒 ・ アルコール分 ${d.alcohol}% ・ 内容量 ${d.volume}ML`,
-    `輸入者: ${imp}`,
-    "妊娠中や授乳期の飲酒は、胎児・乳児の発育に悪影響を与えるおそれがあります。",
-  ] });
-  if (codes.includes("KR")) out.push({ title: "KOREA", lines: [
-    `수입자: ${imp}`,
-    "경고: 지나친 음주는 간경화나 간암을 일으키며, 임신 중 음주는 태아의 기형 발생 위험을 높입니다.",
-  ] });
-  if (codes.includes("CN")) out.push({ title: "CHINA", lines: [
-    `葡萄酒 ・ 酒精度 ${d.alcohol}%VOL ・ 净含量 ${d.volume}ML`,
-    `原产国: ${origin} ・ 进口商: ${imp}`,
-    "过量饮酒有害健康",
-  ] });
-  if (codes.includes("BR")) out.push({ title: "BRAZIL", lines: [
-    `IMPORTADO POR: ${imp}`,
-    "CONTÉM SULFITOS. BEBA COM MODERAÇÃO. VENDA PROIBIDA PARA MENORES DE 18 ANOS.",
-  ] });
-  if (codes.includes("MX")) out.push({ title: "MEXICO", lines: [
-    `IMPORTADO POR: ${imp}`,
-    "EL ABUSO EN EL CONSUMO DE ESTE PRODUCTO ES NOCIVO PARA LA SALUD.",
-  ] });
-  if (codes.includes("IL")) out.push({ title: "ISRAEL", lines: [
-    `יבואן: ${imp}`,
-    "אזהרה: צריכה מופרזת של אלכוהול מסכנת חיים ומזיקה לבריאות!",
-  ] });
-  if (codes.includes("GE")) out.push({ title: "GEORGIA", lines: [
-    `მწარმოებელი: ${d.producer.toUpperCase()}`,
-    `ალკოჰოლი ${d.alcohol}% ・ ${d.volume} მლ`,
-  ] });
+  if (codes.includes("US")) out.push(
+    "GOVERNMENT WARNING: (1) ACCORDING TO THE SURGEON GENERAL, WOMEN SHOULD NOT DRINK ALCOHOLIC BEVERAGES DURING PREGNANCY BECAUSE OF THE RISK OF BIRTH DEFECTS. (2) CONSUMPTION OF ALCOHOLIC BEVERAGES IMPAIRS YOUR ABILITY TO DRIVE A CAR OR OPERATE MACHINERY, AND MAY CAUSE HEALTH PROBLEMS.");
+  if (codes.includes("EU")) out.push(
+    `E ${Math.round(+d.energyKcal * 4.184)} KJ / ${d.energyKcal} KCAL PER 100 ML. INGREDIENTS & NUTRITION VIA THE QR E-LABEL.`);
+  if (codes.includes("AU") || codes.includes("NZ")) out.push(
+    `PREGNANCY WARNING: ALCOHOL CAN CAUSE LIFELONG HARM TO YOUR BABY. CONTAINS APPROX. ${(Number(d.volume) * Number(d.alcohol) / 100 / 12.7).toFixed(1)} STANDARD DRINKS. [OFFICIAL PICTOGRAM REQUIRED]`);
+  if (codes.includes("JP")) out.push(
+    `果実酒 ・ アルコール分 ${d.alcohol}% ・ 内容量 ${d.volume}ML ・ 輸入者: ${imp} ・ 妊娠中や授乳期の飲酒は、胎児・乳児の発育に悪影響を与えるおそれがあります。`);
+  if (codes.includes("KR")) out.push(
+    `수입자: ${imp} ・ 경고: 지나친 음주는 간경화나 간암을 일으키며, 임신 중 음주는 태아의 기형 발생 위험을 높입니다.`);
+  if (codes.includes("CN")) out.push(
+    `葡萄酒 ・ 酒精度 ${d.alcohol}%VOL ・ 净含量 ${d.volume}ML ・ 进口商: ${imp} ・ 过量饮酒有害健康`);
+  if (codes.includes("BR")) out.push(
+    "CONTÉM SULFITOS. BEBA COM MODERAÇÃO. VENDA PROIBIDA PARA MENORES DE 18 ANOS.");
+  if (codes.includes("MX")) out.push(
+    "EL ABUSO EN EL CONSUMO DE ESTE PRODUCTO ES NOCIVO PARA LA SALUD.");
+  if (codes.includes("IL")) out.push(
+    "אזהרה: צריכה מופרזת של אלכוהול מסכנת חיים ומזיקה לבריאות!");
+  if (codes.includes("GE")) out.push(
+    `მწარმოებელი: ${d.producer.toUpperCase()} ・ ალკოჰოლი ${d.alcohol}% ・ ${d.volume} მლ`);
+  return out;
+}
+
+/* allergen appears ONCE — spelling/language follows the market mix */
+function allergenLines(codes: string[]): string[] {
+  const us = codes.includes("US");
+  const eu = codes.some((c) => ["EU", "GB", "AU", "NZ"].includes(c));
+  const en = us && eu ? "CONTAINS SULFITES (SULPHITES)" : us ? "CONTAINS SULFITES" : "CONTAINS SULPHITES";
+  const out = [en];
+  if (codes.includes("CA")) out.push("CONTIENT : SULFITES");
   return out;
 }
 
@@ -171,85 +176,114 @@ export async function composeBackLabel(
   const T = (x: number, y: number, size: number, text: string, weight = 400, anchor = "start") =>
     `<text x="${(x * s).toFixed(2)}" y="${(y * s).toFixed(2)}" font-size="${(size * s).toFixed(2)}" font-weight="${weight}" text-anchor="${anchor}" font-family="${FAM}">${esc(text)}</text>`;
 
+  /* — v4 FLOW FACE (owner 2026-09-04): the template gives zone ORDER,
+     rules, sizes and the bottom band; content FLOWS. Width climbs a
+     ladder until everything fits the fixed height — wider face = longer
+     paragraph lines = fewer rows. The regulatory zone (where the sample
+     US warning sat) carries the SELECTED markets' texts, in columns when
+     the face is wide. Codes never collide with text: the bottom band is
+     reserved, allergen text gets its measured room, QR sits after it,
+     EAN hugs the right edge. — */
+  const reg = regulatoryBlocks(opts.markets, d);
+  const allergen = allergenLines(opts.markets);
+  const importerLabel = opts.markets.length === 1 ? `IMPORTED BY (${opts.markets[0]}):` : "IMPORTED BY:";
+  const CODEBAND = 18.6;             // fixed bottom band height
+  const LH8 = 3.4, LH7 = 2.9;
+
+  const layoutAt = (W: number) => {
+    const CW = W - 8.4;              // content width
+    const parts: { y: number; x: number; size: number; text: string; weight?: number; anchor?: string }[] = [];
+    const rules: number[] = [];
+    let y = 6.7;
+    parts.push({ y, x: 4.2, size: S12, text: up(d.wine), weight: 500 });
+    y += 1.7; rules.push(y); y += 3.6;
+    for (const ln of wrap(up(d.description), S8, CW)) { parts.push({ y, x: 4.2, size: S8, text: ln, weight: 500 }); y += LH8; }
+    y = y - LH8 + 1.6; rules.push(y);
+    /* importer | producer columns share the face width */
+    const colW = (CW - 4) / 2, colR = 4.2 + colW + 4;
+    let yl = y + 3.8, yr = y + 3.8;
+    parts.push({ y: yl, x: 4.3, size: S8, text: importerLabel }); yl += LH8;
+    parts.push({ y: yr, x: colR, size: S8, text: "PRODUCER:" }); yr += LH8;
+    for (const ln of wrap(up(d.importer), S8, colW)) { parts.push({ y: yl, x: 4.3, size: S8, text: ln }); yl += LH8; }
+    for (const ln of wrap(up(d.producer), S8, colW)) { parts.push({ y: yr, x: colR, size: S8, text: ln }); yr += LH8; }
+    y = Math.max(yl, yr) - LH8 + 1.8; rules.push(y);
+    parts.push({ y: y + 3.4, x: 4.3, size: S7, text: `PRODUCT OF ${up(d.countryOfOrigin)}.${opts.markets.includes("CA") ? ` / PRODUIT DE ${up(d.countryOfOrigin)}.` : ""}` });
+    parts.push({ y: y + 3.4, x: colR, size: S7, text: up(d.web) });
+    y += 3.4 + 1.9; rules.push(y);
+    parts.push({ y: y + 3.5, x: 4.2, size: S7, text: `BOTTLED: ${d.bottlingDate}   /   LOT: L${d.lot}   /   ${d.alcohol}% ALC./VOL. ${d.volume} ML` });
+    y += 3.5 + 1.6; rules.push(y);
+    /* regulatory zone: flow blocks into columns of ~64mm */
+    const zoneTop = y + 3.3;
+    const zoneBottom = BASE - CODEBAND - 1.2;
+    const rcW = Math.min(72, CW);
+    const nrc = Math.max(1, Math.floor((CW + 4) / (rcW + 4)));
+    const rcRealW = (CW - (nrc - 1) * 4) / nrc;
+    let rc = 0, ry = zoneTop;
+    let overflow = false;
+    for (const block of reg) {
+      const lines = wrap(block, S7, rcRealW);
+      const need = lines.length * LH7 + 1.4;
+      if (ry + need - LH7 > zoneBottom && ry > zoneTop) { rc++; ry = zoneTop; }
+      if (rc >= nrc || ry + need - LH7 > zoneBottom) { overflow = true; break; }
+      for (const ln of lines) { parts.push({ y: ry, x: 4.2 + rc * (rcRealW + 4), size: S7, text: ln }); ry += LH7; }
+      ry += 1.4;
+    }
+    return { parts, rules, overflow, colR };
+  };
+
+  /* width ladder: template width first, then grow carefully */
+  let W = BASE, lay = layoutAt(W);
+  for (const cand of [90, 100, 112, 126, 142, 160, 180, 205, 230]) {
+    if (!lay.overflow) break;
+    W = cand; lay = layoutAt(W);
+  }
+
   let body = "";
-  /* — template face v3: coordinates measured from the owner's JPEG
-     (WAIN/Back_Label_Template.jpg, 2270px = 80mm): five 0.2mm section
-     rules; QR 15mm at x22.4; EAN-13 with standard digit layout (leading
-     digit outside the bars). — */
-  const RULE = (ymm: number) =>
-    `<rect x="${(4.2 * s).toFixed(2)}" y="${(ymm * s).toFixed(2)}" width="${(71.4 * s).toFixed(2)}" height="${(0.2 * s).toFixed(2)}" fill="#000"/>`;
-  body += T(4.2, 6.7, S12, up(d.wine), 500);
-  body += RULE(8.4);
-  let y = 12.0;
-  for (const ln of wrap(up(d.description), S8, 71).slice(0, 4)) { body += T(4.2, y, S8, ln, 500); y += 3.4; }
-  body += RULE(23.5);
-  const colL = 4.3, colR = 42.6, colW = 33;
-  body += T(colL, 27.3, S8, "IMPORTED BY (US):");
-  body += T(colR, 27.3, S8, "PRODUCER:");
-  let yl = 30.7;
-  for (const ln of wrap(up(d.importer), S8, colW).slice(0, 2)) { body += T(colL, yl, S8, ln); yl += 3.35; }
-  let yr = 30.7;
-  for (const ln of wrap(up(d.producer), S8, colW).slice(0, 2)) { body += T(colR, yr, S8, ln); yr += 3.35; }
-  body += RULE(35.9);
-  body += T(colL, 39.3, S7, `PRODUCT OF ${up(d.countryOfOrigin)}.`);
-  body += T(colR, 39.3, S7, up(d.web));
-  body += RULE(41.2);
-  body += T(4.2, 44.7, S7, `BOTTLED: ${d.bottlingDate}   /   LOT: L${d.lot}   /   ${d.alcohol}% ALC./VOL. ${d.volume} ML`);
-  body += RULE(46.3);
-  let yw = 49.6;
-  const WARN = "GOVERNMENT WARNING: (1) ACCORDING TO THE SURGEON GENERAL, WOMEN SHOULD NOT DRINK ALCOHOLIC BEVERAGES DURING PREGNANCY BECAUSE OF THE RISK OF BIRTH DEFECTS. (2) CONSUMPTION OF ALCOHOLIC BEVERAGES IMPAIRS YOUR ABILITY TO DRIVE A CAR OR OPERATE MACHINERY, AND MAY CAUSE HEALTH PROBLEMS.";
-  for (const ln of wrap(WARN, S7, 71).slice(0, 4)) { body += T(4.2, yw, S7, ln); yw += 2.9; }
-  /* bottom band (all y from the JPEG) */
-  body += T(4.1, 63.2, S7, "CONTAINS");
-  body += T(4.1, 66.1, S7, "SULFITES");
-  body += T(4.1, 76.2, S7, "SEE INGREDIENTS:");
-  const qrX = 22.4, qrY = 61.4, qrS = 15.0;
+  for (const r2 of lay.rules)
+    body += `<rect x="${(4.2 * s).toFixed(2)}" y="${(r2 * s).toFixed(2)}" width="${((W - 8.4) * s).toFixed(2)}" height="${(0.2 * s).toFixed(2)}" fill="#000"/>`;
+  for (const pt2 of lay.parts) body += T(pt2.x, pt2.y, pt2.size, pt2.text, pt2.weight || 400, pt2.anchor || "start");
+
+  /* — bottom band (reserved; nothing else may enter): allergen ·
+     SEE INGREDIENTS · QR · EAN right-aligned — */
+  const bandTop = BASE - CODEBAND + 0.1; // 61.5 at BASE=80
+  let ay = bandTop + 1.7;
+  let allergenW = 0;
+  for (const ln of allergen) {
+    for (const seg of wrap(ln, S7, 24)) {
+      body += T(4.1, ay, S7, seg); ay += LH7;
+      allergenW = Math.max(allergenW, tw(seg, S7));
+    }
+  }
+  body += T(4.1, BASE - 3.8 + 2.4, S7, "SEE INGREDIENTS:");
+  const qrS = 15.0;
+  const qrX = Math.max(22.4, 4.1 + allergenW + 3);
   if (d.qrImage) {
-    body += `<image x="${(qrX * s).toFixed(2)}" y="${(qrY * s).toFixed(2)}" width="${(qrS * s).toFixed(2)}" height="${(qrS * s).toFixed(2)}" href="${d.qrImage}"/>`;
+    body += `<image x="${(qrX * s).toFixed(2)}" y="${(bandTop * s).toFixed(2)}" width="${(qrS * s).toFixed(2)}" height="${(qrS * s).toFixed(2)}" href="${d.qrImage}"/>`;
   } else {
     const qrPng = await QRCode.toDataURL(d.qrUrl || d.web, { margin: 1, width: 300 });
-    body += `<image x="${(qrX * s).toFixed(2)}" y="${(qrY * s).toFixed(2)}" width="${(qrS * s).toFixed(2)}" height="${(qrS * s).toFixed(2)}" href="${qrPng}"/>`;
+    body += `<image x="${(qrX * s).toFixed(2)}" y="${(bandTop * s).toFixed(2)}" width="${(qrS * s).toFixed(2)}" height="${(qrS * s).toFixed(2)}" href="${qrPng}"/>`;
   }
   const bc = ean13(d.barcodeDigits);
+  const bcW = 31.4, bx = W - 4.2 - bcW;
   if (d.barcodeImage) {
-    body += `<image x="${(44.2 * s).toFixed(2)}" y="${(61.4 * s).toFixed(2)}" width="${(31.4 * s).toFixed(2)}" height="${(14.9 * s).toFixed(2)}" href="${d.barcodeImage}"/>`;
+    body += `<image x="${(bx * s).toFixed(2)}" y="${(bandTop * s).toFixed(2)}" width="${(bcW * s).toFixed(2)}" height="${(14.9 * s).toFixed(2)}" href="${d.barcodeImage}"/>`;
   } else {
-    /* standard EAN-13: guards run longer than data bars; digits sit in the
-       guard gaps; the first digit stands left of the start guard */
-    const bx = 44.2, byT = 61.4, mod = 31.4 / 95;
-    const GUARD = new Set([0,1,2,45,46,47,48,49,92,93,94]);
-    const dataH = 12.4, guardH = 13.9;
+    const mod = bcW / 95;
+    const GUARD = new Set([0, 1, 2, 45, 46, 47, 48, 49, 92, 93, 94]);
     for (let i = 0; i < bc.modules.length; i++)
       if (bc.modules[i] === "1")
-        body += `<rect x="${((bx + i * mod) * s).toFixed(2)}" y="${(byT * s).toFixed(2)}" width="${(mod * s).toFixed(2)}" height="${((GUARD.has(i) ? guardH : dataH) * s).toFixed(2)}" fill="#000"/>`;
-    body += T(bx - 1.2, 76.2, S7, bc.digits[0], 400, "end");
-    body += T(bx + 3 * mod + (42 * mod) / 2, 76.2, S7, bc.digits.slice(1, 7).split("").join("\u2009"), 400, "middle");
-    body += T(bx + 50 * mod + (42 * mod) / 2, 76.2, S7, bc.digits.slice(7).split("").join("\u2009"), 400, "middle");
+        body += `<rect x="${((bx + i * mod) * s).toFixed(2)}" y="${(bandTop * s).toFixed(2)}" width="${(mod * s).toFixed(2)}" height="${((GUARD.has(i) ? 13.9 : 12.4) * s).toFixed(2)}" fill="#000"/>`;
+    body += T(bx - 1.2, BASE - 3.8 + 2.4, S7, bc.digits[0], 400, "end");
+    body += T(bx + 3 * (bcW / 95) + (42 * (bcW / 95)) / 2, BASE - 3.8 + 2.4, S7, bc.digits.slice(1, 7).split("").join("\u2009"), 400, "middle");
+    body += T(bx + 50 * (bcW / 95) + (42 * (bcW / 95)) / 2, BASE - 3.8 + 2.4, S7, bc.digits.slice(7).split("").join("\u2009"), 400, "middle");
   }
 
-  /* extra markets extend width in 80mm panels, same 7pt */
-  const extras = extraMarketLines(opts.markets.filter((m) => m !== "US"), d);
-  let panels = 0;
-  if (extras.length) {
-    let px = BASE + 4, py = 6.2, panelIdx = 0;
-    for (const blk of extras) {
-      const lines = blk.lines.flatMap((l) => wrap(l, S7, 72));
-      const need = (lines.length + 1) * 2.95 + 2.6;
-      if (py + need > BASE - 4 && py > 6.2) { panelIdx++; px = BASE + panelIdx * BASE + 4; py = 6.2; }
-      body += T(px, py, S7, blk.title, 600);
-      py += 2.95;
-      for (const ln of lines) { body += T(px, py, S7, ln); py += 2.95; }
-      py += 2.6;
-    }
-    panels = panelIdx + 1;
-  }
-
-  const W = (BASE + panels * BASE) * s;
+  const Wmm = W * s;
   const H = BASE * s;
   const svg =
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W.toFixed(1)} ${H.toFixed(1)}" width="${W.toFixed(1)}mm" height="${H.toFixed(1)}mm">` +
-    `<rect width="${W.toFixed(1)}" height="${H.toFixed(1)}" fill="#FFFFFF"/>` + body + `</svg>`;
-  return { svg, widthMM: W, heightMM: H, barcodeDigits: bc.digits };
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${Wmm.toFixed(1)} ${H.toFixed(1)}" width="${Wmm.toFixed(1)}mm" height="${H.toFixed(1)}mm">` +
+    `<rect width="${Wmm.toFixed(1)}" height="${H.toFixed(1)}" fill="#FFFFFF"/>` + body + `</svg>`;
+  return { svg, widthMM: Wmm, heightMM: H, barcodeDigits: bc.digits };
 }
 
 function esc(s2: string) {
