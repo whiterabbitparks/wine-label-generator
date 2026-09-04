@@ -1610,3 +1610,9 @@ composition-contract tightening, then customer wiring.
   zero-width flex items ("no space, no lines"). Forced block display +
   one block wrapper; browser-verified: both 2px rules render full-width
   with exactly 26px air above and below the label.
+- BACK PANEL, FINAL SPACING (owner 2026-09-04): NO rules — only clean
+  26px space above and below the generated label. Root cause of the
+  pricing overlap: the shell gives backThumbBox a FIXED 380px height
+  while the label is ~460px tall — height/maxHeight/overflow now
+  overridden inline so the container grows with content.
+  Browser-verified: label bottom 832 < pricing top 904, zero overlap.

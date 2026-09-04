@@ -225,18 +225,18 @@ export default function Configurator() {
               const GAP = 26;
               const box = document.getElementById("backThumbBox") || document.getElementById("backThumbWrap");
               if (box) {
-                /* the shell styles this box as FLEX — stacked spacers were
-                   collapsing to zero-width items (owner: "no space, no
-                   lines"); force block layout with one wrapper */
+                /* owner 2026-09-04 (final): NO rules — ONLY clean space
+                   above and below. The shell gives this box a FIXED height
+                   and flex layout, which made content overlap the pricing
+                   list below — both overridden inline. */
                 (box as HTMLElement).style.display = "block";
+                (box as HTMLElement).style.height = "auto";
+                (box as HTMLElement).style.maxHeight = "none";
+                (box as HTMLElement).style.overflow = "visible";
                 box.innerHTML =
                   `<div style="display:block;width:100%">` +
                   `<div style="height:${GAP}px"></div>` +
-                  `<div style="height:2px;background:#111;width:100%"></div>` +
-                  `<div style="height:${GAP}px"></div>` +
                   `<img src="${url}" alt="back label" style="width:100%;display:block;border:1px solid #ccc"/>` +
-                  `<div style="height:${GAP}px"></div>` +
-                  `<div style="height:2px;background:#111;width:100%"></div>` +
                   `<div style="height:${GAP}px"></div>` +
                   `</div>`;
               }
