@@ -1594,3 +1594,14 @@ composition-contract tightening, then customer wiring.
   overflow; codes band reserved (QR placed after measured allergen
   text, EAN right-anchored). US-only = 90mm (the extra 10mm is honest:
   Barlow is a touch wider than Avenir at 8pt).
+- MINIMALIST ON IMAGE SIDE + BACK PANEL POLISH (owner 2026-09-04):
+  minimalist added to every image-side style list (style-refs route,
+  image-rules, LegacyAdmin pills incl. Image Play + proof styles) —
+  upload minimalist image references + Analyze to give it style cards.
+  Web back panel: generated label now sits between two 2px black rules
+  with equal 26px air above/below (flags · gap · rule · gap · LABEL ·
+  gap · rule · gap · pricing); the label-side download button is
+  REMOVED — the back panel's Proceed to Payment downloads the 300dpi
+  TIFF directly (TEMP until the payment phase exists). Browser-verified:
+  rules render, old button gone, pay click downloads
+  back-label-300dpi.tiff.

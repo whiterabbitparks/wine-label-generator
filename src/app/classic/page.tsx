@@ -216,22 +216,44 @@ export default function Configurator() {
               const r = await fetch("/api/back-label", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
               if (!r.ok) throw new Error(`back label failed (${r.status})`);
               const url = URL.createObjectURL(await r.blob());
+              /* layout per owner 2026-09-04: [flags] · gap · black rule ·
+                 gap · LABEL · gap · black rule · gap · [pricing]. The gap
+                 mirrors the flags section's own top spacing. No download
+                 button here — Proceed to Payment IS the download (TEMP,
+                 until the payment phase exists). */
+              (window as unknown as { __BACK_PAYLOAD__?: unknown }).__BACK_PAYLOAD__ = payload;
+              const GAP = 26;
               const box = document.getElementById("backThumbBox") || document.getElementById("backThumbWrap");
               if (box) {
-                box.innerHTML = `<img src="${url}" alt="back label" style="width:100%;display:block;border:1px solid #ccc"/>` +
-                  `<button id="backTiffDl" style="font:inherit;font-size:13px;margin-top:8px;background:#111;color:#fff;border:2px solid #111;padding:7px 14px;cursor:pointer">Download print file (300dpi TIFF)</button>`;
-                document.getElementById("backTiffDl")?.addEventListener("click", async () => {
-                  const tr = await fetch("/api/back-label", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...payload, format: "tiff" }) });
-                  if (!tr.ok) return;
-                  const tu = URL.createObjectURL(await tr.blob());
-                  const a = document.createElement("a"); a.href = tu; a.download = "back-label-300dpi.tiff"; a.click();
-                  setTimeout(() => URL.revokeObjectURL(tu), 1000);
-                });
+                box.innerHTML =
+                  `<div style="height:${GAP}px"></div>` +
+                  `<div style="height:2px;background:#111"></div>` +
+                  `<div style="height:${GAP}px"></div>` +
+                  `<img src="${url}" alt="back label" style="width:100%;display:block;border:1px solid #ccc"/>` +
+                  `<div style="height:${GAP}px"></div>` +
+                  `<div style="height:2px;background:#111"></div>` +
+                  `<div style="height:${GAP}px"></div>`;
               }
               const reveal = document.getElementById("backReveal");
               if (reveal) (reveal as HTMLElement).style.display = "";
             } catch (e) { console.error(e); alert(e instanceof Error ? e.message : String(e)); }
             btn.disabled = false; btn.textContent = oldTxt;
+          });
+        }
+        /* TEMP (owner 2026-09-04): the back panel's Proceed to Payment
+           downloads the 300dpi TIFF directly — the payment phase will sit
+           in between later */
+        const backPay = document.querySelector("#panel-back .pay-btn");
+        if (backPay && !(backPay as HTMLElement & { _wired?: boolean })._wired) {
+          (backPay as HTMLElement & { _wired?: boolean })._wired = true;
+          backPay.addEventListener("click", async () => {
+            const payload = (window as unknown as { __BACK_PAYLOAD__?: Record<string, unknown> }).__BACK_PAYLOAD__;
+            if (!payload) { alert("Generate the back label first."); return; }
+            const tr = await fetch("/api/back-label", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...payload, format: "tiff" }) });
+            if (!tr.ok) { alert("print file failed — try again"); return; }
+            const tu = URL.createObjectURL(await tr.blob());
+            const a = document.createElement("a"); a.href = tu; a.download = "back-label-300dpi.tiff"; a.click();
+            setTimeout(() => URL.revokeObjectURL(tu), 1000);
           });
         }
         gen.wired = true; // e2e tests wait for this before driving the UI
