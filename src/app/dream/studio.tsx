@@ -35,6 +35,83 @@ interface DreamCard {
   downloading?: boolean;
 }
 
+/* BACK LABEL LAB (owner 2026-09-03, TEMP placeholders — remove before
+   launch): every field falls back to a server-side placeholder so testing
+   needs no typing; typed values win. Markets from the site's Export
+   Compliance grid. */
+export function BackLabelCard() {
+  const [f, setF] = useState<Record<string, string>>({});
+  const [markets, setMarkets] = useState<string[]>(["EU", "US"]);
+  const [heightMM, setHeightMM] = useState("73.3");
+  const [preview, setPreview] = useState<string>("");
+  const [busy, setBusy] = useState("");
+  const [err, setErr] = useState("");
+  const MK: [string, string][] = [["EU","EU"],["US","US"],["GB","UK"],["CA","Canada"],["AU","Australia"],["NZ","New Zealand"],["JP","Japan"],["KR","Korea"],["CN","China"],["BR","Brazil"],["MX","Mexico"],["IL","Israel"],["GE","Georgia"]];
+  const FIELDS: [string, string][] = [
+    ["description", "Wine description (placeholder if empty)"],
+    ["producer", "Producer company"],
+    ["importer", "Importer (name, address)"],
+    ["bottlingDate", "Bottling date"],
+    ["lot", "LOT number"],
+    ["web", "Web page / e-label URL"],
+    ["barcodeDigits", "Barcode digits (random if empty)"],
+    ["energyKcal", "Energy kcal / 100ml"],
+  ];
+  const payload = (format: string) => ({ data: f, markets, heightMM: Number(heightMM) || 73.3, format });
+  async function gen() {
+    setBusy("preview"); setErr("");
+    try {
+      const r = await fetch("/api/back-label", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload("png")) });
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `failed (${r.status})`);
+      setPreview(URL.createObjectURL(await r.blob()));
+    } catch (e) { setErr(e instanceof Error ? e.message : String(e)); }
+    setBusy("");
+  }
+  async function tiff() {
+    setBusy("tiff"); setErr("");
+    try {
+      const r = await fetch("/api/back-label", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload("tiff")) });
+      if (!r.ok) throw new Error(`TIFF failed (${r.status})`);
+      const url = URL.createObjectURL(await r.blob());
+      const a = document.createElement("a"); a.href = url; a.download = "back-label-300dpi.tiff"; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) { setErr(e instanceof Error ? e.message : String(e)); }
+    setBusy("");
+  }
+  return (
+    <div style={S.card}>
+      <b style={{ fontSize: 13 }}>Back label</b>
+      <span style={{ fontSize: 11.5, color: "#8a887e", marginLeft: 8 }}>
+        deterministic typography · same height as front, width follows content · min 6pt · barcode+QR ≥15mm · TEMP placeholders fill empty fields
+      </span>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginTop: 8 }}>
+        {FIELDS.map(([k, ph]) => (
+          <input key={k} style={{ ...S.input, fontSize: 12 }} placeholder={ph} value={f[k] || ""}
+            onChange={(e) => setF((m) => ({ ...m, [k]: e.target.value }))} />
+        ))}
+        <input style={{ ...S.input, fontSize: 12 }} placeholder="Height mm (front height)" value={heightMM} onChange={(e) => setHeightMM(e.target.value)} />
+      </div>
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+        {MK.map(([code, label]) => (
+          <button key={code} onClick={() => setMarkets((ms) => ms.includes(code) ? ms.filter((x) => x !== code) : [...ms, code])}
+            style={{ font: "inherit", fontSize: 11.5, padding: "3px 10px", borderRadius: 12, cursor: "pointer", border: "1px solid #5a6b3b", background: markets.includes(code) ? "#5a6b3b" : "transparent", color: markets.includes(code) ? "#fff" : "#5a6b3b" }}>
+            {label}
+          </button>
+        ))}
+      </div>
+      <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 10 }}>
+        <button style={S.btn} disabled={!!busy} onClick={gen}>{busy === "preview" ? "Composing…" : "Generate back label"}</button>
+        <button style={S.btnGhost} disabled={!!busy || !preview} onClick={tiff}>{busy === "tiff" ? "Preparing…" : "Download 300dpi TIFF"}</button>
+      </div>
+      {err && <p style={{ color: "#a03030", fontSize: 12 }}>{err}</p>}
+      {preview && (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img src={preview} alt="back label" style={{ maxWidth: "100%", border: `2px solid ${INK}`, marginTop: 10, background: "#fff" }} />
+      )}
+    </div>
+  );
+}
+
 export function StudioCore() {
   const [vision, setVision] = useState("An old man in a wool cap plays the panduri under a fig tree, a rooster pecking at his feet");
   const [wine, setWine] = useState("Saperavi Reserve");
@@ -145,6 +222,7 @@ export function StudioCore() {
           {err && <p style={{ color: "#a03030", fontSize: 13 }}>{err}</p>}
         </div>
 
+        <BackLabelCard />
         {cards.map((c) => (
           <div key={c.id} style={S.card}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 260px", gap: 14 }}>

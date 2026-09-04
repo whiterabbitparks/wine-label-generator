@@ -1524,3 +1524,21 @@ composition-contract tightening, then customer wiring.
   charters regenerated layout-only (cards preserved); UI labels updated.
   Image Play's default story = the panduri test prompt. NEXT UP (owner):
   build the BACK label.
+- BACK LABEL v1 (owner 2026-09-03): deterministic vector typography — no
+  AI. src/lib/back-label.ts + /api/back-label (json|png|tiff 300dpi,
+  pixel-exact) + BackLabelCard in Dream Studio. Same height as front;
+  width grows by 45mm columns as content/markets demand (EU-only ≈
+  102mm). Laws: nothing under 6pt (verified structurally), 2.6mm block
+  air, EAN-13 (valid checksum, random GS1-Georgia 482 prefix when blank)
+  + QR e-label both 15mm. TEMP placeholders fill every empty field
+  (REMOVE BEFORE LAUNCH, like DEMO_FILL). COMPLIANCE per the site's 13
+  markets — CONFIDENCE: HIGH = US (statutory Government Warning text,
+  CONTAINS SULFITES, importer, origin) and EU (Contains sulphites +
+  energy E kJ/kcal per 100ml on-label, ingredients/nutrition via QR
+  e-label per Reg 2021/2117, L-lot). MEDIUM = UK, Canada (bilingual),
+  AU/NZ (pregnancy warning TEXT + standard drinks — the mandatory
+  PICTOGRAM artwork is a placeholder note), Mexico. LOW (best-guess
+  wording, needs legal check) = Japan, Korea, China, Brazil, Israel,
+  Georgia domestic. NOT implemented: per-country recycling marks,
+  deposit marks, strip stamps. Shell's own Back Label tab (panel-back)
+  not yet wired to this API — wire after the owner approves the layout.
