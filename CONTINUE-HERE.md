@@ -1542,3 +1542,19 @@ composition-contract tightening, then customer wiring.
   Georgia domestic. NOT implemented: per-country recycling marks,
   deposit marks, strip stamps. Shell's own Back Label tab (panel-back)
   not yet wired to this API — wire after the owner approves the layout.
+- BACK LABEL v2 — TEMPLATE-EXACT (owner PDF 2026-09-03): the owner's
+  WAIN/Back_Label_Template.pdf (80×80mm, Avenir Next Condensed) is now
+  the layout, parsed with PyMuPDF and encoded 1:1 in
+  src/lib/back-label.ts: name 12pt / description+columns 8pt / all else
+  7pt, ALL CAPS, importer|producer two-column zone, PRODUCT OF + web
+  row, BOTTLED/LOT/ALC line, statutory US warning zone, bottom band =
+  CONTAINS SULFITES + QR 19.2mm ("SEE INGREDIENTS:") + EAN-13
+  31.7×14.4mm with digits. Font: Google's ARCHIVO NARROW (closest
+  condensed match), three weights installed to ~/Library/Fonts —
+  verified loaded by sharp's fontconfig empirically; DEPLOY NOTE: any
+  server rendering back labels needs these TTFs installed. Whole face
+  scales with front height (template native 80mm; studio default now
+  80). Markets beyond US extend width in extra 80mm panels at the same
+  7pt; the base face never changes. Barcode+QR identical every time
+  (positions/sizes fixed) per owner's rule. Pure code — no AI anywhere
+  in the back label.

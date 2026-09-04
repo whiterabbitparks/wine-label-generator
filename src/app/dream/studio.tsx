@@ -42,7 +42,7 @@ interface DreamCard {
 export function BackLabelCard() {
   const [f, setF] = useState<Record<string, string>>({});
   const [markets, setMarkets] = useState<string[]>(["EU", "US"]);
-  const [heightMM, setHeightMM] = useState("73.3");
+  const [heightMM, setHeightMM] = useState("80");
   const [preview, setPreview] = useState<string>("");
   const [busy, setBusy] = useState("");
   const [err, setErr] = useState("");
