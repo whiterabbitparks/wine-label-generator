@@ -225,14 +225,20 @@ export default function Configurator() {
               const GAP = 26;
               const box = document.getElementById("backThumbBox") || document.getElementById("backThumbWrap");
               if (box) {
+                /* the shell styles this box as FLEX — stacked spacers were
+                   collapsing to zero-width items (owner: "no space, no
+                   lines"); force block layout with one wrapper */
+                (box as HTMLElement).style.display = "block";
                 box.innerHTML =
+                  `<div style="display:block;width:100%">` +
                   `<div style="height:${GAP}px"></div>` +
-                  `<div style="height:2px;background:#111"></div>` +
+                  `<div style="height:2px;background:#111;width:100%"></div>` +
                   `<div style="height:${GAP}px"></div>` +
                   `<img src="${url}" alt="back label" style="width:100%;display:block;border:1px solid #ccc"/>` +
                   `<div style="height:${GAP}px"></div>` +
-                  `<div style="height:2px;background:#111"></div>` +
-                  `<div style="height:${GAP}px"></div>`;
+                  `<div style="height:2px;background:#111;width:100%"></div>` +
+                  `<div style="height:${GAP}px"></div>` +
+                  `</div>`;
               }
               const reveal = document.getElementById("backReveal");
               if (reveal) (reveal as HTMLElement).style.display = "";

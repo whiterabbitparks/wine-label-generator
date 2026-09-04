@@ -1605,3 +1605,8 @@ composition-contract tightening, then customer wiring.
   TIFF directly (TEMP until the payment phase exists). Browser-verified:
   rules render, old button gone, pay click downloads
   back-label-300dpi.tiff.
+- BACK PANEL SPACING FIX (owner 2026-09-04): the shell styles
+  backThumbBox as FLEX — the injected spacers/rules collapsed to
+  zero-width flex items ("no space, no lines"). Forced block display +
+  one block wrapper; browser-verified: both 2px rules render full-width
+  with exactly 26px air above and below the label.
