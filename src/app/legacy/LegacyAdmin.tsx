@@ -531,7 +531,7 @@ interface FeedbackRow {
 
 function PlaygroundTab() {
   const [style, setStyle] = useState<string>("traditional");
-  const [story, setStory] = useState("");
+  const [story, setStory] = useState("An old man in a wool cap plays the panduri under a fig tree, a rooster pecking at his feet");
   const [count, setCount] = useState(4);
   const [provider, setProvider] = useState<string>("openai");
   const [busy, setBusy] = useState(false);

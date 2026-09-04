@@ -1513,3 +1513,14 @@ composition-contract tightening, then customer wiring.
   labelled lab-only A/B choices. ⚠ CROSS-BRANCH: the old vector branches
   expect IMAGE_PROVIDER=hybrid — restore it in .env.local when switching
   back to POPIKA_ALTERNATIVE_ENGINE or older.
+- CLEAN SEPARATION: DREAM = LAYOUT, IMAGE REFS = STYLE (owner 2026-09-03):
+  the dream charter no longer speaks about typography character,
+  illustration technique or mood — it is a LAYOUT DOCTRINE only
+  (hierarchy, alignment, type-scale contrast, density/whitespace,
+  illustration placement + the Grounds line); illustration style is
+  governed exclusively by the Image Refs boards / Image Play feedback.
+  Engine prompt renamed accordingly ("House LAYOUT doctrine … the
+  illustration's artistic style is governed separately"). All four
+  charters regenerated layout-only (cards preserved); UI labels updated.
+  Image Play's default story = the panduri test prompt. NEXT UP (owner):
+  build the BACK label.

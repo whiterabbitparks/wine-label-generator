@@ -98,18 +98,16 @@ export async function POST(req: Request) {
             role: "system",
             content:
               "You are a graphic design analyst. You receive examples of packaging label design. " +
-              "Describe their SHARED VISUAL DESIGN LANGUAGE as a compact style guide (max 140 words): " +
-              "typography character, colour and mood, illustration technique, level of ornament. " +
-              "Name what makes THIS board DIFFERENT from a generic wine label — avoid stock words like " +
-              "'elegant' or 'sophisticated' unless they are genuinely the board's edge. " +
+              "Describe their SHARED LAYOUT DOCTRINE as a compact guide (max 120 words): information " +
+              "hierarchy habits, alignment doctrines (centred stacks / left columns / asymmetry), " +
+              "type-SCALE contrasts (name huge vs details small — scale only, never typeface style), " +
+              "density and whitespace philosophy, where illustrations tend to sit and how much room they get. " +
               "ALWAYS include one line 'Grounds:' listing the actual background colours seen across these " +
               "references, stated plainly (e.g. 'Grounds: chalk white, vivid tomato red, deep bottle green') — " +
               "never assume cream or beige unless the references truly show it. " +
-              "Do NOT describe layout or composition — that is captured separately per example. " +
-              "STRICTLY FORBIDDEN: naming anything depicted — no objects, people, animals, body parts, " +
-              "buildings or scenery. Style is HOW it is made, never WHAT is shown; a design in this " +
-              "style must be able to depict any subject. " +
-              "Phrase it as positive guidance for creating new, original designs in a similar spirit. " +
+              "STRICTLY FORBIDDEN: the illustration's artistic technique, medium, rendering style, mood or " +
+              "imagery — illustration style is captured separately from the image reference boards; " +
+              "also no depicted subjects, and no per-example layout schemes (those are captured per card). " +
               "Do not reference the specific products, names or texts shown.",
           },
           { role: "user", content: [{ type: "text", text: "The design examples:" }, ...images] },

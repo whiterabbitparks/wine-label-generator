@@ -154,7 +154,7 @@ function DreamRefsCard() {
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
         <b style={{ fontSize: 13 }}>Dream references</b>
         <span style={{ fontSize: 11.5, color: "#8a887e" }}>
-          whole-label designs you admire, per style — analyzed into a charter that steers that style&rsquo;s dreams (images never go to the model)
+          whole-label designs you admire, per style — analyzed into LAYOUT cards + a layout charter (composition, hierarchy, grounds); illustration STYLE comes only from Image Refs (images never go to the model)
         </span>
       </div>
       <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 10, flexWrap: "wrap" }}>
@@ -204,7 +204,7 @@ function DreamRefsCard() {
           <p style={{ fontSize: 11, color: "#a06a2c", margin: "4px 0 8px" }}>
             ⚠ &ldquo;Analyze board&rdquo; regenerates these from the images and OVERWRITES your edits — re-analyze only after changing the reference images.
           </p>
-          <label style={{ ...S.label, marginTop: 4 }}>Charter (style spirit + Grounds)</label>
+          <label style={{ ...S.label, marginTop: 4 }}>Layout charter (composition doctrine + Grounds — illustration style lives in Image Refs)</label>
           <textarea style={{ ...S.input, minHeight: 90, fontSize: 12 }} value={charters[style] || ""}
             onChange={(e) => setCharters((m) => ({ ...m, [style]: e.target.value }))} />
           <p style={{ fontSize: 11, color: "#8a887e", margin: "4px 0 0" }}>

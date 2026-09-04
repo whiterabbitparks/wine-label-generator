@@ -120,7 +120,7 @@ export async function runDreamPhase(p: DreamParams): Promise<{ dream: string; pr
       // board and charter; "free" dreams run uncharted.
       if (style !== "free") {
         const ch = (await db.collection("settings").findOne({ _id: `dream-charter-${style}` } as never)) as { text?: string } | null;
-        if (ch?.text) guidance += ` House design spirit for this style (learned from the art director's reference labels): ${ch.text}`;
+        if (ch?.text) guidance += ` House LAYOUT doctrine for this style (learned from the art director's reference labels — hierarchy, alignment, density, grounds; the illustration's artistic style is governed separately below): ${ch.text}`;
         const cd = (await db.collection("settings").findOne({ _id: `dream-cards-${style}` } as never)) as { cards?: { key: string; arrangement: string }[] } | null;
         const card = dealCompositionCard(style, cd?.cards || []);
         if (card) {
