@@ -24,6 +24,9 @@ export interface BackLabelData {
   energyKcal?: string;
   barcodeDigits?: string;
   qrUrl?: string;
+  /** uploaded artwork (data URLs) replaces the generated codes */
+  barcodeImage?: string;
+  qrImage?: string;
 }
 
 const PT = 0.3528;
@@ -159,6 +162,8 @@ export async function composeBackLabel(
     energyKcal: raw.energyKcal || "81",
     barcodeDigits: raw.barcodeDigits || "",
     qrUrl: raw.qrUrl || "",
+    barcodeImage: raw.barcodeImage || "",
+    qrImage: raw.qrImage || "",
   };
   const BASE = 80;                       // template face, mm
   const s = opts.heightMM / BASE;        // whole face scales with front height
@@ -167,38 +172,60 @@ export async function composeBackLabel(
     `<text x="${(x * s).toFixed(2)}" y="${(y * s).toFixed(2)}" font-size="${(size * s).toFixed(2)}" font-weight="${weight}" text-anchor="${anchor}" font-family="${FAM}">${esc(text)}</text>`;
 
   let body = "";
-  /* — template face (coordinates straight from the PDF) — */
-  body += T(4, 6.2, S12, up(d.wine), 500);
-  let y = 9.3;
-  for (const ln of wrap(up(d.description), S8, 72)) { body += T(4, y + 2.5, S8, ln, 500); y += 3.4; }
-  /* two columns: importer left, producer right */
-  const colL = 4.2, colR = 42.5, colW = 34;
-  body += T(colL, 26.3, S8, "IMPORTED BY (US):");
-  body += T(colR, 26.3, S8, "PRODUCER:");
-  let yl = 29.7;
-  for (const ln of wrap(up(d.importer), S8, colW).slice(0, 3)) { body += T(colL, yl, S8, ln); yl += 3.4; }
-  let yr = 29.7;
-  for (const ln of wrap(up(d.producer), S8, colW).slice(0, 3)) { body += T(colR, yr, S8, ln); yr += 3.4; }
-  body += T(colL, 38.6, S7, `PRODUCT OF ${up(d.countryOfOrigin)}.`);
-  body += T(colR, 38.6, S7, up(d.web));
-  body += T(4, 44.0, S7, `BOTTLED: ${d.bottlingDate}   /   LOT: L${d.lot}   /   ${d.alcohol}% ALC./VOL. ${d.volume} ML`);
-  /* US Government Warning zone (statutory text, template position) */
-  let yw = 48.7;
+  /* — template face v3: coordinates measured from the owner's JPEG
+     (WAIN/Back_Label_Template.jpg, 2270px = 80mm): five 0.2mm section
+     rules; QR 15mm at x22.4; EAN-13 with standard digit layout (leading
+     digit outside the bars). — */
+  const RULE = (ymm: number) =>
+    `<rect x="${(4.2 * s).toFixed(2)}" y="${(ymm * s).toFixed(2)}" width="${(71.4 * s).toFixed(2)}" height="${(0.2 * s).toFixed(2)}" fill="#000"/>`;
+  body += T(4.2, 6.7, S12, up(d.wine), 500);
+  body += RULE(8.4);
+  let y = 12.0;
+  for (const ln of wrap(up(d.description), S8, 71).slice(0, 4)) { body += T(4.2, y, S8, ln, 500); y += 3.4; }
+  body += RULE(23.5);
+  const colL = 4.3, colR = 42.6, colW = 33;
+  body += T(colL, 27.3, S8, "IMPORTED BY (US):");
+  body += T(colR, 27.3, S8, "PRODUCER:");
+  let yl = 30.7;
+  for (const ln of wrap(up(d.importer), S8, colW).slice(0, 2)) { body += T(colL, yl, S8, ln); yl += 3.35; }
+  let yr = 30.7;
+  for (const ln of wrap(up(d.producer), S8, colW).slice(0, 2)) { body += T(colR, yr, S8, ln); yr += 3.35; }
+  body += RULE(35.9);
+  body += T(colL, 39.3, S7, `PRODUCT OF ${up(d.countryOfOrigin)}.`);
+  body += T(colR, 39.3, S7, up(d.web));
+  body += RULE(41.2);
+  body += T(4.2, 44.7, S7, `BOTTLED: ${d.bottlingDate}   /   LOT: L${d.lot}   /   ${d.alcohol}% ALC./VOL. ${d.volume} ML`);
+  body += RULE(46.3);
+  let yw = 49.6;
   const WARN = "GOVERNMENT WARNING: (1) ACCORDING TO THE SURGEON GENERAL, WOMEN SHOULD NOT DRINK ALCOHOLIC BEVERAGES DURING PREGNANCY BECAUSE OF THE RISK OF BIRTH DEFECTS. (2) CONSUMPTION OF ALCOHOLIC BEVERAGES IMPAIRS YOUR ABILITY TO DRIVE A CAR OR OPERATE MACHINERY, AND MAY CAUSE HEALTH PROBLEMS.";
-  for (const ln of wrap(WARN, S7, 72)) { body += T(4, yw, S7, ln); yw += 2.95; }
-  /* bottom band: CONTAINS SULFITES · QR + SEE INGREDIENTS · barcode */
-  body += T(4, 62.6, S7, "CONTAINS");
-  body += T(4, 65.5, S7, "SULFITES");
-  const qrSize = 19.2 * s;
-  const qrPng = await QRCode.toDataURL(d.qrUrl || d.web, { margin: 1, width: 300 });
-  body += `<image x="${(20.4 * s).toFixed(2)}" y="${(59.4 * s).toFixed(2)}" width="${qrSize.toFixed(2)}" height="${qrSize.toFixed(2)}" href="${qrPng}"/>`;
-  body += T(4, 75.6, S7, "SEE INGREDIENTS:");
+  for (const ln of wrap(WARN, S7, 71).slice(0, 4)) { body += T(4.2, yw, S7, ln); yw += 2.9; }
+  /* bottom band (all y from the JPEG) */
+  body += T(4.1, 63.2, S7, "CONTAINS");
+  body += T(4.1, 66.1, S7, "SULFITES");
+  body += T(4.1, 76.2, S7, "SEE INGREDIENTS:");
+  const qrX = 22.4, qrY = 61.4, qrS = 15.0;
+  if (d.qrImage) {
+    body += `<image x="${(qrX * s).toFixed(2)}" y="${(qrY * s).toFixed(2)}" width="${(qrS * s).toFixed(2)}" height="${(qrS * s).toFixed(2)}" href="${d.qrImage}"/>`;
+  } else {
+    const qrPng = await QRCode.toDataURL(d.qrUrl || d.web, { margin: 1, width: 300 });
+    body += `<image x="${(qrX * s).toFixed(2)}" y="${(qrY * s).toFixed(2)}" width="${(qrS * s).toFixed(2)}" height="${(qrS * s).toFixed(2)}" href="${qrPng}"/>`;
+  }
   const bc = ean13(d.barcodeDigits);
-  const bx = 44.0, bw = 31.7, bh = 14.4, mod = bw / 95;
-  for (let i = 0; i < bc.modules.length; i++)
-    if (bc.modules[i] === "1")
-      body += `<rect x="${((bx + i * mod) * s).toFixed(2)}" y="${(61.5 * s).toFixed(2)}" width="${(mod * s).toFixed(2)}" height="${(bh * s).toFixed(2)}" fill="#000"/>`;
-  body += T(bx + bw / 2, 78.2, S7, bc.digits, 400, "middle");
+  if (d.barcodeImage) {
+    body += `<image x="${(44.2 * s).toFixed(2)}" y="${(61.4 * s).toFixed(2)}" width="${(31.4 * s).toFixed(2)}" height="${(14.9 * s).toFixed(2)}" href="${d.barcodeImage}"/>`;
+  } else {
+    /* standard EAN-13: guards run longer than data bars; digits sit in the
+       guard gaps; the first digit stands left of the start guard */
+    const bx = 44.2, byT = 61.4, mod = 31.4 / 95;
+    const GUARD = new Set([0,1,2,45,46,47,48,49,92,93,94]);
+    const dataH = 12.4, guardH = 13.9;
+    for (let i = 0; i < bc.modules.length; i++)
+      if (bc.modules[i] === "1")
+        body += `<rect x="${((bx + i * mod) * s).toFixed(2)}" y="${(byT * s).toFixed(2)}" width="${(mod * s).toFixed(2)}" height="${((GUARD.has(i) ? guardH : dataH) * s).toFixed(2)}" fill="#000"/>`;
+    body += T(bx - 1.2, 76.2, S7, bc.digits[0], 400, "end");
+    body += T(bx + 3 * mod + (42 * mod) / 2, 76.2, S7, bc.digits.slice(1, 7).split("").join("\u2009"), 400, "middle");
+    body += T(bx + 50 * mod + (42 * mod) / 2, 76.2, S7, bc.digits.slice(7).split("").join("\u2009"), 400, "middle");
+  }
 
   /* extra markets extend width in 80mm panels, same 7pt */
   const extras = extraMarketLines(opts.markets.filter((m) => m !== "US"), d);

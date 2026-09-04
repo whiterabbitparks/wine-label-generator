@@ -1558,3 +1558,18 @@ composition-contract tightening, then customer wiring.
   7pt; the base face never changes. Barcode+QR identical every time
   (positions/sizes fixed) per owner's rule. Pure code — no AI anywhere
   in the back label.
+- BACK LABEL v3 + WEB (owner JPEG 2026-09-04): the owner's JPEG revision
+  (WAIN/Back_Label_Template.jpg) measured programmatically (2270px=80mm)
+  and encoded: FIVE 0.2mm full-width section rules (missing from the PDF
+  parse — the "not accurate"), JPEG-exact row baselines, bottom band =
+  CONTAINS/SULFITES + SEE INGREDIENTS at x4.1, QR 15mm at x22.4, EAN-13
+  at x44.2 with STANDARD digit typography (leading digit outside the
+  start guard, six-digit groups under each half, guards longer than data
+  bars). Uploaded barcode/QR files (panel-back qrFile/barcodeFile)
+  replace generated codes. WEB WIRED: the shell's static Back Label tab
+  now works — backPreviewBtn reads descText + label-row fields (no ids;
+  looked up by row label), markets from the country grid flag order
+  [EU,AU,KR,IL,US,NZ,BR,GE,GB,CN,MX,CA,JP], height from le_hmm; preview
+  renders into backThumbBox + "Download print file (300dpi TIFF)"
+  button. E2E-verified with a real browser click-through. Wiring lives
+  in classic/page.tsx (no shell edit).

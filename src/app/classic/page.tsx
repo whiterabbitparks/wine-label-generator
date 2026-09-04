@@ -160,6 +160,80 @@ export default function Configurator() {
             setTimeout(() => URL.revokeObjectURL(url), 1000);
           } catch (e) { console.error(e); }
         };
+        /* BACK LABEL ON WEB (owner 2026-09-04): the shell's Back Label tab
+           was static HTML — wire it to /api/back-label. Fields are read by
+           their row labels (the shell gives them no ids); markets come from
+           the country grid's flag order; uploaded barcode/QR files replace
+           the generated codes. */
+        const backBtn = document.getElementById("backPreviewBtn");
+        if (backBtn && !(backBtn as HTMLElement & { _wired?: boolean })._wired) {
+          (backBtn as HTMLElement & { _wired?: boolean })._wired = true;
+          const FLAG_CODES = ["EU", "AU", "KR", "IL", "US", "NZ", "BR", "GE", "GB", "CN", "MX", "CA", "JP"];
+          const fieldByLabel = (want: string): string => {
+            const panel = document.getElementById("panel-back");
+            if (!panel) return "";
+            for (const lb of Array.from(panel.querySelectorAll("label, .o-label, .grp-label, span"))) {
+              if ((lb.textContent || "").trim().toLowerCase().startsWith(want)) {
+                const row = lb.closest("div");
+                const inp = row?.querySelector("input, textarea") as HTMLInputElement | null;
+                if (inp && inp.type !== "checkbox" && inp.type !== "file") return inp.value || "";
+              }
+            }
+            return "";
+          };
+          const fileAsDataUrl = (id: string) => new Promise<string>((res) => {
+            const el = document.getElementById(id) as HTMLInputElement | null;
+            const f = el?.files?.[0];
+            if (!f) { res(""); return; }
+            const rd = new FileReader(); rd.onload = () => res(String(rd.result)); rd.onerror = () => res("");
+            rd.readAsDataURL(f);
+          });
+          backBtn.addEventListener("click", async () => {
+            const btn = backBtn as HTMLButtonElement;
+            const oldTxt = btn.textContent; btn.disabled = true; btn.textContent = "Composing…";
+            try {
+              const front = (window as unknown as { EightKImageGen?: { buildBrief?: () => { data?: Record<string, string> } } }).EightKImageGen?.buildBrief?.()?.data || {};
+              const markets: string[] = [];
+              document.querySelectorAll("#countryGrid .country-row").forEach((row, i) => {
+                const cb = row.querySelector("input[type=checkbox]") as HTMLInputElement | null;
+                if (cb ? cb.checked : row.classList.contains("on")) markets.push(FLAG_CODES[i] || "");
+              });
+              const hEl = document.getElementById("le_hmm") as HTMLInputElement | null;
+              const [qrImage, barcodeImage] = await Promise.all([fileAsDataUrl("qrFile"), fileAsDataUrl("barcodeFile")]);
+              const payload = {
+                data: {
+                  wine: front.wine || "", producer: fieldByLabel("producer company"),
+                  description: (document.getElementById("descText") as HTMLTextAreaElement | null)?.value || "",
+                  importer: fieldByLabel("importer"), bottlingDate: fieldByLabel("bottling date"),
+                  lot: fieldByLabel("lot number"), web: fieldByLabel("web page"),
+                  alcohol: front.alcohol || "", volume: front.volume || "",
+                  countryOfOrigin: front.country || "", qrImage, barcodeImage,
+                },
+                markets: markets.filter(Boolean).length ? markets.filter(Boolean) : ["US"],
+                heightMM: Number(hEl?.value) || 80,
+                format: "png",
+              };
+              const r = await fetch("/api/back-label", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+              if (!r.ok) throw new Error(`back label failed (${r.status})`);
+              const url = URL.createObjectURL(await r.blob());
+              const box = document.getElementById("backThumbBox") || document.getElementById("backThumbWrap");
+              if (box) {
+                box.innerHTML = `<img src="${url}" alt="back label" style="width:100%;display:block;border:1px solid #ccc"/>` +
+                  `<button id="backTiffDl" style="font:inherit;font-size:13px;margin-top:8px;background:#111;color:#fff;border:2px solid #111;padding:7px 14px;cursor:pointer">Download print file (300dpi TIFF)</button>`;
+                document.getElementById("backTiffDl")?.addEventListener("click", async () => {
+                  const tr = await fetch("/api/back-label", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...payload, format: "tiff" }) });
+                  if (!tr.ok) return;
+                  const tu = URL.createObjectURL(await tr.blob());
+                  const a = document.createElement("a"); a.href = tu; a.download = "back-label-300dpi.tiff"; a.click();
+                  setTimeout(() => URL.revokeObjectURL(tu), 1000);
+                });
+              }
+              const reveal = document.getElementById("backReveal");
+              if (reveal) (reveal as HTMLElement).style.display = "";
+            } catch (e) { console.error(e); alert(e instanceof Error ? e.message : String(e)); }
+            btn.disabled = false; btn.textContent = oldTxt;
+          });
+        }
         gen.wired = true; // e2e tests wait for this before driving the UI
       })
       .catch((e) => console.error(e));
