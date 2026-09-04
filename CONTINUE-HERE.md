@@ -1505,3 +1505,11 @@ composition-contract tightening, then customer wiring.
   keep their old texts (preservation logic) — to give an EXISTING
   reference the colour-state, hand-edit its card (e.g. prepend "Strictly
   monochrome — black ink only.") or delete+re-upload that reference.
+- IMAGE PLAY PROVIDER SANITY (owner 2026-09-03): "server default" WAS
+  hybrid (GPT→FLUX) — not the web engine at all on this branch. Now
+  .env.local IMAGE_PROVIDER=openai (gpt-image = the actual dream/web
+  engine), the redundant "server default" dropdown entry is removed, and
+  gpt-image is the preselected option; FLUX/hybrid remain as clearly
+  labelled lab-only A/B choices. ⚠ CROSS-BRANCH: the old vector branches
+  expect IMAGE_PROVIDER=hybrid — restore it in .env.local when switching
+  back to POPIKA_ALTERNATIVE_ENGINE or older.

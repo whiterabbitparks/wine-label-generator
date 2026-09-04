@@ -533,7 +533,7 @@ function PlaygroundTab() {
   const [style, setStyle] = useState<string>("traditional");
   const [story, setStory] = useState("");
   const [count, setCount] = useState(4);
-  const [provider, setProvider] = useState<string>("default");
+  const [provider, setProvider] = useState<string>("openai");
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
   const [results, setResults] = useState<PlayResult[]>([]);
@@ -630,10 +630,9 @@ function PlaygroundTab() {
           <div>
             <label style={S.label}>Provider (A/B)</label>
             <select style={S.input} value={provider} onChange={(e) => setProvider(e.target.value)}>
-              <option value="default">server default</option>
-              <option value="openai">gpt-image</option>
-              <option value="flux">FLUX (trained LoRA)</option>
-              <option value="hybrid">GPT→FLUX hybrid (story + craft)</option>
+              <option value="openai">gpt-image (the web engine)</option>
+              <option value="flux">FLUX LoRA — lab only</option>
+              <option value="hybrid">GPT→FLUX hybrid — lab only</option>
             </select>
           </div>
           <button style={S.btn} onClick={generate} disabled={busy}>
