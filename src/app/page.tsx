@@ -70,7 +70,10 @@ export default function NewUI() {
   const dragRef = useRef(false);
 
   useEffect(() => {
-    const fit = () => setScale(Math.min(1, window.innerWidth / W));
+    /* owner 2026-09-05: UI fits the browser width exactly — stretches
+       proportionally when the window is wider than the design; never
+       shrinks below the design's 1440 minimum (scrolls instead). */
+    const fit = () => setScale(Math.max(1, window.innerWidth / W));
     fit(); window.addEventListener("resize", fit);
     return () => window.removeEventListener("resize", fit);
   }, []);
@@ -391,11 +394,12 @@ export default function NewUI() {
   };
 
   return (
-    <main style={{ background: "#fff", minHeight: "100vh", display: "flex", justifyContent: "center", overflow: "hidden" }}>
-      <style>{`@keyframes nuiPulse { 0%,100% { opacity: .15 } 45% { opacity: 1 } }
+    <main style={{ background: "#000", minHeight: "100vh", margin: 0, padding: 0 }}>
+      <style>{`html, body { margin: 0; padding: 0; background: #000; }
+        @keyframes nuiPulse { 0%,100% { opacity: .15 } 45% { opacity: 1 } }
         @keyframes nuiIn { from { transform: translateX(${dir > 0 ? "100%" : "-100%"}) } to { transform: translateX(0) } }
         @keyframes nuiOut { from { transform: translateX(0) } to { transform: translateX(${dir > 0 ? "-100%" : "100%"}) } }`}</style>
-      <div style={{ width: W * scale, height: H * scale, position: "relative" }}>
+      <div style={{ width: W * scale, height: H * scale, position: "relative", margin: "0 auto" }}>
         <div style={{ width: W, height: H, transform: `scale(${scale})`, transformOrigin: "top left", position: "absolute", overflow: "hidden", background: "#fff" }}>
           {prev && (
             <div style={{ position: "absolute", inset: 0, animation: `nuiOut ${SLIDE_MS}ms ${EASE} forwards` }}>
