@@ -1646,3 +1646,19 @@ composition-contract tightening, then customer wiring.
   Neue; licensed woff2 pending owner decision. NEXT: owner visual pass →
   pixel-correction round (overlay coordinates are first-pass; the
   machine-diff harness comes with corrections).
+- NEW UI v2 (owner: "header deformed, arrow not clickable" — root cause:
+  v1 RECREATED chrome in HTML instead of trusting the artboards): the
+  baked chrome IS the interface now — black header/footer bars, white
+  type, progress line, step circles all come from the owner's SVGs;
+  zero HTML recreation. All overlay coordinates re-extracted from the
+  SVGs themselves: nav arrows are in the bottom bar (back 69–103,
+  forward 1337–1371 @y686; welcome start arrow 134–169 bottom-LEFT);
+  front rows baseline 251.3 +30.33/row (inputs x264.9); back rows 247.1
+  +33.1 (values x989.6); compliance columns x347/602/851/1108 rows
+  +52.3 with "Arabic Markets" COVERED by a white patch (removed per
+  owner, baked in art); Select centres 286.6/698/1109.5 @545; bottle
+  option rows x405/645/884 +29.8, finish 1120/1187, shade slider on the
+  BAKED vertical track x1261.1 y358.8–495.4 with preview swatch at
+  1093.7; loader dots under "Designing your label…" (639.9,514).
+  Browser-verified: start arrow, next/back arrows, slides, baked black
+  bar rendering. The bottom progress line lengths are baked per page.
