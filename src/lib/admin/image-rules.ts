@@ -27,7 +27,7 @@ export interface ImageRules {
 }
 
 const DOC_ID = "image-hard-rules";
-const STYLES = ["traditional", "contemporary", "punk", "minimalist"];
+const STYLES = ["traditional", "contemporary", "punk"];
 
 export async function getImageRules(): Promise<ImageRules> {
   try {

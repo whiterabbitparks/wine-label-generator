@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:i="http://ns.adobe.com/AdobeIllustrator/10.0/" version="1.1" viewBox="0 0 1440 822.86">
+  <!-- Generator: Adobe Illustrator 30.3.0, SVG Export Plug-In . SVG Version: 2.1.3 Build 182)  -->
+  <defs>
+    <style>
+      .st0, .st1, .st2, .st3, .st4, .st5 {
+        font-family: HelveticaNeueWorld-75Bold, 'Helvetica Neue World';
+        font-weight: 700;
+      }
+
+      .st1, .st2 {
+        font-size: 19px;
+      }
+
+      .st6, .st7, .st2, .st3, .st5 {
+        isolation: isolate;
+      }
+
+      .st8, .st4 {
+        font-size: 14px;
+      }
+
+      .st9, .st7, .st2, .st5 {
+        fill: #fff;
+      }
+
+      .st9, .st10, .st11, .st12, .st13, .st14 {
+        stroke-miterlimit: 10;
+      }
+
+      .st9, .st11, .st12, .st13, .st14 {
+        stroke: #000;
+      }
+
+      .st7 {
+        font-size: 11px;
+      }
+
+      .st7, .st15 {
+        font-family: HelveticaNeueWorld-55Roman, 'Helvetica Neue World';
+      }
+
+      .st10 {
+        stroke: #231f20;
+      }
+
+      .st10, .st11, .st12, .st14 {
+        fill: none;
+      }
+
+      .st10, .st14 {
+        stroke-width: 3px;
+      }
+
+      .st16, .st3, .st15 {
+        font-size: 15px;
+      }
+
+      .st16, .st17 {
+        font-family: HelveticaNeueWorld-56It, 'Helvetica Neue World';
+        font-style: italic;
+        text-decoration: underline;
+      }
+
+      .st12 {
+        stroke-dasharray: 5;
+        stroke-width: 1px;
+      }
+
+      .st5 {
+        font-size: 13px;
+      }
+    </style>
+  </defs>
+  <rect x="0" width="1440" height="68.57"/>
+  <text class="st5" transform="translate(1055.99 38)"><tspan x="0" y="0">About Us</tspan></text>
+  <text class="st5" transform="translate(1159.99 38)"><tspan x="0" y="0">Gallery</tspan></text>
+  <text class="st5" transform="translate(1253.5 38)"><tspan x="0" y="0">Contact</tspan></text>
+  <text class="st3" transform="translate(137.15 719.99)"><tspan x="0" y="0">Front Label</tspan></text>
+  <text class="st3" transform="translate(487.51 719.99)"><tspan x="0" y="0">Back Label</tspan></text>
+  <text class="st3" transform="translate(850.16 719.99)"><tspan x="0" y="0">Marketing Assets</tspan></text>
+  <text class="st3" transform="translate(1228.23 719.99)"><tspan x="0" y="0">Check out</tspan></text>
+  <rect x="0" y="754.07" width="1440" height="69"/>
+  <text class="st7" transform="translate(138.45 788)"><tspan x="0" y="0">© 8K Labels — a demo interface built from your uploaded mockup</tspan></text>
+  <line class="st11" x1="137.14" y1="685.59" x2="1303.41" y2="685.59"/>
+  <circle class="st13" cx="142.06" cy="685.59" r="4.92"/>
+  <circle class="st9" cx="527.35" cy="685.59" r="4.92"/>
+  <circle class="st9" cx="1297.94" cy="685.59" r="4.92"/>
+  <circle class="st9" cx="912.65" cy="685.59" r="4.92"/>
+  <g>
+    <line class="st14" x1="103.41" y1="685.71" x2="69.14" y2="685.71"/>
+    <polyline class="st14" points="79.66 675.19 69.14 685.71 79.66 696.23"/>
+  </g>
+  <g>
+    <text class="st4" transform="translate(138.05 251.27)"><tspan x="0" y="0">Producer: </tspan><tspan x="0" y="30">Wine Name:</tspan><tspan x="0" y="60">Appellation:</tspan><tspan x="0" y="90">Classification:</tspan><tspan x="0" y="120">Vintage:</tspan><tspan x="0" y="150">Grape Variety: </tspan><tspan x="0" y="180">Region, Country:</tspan><tspan x="0" y="210">Special mention:</tspan><tspan x="0" y="240">Sweetness:</tspan><tspan x="0" y="270">Colour:</tspan><tspan x="0" y="300">Wine Type:</tspan><tspan x="0" y="330">Alcohol:</tspan><tspan x="0" y="360">Volume:</tspan></text>
+    <text class="st16" transform="translate(264.86 251.27)"><tspan x="0" y="0" xml:space="preserve"> E.G. GRAND VIN                                         </tspan><tspan x="0" y="30" xml:space="preserve"> E.g. Château Margaux                                 </tspan><tspan x="0" y="60" xml:space="preserve"> E.g. Margaux AOC                                       </tspan><tspan x="0" y="90" xml:space="preserve"> E.g. Grand Cru Classé                                 </tspan><tspan x="0" y="120" xml:space="preserve"> E.g. 2018                                                     </tspan><tspan x="0" y="150" xml:space="preserve"> E.g. Cabernet Sauvignon                             </tspan><tspan x="0" y="180" xml:space="preserve"> E.g. Bordeaux, France                                 </tspan><tspan x="0" y="210" xml:space="preserve"> E.g. Vieilles Vignes                                       </tspan><tspan x="0" y="240" xml:space="preserve"> Dry, etc.                                                       </tspan><tspan x="0" y="270" xml:space="preserve"> E.g. Red, White etc.                                     </tspan><tspan x="0" y="300" xml:space="preserve"> E.g Wine, Sparkling Wine, etc.                     </tspan><tspan x="0" y="330" xml:space="preserve"> E.g. 12.5%                                                    </tspan><tspan x="0" y="360" xml:space="preserve"> E.g. 750 mL                                                  </tspan></text>
+  </g>
+  <line class="st12" x1="1302.47" y1="617.14" x2="685.71" y2="617.14"/>
+  <text class="st15" transform="translate(136.97 183.62)"><tspan x="0" y="0">If you have a specific idea for the front label, describe it in simple words </tspan><tspan x="0" y="18">or upload a sketch or photo reference. Or, let us suggest ideas for you.</tspan></text>
+  <g class="st6">
+    <text class="st1" transform="translate(137.15 149.08)"><tspan x="0" y="0">FRONT LABEL</tspan></text>
+  </g>
+  <g>
+    <rect class="st11" x="814.43" y="172.29" width="488.42" height="377.11"/>
+    <line class="st11" x1="1302.86" y1="172.29" x2="814.43" y2="549.41"/>
+    <g>
+      <line class="st14" x1="814.43" y1="532.06" x2="814.43" y2="565.02"/>
+      <line class="st14" x1="830.92" y1="549.41" x2="797.95" y2="549.41"/>
+    </g>
+    <g>
+      <line class="st14" x1="814.43" y1="154.95" x2="814.43" y2="187.91"/>
+      <line class="st14" x1="830.92" y1="172.29" x2="797.95" y2="172.29"/>
+    </g>
+    <g>
+      <line class="st14" x1="1302.86" y1="154.95" x2="1302.86" y2="187.91"/>
+      <line class="st14" x1="1319.34" y1="172.29" x2="1286.38" y2="172.29"/>
+    </g>
+    <g>
+      <line class="st14" x1="1302.86" y1="532.06" x2="1302.86" y2="565.02"/>
+      <line class="st14" x1="1319.34" y1="549.41" x2="1286.38" y2="549.41"/>
+    </g>
+  </g>
+  <g>
+    <line class="st10" x1="1337.13" y1="685.71" x2="1371.43" y2="685.71"/>
+    <polyline class="st10" points="1360.91 696.23 1371.43 685.71 1360.91 675.19"/>
+  </g>
+  <text class="st8" transform="translate(1076.81 601.47)"><tspan class="st0" x="0" y="0">Height: </tspan><tspan class="st17" x="51.59" y="0" xml:space="preserve"> 80cm     </tspan></text>
+  <text class="st2" transform="translate(138.18 40)"><tspan x="0" y="0">8K</tspan></text>
+  <text class="st8" transform="translate(951.3 601.47)"><tspan class="st0" x="0" y="0">Width: </tspan><tspan class="st17" x="46.4" y="0" xml:space="preserve"> 110mm  </tspan></text>
+  
+  
+</svg>

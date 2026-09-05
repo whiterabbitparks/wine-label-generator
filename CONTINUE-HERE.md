@@ -1616,3 +1616,33 @@ composition-contract tightening, then customer wiring.
   while the label is ~460px tall — height/maxHeight/overflow now
   overridden inline so the container grows with content.
   Browser-verified: label bottom 832 < pricing top 904, zero overlap.
+- NEW UI v1 (owner's Illustrator redesign, 2026-09-05): root (/) is now
+  the redesigned wizard; classic stays at /classic (switch links both
+  ways). HANDWRITTEN NOTES were read via macOS Vision framework OCR
+  (osascript JXA — scratchpad ocr.js pattern; pyobjc/swift both broken
+  on this machine). Asset pipeline: owner artboards → public/newui/*.svg
+  with Illustrator pgf/XMP blobs stripped (4-28MB → 2-49KB) and mock
+  raster images removed; their frames recorded in
+  public/newui/frames.json = live-content zones. Architecture: fixed
+  1440×823 canvas scaled as one unit; each page = owner's SVG as base
+  layer + transparent overlays at design coordinates; STATIC header +
+  footer/step-bar as fixed HTML strips covering the artboards' identical
+  strips (pages slide only in the middle band, per notes); slide-left
+  transitions 520ms cubic-bezier(0.33,1,0.68,1). Wired: welcome arrow →
+  vision (story + sketch + Give-me-an-idea from a 20-prompt generic
+  list) → front details (13 field rows + size) → loader (pulsing dots)
+  → options (3 frames, labels anchored TOP-RIGHT per owner, Select
+  inverts white/black, one label per style — no variations yet) → back
+  details (7 rows + description + create/upload toggles) → compliance
+  (13 markets, Arabic removed) → back design (live PNG + Edit→details)
+  → bottle (radio dots, closure shade DRAG slider, bottle photo
+  placeholder awaiting owner images "neck clean") → assets (placeholder
+  hero+thumb SWAP, product shots F/B) → checkout (previews, terms,
+  Proceed→downloads front TIFF + back SVG, TEMP until payment).
+  MINIMALIST MERGED into contemporary (DB: 8 dream refs, 8 cards, 5
+  image refs, 5 variants moved; UI lists back to 3 styles). Back label
+  now downloadable as editable SVG (format=svg). Font: design uses
+  Helvetica Neue World (commercial) — rendering via system Helvetica
+  Neue; licensed woff2 pending owner decision. NEXT: owner visual pass →
+  pixel-correction round (overlay coordinates are first-pass; the
+  machine-diff harness comes with corrections).

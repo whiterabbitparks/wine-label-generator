@@ -63,7 +63,7 @@ export default function Configurator() {
            own renderStyleOptions is patched to return the fitted dream
            replicas, so cards, lightbox and resizing all keep working. */
         interface DreamRes { dream: string; preview?: string | null }
-        const DREAM_STYLE_KEYS = ["traditional", "contemporary", "punk", "minimalist"];
+        const DREAM_STYLE_KEYS = ["traditional", "contemporary", "punk"];
         const STYLE_LABELS: Record<string, string> = { traditional: "Traditional", contemporary: "Contemporary", punk: "Punk", minimalist: "Minimalist" };
         const wrapDream = (key: string, href: string, wMM = 110, hMM = 73.3) => {
           const W = Math.round(wMM * 10), H = Math.round(hMM * 10);
@@ -131,9 +131,6 @@ export default function Configurator() {
                 if (!dr) return entry;
                 return { ...entry, svg: wrapDream(entry.style, dr.preview || dr.dream, wMM, hMM) };
               });
-              /* minimalist has no legacy card — it joins as the fourth */
-              if (sp.minimalist && !mapped.some((e) => e.style === "minimalist"))
-                mapped.push({ style: "minimalist", name: "Minimalist", svg: wrapDream("minimalist", sp.minimalist.preview || sp.minimalist.dream, wMM, hMM) } as (typeof mapped)[number]);
               return mapped;
             };
             eng2.__dreamPatched = true;
@@ -268,9 +265,14 @@ export default function Configurator() {
   }, []);
 
   return (
-    <div
-      suppressHydrationWarning
-      dangerouslySetInnerHTML={{ __html: shellBodyHtml }}
-    />
+    <>
+      <div
+        suppressHydrationWarning
+        dangerouslySetInnerHTML={{ __html: shellBodyHtml }}
+      />
+      <a href="/" style={{ position: "fixed", right: 14, bottom: 14, zIndex: 9999, font: "12px Helvetica, sans-serif", background: "#111", color: "#fff", padding: "7px 12px", textDecoration: "none" }}>
+        new interface →
+      </a>
+    </>
   );
 }

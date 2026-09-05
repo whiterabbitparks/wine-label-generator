@@ -21,6 +21,15 @@ export async function POST(req: Request) {
     const fmt = String(body.format || "json");
     if (fmt === "json")
       return new Response(JSON.stringify(out), { headers: { "Content-Type": "application/json" } });
+    /* editable vector deliverable (owner 2026-09-04) */
+    if (fmt === "svg")
+      return new Response(out.svg, {
+        headers: {
+          "Content-Type": "image/svg+xml",
+          "Content-Disposition": `attachment; filename="back-label.svg"`,
+          "Cache-Control": "no-store",
+        },
+      });
     /* librsvg's mm handling double-scales — render big, then pin the
        EXACT pixel width for true 300dpi */
     const pxW = Math.round((out.widthMM / 25.4) * 300);

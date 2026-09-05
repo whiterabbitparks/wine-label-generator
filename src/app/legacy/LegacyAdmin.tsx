@@ -97,7 +97,7 @@ export default function AdminPage() {
 
 /* ---------- Styles: reference boards per style + derived variety ---------- */
 const STYLE_DEFS = [
-  ["traditional", "Traditional"], ["contemporary", "Contemporary"], ["punk", "Punk"], ["minimalist", "Minimalist"],
+  ["traditional", "Traditional"], ["contemporary", "Contemporary"], ["punk", "Punk"],
 ] as const;
 
 interface RefRow { id: string; style: string; name: string; url: string; bytes: number }
@@ -1734,7 +1734,7 @@ interface ProofCard {
   analysis: ProofAnalysis | null; done?: string;
 }
 const PROOF_FAILS = ["image", "arrangement", "fonts", "colour", "interplay"] as const;
-const PROOF_STYLES = ["traditional", "contemporary", "punk", "minimalist"] as const;
+const PROOF_STYLES = ["traditional", "contemporary", "punk"] as const;
 
 
 /* map the artwork's quiet zones from IMAGE space into LABEL space using the
