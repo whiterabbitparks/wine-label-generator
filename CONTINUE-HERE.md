@@ -1719,3 +1719,29 @@ composition-contract tightening, then customer wiring.
   (killed red artifacts); bottle photo → placeholder (owner will upload
   option images). RING-DETECTION METHOD: rasterize artboards, scan for
   8-point dark ring / light centre — use it for any future circle sync.
+- NEW UI v5 — round 5 (owner's 5 answers + Safari fonts, 2026-09-05):
+  SAFARI FONTS ROOT CAUSE: artboard SVGs were loaded via <img>, which
+  isolates them from page fonts → boards are now INLINED
+  (dangerouslySetInnerHTML) and Helvetica Neue World ships self-hosted
+  as woff2 (public/newui/fonts/HNW-*.woff2) with @font-face aliases for
+  the artboard family names (HelveticaNeueWorld-55Roman/-56It/-75Bold/
+  -45Light + 'Helvetica Neue World'). Word counters moved fully INSIDE
+  their boxes (box outlines no longer interrupted); back arrow shows on
+  Your Vision too; thin progress line ends AT the last circle (1297.9);
+  size frame = 1px line with 3px/33px-arm corner pluses at the DESIGN
+  coordinates (814.43,172.29)-(1302.86,549.41) — frame and pluses grow
+  together in one top-right-anchored animated wrapper; W/H row per
+  design: bold 14 captions at x951.3/1076.81 baseline 601.47, values
+  italic underlined with unit attached; options Select buttons match
+  design truth = SOLID BLACK w/ white 12px Roman "Select", selecting
+  INVERTS to white "Selected"; labels sized by natural image aspect
+  (imgDims probe) — no squeezing; selection dots centred via
+  translate(-50%,-50%) everywhere; slider cursor transparent inside;
+  checkout back-label preview moved to summary SLOT 2 (452,268 patch,
+  contain-fit); barcode/QR uploads show "✓ uploaded" feedback and are
+  wired into the back label; assets hero + thumbs got corner pluses.
+  PIXEL-DIFF AUDIT METHOD: rasterize artboard (sharp density 96,
+  1440×823) vs Playwright screenshot, mask live zones, cluster diff px
+  on a 16px grid — remaining 1-3%/page is librsvg-vs-Chromium text
+  antialiasing + ref font fallback, i.e. noise, verified by exact
+  row/column scans of the structural lines.

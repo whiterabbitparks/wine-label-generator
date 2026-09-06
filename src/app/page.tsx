@@ -117,8 +117,26 @@ export default function NewUI() {
   const [packSel, setPackSel] = useState<boolean[]>([true, true, true, true, false]);
   const [agree, setAgree] = useState(false);
   const [gallery, setGallery] = useState<{ imgs: string[]; i: number } | null>(null);
+  const [imgDims, setImgDims] = useState<Record<number, { w: number; h: number }>>({});
+  useEffect(() => {
+    dreams.forEach((d, i) => {
+      const im = new Image();
+      im.onload = () => setImgDims((m) => ({ ...m, [i]: { w: im.width, h: im.height } }));
+      im.src = d.preview || d.dream;
+    });
+  }, [dreams]);
   const [busyMsg, setBusyMsg] = useState("");
   const dragRef = useRef<"" | "wheel" | "shade">("");
+  const [boards, setBoards] = useState<Record<string, string>>({});
+  useEffect(() => {
+    /* inline the artboards: SVG-in-<img> cannot use page fonts (the
+       owner's Safari font complaint) — inline SVG can */
+    ORDER.forEach((p) => {
+      fetch(`/newui/${p}.svg`).then((r) => r.text()).then((t) =>
+        setBoards((m) => ({ ...m, [p]: t.replace(/<\?xml[^>]*\?>/, "").replace(/<svg /, '<svg preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%" ') }))
+      ).catch(() => {});
+    });
+  }, []);
   const wheelCanvas = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -267,10 +285,11 @@ export default function NewUI() {
   const patch = (x: number, y: number, w: number, h: number, key?: string) => <div key={key} style={{ ...px(x, y, w, h), background: "#fff" }} />;
   /* owner #15: input text matches placeholder style — italic (design st16) */
   const inputStyle: React.CSSProperties = { font: `italic 15px ${HNW}`, textDecoration: "underline", border: "none", outline: "none", background: "#fff", padding: 0, color: "#111", lineHeight: "20px" };
-  const cross = (cx: number, cy: number, key: string) => (
-    <svg key={key} style={{ ...px(cx - 9, cy - 9, 18, 18), pointerEvents: "none" }} viewBox="0 0 18 18">
-      <line x1="9" y1="0.5" x2="9" y2="17.5" stroke="#000" strokeWidth="1" />
-      <line x1="0.5" y1="9" x2="17.5" y2="9" stroke="#000" strokeWidth="1" />
+  const cross = (cx: number, cy: number, key: string, thick = false) => (
+    /* thick arms = 33px, matching the baked st14 pluses (532.06→565.02) */
+    <svg key={key} style={{ ...px(cx - (thick ? 16.5 : 9), cy - (thick ? 16.5 : 9), thick ? 33 : 18, thick ? 33 : 18), pointerEvents: "none" }} viewBox={thick ? "0 0 33 33" : "0 0 18 18"}>
+      <line x1={thick ? 16.5 : 9} y1="0.5" x2={thick ? 16.5 : 9} y2={thick ? 32.5 : 17.5} stroke="#000" strokeWidth={thick ? 3 : 1} />
+      <line x1="0.5" y1={thick ? 16.5 : 9} x2={thick ? 32.5 : 17.5} y2={thick ? 16.5 : 9} stroke="#000" strokeWidth={thick ? 3 : 1} />
     </svg>
   );
   /* centred contain-fit inside an area (owner #12) */
@@ -330,10 +349,10 @@ export default function NewUI() {
           style={{ ...px(122, 662, 60, 48), ...ghost }} />;
       case "vision":
         return (<>
-          {patch(1215, 419, 100, 20, "cnt")}
-          <span style={{ ...px(1221.8, 421, 100, 16), font: `11px ${HNW}`, color: "#111" }}>{vision.trim() ? vision.trim().split(/\s+/).length : 0} / 300 words</span>
+          {patch(1213, 421, 87, 17, "cnt")}
+          <span style={{ ...px(1178, 422, 110, 15), font: `11px ${HNW}`, color: "#111", textAlign: "right" }}>{vision.trim() ? vision.trim().split(/\s+/).length : 0} / 300 words</span>
           <textarea value={vision} onChange={(e) => setVision(e.target.value)} maxLength={2200}
-            style={{ ...px(148, 251, 1144, 168), ...inputStyle, fontStyle: "normal", textDecoration: "none", resize: "none", lineHeight: 1.5, overflow: "auto", background: "transparent" }} />
+            style={{ ...px(148, 246, 1144, 168), ...inputStyle, fontStyle: "normal", textDecoration: "none", resize: "none", lineHeight: 1.5, overflow: "auto", background: "transparent" }} />
           <button title="Give me an idea" onClick={() => setVision(IDEAS[Math.floor(Math.random() * IDEAS.length)])}
             style={{ ...px(960, 480, 342.9, 34.3), ...ghost }} />
           <label style={{ ...px(137.1, 480, 342.9, 34.3), cursor: "pointer" }}>
@@ -345,9 +364,11 @@ export default function NewUI() {
           </label>
         </>);
       case "front": {
-        const area = { right: 1302.86, top: 172.3, w: 488.4, h: 377.1 };
+        /* design truth (front.svg st14 pluses): frame corners at
+           (814.43,172.29)-(1302.86,549.41) */
+        const area = { right: 1302.86, top: 172.29, w: 488.43, h: 377.12 };
         const wmm = Number(f.width) || 110, hmm = Number(f.height) || 80;
-        const k = Math.min(area.w / wmm, area.h / hmm) * 0.92;
+        const k = Math.min(area.w / wmm, area.h / hmm);
         const bw = wmm * k, bh = hmm * k;
         const fx0 = area.right - bw, fy0 = area.top;
         return (<>
@@ -358,25 +379,36 @@ export default function NewUI() {
               onChange={(e) => setF((m) => ({ ...m, [k2]: e.target.value }))}
               style={{ ...px(264.9, 251.3 + i * 30.33 - 16.5, 540, 20), ...inputStyle }} />
           ))}
-          {/* cover the ENTIRE baked size area (rect + diagonal + old pluses + dashed line) */}
-          {patch(806, 164, 505, 460, "szarea")}
+          {/* cover the ENTIRE baked size area (rect + diagonal + pluses whose
+              arms reach x1319.34 / y154.95-565.02 + dashed line y617.1) */}
+          {patch(806, 148, 517, 480, "szarea")}
           {/* the ANIMATED OUTER FRAME (owner #4/#5): 3px black + corner
               pluses, anchored TOP-RIGHT, stretching in diagonally */}
+          {/* frame + pluses grow TOGETHER, anchored on the top-right plus */}
           <div key={`szf-${prev ? "in" : "live"}`} style={{
-            ...px(fx0, fy0, bw, bh), border: "3px solid #111", boxSizing: "border-box",
-            transformOrigin: "top right", transition: `all 380ms ${EASE}`,
-            animation: `szGrow 650ms ${EASE}`,
-          }} />
-          {cross(fx0, fy0, "s1")}{cross(fx0 + bw, fy0, "s2")}{cross(fx0, fy0 + bh, "s3")}{cross(fx0 + bw, fy0 + bh, "s4")}
-          {/* Width/Height row on the Volume baseline (owner #9), captions bold 14 (#6), values regular (#7) */}
-          <span style={{ ...px(951.3, 615.3 - 12, 60, 15), font: `700 14px ${HNW}`, lineHeight: "15px" }}>Width:</span>
+            ...px(fx0 - 16.5, fy0 - 16.5, bw + 33, bh + 33),
+            transformOrigin: `${16.5 + bw}px 16.5px`, transition: `all 380ms ${EASE}`,
+            animation: `szGrow 650ms ${EASE}`, pointerEvents: "none",
+          }}>
+            <div style={{ position: "absolute", left: 16.5, top: 16.5, width: bw, height: bh, border: "1px solid #111", boxSizing: "border-box" }} />
+            {[[0, 0], [bw, 0], [0, bh], [bw, bh]].map(([dx, dy], ci) => (
+              <svg key={ci} style={{ position: "absolute", left: dx, top: dy, width: 33, height: 33 }} viewBox="0 0 33 33">
+                <line x1="16.5" y1="0.5" x2="16.5" y2="32.5" stroke="#000" strokeWidth="3" />
+                <line x1="0.5" y1="16.5" x2="32.5" y2="16.5" stroke="#000" strokeWidth="3" />
+              </svg>
+            ))}
+          </div>
+          {/* Width/Height row — design truth (front.svg): bold 14px captions at
+              x951.3/1076.81 baseline 601.47; values ITALIC UNDERLINED 14px
+              (st17 input-style) at x997.7/1128.4 with the unit attached */}
+          <span style={{ ...px(951.3, 601.47 - 12, 48, 15), font: `700 14px ${HNW}`, lineHeight: "15px" }}>Width:</span>
           <input value={f.width} onChange={(e) => setF((m) => ({ ...m, width: e.target.value.replace(/[^\d.]/g, "") }))}
-            style={{ ...px(1006, 615.3 - 12, 42, 15), font: `14px ${HNW}`, lineHeight: "15px", border: "none", outline: "none", background: "#fff", padding: 0 }} />
-          <span style={{ ...px(1044, 615.3 - 12, 30, 15), font: `14px ${HNW}`, lineHeight: "15px" }}>mm</span>
-          <span style={{ ...px(1096.8, 615.3 - 12, 60, 15), font: `700 14px ${HNW}`, lineHeight: "15px" }}>Height:</span>
+            style={{ ...px(997.7, 601.47 - 12, 32, 16), font: `italic 14px ${HNW}`, textDecoration: "underline", lineHeight: "15px", border: "none", outline: "none", background: "#fff", padding: 0 }} />
+          <span style={{ ...px(1029.7, 601.47 - 12, 28, 16), font: `italic 14px ${HNW}`, textDecoration: "underline", lineHeight: "15px" }}>mm</span>
+          <span style={{ ...px(1076.81, 601.47 - 12, 54, 15), font: `700 14px ${HNW}`, lineHeight: "15px" }}>Height:</span>
           <input value={f.height} onChange={(e) => setF((m) => ({ ...m, height: e.target.value.replace(/[^\d.]/g, "") }))}
-            style={{ ...px(1155, 615.3 - 12, 42, 15), font: `14px ${HNW}`, lineHeight: "15px", border: "none", outline: "none", background: "#fff", padding: 0 }} />
-          <span style={{ ...px(1193, 615.3 - 12, 30, 15), font: `14px ${HNW}`, lineHeight: "15px" }}>mm</span>
+            style={{ ...px(1128.4, 601.47 - 12, 26, 16), font: `italic 14px ${HNW}`, textDecoration: "underline", lineHeight: "15px", border: "none", outline: "none", background: "#fff", padding: 0 }} />
+          <span style={{ ...px(1154.4, 601.47 - 12, 28, 16), font: `italic 14px ${HNW}`, textDecoration: "underline", lineHeight: "15px" }}>mm</span>
         </>);
       }
       case "loader": {
@@ -402,15 +434,16 @@ export default function NewUI() {
         covers.push(patch(135, 546, 1172, 40, "selrow"));
         for (const fx0 of [137.1, 480, 548.5, 891.4, 960, 1302.9])
           for (const fy0 of [240, 468.6]) covers.push(patch(fx0 - 11, fy0 - 11, 22, 22, `c${fx0}-${fy0}`));
-        const CUBE = 34.3, AREA_TOP = 240, AREA_BOT = 540;
+        const CUBE = 34.3, AREA_TOP = 240, AREA_BOT = 528;   /* space below labels (owner) */
         return (<>
           {covers}
           {OPT_FRAMES.map((fr, i) => {
             const d = dreams[i];
             if (!d?.preview && !d?.dream) return null;
-            const ar = (Number(f.width) || 110) / (Number(f.height) || 80);
+            const nat = imgDims[i];
+            const ar = nat ? nat.w / nat.h : (Number(f.width) || 110) / (Number(f.height) || 80);
             let lw: number, lh: number;
-            if (ar >= 1) { lw = OPT_W; lh = OPT_W / ar; }          /* horizontal: full Select width */
+            if (ar >= 1) { lw = OPT_W; lh = OPT_W / ar; if (lh > AREA_BOT - AREA_TOP) { lh = AREA_BOT - AREA_TOP; lw = lh * ar; } }
             else { lh = AREA_BOT - AREA_TOP; lw = lh * ar; if (lw > OPT_W - 2 * CUBE) { lw = OPT_W - 2 * CUBE; lh = lw / ar; } }
             const lx = fr.x + (OPT_W - lw) / 2;
             const ly = AREA_TOP + (ar >= 1 ? 0 : (AREA_BOT - AREA_TOP - lh) / 2);
@@ -428,19 +461,21 @@ export default function NewUI() {
             <button key={"s" + i} onClick={() => setSelected(i)}
               style={{
                 ...px(fr.x + 0.2, 548.6, OPT_W, 34.3), cursor: "pointer",
-                font: `700 15px ${HNW}`, letterSpacing: 0.3, transition: `all 180ms ${EASE}`,
-                background: selected === i ? "#111" : "#fff",
-                color: selected === i ? "#fff" : "#111",
+                /* design truth (options.svg): default button is SOLID BLACK with white
+                   12px 55Roman "Select"; selecting inverts it (owner: "inverted Select→Selected") */
+                font: `12px ${HNW}`, letterSpacing: 0.3, transition: `all 180ms ${EASE}`,
+                background: selected === i ? "#fff" : "#111",
+                color: selected === i ? "#111" : "#fff",
                 border: "1px solid #111", boxSizing: "border-box",
-                display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 2,
+                display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4,
               }}>{selected === i ? "Selected" : "Select"}</button>
           ))}
         </>);
       }
       case "backdetails":
         return (<>
-          {patch(596, 424, 110, 18, "cnt2")}
-          <span style={{ ...px(600.2, 425, 110, 16), font: `11px ${HNW}` }}>{(b.description || "").trim() ? (b.description || "").trim().split(/\s+/).length : 0} / 300 words</span>
+          {patch(560, 421, 122, 17, "cnt2")}
+          <span style={{ ...px(552, 422, 116, 15), font: `11px ${HNW}`, textAlign: "right" }}>{(b.description || "").trim() ? (b.description || "").trim().split(/\s+/).length : 0} / 300 words</span>
           <textarea value={b.description || ""} onChange={(e) => setB((m) => ({ ...m, description: e.target.value }))}
             style={{ ...px(148, 251, 528, 168), ...inputStyle, fontStyle: "normal", textDecoration: "none", fontSize: 14, resize: "none", lineHeight: 1.45, overflow: "auto", background: "transparent" }} />
           {patch(987, 230, 330, 300, "bpcol")}
@@ -456,6 +491,7 @@ export default function NewUI() {
               const file = e.target.files?.[0]; if (!file) return;
               const rd = new FileReader(); rd.onload = () => setBarcodeImg(String(rd.result)); rd.readAsDataURL(file);
             }} />
+            {barcodeImg && <span style={{ position: "absolute", left: 0, top: 38, width: 240, font: `11px ${HNW}`, color: "#3f6d2a", textAlign: "center" }}>✓ barcode uploaded</span>}
           </label>
           <button onClick={() => { setQrImg(""); }} style={{ ...px(754.3, 480, 240.1, 34.3), ...ghost, outline: !qrImg ? "2px solid #111" : "none", outlineOffset: -4 }} />
           <label style={{ ...px(1064, 480, 238.4, 34.3), cursor: "pointer", display: "block", outline: qrImg ? "2px solid #111" : "none", outlineOffset: -4, position: "absolute" }}>
@@ -463,6 +499,7 @@ export default function NewUI() {
               const file = e.target.files?.[0]; if (!file) return;
               const rd = new FileReader(); rd.onload = () => setQrImg(String(rd.result)); rd.readAsDataURL(file);
             }} />
+            {qrImg && <span style={{ position: "absolute", left: 0, top: 38, width: 238, font: `11px ${HNW}`, color: "#3f6d2a", textAlign: "center" }}>✓ QR uploaded</span>}
           </label>
         </>);
       case "compliance": {
@@ -486,7 +523,7 @@ export default function NewUI() {
             return (
               <button key={code} onClick={() => setMarkets((ms) => on ? ms.filter((m) => m !== code) : [...ms, code])}
                 style={{ ...px(cx0 - 14, cy0 - 14, 28, 28), ...ghost }}>
-                {on && <span style={{ position: "absolute", left: 9, top: 9, width: 10, height: 10, borderRadius: 5, background: "#111" }} />}
+                {on && <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 10, height: 10, borderRadius: 5, background: "#111" }} />}
               </button>
             );
           })}
@@ -522,7 +559,7 @@ export default function NewUI() {
             return (
               <button key={String(key) + opt} onClick={() => setBottle((m) => ({ ...m, [key]: opt }))}
                 style={{ ...px(Number(cx0) - 12, ROWS_Y[i] - 12, 24, 24), ...ghost }}>
-                {on && <span style={{ position: "absolute", left: 8, top: 8, width: 8, height: 8, borderRadius: 4, background: "#111" }} />}
+                {on && <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 8, height: 8, borderRadius: 4, background: "#111" }} />}
               </button>
             );
           }))}
@@ -531,7 +568,7 @@ export default function NewUI() {
             return (
               <button key={opt} onClick={() => setBottle((m) => ({ ...m, finish: opt }))}
                 style={{ ...px(cx0 - 12, cy0 - 12, 24, 24), ...ghost }}>
-                {on && <span style={{ position: "absolute", left: 8, top: 8, width: 8, height: 8, borderRadius: 4, background: "#111" }} />}
+                {on && <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 8, height: 8, borderRadius: 4, background: "#111" }} />}
               </button>
             );
           })}
@@ -560,12 +597,12 @@ export default function NewUI() {
               setShade(Math.min(1, Math.max(0, (e.clientY - r.top - 8.8 * scale) / (r.height - 17.6 * scale))));
             }}
             onPointerUp={() => { dragRef.current = ""; }}>
-            <span style={{ position: "absolute", left: 16.1 - 7.6, top: 8.8 + shade * 136.6 - 7.6, width: 15.2, height: 15.2, borderRadius: 8, background: "#fff", border: "1.5px solid #111", boxSizing: "border-box" }} />
+            <span style={{ position: "absolute", left: 16.1 - 7.6, top: 8.8 + shade * 136.6 - 7.6, width: 15.2, height: 15.2, borderRadius: 8, background: "transparent", border: "1.5px solid #111", boxSizing: "border-box" }} />
           </div>
           {/* result colour bar (baked rect 1097.1,532.6,171.4×18.3) */}
           <div style={{ ...px(1095.6, 531.1, 174.4, 21.3), background: shadeRgb(), border: "1px solid #111", boxSizing: "border-box" }} />
           {/* bottle placeholder (owner #18 — option images come later) */}
-          <div style={{ ...px(137.1, 172, 205.7, 411.4), background: "#F4F3EE", display: "flex", alignItems: "center", justifyContent: "center", font: `12px ${HNW}`, color: "#999", textAlign: "center" }}>
+          <div style={{ ...px(137.1, 172, 205.7, 411.4), background: "#F4F3EE", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", font: `12px ${HNW}`, color: "#999", textAlign: "center", lineHeight: 1.6 }}>
             [ bottle<br />{bottle.type}<br />{bottle.color} · {bottle.closure} ]
           </div>
         </>);
@@ -581,6 +618,8 @@ export default function NewUI() {
         );
         return (<>
           <div style={{ ...px(548.6, 171.9, 338.6, 338.6) }}>{ph(order[0], 338.6, 338.6, 14)}</div>
+          {cross(548.6, 171.9, "ah1")}{cross(887.2, 171.9, "ah2")}{cross(548.6, 510.5, "ah3")}{cross(887.2, 510.5, "ah4")}
+          {cross(994.3, 171.5, "at1")}{cross(1303.7, 171.5, "at2")}{cross(994.3, 515.3, "at3")}{cross(1303.7, 515.3, "at4")}
           {thumbs.map((t, k) => (
             <button key={k} onClick={() => setHeroAsset(order[k + 1])} style={{ ...px(t.x, t.y, 137.9, 137.9), ...ghost }}>
               {ph(order[k + 1], 137.9, 137.9)}
@@ -598,25 +637,27 @@ export default function NewUI() {
             <img src={dreams[selected].preview || dreams[selected].dream} alt="front" onClick={() => setGallery({ imgs: [dreams[selected].preview || dreams[selected].dream], i: 0 })}
               style={{ ...px(171, 279.3, 245.8, 163.8), objectFit: "contain", cursor: "zoom-in" }} />
           )}
-          {backPng && (
-            /* eslint-disable-next-line @next/next/no-img-element */
+          {backPng && (<>
+            {/* slot 2 of the summary row — cover the baked mock text, contain-fit the real back label */}
+            {patch(452, 268, 256, 180, "bmock2")}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={backPng} alt="back" onClick={() => setGallery({ imgs: [backPng], i: 0 })}
-              style={{ ...px(1108.6, 283.6, 177.4, 88.7), objectFit: "contain", cursor: "zoom-in" }} />
-          )}
+              style={{ ...px(458, 274, 244, 168), objectFit: "contain", cursor: "zoom-in" }} />
+          </>)}
           {/* pack selection dots (owner #24) + live total */}
           {PACK.map((it, i) => {
             const CY = [529, 563.5, 597.5, 632, 666.5];   /* pixel-detected */
             return (
             <button key={it.name} onClick={() => setPackSel((ps) => ps.map((v, k) => (k === i ? !v : v)))}
               style={{ ...px(143.5 - 14, CY[i] - 14, 28, 28), ...ghost }}>
-              {packSel[i] && <span style={{ position: "absolute", left: 9, top: 9, width: 10, height: 10, borderRadius: 5, background: "#111" }} />}
+              {packSel[i] && <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 10, height: 10, borderRadius: 5, background: "#111" }} />}
             </button>
           ); })}
           {patch(985, 684, 100, 24, "tot")}
           <span style={{ ...px(850.2, 686, 240, 20), font: `700 19px ${HNW}` }}>TOTAL SUM: ${total}</span>
           {/* agree: circle like the others (owner #24) */}
           <button onClick={() => setAgree(!agree)} style={{ ...px(143.5 - 14, 701 - 14, 28, 28), ...ghost }}>
-            {agree && <span style={{ position: "absolute", left: 9, top: 9, width: 10, height: 10, borderRadius: 5, background: "#111" }} />}
+            {agree && <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 10, height: 10, borderRadius: 5, background: "#111" }} />}
           </button>
           <button aria-label="pay" onClick={proceedToPayment} style={{ ...px(1090, 682, 250, 46), ...ghost }} />
           <button aria-label="back" onClick={goBack} style={{ ...px(56, 664, 60, 44), ...ghost }} />
@@ -635,10 +676,16 @@ export default function NewUI() {
   return (
     <main style={{ background: "#000", minHeight: "100vh", margin: 0, padding: 0 }}>
       <style>{`html, body { margin: 0; padding: 0; background: #000; }
-        @font-face { font-family: 'HNW'; src: url('/newui/fonts/HNW-55Roman.ttf'); font-weight: 400; font-style: normal; }
-        @font-face { font-family: 'HNW'; src: url('/newui/fonts/HNW-56It.ttf'); font-weight: 400; font-style: italic; }
-        @font-face { font-family: 'HNW'; src: url('/newui/fonts/HNW-75Bold.ttf'); font-weight: 700; font-style: normal; }
-        @font-face { font-family: 'HNW'; src: url('/newui/fonts/HNW-45Lt.ttf'); font-weight: 300; font-style: normal; }
+        @font-face { font-family: 'HNW'; src: url('/newui/fonts/HNW-55Roman.woff2') format('woff2'), url('/newui/fonts/HNW-55Roman.ttf'); font-weight: 400; font-style: normal; font-display: block; }
+        @font-face { font-family: 'HNW'; src: url('/newui/fonts/HNW-56It.woff2') format('woff2'), url('/newui/fonts/HNW-56It.ttf'); font-weight: 400; font-style: italic; font-display: block; }
+        @font-face { font-family: 'HNW'; src: url('/newui/fonts/HNW-75Bold.woff2') format('woff2'), url('/newui/fonts/HNW-75Bold.ttf'); font-weight: 700; font-style: normal; font-display: block; }
+        @font-face { font-family: 'HNW'; src: url('/newui/fonts/HNW-45Lt.woff2') format('woff2'), url('/newui/fonts/HNW-45Lt.ttf'); font-weight: 300; font-style: normal; font-display: block; }
+        @font-face { font-family: 'HelveticaNeueWorld-55Roman'; src: url('/newui/fonts/HNW-55Roman.woff2') format('woff2'); font-display: block; }
+        @font-face { font-family: 'HelveticaNeueWorld-56It'; src: url('/newui/fonts/HNW-56It.woff2') format('woff2'); font-display: block; }
+        @font-face { font-family: 'HelveticaNeueWorld-75Bold'; src: url('/newui/fonts/HNW-75Bold.woff2') format('woff2'); font-display: block; }
+        @font-face { font-family: 'HelveticaNeueWorld-45Light'; src: url('/newui/fonts/HNW-45Lt.woff2') format('woff2'); font-display: block; }
+        @font-face { font-family: 'Helvetica Neue World'; src: url('/newui/fonts/HNW-55Roman.woff2') format('woff2'); font-weight: 400; font-display: block; }
+        @font-face { font-family: 'Helvetica Neue World'; src: url('/newui/fonts/HNW-75Bold.woff2') format('woff2'); font-weight: 700; font-display: block; }
         input::placeholder, textarea::placeholder { color: #111; opacity: 1; font-style: italic; }
         @keyframes nuiIn { from { transform: translateX(${dir > 0 ? "100%" : "-100%"}) } to { transform: translateX(0) } }
         @keyframes nuiOut { from { transform: translateX(0) } to { transform: translateX(${dir > 0 ? "-100%" : "100%"}) } }
@@ -653,13 +700,13 @@ export default function NewUI() {
           <div style={{ position: "absolute", left: 0, top: fullSlide ? 0 : BAND_TOP, width: W, height: (fullSlide ? H : bandBottom - BAND_TOP), overflow: "hidden" }}>
             {prev && (
               <div style={{ position: "absolute", inset: 0, animation: `${fade ? "nuiFadeOut" : "nuiOut"} ${fade ? 300 : SLIDE_MS}ms ${EASE} forwards` }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`/newui/${prev}.svg`} alt="" style={{ position: "absolute", left: 0, top: fullSlide ? 0 : -BAND_TOP, width: W, height: H }} />
+                <div style={{ position: "absolute", left: 0, top: fullSlide ? 0 : -BAND_TOP, width: W, height: H }}
+                  dangerouslySetInnerHTML={{ __html: boards[prev] || "" }} />
               </div>
             )}
             <div style={{ position: "absolute", inset: 0, animation: prev ? `${fade ? "nuiFadeIn" : "nuiIn"} ${fade ? 300 : SLIDE_MS}ms ${EASE}` : "none" }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={`/newui/${page}.svg`} alt="" draggable={false} style={{ position: "absolute", left: 0, top: fullSlide ? 0 : -BAND_TOP, width: W, height: H, userSelect: "none" }} />
+              <div style={{ position: "absolute", left: 0, top: fullSlide ? 0 : -BAND_TOP, width: W, height: H, userSelect: "none" }}
+                dangerouslySetInnerHTML={{ __html: boards[page] || "" }} />
             </div>
           </div>
 
@@ -679,7 +726,7 @@ export default function NewUI() {
           {/* STATIC progress bar (hidden on welcome & checkout) */}
           {thick !== null && (
             <div style={{ ...px(0, 660, W, FOOTER_Y - 660), background: "#fff" }}>
-              <div style={{ ...px(137.14, 685.09 - 660, 1166.3, 1), background: "#111" }} />
+              <div style={{ ...px(137.14, 685.09 - 660, 1297.9 - 137.14, 1), background: "#111" }} />
               <div style={{ ...px(142.06, 684.09 - 660, thick - 142.06, 3), background: "#111", transition: `width ${SLIDE_MS}ms ${EASE}` }} />
               {CIRCLE_X.map((cx0, i) => (
                 <span key={i} style={{ ...px(cx0 - 4.9, 685.59 - 4.9 - 660, 9.8, 9.8), borderRadius: 5, border: "1px solid #111", background: step >= i ? "#111" : "#fff", transition: `background 300ms ${EASE}`, boxSizing: "border-box" }} />
@@ -688,7 +735,7 @@ export default function NewUI() {
                 <span key={t} style={{ ...px(x0, 708.5 - 660, 260, 18), font: `700 15px ${HNW}`, color: "#111", lineHeight: "15px" }}>{t}</span>
               ))}
               {/* back arrow */}
-              {page !== "vision" && (
+              {(
                 <button aria-label="back" onClick={goBack} style={{ ...px(56, 666 - 660, 60, 40), ...ghost }}>
                   <svg viewBox="0 0 60 40" width="60" height="40"><line x1="47" y1="20" x2="13" y2="20" stroke="#000" strokeWidth="3" /><polyline points="23,9.5 12.5,20 23,30.5" fill="none" stroke="#000" strokeWidth="3" /></svg>
                 </button>
