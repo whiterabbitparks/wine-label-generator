@@ -250,6 +250,25 @@ export async function generateImageWithRetry(job: GenerationJob): Promise<string
   }
 }
 
+/* Same retry, NO artwork finishing — marketing photos must keep their real
+   gradients, transparency and colours (ink discipline / white edges are
+   label-artwork treatments and would destroy a photograph). */
+export async function generateImageRawWithRetry(job: GenerationJob): Promise<string> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await generateImage(job);
+    } catch (e) {
+      const kind = transientKind(e);
+      if (!kind || attempt >= RETRIES) throw e;
+      const msg = e instanceof Error ? e.message : String(e);
+      const hinted = msg.match(/try again in (\d+(?:\.\d+)?)s/i);
+      const waitMs =
+        kind === "rate" ? (hinted ? Math.ceil(parseFloat(hinted[1]) * 1000) + 1000 : 15000) : 3000;
+      await new Promise((res) => setTimeout(res, waitMs));
+    }
+  }
+}
+
 /* SCREEN-PRINT KEYING (owner 2026-08-19): convert the finished white-ground
    PNG into an ink-density alpha PNG — "unmultiply". Alpha = ink coverage
    (255 − min channel); colour is re-derived so that compositing the pixel

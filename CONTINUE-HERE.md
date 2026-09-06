@@ -1911,3 +1911,43 @@ composition-contract tightening, then customer wiring.
   16.5 so the 1px inside-drawn border's centreline lands exactly on the
   pluses' 16.5 axis (left pluses looked off the line); bottle photo got
   its four corner pluses drawn ON TOP (the JPEG covered the baked ones).
+- MARKETING ASSETS ENGINE (owner 2026-09-06) — next stage after UI
+  approval. src/lib/marketing/engine.ts + POST /api/marketing-assets
+  (NDJSON stream, in-memory cache by brief signature incl. label-pixel
+  hashes): 2 STUDIO PRODUCT SHOTS (front + back, straight-on, whole
+  bottle, TRANSPARENT-alpha cutout — verified live: corner alpha 0,
+  composites cleanly on any ground) + 5 LIFESTYLE images (square).
+  The customer's own label PNGs travel to the model as image inputs
+  (sketch precedent — customer-owned art; board references still never
+  do). Provider extended: GenerationJob.references[] / transparent /
+  quality; openai.ts sends background=transparent + image[] inputs;
+  generateImageRawWithRetry = retry WITHOUT finishArtwork (ink
+  discipline would destroy photos). PROMPT PHYSICS: BOTTLE_SPECS
+  (Bordeaux 30cm/7.6 anchor, Prestige 31.5, Burgundy 29.5, Sparkling
+  32, Alsace 35, Ice Wine 32/5.5 slim), liquidLine() = wine colour ×
+  glass colour matrix (red in olive glass → near-black with green
+  glints; amber wine darkens lighter; etc.), closureLine() = closure
+  type + picked closure colour (wheel shadeRgb) + matte/glossy ("No
+  cap" = bare cork, no capsule), scaleLine() = exact label mm vs
+  bottle cm with % of height (verified: label scale correct in live
+  test). LIFESTYLE: 8 scenario deck (sommelier/pour/grapes/cellar/
+  table/terrace/hand/crate), seeded deal of 5; STYLE_WORLD entourage
+  per style (traditional classic / contemporary minimal / punk raw);
+  optional per-style MARKETING CHARTER from the new admin Marketing
+  tab (upload reference photos per style → Analyze → photo-world
+  charter via vision; refs never reach the model; hand edits survive
+  re-analysis) — /api/admin/marketing-refs + marketingRefs collection
+  + data/marketing-refs/. SIZES: model caps at 1024×1536/1024²;
+  IMAGE_QUALITY=prod additionally upscales shots so the bottle's
+  ALPHA BBOX = 2500px tall and lifestyle to 2500² (sharp lanczos,
+  free) — dev skips upscales and uses quality 'low'. WIZARD: entering
+  Marketing Assets auto-generates (sig-cached; sequential ~2-4 min
+  under the 5 img/min cap) with an italic progress note; placeholders
+  fill in as each image lands; hero/thumb swap + gallery work on real
+  images; checkout slots 3-4 show the real shots/hero. Bottle-type
+  photo inset 2px so the baked dashed frame stays visible. COST per
+  full customer pack (labels 3 + shots 2 + lifestyle 5 + free code
+  back label): dev/low ≈ $0.15-0.20, prod/medium ≈ $0.55-0.65, high
+  tier would be ≈ $2.20. Live test 2026-09-06: Bordeaux + olive glass
+  + red saperavi + matte dark-red cork capsule — all physics honoured,
+  label reproduced exactly, cutout clean.

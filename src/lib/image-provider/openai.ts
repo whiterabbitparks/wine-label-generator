@@ -34,17 +34,23 @@ export async function generateOpenAIImage(job: GenerationJob): Promise<string> {
   if (job.negative) prompt += ` Avoid: ${job.negative}.`;
 
   let res: Response;
+  const quality = job.quality || (imageQuality() === "prod" ? "medium" : "low");
   const imageInputs: { blob: Blob; name: string }[] = [];
-  // only the winemaker's own sketch may steer as an image input — the owner's
-  // style-reference boards deliberately never reach the image model (rule
-  // 2026-08-13: image inputs made the model copy their shapes and subjects)
+  // only CUSTOMER-OWNED images may steer as image inputs: the winemaker's
+  // sketch, and (for marketing product shots) their own generated label
+  // artwork. The owner's style-reference boards deliberately never reach
+  // the image model (rule 2026-08-13: image inputs made the model copy
+  // their shapes and subjects).
   if (job.reference) imageInputs.push({ blob: dataUrlToBlob(job.reference), name: "reference.png" });
+  for (let i = 0; i < (job.references?.length || 0); i++)
+    imageInputs.push({ blob: dataUrlToBlob(job.references![i]), name: `input-${i}.png` });
   if (imageInputs.length) {
     const form = new FormData();
     form.append("model", model);
     form.append("prompt", prompt);
     form.append("size", pickSize(job.size));
-    form.append("quality", imageQuality() === "prod" ? "medium" : "low");
+    form.append("quality", quality);
+    if (job.transparent) form.append("background", "transparent");
     for (const inp of imageInputs) form.append("image[]", inp.blob, inp.name);
     res = await fetch(`${API}/images/edits`, {
       method: "POST",
@@ -55,7 +61,7 @@ export async function generateOpenAIImage(job: GenerationJob): Promise<string> {
     res = await fetch(`${API}/images/generations`, {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model, prompt, size: pickSize(job.size), quality: imageQuality() === "prod" ? "medium" : "low" }),
+      body: JSON.stringify({ model, prompt, size: pickSize(job.size), quality, ...(job.transparent ? { background: "transparent" } : {}) }),
     });
   }
 

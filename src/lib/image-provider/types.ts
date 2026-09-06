@@ -18,6 +18,13 @@ export interface GenerationJob {
   /** exact ink colours extracted from the card's reference — the finishing
       pass maps every coloured pixel to the nearest of these (owner rule) */
   paletteLock?: string[];
+  /** extra CUSTOMER-OWNED image inputs (their generated label artwork, for
+      product-shot compositing) — never board references (house rule) */
+  references?: string[];
+  /** request a transparent-background PNG (product-shot cutouts) */
+  transparent?: boolean;
+  /** per-job quality override; otherwise the IMAGE_QUALITY env tier */
+  quality?: "low" | "medium" | "high";
 }
 
 /** Returns an image as a data URL that slots into the label's image area. */

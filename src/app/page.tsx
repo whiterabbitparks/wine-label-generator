@@ -162,6 +162,11 @@ export default function NewUI() {
   const [wheel, setWheel] = useState({ x: 0.5, y: 0.5, rgb: [255, 255, 255] as number[] });
   const [shade, setShade] = useState(0.5);
   const [heroAsset, setHeroAsset] = useState(0);
+  /* marketing assets (round 13): 2 product shots + 5 lifestyle images */
+  const [assets, setAssets] = useState<{ front?: { full: string; prev: string }; back?: { full: string; prev: string }; life: { full: string; prev: string }[] }>({ life: [] });
+  const [assetsSig, setAssetsSig] = useState("");
+  const [assetsStage, setAssetsStage] = useState("");
+  const assetsRunning = useRef(false);
   const [packSel, setPackSel] = useState<boolean[]>([true, true, true, true, false]);
   const [agree, setAgree] = useState(false);
   const [gallery, setGallery] = useState<{ imgs: string[]; i: number } | null>(null);
@@ -189,6 +194,62 @@ export default function NewUI() {
   useEffect(() => {
     if (page === "checkout") setPackSel((ps) => [ps[0], barcodeMode !== "upload", qrMode !== "upload", ps[3], false]);
   }, [page, barcodeMode, qrMode]);
+
+  /* MARKETING ASSETS (round 13): entering the assets page kicks off the
+     generation run (2 product shots + 5 lifestyle) unless the same brief
+     is already generated. Sequential on the server (~5 imgs/min cap). */
+  useEffect(() => {
+    if (page !== "assets" || selected < 0 || !dreams[selected] || assetsRunning.current) return;
+    const sel = dreams[selected];
+    const sig = JSON.stringify({ fs: frontSig, bs: backSig, bottle, rgb: wheel.rgb, shade, sel: sel.style });
+    if (sig === assetsSig) return;
+    assetsRunning.current = true;
+    (async () => {
+      try {
+        setAssets({ life: [] });
+        setAssetsStage("preparing");
+        let backData: string | null = null;
+        if (backPng) {
+          try {
+            const blob = await (await fetch(backPng)).blob();
+            backData = await new Promise<string>((res) => { const rd = new FileReader(); rd.onload = () => res(String(rd.result)); rd.readAsDataURL(blob); });
+          } catch { /* back shot is optional */ }
+        }
+        let seed = 5381; for (let i = 0; i < sig.length; i++) seed = ((seed * 33) ^ sig.charCodeAt(i)) >>> 0;
+        const r = await fetch("/api/marketing-assets", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            front: sel.dream, back: backData,
+            bottle: { type: bottle.type, color: bottle.color, closure: bottle.closure, finish: bottle.finish, closureColour: shadeRgb() },
+            wine: { colour: f.colour || DEMO_FRONT.colour, name: f.wine || DEMO_FRONT.wine },
+            labelMM: { w: Number(f.width) || 110, h: Number(f.height) || 80 },
+            style: sel.style, seed,
+          }),
+        });
+        if (!r.ok || !r.body) throw new Error(`assets failed (${r.status})`);
+        const reader = r.body.getReader(); const dec = new TextDecoder();
+        let buf = "";
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += dec.decode(value, { stream: true });
+          let nl;
+          while ((nl = buf.indexOf("\n")) >= 0) {
+            const line = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1);
+            if (!line) continue;
+            const m = JSON.parse(line);
+            if (m.type === "progress") setAssetsStage(m.stage || "");
+            else if (m.type === "shot") setAssets((a) => ({ ...a, [m.side]: { full: m.image, prev: m.preview || m.image } }));
+            else if (m.type === "life") setAssets((a) => { const life = [...a.life]; life[m.i] = { full: m.image, prev: m.preview || m.image }; return { ...a, life }; });
+          }
+        }
+        setAssetsSig(sig);
+      } catch { /* placeholders remain; revisiting the page retries */ }
+      setAssetsStage("");
+      assetsRunning.current = false;
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
   const [imgDims, setImgDims] = useState<Record<number, { w: number; h: number }>>({});
   useEffect(() => {
     dreams.forEach((d, i) => {
@@ -780,32 +841,47 @@ export default function NewUI() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img key={bottle.type} alt={bottle.type}
             src={`/newui/bottles/${({ "Bordeaux": "bordeaux", "Bordeaux Prestige": "bordeaux-prestige", "Burgundy": "burgundy", "Sparkling": "sparkling", "Alsace / Rhine": "alsace-rhine", "Ice Wine": "ice-wine" } as Record<string, string>)[bottle.type] || "bordeaux"}.jpg`}
-            style={{ ...px(137.1, 172, 205.7, 411.4), objectFit: "cover", animation: inSlide ? "none" : `nuiFadeIn 240ms ${EASE}`, pointerEvents: "none" }} />
+            style={{ ...px(139.2, 174, 201.6, 407.4), objectFit: "cover", animation: inSlide ? "none" : `nuiFadeIn 240ms ${EASE}`, pointerEvents: "none" }} />
           {/* round 12 #3: corner pluses back ON TOP of the photo */}
           {cross(137.14, 172, "bt1")}{cross(342.84, 172, "bt2")}{cross(137.14, 583.41, "bt3")}{cross(342.84, 583.41, "bt4")}
         </>);
       }
       case "assets": {
         const thumbs = [{ x: 994.3, y: 171.5 }, { x: 1165.8, y: 171.5 }, { x: 994.3, y: 376.9 }, { x: 1165.7, y: 377.4 }];
-        const names = ["Context 1", "Context 2", "Context 3", "Context 4", "Context 5"];
-        const order = [heroAsset, ...names.map((_, i) => i).filter((i) => i !== heroAsset)];
-        const ph = (i: number, w2: number, h2: number, fs = 12) => (
-          <div style={{ width: w2, height: h2, background: "#F4F3EE", display: "flex", alignItems: "center", justifyContent: "center", font: `${fs}px ${HNW}`, color: "#999" }}>
-            [ {names[i]} ]
-          </div>
-        );
+        const order = [heroAsset, ...[0, 1, 2, 3, 4].filter((i) => i !== heroAsset)];
+        const lifeGallery = assets.life.filter(Boolean).map((l) => l.full);
+        const shotGallery = [assets.front, assets.back].filter(Boolean).map((s) => s!.full);
+        const pic = (it: { full: string; prev: string } | undefined, w2: number, h2: number, label: string, fs = 12, fit: "cover" | "contain" = "cover", gal?: string[]) =>
+          it ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img src={it.prev} alt={label} onClick={() => { const g = gal?.length ? gal : [it.full]; setGallery({ imgs: g, i: Math.max(0, g.indexOf(it.full)) }); }}
+              style={{ width: w2, height: h2, objectFit: fit, display: "block", cursor: "zoom-in" }} />
+          ) : (
+            <div style={{ width: w2, height: h2, background: "#F4F3EE", display: "flex", alignItems: "center", justifyContent: "center", font: `${fs}px ${HNW}`, color: "#999", textAlign: "center" }}>[ {label} ]</div>
+          );
         return (<>
-          <div style={{ ...px(548.6, 171.9, 338.6, 338.6) }}>{ph(order[0], 338.6, 338.6, 14)}</div>
+          {/* generation progress (round 13) */}
+          {assetsStage && (
+            <span style={{ ...px(548.6, 530, 600, 16), font: `italic 13px ${HNW}`, color: "#555" }}>
+              Creating your marketing assets — {assetsStage}… please stay on the page.
+            </span>
+          )}
+          {page === "assets" && selected < 0 && (
+            <span style={{ ...px(548.6, 530, 600, 16), font: `italic 13px ${HNW}`, color: "#BA141A" }}>
+              Select a front label first — assets are built from it.
+            </span>
+          )}
+          <div style={{ ...px(548.6, 171.9, 338.6, 338.6) }}>{pic(assets.life[order[0]], 338.6, 338.6, `Context ${order[0] + 1}`, 14, "cover", lifeGallery)}</div>
           {cross(548.6, 171.9, "ah1")}{cross(887.2, 171.9, "ah2")}{cross(548.6, 510.5, "ah3")}{cross(887.2, 510.5, "ah4")}
           {cross(994.3, 171.5, "at1")}{cross(1303.7, 171.5, "at2")}{cross(994.3, 515.3, "at3")}{cross(1303.7, 515.3, "at4")}
           {thumbs.map((t, k) => (
             <button key={k} onClick={() => setHeroAsset(order[k + 1])} style={{ ...px(t.x, t.y, 137.9, 137.9), ...ghost }}>
-              {ph(order[k + 1], 137.9, 137.9)}
+              {pic(assets.life[order[k + 1]], 137.9, 137.9, `Context ${order[k + 1] + 1}`, 12, "cover", lifeGallery)}
             </button>
           ))}
           {/* product shots in the CROSS-MARKED area (137.1–411.4 × 171.9–514.8) */}
-          <div style={{ ...px(139, 174, 133, 339), background: "#F4F3EE", display: "flex", alignItems: "center", justifyContent: "center", font: `12px ${HNW}`, color: "#999" }}>[ Shot: Face ]</div>
-          <div style={{ ...px(276.3, 174, 133, 339), background: "#F4F3EE", display: "flex", alignItems: "center", justifyContent: "center", font: `12px ${HNW}`, color: "#999" }}>[ Shot: Back ]</div>
+          <div style={{ ...px(139, 174, 133, 339) }}>{pic(assets.front, 133, 339, "Shot: Face", 12, "contain", shotGallery)}</div>
+          <div style={{ ...px(276.3, 174, 133, 339) }}>{pic(assets.back, 133, 339, "Shot: Back", 12, "contain", shotGallery)}</div>
           {/* round 8 #10: pluses over everything */}
           {cross(137.1, 171.9, "as1")}{cross(411.4, 171.9, "as2")}{cross(137.1, 514.8, "as3")}{cross(411.4, 514.8, "as4")}
         </>);
@@ -837,13 +913,21 @@ export default function NewUI() {
             Tiff / {f.width || "110"}x{f.height || "80"}mm / 300dpi / CMYK</span>
           <span style={{ ...px(445.71, 222.4 - (IN_BASE - 2), 280, 16), font: `13px ${HNW}`, lineHeight: "16px" }}>
             SVG / {backDims.w > 1 ? Math.round((backDims.w / 300) * 25.4) : f.width || "110"}x{f.height || "80"}mm / 300dpi / CMYK</span>
-          {/* round 7 #22 + round 8 #12: placeholder content in slots 3, 4 AND 5 */}
-          {[
-            { x: 696, w: 82, label: "Shot: Face" }, { x: 799, w: 82, label: "Shot: Back" },
-            { x: 906, w: 176, label: "Context 1" }, { x: 1112, w: 176, label: "Landing Page" },
-          ].map((s) => (
-            <div key={s.label} style={{ ...px(s.x, 284, s.w, 150), background: "#F4F3EE", display: "flex", alignItems: "center", justifyContent: "center", font: `10px ${HNW}`, color: "#999", textAlign: "center" }}>[ {s.label} ]</div>
-          ))}
+          {/* slots 3-5: real generated assets when available (round 13),
+              placeholders otherwise */}
+          {([
+            { x: 696, w: 82, label: "Shot: Face", it: assets.front, fit: "contain" },
+            { x: 799, w: 82, label: "Shot: Back", it: assets.back, fit: "contain" },
+            { x: 906, w: 176, label: "Context", it: assets.life[heroAsset], fit: "cover" },
+            { x: 1112, w: 176, label: "Landing Page", it: undefined, fit: "cover" },
+          ] as { x: number; w: number; label: string; it?: { full: string; prev: string }; fit: "cover" | "contain" }[]).map((s) =>
+            s.it ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img key={s.label} src={s.it.prev} alt={s.label} onClick={() => setGallery({ imgs: [s.it!.full], i: 0 })}
+                style={{ ...px(s.x, 284, s.w, 150), objectFit: s.fit, cursor: "zoom-in" }} />
+            ) : (
+              <div key={s.label} style={{ ...px(s.x, 284, s.w, 150), background: "#F4F3EE", display: "flex", alignItems: "center", justifyContent: "center", font: `10px ${HNW}`, color: "#999", textAlign: "center" }}>[ {s.label} ]</div>
+            ))}
           {/* round 8 #11/#15: the whole pricing block re-rendered 20.5px
               higher — no top dashed rule, agree row lands on the back
               arrow's line, ring+dot+text aligned by construction */}

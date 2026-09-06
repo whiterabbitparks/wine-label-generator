@@ -15,7 +15,7 @@ import {
 } from "../legacy/LegacyAdmin";
 import { StudioCore } from "../dream/studio";
 
-const TABS = ["Dream Studio", "Image Refs", "Image Play", "Rules", "Generations", "Users"] as const;
+const TABS = ["Dream Studio", "Image Refs", "Image Play", "Marketing", "Rules", "Generations", "Users"] as const;
 type Tab = (typeof TABS)[number];
 
 /* Rules for the NEW engine: the two fixed laws, plus the verified image
@@ -220,6 +220,113 @@ function DreamRefsCard() {
   );
 }
 
+/* MARKETING REFERENCES (owner 2026-09-06): promotional/lifestyle imagery
+   boards, per style. Analyze distils each board into a MARKETING CHARTER
+   (scene world, light, styling) that rides every lifestyle-image prompt;
+   the reference photos themselves never reach the image model. */
+function MarketingRefsCard() {
+  const [refs, setRefs] = useState<DreamRef[]>([]);
+  const [charters, setCharters] = useState<Record<string, string>>({});
+  const [style, setStyle] = useState<string>("traditional");
+  const [busy, setBusy] = useState("");
+  const [err, setErr] = useState("");
+  const [savedTx, setSavedTx] = useState(false);
+  const load = useCallback(async () => {
+    const r = await fetch("/api/admin/marketing-refs");
+    if (r.ok) { const b = await r.json(); setRefs(b.refs || []); setCharters(b.charters || {}); }
+  }, []);
+  useEffect(() => { load(); }, [load]);
+
+  async function upload(files: FileList | null) {
+    if (!files?.length) return;
+    setBusy("upload"); setErr("");
+    for (const f of Array.from(files)) {
+      const dataUrl = await new Promise<string>((res) => { const rd = new FileReader(); rd.onload = () => res(String(rd.result)); rd.readAsDataURL(f); });
+      const r = await fetch("/api/admin/marketing-refs", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dataUrl, name: f.name, style }),
+      });
+      if (!r.ok) { setErr((await r.json().catch(() => ({}))).error || "upload failed"); break; }
+    }
+    setBusy(""); load();
+  }
+  async function analyze() {
+    setBusy("analyze"); setErr("");
+    const r = await fetch("/api/admin/marketing-refs", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ analyze: true, style }),
+    });
+    if (!r.ok) setErr((await r.json().catch(() => ({}))).error || "analysis failed");
+    setBusy(""); load();
+  }
+  async function saveTexts() {
+    setBusy("save"); setErr("");
+    const r = await fetch("/api/admin/marketing-refs", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ saveTexts: true, style, charter: charters[style] || "" }),
+    });
+    if (!r.ok) setErr((await r.json().catch(() => ({}))).error || "save failed");
+    else { setSavedTx(true); setTimeout(() => setSavedTx(false), 2500); }
+    setBusy("");
+  }
+  const styleRefs = refs.filter((r) => r.style === style);
+  return (
+    <div style={S.card}>
+      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+        <b style={{ fontSize: 13 }}>Marketing references</b>
+        <span style={{ fontSize: 11.5, color: "#8a887e" }}>
+          promotional / lifestyle photographs you admire, per style — analyzed into a photo-world charter (settings, light, styling) that steers the lifestyle images; the photos never go to the model
+        </span>
+      </div>
+      <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 10, flexWrap: "wrap" }}>
+        {DREAM_STYLES.map((st) => (
+          <button key={st} onClick={() => setStyle(st)}
+            style={{ font: "inherit", fontSize: 12, padding: "4px 12px", borderRadius: 12, cursor: "pointer", border: "1px solid #5a6b3b", background: style === st ? "#5a6b3b" : "transparent", color: style === st ? "#fff" : "#5a6b3b" }}>
+            {st} ({refs.filter((r) => r.style === st).length}){charters[st] ? " ✓" : ""}
+          </button>
+        ))}
+        <label style={{ ...S.btnGhost, display: "inline-block", cursor: "pointer", marginLeft: 8 }}>
+          {busy === "upload" ? "Uploading…" : `Upload to ${style}`}
+          <input type="file" accept="image/*" multiple style={{ display: "none" }} onChange={(e) => upload(e.target.files)} />
+        </label>
+        <button style={S.btn} disabled={!styleRefs.length || busy === "analyze"} onClick={analyze}>
+          {busy === "analyze" ? "Analyzing…" : `Analyze ${style} board`}
+        </button>
+      </div>
+      {err && <p style={{ color: "#a33", fontSize: 12 }}>{err}</p>}
+      {styleRefs.length > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 10, marginTop: 10 }}>
+          {styleRefs.map((r, i) => (
+            <div key={r.id} style={{ position: "relative", border: "1px solid #ddd", padding: 6 }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={r.thumb} alt={r.name} title={r.name} style={{ height: 100, maxWidth: "100%", display: "block" }} />
+              <span style={{ position: "absolute", bottom: 4, left: 4, fontSize: 11, background: "#111", color: "#fff", padding: "0 5px", lineHeight: 1.6 }}>{i + 1}</span>
+              <button
+                style={{ position: "absolute", top: 2, right: 2, font: "inherit", fontSize: 10, background: "#fff", border: "1px solid #a33", color: "#a33", cursor: "pointer", lineHeight: 1.4, padding: "0 4px" }}
+                onClick={async () => { await fetch(`/api/admin/marketing-refs?id=${r.id}`, { method: "DELETE" }); load(); }}
+              >×</button>
+            </div>
+          ))}
+        </div>
+      )}
+      {charters[style] && (
+        <div style={{ marginTop: 12, borderTop: "1px dashed #ccc", paddingTop: 10 }}>
+          <b style={{ fontSize: 12.5 }}>Marketing charter — edit freely, it rides every {style} lifestyle image verbatim</b>
+          <p style={{ fontSize: 11, color: "#a06a2c", margin: "4px 0 8px" }}>
+            ⚠ &ldquo;Analyze board&rdquo; regenerates this from the images (your saved edits survive until the next image change).
+          </p>
+          <textarea style={{ ...S.input, minHeight: 90, fontSize: 12 }} value={charters[style] || ""}
+            onChange={(e) => setCharters((m) => ({ ...m, [style]: e.target.value }))} />
+          <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 8 }}>
+            <button style={S.btn} disabled={busy === "save"} onClick={saveTexts}>{busy === "save" ? "Saving…" : "Save charter"}</button>
+            {savedTx && <span style={{ fontSize: 12, color: "#3f6d2a" }}>Saved ✓ — applies to the next asset run</span>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ILLUSTRATION STEERING TEXTS (owner 2026-09-03): the image boards' charter
    and per-reference style cards, hand-editable — they feed the dream's
    illustration-style line verbatim. Analyze overwrites. */
@@ -337,6 +444,7 @@ export default function DreamAdmin() {
           </div>
         )}
         {tab === "Image Refs" && <><IllustrationTextsCard /><StylesTab /></>}
+        {tab === "Marketing" && <MarketingRefsCard />}
         {tab === "Image Play" && <PlaygroundTab />}
         {tab === "Rules" && <RulesTab />}
         {tab === "Generations" && <GenerationsTab />}
