@@ -1745,3 +1745,38 @@ composition-contract tightening, then customer wiring.
   on a 16px grid — remaining 1-3%/page is librsvg-vs-Chromium text
   antialiasing + ref font fallback, i.e. noise, verified by exact
   row/column scans of the structural lines.
+- NEW UI v6 — parallax slides + font/glitch root causes (owner 2026-09-05,
+  "transitions stiff, bold too heavy, something glitches on slide-in"):
+  (1) GLITCH ROOT CAUSE (caught on camera): every Illustrator artboard
+  ships the same global class names (.st0…) and ids (clippath…) whose
+  meanings differ per file — during a slide both boards were inline and
+  fought (front's FRONT LABEL heading rendered WHITE via vision's .st3
+  until the old page unmounted; clip-paths could cross-resolve).
+  namespaceSvg() in page.tsx now prefixes classes AND ids per page at
+  fetch. (2) SECOND GLITCH: overlays used to pop in 180ms AFTER the
+  slide (baked E.g. texts visible mid-slide, then covered). Overlays now
+  ride INSIDE every slide layer (renderOverlay(p, inSlide) — inert
+  ghosts, entry animations suppressed); nothing appears after the slide.
+  Front size-frame keeps its diagonal szGrow entry at settle (hidden
+  while ghosted). TRAP HIT: naming the new param "ghost" shadowed the
+  ghost BUTTON STYLE const → all transparent buttons went native-grey;
+  renamed inSlide. (3) PARALLAX: each slide moves as three vertical
+  bands (STRIP_DELAYS 0/45/90ms, same 520ms speed+easing, fill both) —
+  top lands first. Per-page STRIP_BOUNDS (page-coord y) sit in each
+  artboard's natural gaps so cuts never cross a text row or drawn box
+  (front's 2nd cut = 472, the gap between Special mention and
+  Sweetness — 483 sliced the Sweetness row, caught in a mid-flight
+  screenshot). Strips carry board+overlay (white patches shear
+  invisibly white-on-white). Loader keeps fades. setPrev timeout =
+  SLIDE_MS+90+60. Small covers added for the baked corner-plus tips at
+  x798 (past the szarea patch's left edge). (4) HEAVY BOLD ROOT CAUSE:
+  aliased @font-face families (HelveticaNeueWorld-75Bold/-56It…) had NO
+  weight/style descriptors → faces registered as regular-upright while
+  the artboards request font-weight:700/font-style:italic → Safari
+  paints SYNTHETIC bold over the already-bold file (Chrome matched
+  fine: before/after 0-px diff). All faces now carry font-weight +
+  font-style; 'Helvetica Neue World' fallback family gained 300/italic
+  faces; html gets font-synthesis:none. Real HNW kept — no substitute
+  font. Verified on prod build: mid-slide frames clean, rest-state
+  pixel-identical, npm run build passes (engine untouched — no
+  golden/parity re-run needed).

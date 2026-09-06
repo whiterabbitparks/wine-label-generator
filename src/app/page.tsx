@@ -16,6 +16,10 @@ const HEADER_H = 68.57, FOOTER_Y = 754.07;
 const BAND_TOP = HEADER_H;
 const EASE = "cubic-bezier(0.33, 1, 0.68, 1)";
 const SLIDE_MS = 520;
+/* parallax slide: each page moves as three vertical bands — top lands
+   first, lower bands trail slightly (same speed/easing, staggered start) */
+const STRIP_DELAYS = [0, 45, 90];
+const SLIDE_TOTAL = SLIDE_MS + STRIP_DELAYS[STRIP_DELAYS.length - 1];
 const HNW = "'HNW', 'Helvetica Neue', Helvetica, sans-serif";
 
 const ORDER = ["welcome", "vision", "front", "loader", "options", "backdetails", "compliance", "backdesign", "bottle", "assets", "checkout"] as const;
@@ -33,6 +37,28 @@ const STEP_LABELS: [string, number][] = [["Front Label", 137.2], ["Back Label", 
 
 /* content band bottom per page (checkout content reaches the footer) */
 const BAND_BOTTOM: Record<PageKey, number> = Object.fromEntries(ORDER.map((p) => [p, p === "checkout" || p === "welcome" ? FOOTER_Y : 660])) as Record<PageKey, number>;
+
+/* parallax strip boundaries (page-coordinate y) — each pair sits in that
+   artboard's natural empty bands so the cut never crosses a text row or a
+   drawn box (loader entry fades, so its entry is unused) */
+const STRIP_BOUNDS: Record<PageKey, [number, number]> = {
+  welcome: [360, 560], vision: [225, 460], front: [225, 472], loader: [225, 460],
+  options: [225, 543], backdetails: [225, 468], compliance: [270, 555],
+  backdesign: [165, 540], bottle: [225, 515], assets: [165, 540], checkout: [250, 500],
+};
+
+/* Illustrator exports every board with the same global class names (.st0…)
+   and ids (clippath…) whose meanings DIFFER per file — with two boards
+   inline during a slide they fought each other (white headings, wrong
+   clips mid-transition). Namespace both per page. */
+function namespaceSvg(t: string, key: string) {
+  return t
+    .replace(/\.st(\d+)/g, `.${key}-st$1`)
+    .replace(/class="([^"]*)"/g, (_, cls: string) => `class="${cls.split(/\s+/).map((c) => (/^st\d+$/.test(c) ? `${key}-${c}` : c)).join(" ")}"`)
+    .replace(/id="([^"]*)"/g, (_, id: string) => `id="${key}--${id}"`)
+    .replace(/url\(#([^)]+)\)/g, (_, id: string) => `url(#${key}--${id})`)
+    .replace(/href="#([^"]+)"/g, (_, id: string) => `href="#${key}--${id}"`);
+}
 
 const IDEAS = [
   "An old dog sleeps in the shade of a vine while the harvest happens around him",
@@ -133,7 +159,7 @@ export default function NewUI() {
        owner's Safari font complaint) — inline SVG can */
     ORDER.forEach((p) => {
       fetch(`/newui/${p}.svg`).then((r) => r.text()).then((t) =>
-        setBoards((m) => ({ ...m, [p]: t.replace(/<\?xml[^>]*\?>/, "").replace(/<svg /, '<svg preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%" ') }))
+        setBoards((m) => ({ ...m, [p]: namespaceSvg(t, p).replace(/<\?xml[^>]*\?>/, "").replace(/<svg /, '<svg preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%" ') }))
       ).catch(() => {});
     });
   }, []);
@@ -158,7 +184,7 @@ export default function NewUI() {
 
   const go = useCallback((next: PageKey, d = 1) => {
     setPrev(page); setDir(d); setPage(next);
-    setTimeout(() => setPrev(null), SLIDE_MS + 60);
+    setTimeout(() => setPrev(null), SLIDE_TOTAL + 60);
   }, [page]);
 
   const goBack = useCallback(() => {
@@ -342,7 +368,9 @@ export default function NewUI() {
     return `rgb(${mix(r)}, ${mix(g)}, ${mix(bl)})`;
   };
 
-  const renderOverlay = (p: PageKey) => {
+  /* inSlide = rendered inside a moving slide layer (inert, entry
+     animations suppressed — the slide itself is the entry) */
+  const renderOverlay = (p: PageKey, inSlide = false) => {
     switch (p) {
       case "welcome":
         return <button aria-label="start" onClick={() => { setArrowFly(true); go("vision"); setTimeout(() => setArrowFly(false), SLIDE_MS + 80); }}
@@ -382,10 +410,14 @@ export default function NewUI() {
           {/* cover the ENTIRE baked size area (rect + diagonal + pluses whose
               arms reach x1319.34 / y154.95-565.02 + dashed line y617.1) */}
           {patch(806, 148, 517, 480, "szarea")}
+          {/* left tips of the baked corner pluses reach x798, past the big patch */}
+          {patch(796, 155, 11, 36, "szl1")}
+          {patch(796, 531, 11, 36, "szl2")}
           {/* the ANIMATED OUTER FRAME (owner #4/#5): 3px black + corner
               pluses, anchored TOP-RIGHT, stretching in diagonally */}
-          {/* frame + pluses grow TOGETHER, anchored on the top-right plus */}
-          <div key={`szf-${prev ? "in" : "live"}`} style={{
+          {/* frame + pluses grow TOGETHER, anchored on the top-right plus;
+              hidden while ghosted so the grow plays once the page lands */}
+          {!inSlide && <div key="szf" style={{
             ...px(fx0 - 16.5, fy0 - 16.5, bw + 33, bh + 33),
             transformOrigin: `${16.5 + bw}px 16.5px`, transition: `all 380ms ${EASE}`,
             animation: `szGrow 650ms ${EASE}`, pointerEvents: "none",
@@ -397,7 +429,7 @@ export default function NewUI() {
                 <line x1="0.5" y1="16.5" x2="32.5" y2="16.5" stroke="#000" strokeWidth="3" />
               </svg>
             ))}
-          </div>
+          </div>}
           {/* Width/Height row — design truth (front.svg): bold 14px captions at
               x951.3/1076.81 baseline 601.47; values ITALIC UNDERLINED 14px
               (st17 input-style) at x997.7/1128.4 with the unit attached */}
@@ -675,17 +707,19 @@ export default function NewUI() {
 
   return (
     <main style={{ background: "#000", minHeight: "100vh", margin: 0, padding: 0 }}>
-      <style>{`html, body { margin: 0; padding: 0; background: #000; }
+      <style>{`html, body { margin: 0; padding: 0; background: #000; font-synthesis: none; }
         @font-face { font-family: 'HNW'; src: url('/newui/fonts/HNW-55Roman.woff2') format('woff2'), url('/newui/fonts/HNW-55Roman.ttf'); font-weight: 400; font-style: normal; font-display: block; }
         @font-face { font-family: 'HNW'; src: url('/newui/fonts/HNW-56It.woff2') format('woff2'), url('/newui/fonts/HNW-56It.ttf'); font-weight: 400; font-style: italic; font-display: block; }
         @font-face { font-family: 'HNW'; src: url('/newui/fonts/HNW-75Bold.woff2') format('woff2'), url('/newui/fonts/HNW-75Bold.ttf'); font-weight: 700; font-style: normal; font-display: block; }
         @font-face { font-family: 'HNW'; src: url('/newui/fonts/HNW-45Lt.woff2') format('woff2'), url('/newui/fonts/HNW-45Lt.ttf'); font-weight: 300; font-style: normal; font-display: block; }
-        @font-face { font-family: 'HelveticaNeueWorld-55Roman'; src: url('/newui/fonts/HNW-55Roman.woff2') format('woff2'); font-display: block; }
-        @font-face { font-family: 'HelveticaNeueWorld-56It'; src: url('/newui/fonts/HNW-56It.woff2') format('woff2'); font-display: block; }
-        @font-face { font-family: 'HelveticaNeueWorld-75Bold'; src: url('/newui/fonts/HNW-75Bold.woff2') format('woff2'); font-display: block; }
-        @font-face { font-family: 'HelveticaNeueWorld-45Light'; src: url('/newui/fonts/HNW-45Lt.woff2') format('woff2'); font-display: block; }
-        @font-face { font-family: 'Helvetica Neue World'; src: url('/newui/fonts/HNW-55Roman.woff2') format('woff2'); font-weight: 400; font-display: block; }
-        @font-face { font-family: 'Helvetica Neue World'; src: url('/newui/fonts/HNW-75Bold.woff2') format('woff2'); font-weight: 700; font-display: block; }
+        @font-face { font-family: 'HelveticaNeueWorld-55Roman'; src: url('/newui/fonts/HNW-55Roman.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: block; }
+        @font-face { font-family: 'HelveticaNeueWorld-56It'; src: url('/newui/fonts/HNW-56It.woff2') format('woff2'); font-weight: 400; font-style: italic; font-display: block; }
+        @font-face { font-family: 'HelveticaNeueWorld-75Bold'; src: url('/newui/fonts/HNW-75Bold.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: block; }
+        @font-face { font-family: 'HelveticaNeueWorld-45Light'; src: url('/newui/fonts/HNW-45Lt.woff2') format('woff2'); font-weight: 300; font-style: normal; font-display: block; }
+        @font-face { font-family: 'Helvetica Neue World'; src: url('/newui/fonts/HNW-55Roman.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: block; }
+        @font-face { font-family: 'Helvetica Neue World'; src: url('/newui/fonts/HNW-56It.woff2') format('woff2'); font-weight: 400; font-style: italic; font-display: block; }
+        @font-face { font-family: 'Helvetica Neue World'; src: url('/newui/fonts/HNW-75Bold.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: block; }
+        @font-face { font-family: 'Helvetica Neue World'; src: url('/newui/fonts/HNW-45Lt.woff2') format('woff2'); font-weight: 300; font-style: normal; font-display: block; }
         input::placeholder, textarea::placeholder { color: #111; opacity: 1; font-style: italic; }
         @keyframes nuiIn { from { transform: translateX(${dir > 0 ? "100%" : "-100%"}) } to { transform: translateX(0) } }
         @keyframes nuiOut { from { transform: translateX(0) } to { transform: translateX(${dir > 0 ? "-100%" : "100%"}) } }
@@ -696,24 +730,40 @@ export default function NewUI() {
       <div style={{ width: W * scale, height: H * scale, position: "relative", margin: "0 auto" }}>
         <div style={{ width: W, height: H, transform: `scale(${scale})`, transformOrigin: "top left", position: "absolute", overflow: "hidden", background: "#fff" }}>
 
-          {/* sliding zone: full page on welcome transitions, content band otherwise */}
-          <div style={{ position: "absolute", left: 0, top: fullSlide ? 0 : BAND_TOP, width: W, height: (fullSlide ? H : bandBottom - BAND_TOP), overflow: "hidden" }}>
-            {prev && (
-              <div style={{ position: "absolute", inset: 0, animation: `${fade ? "nuiFadeOut" : "nuiOut"} ${fade ? 300 : SLIDE_MS}ms ${EASE} forwards` }}>
-                <div style={{ position: "absolute", left: 0, top: fullSlide ? 0 : -BAND_TOP, width: W, height: H }}
-                  dangerouslySetInnerHTML={{ __html: boards[prev] || "" }} />
+          {/* sliding zone: every layer carries its board AND its live
+              content, so nothing pops in after the slide; slides move as
+              three vertical bands with a small stagger (parallax) */}
+          {(() => {
+            const zoneH = fullSlide ? H : bandBottom - BAND_TOP;
+            const pageTop = fullSlide ? 0 : -BAND_TOP;
+            const pageSpace = (p: PageKey, inSlide: boolean) => (
+              <>
+                <div style={{ position: "absolute", inset: 0, userSelect: "none" }} dangerouslySetInnerHTML={{ __html: boards[p] || "" }} />
+                {renderOverlay(p, inSlide)}
+              </>
+            );
+            const strips = (p: PageKey, anim: string) => {
+              const cuts = [0, ...STRIP_BOUNDS[p].map((b) => Math.min(zoneH, Math.max(0, Math.round(b + pageTop)))), zoneH];
+              return cuts.slice(0, -1).map((y0, si) => (
+                <div key={`${p}-${si}`} style={{ position: "absolute", left: 0, top: y0, width: W, height: cuts[si + 1] - y0, overflow: "hidden", animation: `${anim} ${SLIDE_MS}ms ${EASE} ${STRIP_DELAYS[si]}ms both`, pointerEvents: "none" }}>
+                  <div style={{ position: "absolute", left: 0, top: pageTop - y0, width: W, height: H }}>{pageSpace(p, true)}</div>
+                </div>
+              ));
+            };
+            const faded = (p: PageKey, anim: string) => (
+              <div key={p} style={{ position: "absolute", inset: 0, animation: `${anim} 300ms ${EASE} both`, pointerEvents: "none" }}>
+                <div style={{ position: "absolute", left: 0, top: pageTop, width: W, height: H }}>{pageSpace(p, true)}</div>
               </div>
-            )}
-            <div style={{ position: "absolute", inset: 0, animation: prev ? `${fade ? "nuiFadeIn" : "nuiIn"} ${fade ? 300 : SLIDE_MS}ms ${EASE}` : "none" }}>
-              <div style={{ position: "absolute", left: 0, top: fullSlide ? 0 : -BAND_TOP, width: W, height: H, userSelect: "none" }}
-                dangerouslySetInnerHTML={{ __html: boards[page] || "" }} />
-            </div>
-          </div>
-
-          {/* interactive overlays appear AFTER the slide (owner #3) */}
-          <div style={{ position: "absolute", inset: 0, opacity: prev ? 0 : 1, transition: prev ? "none" : "opacity 180ms ease-out" }}>
-            {!prev && renderOverlay(page)}
-          </div>
+            );
+            return (
+              <div style={{ position: "absolute", left: 0, top: fullSlide ? 0 : BAND_TOP, width: W, height: zoneH, overflow: "hidden" }}>
+                {prev && (fade ? faded(prev, "nuiFadeOut") : strips(prev, "nuiOut"))}
+                {prev
+                  ? (fade ? faded(page, "nuiFadeIn") : strips(page, "nuiIn"))
+                  : <div style={{ position: "absolute", left: 0, top: pageTop, width: W, height: H }}>{pageSpace(page, false)}</div>}
+              </div>
+            );
+          })()}
 
           {/* STATIC header (real fonts, extracted geometry) */}
           <div style={{ ...px(0, 0, W, HEADER_H), background: "#000" }}>
