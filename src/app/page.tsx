@@ -29,7 +29,9 @@ type PageKey = (typeof ORDER)[number];
 
 /* progress thick-line endpoint per page (extracted; null = no bar) */
 const THICK: Record<PageKey, number | null> = {
-  welcome: null, vision: 334.48, front: 334.48, loader: 522.43, options: 522.43,
+  /* vision: bar visible but thick line not yet started (round 8 #1) —
+     it slides in on the transition to front */
+  welcome: null, vision: 142.06, front: 334.48, loader: 522.43, options: 522.43,
   backdetails: 527.35, compliance: 720.28, backdesign: 907.72, bottle: 912.65,
   assets: 1106.38, checkout: null,
 };
@@ -136,7 +138,7 @@ export default function NewUI() {
   const [genProgress, setGenProgress] = useState(0);
   const [frontSig, setFrontSig] = useState("");
   const [b, setB] = useState<Record<string, string>>({});
-  const [markets, setMarkets] = useState<string[]>(["EU"]);
+  const [markets, setMarkets] = useState<string[]>([]);   /* round 8 #7: none preselected */
   const [barcodeImg, setBarcodeImg] = useState("");
   const [qrImg, setQrImg] = useState("");
   const [backPng, setBackPng] = useState("");
@@ -153,6 +155,29 @@ export default function NewUI() {
   const [gallery, setGallery] = useState<{ imgs: string[]; i: number } | null>(null);
   const [warn, setWarn] = useState("");
   const [backSel, setBackSel] = useState(false);
+  const [barcodeMode, setBarcodeMode] = useState<"" | "create" | "upload">("");
+  const [qrMode, setQrMode] = useState<"" | "create" | "upload">("");
+  /* live font metrics of 'italic 15px HNW' (per-browser; Safari ≠ Chrome) */
+  const [fm, setFm] = useState({ a: 14.28, d: 3.19 });
+  useEffect(() => {
+    const go = () => {
+      try {
+        const c = document.createElement("canvas").getContext("2d");
+        if (!c) return;
+        c.font = "italic 15px HNW";
+        const m = c.measureText("Hg");
+        if (m.fontBoundingBoxAscent) setFm({ a: m.fontBoundingBoxAscent, d: m.fontBoundingBoxDescent });
+      } catch { /* keep defaults */ }
+    };
+    if (document.fonts?.load) document.fonts.load("italic 15px HNW").then(go, go);
+    else go();
+  }, []);
+  /* round 8 #13: entering checkout, Barcode/QR rows follow the back-details
+     choice (uploaded → unchecked, created/unset → checked); designer-edit
+     always starts unmarked */
+  useEffect(() => {
+    if (page === "checkout") setPackSel((ps) => [ps[0], barcodeMode !== "upload", qrMode !== "upload", ps[3], false]);
+  }, [page, barcodeMode, qrMode]);
   const [imgDims, setImgDims] = useState<Record<number, { w: number; h: number }>>({});
   useEffect(() => {
     dreams.forEach((d, i) => {
@@ -321,10 +346,13 @@ export default function NewUI() {
   const patch = (x: number, y: number, w: number, h: number, key?: string) => <div key={key} style={{ ...px(x, y, w, h), background: "#fff" }} />;
   /* owner #15 / round 7 #2: input text italic (design st16); the underline is
      a SEPARATE fixed-length row line, not text-decoration */
-  const inputStyle: React.CSSProperties = { font: `italic 15px ${HNW}`, border: "none", outline: "none", background: "transparent", padding: 0, color: "#111", lineHeight: "20px" };
-  /* baseline offset of a 15px/20px-line input — calibrated so typed text
-     shares the baked labels' exact baseline (round 7 #1) */
-  const IN_BASE = 15.5;
+  const inputStyle: React.CSSProperties = { font: `italic 15px ${HNW}`, border: "none", outline: "none", background: "transparent", padding: "0 0 0 5px", color: "#111", lineHeight: "20px" };
+  /* baseline offset of a 15px/20px-line input, computed from the REAL
+     font metrics at runtime (round 8 #2): Safari and Chrome center line
+     boxes with different ascent/descent values, so a hardcoded offset
+     can never align both — the canvas metrics give each browser's own */
+  const IN_BASE = (20 - (fm.a + fm.d)) / 2 + fm.a;
+  const WH_BASE = (15 - (fm.a + fm.d) * (14 / 15)) / 2 + fm.a * (14 / 15);
   /* fixed-length input rule — 1px black, same weight as the progress line */
   const rowLine = (x: number, y: number, w2: number, key?: string) => (
     <div key={key} style={{ position: "absolute", left: x, top: y, width: w2, height: 1, background: "#111" }} />
@@ -344,7 +372,7 @@ export default function NewUI() {
   };
   const cross = (cx: number, cy: number, key: string, thick = false) => (
     /* thick arms = 33px, matching the baked st14 pluses (532.06→565.02) */
-    <svg key={key} style={{ ...px(cx - (thick ? 16.5 : 9), cy - (thick ? 16.5 : 9), thick ? 33 : 18, thick ? 33 : 18), pointerEvents: "none" }} viewBox={thick ? "0 0 33 33" : "0 0 18 18"}>
+    <svg key={key} style={{ ...px(cx - (thick ? 16.5 : 9), cy - (thick ? 16.5 : 9), thick ? 33 : 18, thick ? 33 : 18), pointerEvents: "none", zIndex: 5 }} viewBox={thick ? "0 0 33 33" : "0 0 18 18"}>
       <line x1={thick ? 16.5 : 9} y1="0.5" x2={thick ? 16.5 : 9} y2={thick ? 32.5 : 17.5} stroke="#000" strokeWidth={thick ? 3 : 1} />
       <line x1="0.5" y1={thick ? 16.5 : 9} x2={thick ? 32.5 : 17.5} y2={thick ? 16.5 : 9} stroke="#000" strokeWidth={thick ? 3 : 1} />
     </svg>
@@ -424,8 +452,9 @@ export default function NewUI() {
         </>);
       case "front": {
         /* size area (round 7 #6): top = Producer's cap line, bottom =
-           Wine Type's baseline; right edge from the design frame */
-        const area = { right: 1302.86, top: 240.6, w: 488.43, h: 313.97 };
+           Wine Type's baseline (design row pitch is 30 — from the SVG
+           tspans; the raster's 30.33 was a rasterizer artifact) */
+        const area = { right: 1302.86, top: 240.6, w: 488.43, h: 310.67 };
         const wmm = Number(f.width) || 110, hmm = Number(f.height) || 80;
         const k = Math.min(area.w / wmm, area.h / hmm);
         const bw = wmm * k, bh = hmm * k;
@@ -438,13 +467,14 @@ export default function NewUI() {
           {/* cover baked E.g. column incl. its underlines */}
           {patch(263, 234, 572, 390, "phcol")}
           {FRONT_ROWS.map((k2, i) => {
-            const base = 251.27 + i * 30.33;
+            const base = 251.27 + i * 30;   /* design pitch 30 (round 8 #2) */
             return (
               <span key={k2}>
                 <input value={f[k2] || ""} placeholder={FRONT_PH[i]}
                   onChange={(e) => setF((m) => ({ ...m, [k2]: e.target.value }))}
-                  style={{ ...px(264.9, base - IN_BASE, 556, 20), ...inputStyle }} />
-                {rowLine(264.9, base + 2.5, 564.1, `ln${i}`)}
+                  style={{ ...px(264.9, base - IN_BASE, 450, 20), ...inputStyle }} />
+                {/* rule ends exactly at the window's horizontal centre (#3) */}
+                {rowLine(264.9, base + 2.5, 720 - 264.9, `ln${i}`)}
               </span>
             );
           })}
@@ -477,16 +507,19 @@ export default function NewUI() {
               </svg>
             ))}
           </div>}
-          {/* Width/Height row on Volume's baseline (round 7 #7); only the
-              NUMBER carries the input underline (#8) */}
-          <span style={{ ...px(951.3, 615.23 - 12.9, 48, 15), font: `700 14px ${HNW}`, lineHeight: "15px" }}>Width:</span>
-          <input value={f.width} onChange={(e) => setF((m) => ({ ...m, width: e.target.value.replace(/[^\d.]/g, "") }))}
-            style={{ ...px(997.7, 615.23 - 12.9, 32, 16), font: `italic 14px ${HNW}`, lineHeight: "15px", border: "none", borderBottom: "1px solid #111", outline: "none", background: "transparent", padding: 0 }} />
-          <span style={{ ...px(1033.7, 615.23 - 12.9, 28, 16), font: `italic 14px ${HNW}`, lineHeight: "15px" }}>mm</span>
-          <span style={{ ...px(1076.81, 615.23 - 12.9, 54, 15), font: `700 14px ${HNW}`, lineHeight: "15px" }}>Height:</span>
-          <input value={f.height} onChange={(e) => setF((m) => ({ ...m, height: e.target.value.replace(/[^\d.]/g, "") }))}
-            style={{ ...px(1128.4, 615.23 - 12.9, 26, 16), font: `italic 14px ${HNW}`, lineHeight: "15px", border: "none", borderBottom: "1px solid #111", outline: "none", background: "transparent", padding: 0 }} />
-          <span style={{ ...px(1158.4, 615.23 - 12.9, 28, 16), font: `italic 14px ${HNW}`, lineHeight: "15px" }}>mm</span>
+          {/* Width/Height row on Volume's baseline 611.27 (round 8 #2/#7);
+              only the NUMBER carries the underline, sized to its digits
+              so no empty underlined tail remains (#4/#8) */}
+          {([["Width:", 951.3, "width", 46.4], ["Height:", 1076.81, "height", 51.6]] as const).map(([cap, cx0, key2, off]) => (
+            <span key={key2}>
+              <span style={{ ...px(cx0, 611.27 - WH_BASE, 52, 15), font: `700 14px ${HNW}`, lineHeight: "15px" }}>{cap}</span>
+              <div style={{ position: "absolute", left: cx0 + off, top: 611.27 - WH_BASE, display: "flex", alignItems: "baseline" }}>
+                <input value={f[key2]} onChange={(e) => setF((m) => ({ ...m, [key2]: e.target.value.replace(/[^\d.]/g, "") }))}
+                  style={{ width: Math.max(1, (f[key2] || "").length) * 8.2 + 4, font: `italic 14px ${HNW}`, lineHeight: "15px", border: "none", borderBottom: "1px solid #111", outline: "none", background: "transparent", padding: 0, textAlign: "center" }} />
+                <span style={{ font: `italic 14px ${HNW}`, lineHeight: "15px", marginLeft: 4 }}>mm</span>
+              </div>
+            </span>
+          ))}
         </>);
       }
       case "loader": {
@@ -569,7 +602,7 @@ export default function NewUI() {
               right margin in the artboard) */}
           {patch(985, 228, 380, 242, "bpcol")}
           {BACK_ROWS.map((k, i) => {
-            const base = 247.11 + i * 33.1;
+            const base = 247.11 + i * 32;   /* design pitch 32 (round 8 #2) */
             return (
               <span key={k}>
                 <input value={b[k] || ""} placeholder={BACK_PH[i]}
@@ -579,9 +612,8 @@ export default function NewUI() {
               </span>
             );
           })}
-          {/* round 7 #13: create/upload toggles rebuilt as real buttons —
-              active mode is BLACK, inactive is white/outlined (same
-              language as Select/Selected); no more outline artifacts */}
+          {/* round 8 #5: all four buttons start WHITE; the clicked mode
+              (create, or upload once a file is picked) stays black */}
           {(() => {
             const modeStyle = (active: boolean): React.CSSProperties => ({
               /* classic theme's global CSS uppercases <label> — undo it */
@@ -591,20 +623,20 @@ export default function NewUI() {
               display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4,
             });
             return (<>
-              <button onClick={() => setBarcodeImg("")} style={{ ...px(138.04, 480, 239.1, 34.3), ...modeStyle(!barcodeImg) }}>Create Barcode</button>
-              <label style={{ ...px(445.71, 480, 240, 34.3), ...modeStyle(!!barcodeImg) }}>
+              <button onClick={() => { setBarcodeImg(""); setBarcodeMode("create"); }} style={{ ...px(138.04, 480, 239.1, 34.3), ...modeStyle(barcodeMode === "create") }}>Create Barcode</button>
+              <label style={{ ...px(445.71, 480, 240, 34.3), ...modeStyle(barcodeMode === "upload") }}>
                 <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
                   const file = e.target.files?.[0]; if (!file) return;
-                  const rd = new FileReader(); rd.onload = () => setBarcodeImg(String(rd.result)); rd.readAsDataURL(file);
+                  const rd = new FileReader(); rd.onload = () => { setBarcodeImg(String(rd.result)); setBarcodeMode("upload"); }; rd.readAsDataURL(file);
                 }} />
                 Upload Barcode
                 {barcodeImg && <span style={{ position: "absolute", left: 0, top: 38, width: 240, font: `11px ${HNW}`, color: "#3f6d2a", textAlign: "center" }}>✓ barcode uploaded</span>}
               </label>
-              <button onClick={() => setQrImg("")} style={{ ...px(754.29, 480, 240.1, 34.3), ...modeStyle(!qrImg) }}>Create QR Code</button>
-              <label style={{ ...px(1063.99, 480, 238.4, 34.3), ...modeStyle(!!qrImg) }}>
+              <button onClick={() => { setQrImg(""); setQrMode("create"); }} style={{ ...px(754.29, 480, 240.1, 34.3), ...modeStyle(qrMode === "create") }}>Create QR Code</button>
+              <label style={{ ...px(1063.99, 480, 238.4, 34.3), ...modeStyle(qrMode === "upload") }}>
                 <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
                   const file = e.target.files?.[0]; if (!file) return;
-                  const rd = new FileReader(); rd.onload = () => setQrImg(String(rd.result)); rd.readAsDataURL(file);
+                  const rd = new FileReader(); rd.onload = () => { setQrImg(String(rd.result)); setQrMode("upload"); }; rd.readAsDataURL(file);
                 }} />
                 Upload QR Code
                 {qrImg && <span style={{ position: "absolute", left: 0, top: 38, width: 238, font: `11px ${HNW}`, color: "#3f6d2a", textAlign: "center" }}>✓ QR uploaded</span>}
@@ -631,7 +663,7 @@ export default function NewUI() {
         return (<>
           {/* Arabic Markets removed — cover the SVG name text + its baked ring */}
           {patch(598, 500, 138, 20, "arab")}
-          <div style={{ ...px(536.4 - 13, 508.3 - 13, 26, 26), background: "#fff", borderRadius: 13 }} />
+          <div style={{ ...px(536.4 - 13, 508.3 - 13, 26, 28), background: "#fff" }} />
           {RC.map(({ code, col, row }) => {
             const on = markets.includes(code);
             const cx0 = RING_X[col], cy0 = ROW_C[row];
@@ -648,6 +680,9 @@ export default function NewUI() {
               </span>
             );
           })}
+          {warn && (
+            <span style={{ ...px(0, 600, W, 18), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block" }}>{warn}</span>
+          )}
         </>);
       }
       case "backdesign": {
@@ -663,7 +698,7 @@ export default function NewUI() {
               style={{ ...px(lx, ly, fit.w, fit.h), cursor: "zoom-in", objectFit: "fill" }} />
             {cross(lx, ly, "b1")}{cross(lx + fit.w, ly, "b2")}{cross(lx, ly + fit.h, "b3")}{cross(lx + fit.w, ly + fit.h, "b4")}
             <button onClick={() => go("backdetails", -1)}
-              style={{ ...px(lx, 548.6, fit.w, 34.3), cursor: "pointer", font: `700 15px ${HNW}`, background: "#111", color: "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 2 }}>Edit</button>
+              style={{ ...px(lx, 548.6, fit.w, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>Edit</button>
             {/* round 7 #18: Select under Edit, same inverted logic as options */}
             <button onClick={() => setBackSel(!backSel)}
               style={{ ...px(lx, 591.5, fit.w, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, transition: `all 180ms ${EASE}`, background: backSel ? "#111" : "#fff", color: backSel ? "#fff" : "#111", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>{backSel ? "Selected" : "Select"}</button>
@@ -686,6 +721,9 @@ export default function NewUI() {
           {finish.map(([opt, cx0, cy0]) =>
             dotBtn(cx0, cy0, bottle.finish === opt, () => setBottle((m) => ({ ...m, finish: opt })), "f" + opt, { coverDot: opt === "Matte" })
           )}
+          {/* round 8 #9: the baked cursor ring's stroke pokes 1px past the
+              capsule on both sides — erase it fully, then repaint the capsule */}
+          <div style={{ ...px(1261.07 - 11, 417.77 - 11, 22, 22), background: "#fff", borderRadius: 11 }} />
           {/* round 7 #21: the design's gradient capsule rebuilt 1:1 in CSS —
               covers the frozen baked cursor without erasing the gradient */}
           <div style={{ ...px(1253.57, 359.19, 15, 136.64), borderRadius: 7.5, background: "linear-gradient(#fff, #000)", pointerEvents: "none" }} />
@@ -739,6 +777,8 @@ export default function NewUI() {
           {/* product shots in the CROSS-MARKED area (137.1–411.4 × 171.9–514.8) */}
           <div style={{ ...px(139, 174, 133, 339), background: "#F4F3EE", display: "flex", alignItems: "center", justifyContent: "center", font: `12px ${HNW}`, color: "#999" }}>[ Shot: Face ]</div>
           <div style={{ ...px(276.3, 174, 133, 339), background: "#F4F3EE", display: "flex", alignItems: "center", justifyContent: "center", font: `12px ${HNW}`, color: "#999" }}>[ Shot: Back ]</div>
+          {/* round 8 #10: pluses over everything */}
+          {cross(137.1, 171.9, "as1")}{cross(411.4, 171.9, "as2")}{cross(137.1, 514.8, "as3")}{cross(411.4, 514.8, "as4")}
         </>);
       }
       case "checkout":
@@ -749,35 +789,56 @@ export default function NewUI() {
               style={{ ...px(171, 279.3, 245.8, 163.8), objectFit: "contain", cursor: "zoom-in" }} />
           )}
           {backPng && (<>
-            {/* slot 2 of the summary row — cover the baked mock text, contain-fit the real back label */}
-            {patch(452, 268, 256, 180, "bmock2")}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={backPng} alt="back" onClick={() => setGallery({ imgs: [backPng], i: 0 })}
-              style={{ ...px(458, 274, 244, 168), objectFit: "contain", cursor: "zoom-in" }} />
+            {/* slot 2 — cover the baked mock WITHOUT touching the dashed
+                divider at x685.7 (round 8 #12), centre the real back label */}
+            {patch(452, 268, 230, 180, "bmock2")}
+            {(() => {
+              const fit2 = fitIn(227, 160, backDims.w, backDims.h);
+              return (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={backPng} alt="back" onClick={() => setGallery({ imgs: [backPng], i: 0 })}
+                  style={{ ...px(452 + fit2.dx, 275 + fit2.dy, fit2.w, fit2.h), objectFit: "fill", cursor: "zoom-in" }} />
+              );
+            })()}
           </>)}
-          {/* round 7 #22: slots 3 (product shots) and 4 (marketing) get their
-              content placeholders (real assets pending owner images) */}
+          {/* round 8 #14: real sizes instead of ???x??? in slots 1+2 */}
+          {patch(137, 208, 208, 20, "fmt1")}
+          {patch(445.7, 208, 208, 20, "fmt2")}
+          <span style={{ ...px(137.14, 222.4 - (IN_BASE - 2), 280, 16), font: `13px ${HNW}`, lineHeight: "16px" }}>
+            Tiff / {f.width || "110"}x{f.height || "80"}mm / 300dpi / CMYK</span>
+          <span style={{ ...px(445.71, 222.4 - (IN_BASE - 2), 280, 16), font: `13px ${HNW}`, lineHeight: "16px" }}>
+            SVG / {backDims.w > 1 ? Math.round((backDims.w / 300) * 25.4) : f.width || "110"}x{f.height || "80"}mm / 300dpi / CMYK</span>
+          {/* round 7 #22 + round 8 #12: placeholder content in slots 3, 4 AND 5 */}
           {[
             { x: 696, w: 82, label: "Shot: Face" }, { x: 799, w: 82, label: "Shot: Back" },
-            { x: 906, w: 176, label: "Context 1" },
+            { x: 906, w: 176, label: "Context 1" }, { x: 1112, w: 176, label: "Landing Page" },
           ].map((s) => (
             <div key={s.label} style={{ ...px(s.x, 284, s.w, 150), background: "#F4F3EE", display: "flex", alignItems: "center", justifyContent: "center", font: `10px ${HNW}`, color: "#999", textAlign: "center" }}>[ {s.label} ]</div>
           ))}
-          {/* round 7 #25: the design's LAST dashed pricing rule is removed */}
-          {patch(136, 684.5, 1168, 3, "dash5")}
-          {/* pack dots at the baked rings' exact centres (checkout.svg paths:
-              cx 144.64, cy = row baseline − 4.93) — round 7 #24 */}
-          {PACK.map((it, i) => {
-            const CY = [531.56, 565.85, 600, 634.42, 668.84];
-            return dotBtn(144.64, CY[i], !!packSel[i], () => setPackSel((ps) => ps.map((v, k) => (k === i ? !v : v))), it.name);
-          })}
-          {/* round 7 #23: cover the baked "TOTAL SUM: $200", render the live
-              total on the design's own baseline */}
-          {patch(848, 694, 172, 22, "tot")}
-          <span style={{ ...px(852.24, 711.83 - 16, 240, 20), font: `700 19px ${HNW}`, lineHeight: "20px" }}>TOTAL SUM: ${total}</span>
-          {/* agree circle, concentric like the others */}
-          {dotBtn(144.64, 706.9, agree, () => setAgree(!agree), "agree")}
-          <button aria-label="pay" onClick={proceedToPayment} style={{ ...px(1090, 682, 250, 46), ...ghost }} />
+          {/* round 8 #11/#15: the whole pricing block re-rendered 20.5px
+              higher — no top dashed rule, agree row lands on the back
+              arrow's line, ring+dot+text aligned by construction */}
+          {patch(130, 503, 1180, 240, "pricing")}
+          {(() => {
+            const SH = 20.5, B = IN_BASE - 2;   /* baseline offset in a 16px line */
+            const rows = [536.49, 570.78, 604.93, 639.35, 673.77].map((y) => y - SH);
+            return (<>
+              {[548.84, 582.86, 617.14, 651.7].map((y, i) => (
+                <div key={"dsh" + i} style={{ ...px(137.14, y - SH, 1302.47 - 137.14, 1), background: "repeating-linear-gradient(90deg, #000 0 5px, transparent 5px 10px)" }} />
+              ))}
+              {PACK.map((it, i) => (
+                <span key={it.name}>
+                  <span style={{ ...px(171.43, rows[i] - B, 500, 16), font: `700 15px ${HNW}`, lineHeight: "16px" }}>{it.name}</span>
+                  <span style={{ ...px(1152.9, rows[i] - B, 150, 16), font: `700 15px ${HNW}`, lineHeight: "16px", textAlign: "right", display: "block" }}>${it.price}</span>
+                  {dotBtn(144.64, rows[i] - 4.93, !!packSel[i], () => setPackSel((ps) => ps.map((v, k) => (k === i ? !v : v))), "pk" + i, { ring: true })}
+                </span>
+              ))}
+              {dotBtn(144.64, 686, agree, () => setAgree(!agree), "agree", { ring: true })}
+              <span style={{ ...px(171.43, 691.3 - B, 400, 16), font: `15px ${HNW}`, lineHeight: "16px" }}>I agree to the <u>Terms &amp; Conditions</u></span>
+              <span style={{ ...px(852.24, 691.3 - B - 3, 240, 20), font: `700 19px ${HNW}`, lineHeight: "20px" }}>TOTAL SUM: ${total}</span>
+              <button onClick={proceedToPayment} style={{ ...px(1032, 669.5, 268, 32), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 2 }}>Proceed to payment</button>
+            </>);
+          })()}
           <button aria-label="back" onClick={goBack} style={{ ...px(56, 664, 60, 44), ...ghost }} />
         </>);
       default:
@@ -806,7 +867,7 @@ export default function NewUI() {
         @font-face { font-family: 'Helvetica Neue World'; src: url('/newui/fonts/HNW-56It.woff2') format('woff2'); font-weight: 400; font-style: italic; font-display: block; }
         @font-face { font-family: 'Helvetica Neue World'; src: url('/newui/fonts/HNW-75Bold.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: block; }
         @font-face { font-family: 'Helvetica Neue World'; src: url('/newui/fonts/HNW-45Lt.woff2') format('woff2'); font-weight: 300; font-style: normal; font-display: block; }
-        input::placeholder, textarea::placeholder { color: #808080; opacity: 1; font-style: italic; }
+        input::placeholder, textarea::placeholder { color: #B3B3B3; opacity: 1; font-style: italic; }
         @keyframes nuiDot { 0% { opacity: 0.15 } 30% { opacity: 1 } 60%, 100% { opacity: 0.15 } }
         @keyframes nuiIn { from { transform: translateX(${dir > 0 ? "100%" : "-100%"}) } to { transform: translateX(0) } }
         @keyframes nuiOut { from { transform: translateX(0) } to { transform: translateX(${dir > 0 ? "-100%" : "100%"}) } }
@@ -888,7 +949,10 @@ export default function NewUI() {
                     else { setWarn("Select a label design to continue"); setTimeout(() => setWarn(""), 3200); }
                   }
                   else if (page === "backdetails") go("compliance");
-                  else if (page === "compliance") nextFromCompliance();
+                  else if (page === "compliance") {
+                    if (markets.length) nextFromCompliance();
+                    else { setWarn("Select at least one market to continue"); setTimeout(() => setWarn(""), 3200); }
+                  }
                   else if (page === "backdesign") go("bottle");
                   else if (page === "bottle") go("assets");
                   else if (page === "assets") go("checkout");

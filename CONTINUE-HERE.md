@@ -1829,3 +1829,39 @@ composition-contract tightening, then customer wiring.
   patch(848,694,172,22) and the live total rendered on the design
   baseline 711.83; the LAST dashed pricing rule (y685.99) covered.
   All verified by ?page= screenshots on the prod build.
+- NEW UI v8 — round 8 (owner 2026-09-06, ~17 items). ROW-PITCH ROOT
+  CAUSE (the "rows are messed up" saga, items 2/15b): the artboard
+  tspans step 30px (front) / 32px (back) — the librsvg raster that
+  earlier rounds measured renders them at 30.33/33.1 (rasterizer
+  quirk), but BROWSERS render the tspan values. All rows re-pitched
+  (front base 251.27+i*30, back 247.11+i*32); size area bottom = Wine
+  Type baseline 551.27; W/H row on Volume baseline 611.27. SAFARI
+  BASELINE: IN_BASE is no longer hardcoded — computed at runtime from
+  canvas fontBoundingBox metrics of 'italic 15px HNW' (each browser
+  centres line boxes with ITS OWN ascent/descent; formula
+  (L−(a+d))/2+a reproduces the hardcoded 15.5 in Chrome and adapts in
+  Safari). Rules end at the window centre x720 (#3); inputs get 5px
+  left padding (#16); placeholders 30% grey #B3B3B3 (#6). W/H inputs
+  size to their digits (no empty underline tail, #4) in baseline-flex
+  groups at design offsets (+46.4/+51.6). Vision page: THICK.vision =
+  142.06 → no thick bar yet; it slides in on vision→front (#1).
+  BACKDETAILS (#5): 4 mode buttons start WHITE; create → black;
+  upload → black after a file is picked (barcodeMode/qrMode state).
+  COMPLIANCE (#7): no default markets + red gate warning like options.
+  CHECKOUT (#11-15): pricing block RE-RENDERED as HTML 20.5px higher —
+  top dashed rule dropped, 4 repeating-linear-gradient dashed rules,
+  bold-15 titles, right-aligned prices ending x1302.9, rings drawn
+  (r7.5/2px) with dots, agree ring at y686 = the back arrow's line
+  (baked agree ring was at 703.27, NOT baseline−4.93 — my 706.9 was
+  the "still off" dot), TOTAL SUM + my own black 12px pay button on
+  the same line; the whole baked block covered by patch(130,503,
+  1180,240). Slot 2 back label centre-fitted in (452,275,227,160) —
+  the old 256px-wide patch was what CUT the x685.7 dashed divider.
+  Slots: real sizes replace ???x??? (front f.width×f.height, back
+  width from backDims px→mm); slot 5 gets a [Landing Page]
+  placeholder covering the baked webpage mock. Pack defaults on
+  entering checkout: Barcode/QR checked unless that mode is 'upload';
+  designer-edit always unchecked (#13). Bottle: baked slider-cursor
+  ring stroke poked past the capsule — erased under it (#9). Crosses
+  zIndex 5 everywhere + drawn over the assets shot boxes (#10). All
+  buttons 12px (backdesign Edit was 15 bold, #8).
