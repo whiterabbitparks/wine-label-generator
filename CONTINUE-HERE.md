@@ -1696,3 +1696,26 @@ composition-contract tightening, then customer wiring.
   cross-marked area. (24) Pack items selectable (dot circles), LIVE
   total, agree square → circle. E2E-verified end to end incl. one real
   generation run.
+- NEW UI v4 — rounds 3+4 (owner items 1-17 + mid-turn 18-20, 2026-09-05):
+  step labels corrected to 15px bold @720; textareas INSIDE their drawn
+  polyline boxes (vision 137-1303×240-446, backdetails to 686); overlays
+  render only after the slide (fade 180ms); size preview = the OUTER
+  frame itself (3px + corner pluses), TOP-RIGHT anchored, diagonal
+  scale-in entry (szGrow), live-follows W/H; Width/Height captions bold
+  14 on the Volume baseline, values regular, dashed line covered; list
+  inputs baseline-true italic UNDERLINED (like design st16), same on
+  back details; loader = the CLASSIC glass (SVG lifted verbatim from the
+  shell) with wine rising by generation progress, FADE transitions;
+  options labels sized by grid-cube rule (horizontal = full Select
+  width; vertical fits 240-540 with 34.3 side cubes), Select buttons
+  white/1px-outline → black "Selected"; upload labels display:block fix;
+  compliance flags image restored (was stripped) — RINGS LIVE INSIDE IT,
+  pixel-detected: x[282,534.5,786.9,1039.3] y[355.1,407.1,459.1,511.1];
+  checkout rings pixel-detected x143.5 y[529…701] incl. the agree circle
+  (design already had it); bottle rows y[279.5…426.5] cols
+  [384.5,624.5,863.5] + finish; design's PRESELECTED dots covered white;
+  frozen slider cursor covered + track redrawn; wheel/slider cursors =
+  black OUTLINE circles; result colour rect enlarged cover + 1px border
+  (killed red artifacts); bottle photo → placeholder (owner will upload
+  option images). RING-DETECTION METHOD: rasterize artboards, scan for
+  8-point dark ring / light centre — use it for any future circle sync.

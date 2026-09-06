@@ -266,7 +266,7 @@ export default function NewUI() {
   const ghost: React.CSSProperties = { background: "transparent", border: "none", cursor: "pointer", padding: 0 };
   const patch = (x: number, y: number, w: number, h: number, key?: string) => <div key={key} style={{ ...px(x, y, w, h), background: "#fff" }} />;
   /* owner #15: input text matches placeholder style — italic (design st16) */
-  const inputStyle: React.CSSProperties = { font: `italic 15px ${HNW}`, border: "none", outline: "none", background: "#fff", padding: 0, color: "#111" };
+  const inputStyle: React.CSSProperties = { font: `italic 15px ${HNW}`, textDecoration: "underline", border: "none", outline: "none", background: "#fff", padding: 0, color: "#111", lineHeight: "20px" };
   const cross = (cx: number, cy: number, key: string) => (
     <svg key={key} style={{ ...px(cx - 9, cy - 9, 18, 18), pointerEvents: "none" }} viewBox="0 0 18 18">
       <line x1="9" y1="0.5" x2="9" y2="17.5" stroke="#000" strokeWidth="1" />
@@ -333,7 +333,7 @@ export default function NewUI() {
           {patch(1215, 419, 100, 20, "cnt")}
           <span style={{ ...px(1221.8, 421, 100, 16), font: `11px ${HNW}`, color: "#111" }}>{vision.trim() ? vision.trim().split(/\s+/).length : 0} / 300 words</span>
           <textarea value={vision} onChange={(e) => setVision(e.target.value)} maxLength={2200}
-            style={{ ...px(139, 212, 1160, 195), ...inputStyle, fontStyle: "normal", resize: "none", lineHeight: 1.5, overflow: "auto" }} />
+            style={{ ...px(148, 251, 1144, 168), ...inputStyle, fontStyle: "normal", textDecoration: "none", resize: "none", lineHeight: 1.5, overflow: "auto", background: "transparent" }} />
           <button title="Give me an idea" onClick={() => setVision(IDEAS[Math.floor(Math.random() * IDEAS.length)])}
             style={{ ...px(960, 480, 342.9, 34.3), ...ghost }} />
           <label style={{ ...px(137.1, 480, 342.9, 34.3), cursor: "pointer" }}>
@@ -345,63 +345,82 @@ export default function NewUI() {
           </label>
         </>);
       case "front": {
-        const sb = sizeBox();
+        const area = { right: 1302.86, top: 172.3, w: 488.4, h: 377.1 };
+        const wmm = Number(f.width) || 110, hmm = Number(f.height) || 80;
+        const k = Math.min(area.w / wmm, area.h / hmm) * 0.92;
+        const bw = wmm * k, bh = hmm * k;
+        const fx0 = area.right - bw, fy0 = area.top;
         return (<>
-          {/* cover baked E.g. column; live italic inputs with placeholders */}
+          {/* cover baked E.g. column; live italic-underlined inputs */}
           {patch(263, 234, 550, 372, "phcol")}
-          {FRONT_ROWS.map((k, i) => (
-            <input key={k} value={f[k] || ""} placeholder={FRONT_PH[i]}
-              onChange={(e) => setF((m) => ({ ...m, [k]: e.target.value }))}
-              style={{ ...px(264.9, 251.3 + i * 30.33 - 16, 540, 22), ...inputStyle }} />
+          {FRONT_ROWS.map((k2, i) => (
+            <input key={k2} value={f[k2] || ""} placeholder={FRONT_PH[i]}
+              onChange={(e) => setF((m) => ({ ...m, [k2]: e.target.value }))}
+              style={{ ...px(264.9, 251.3 + i * 30.33 - 16.5, 540, 20), ...inputStyle }} />
           ))}
-          {/* size area: cover baked interior (kills the diagonal), animated box */}
-          {patch(815.6, 173.5, 486, 374.7, "szint")}
-          <div style={{ ...px(sb.x, sb.y, sb.w, sb.h), border: "3px solid #111", transition: `all 380ms ${EASE}`, boxSizing: "border-box" }} />
-          {/* size inputs: cover baked values, live captions */}
-          {patch(948, 585, 175, 24, "szw")}
-          {patch(1073, 585, 175, 24, "szh")}
-          <span style={{ ...px(951.3, 587, 60, 18), font: `14px ${HNW}` }}>Width:</span>
+          {/* cover the ENTIRE baked size area (rect + diagonal + old pluses + dashed line) */}
+          {patch(806, 164, 505, 460, "szarea")}
+          {/* the ANIMATED OUTER FRAME (owner #4/#5): 3px black + corner
+              pluses, anchored TOP-RIGHT, stretching in diagonally */}
+          <div key={`szf-${prev ? "in" : "live"}`} style={{
+            ...px(fx0, fy0, bw, bh), border: "3px solid #111", boxSizing: "border-box",
+            transformOrigin: "top right", transition: `all 380ms ${EASE}`,
+            animation: `szGrow 650ms ${EASE}`,
+          }} />
+          {cross(fx0, fy0, "s1")}{cross(fx0 + bw, fy0, "s2")}{cross(fx0, fy0 + bh, "s3")}{cross(fx0 + bw, fy0 + bh, "s4")}
+          {/* Width/Height row on the Volume baseline (owner #9), captions bold 14 (#6), values regular (#7) */}
+          <span style={{ ...px(951.3, 615.3 - 12, 60, 15), font: `700 14px ${HNW}`, lineHeight: "15px" }}>Width:</span>
           <input value={f.width} onChange={(e) => setF((m) => ({ ...m, width: e.target.value.replace(/[^\d.]/g, "") }))}
-            style={{ ...px(1003, 587, 40, 18), ...inputStyle, fontStyle: "normal", fontSize: 14 }} />
-          <span style={{ ...px(1041, 587, 30, 18), font: `14px ${HNW}` }}>mm</span>
-          <span style={{ ...px(1076.8, 587, 60, 18), font: `14px ${HNW}` }}>Height:</span>
+            style={{ ...px(1006, 615.3 - 12, 42, 15), font: `14px ${HNW}`, lineHeight: "15px", border: "none", outline: "none", background: "#fff", padding: 0 }} />
+          <span style={{ ...px(1044, 615.3 - 12, 30, 15), font: `14px ${HNW}`, lineHeight: "15px" }}>mm</span>
+          <span style={{ ...px(1096.8, 615.3 - 12, 60, 15), font: `700 14px ${HNW}`, lineHeight: "15px" }}>Height:</span>
           <input value={f.height} onChange={(e) => setF((m) => ({ ...m, height: e.target.value.replace(/[^\d.]/g, "") }))}
-            style={{ ...px(1133, 587, 40, 18), ...inputStyle, fontStyle: "normal", fontSize: 14 }} />
-          <span style={{ ...px(1171, 587, 30, 18), font: `14px ${HNW}` }}>mm</span>
+            style={{ ...px(1155, 615.3 - 12, 42, 15), font: `14px ${HNW}`, lineHeight: "15px", border: "none", outline: "none", background: "#fff", padding: 0 }} />
+          <span style={{ ...px(1193, 615.3 - 12, 30, 15), font: `14px ${HNW}`, lineHeight: "15px" }}>mm</span>
         </>);
       }
       case "loader": {
-        /* glass at ~x690-760; wine rises with progress (owner #7) */
+        const fill = Math.max(0.04, genProgress);
         return (<>
-          {patch(600, 498, 260, 24, "ltxt")}
-          <span style={{ ...px(0, 500, W, 20), font: `15px ${HNW}`, textAlign: "center", display: "block" }}>Designing your label…</span>
-          <div style={{ ...px(700, 396, 42, 48), overflow: "hidden", pointerEvents: "none" }}>
-            <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: `${Math.round(genProgress * 100)}%`, background: "#7A1E2B", mixBlendMode: "multiply", transition: `height 600ms ${EASE}` }} />
+          {patch(400, 120, 640, 480, "lcover")}
+          <div style={{ ...px(601, 140, 238, 320) }}>
+            <svg viewBox="0 0 595.276 609.089" width="238" aria-label="Designing your label">
+              <clipPath id="nuiWineClip"><rect x="230" y={266.6 - fill * 95} width="140" height={fill * 95 + 4} style={{ transition: `all 500ms ${EASE}` }} /></clipPath>
+              <path fill="#BA141A" clipPath="url(#nuiWineClip)" d="M352.397 185.696 C353.872 199.478 353.325 211.872 350.76 222.63 C346.838 239.075 336.88 251.431 321.163 259.355 C311.285 264.336 301.979 266.038 298.571 266.527 C296.674 266.308 286.165 264.888 274.916 259.216 C259.199 251.292 249.241 238.936 245.319 222.491 C242.762 211.769 242.21 199.422 243.667 185.696 Z" />
+              <g fill="none" stroke="#231F20" strokeWidth="7.426">
+                <path d="M254.813 401.491 L297.631 401.491 L297.631 276.2 C297.631 276.2 246.711 271.948 235.438 224.682 C222.211 169.219 254.078 108.466 254.078 108.466 L341.155 108.635 C341.155 108.635 373.068 169.358 359.84 224.821 C348.568 272.087 297.648 276.339 297.648 276.339" />
+                <path d="M297.8 276.2 L297.8 401.491 L340.618 401.491" />
+              </g>
+            </svg>
           </div>
+          <span style={{ ...px(0, 500, W, 20), font: `15px ${HNW}`, textAlign: "center", display: "block" }}>Designing your label…</span>
         </>);
       }
       case "options": {
-        /* cover: dots rows, Select+magnifier boxes, baked corner crosses */
         const covers: React.ReactNode[] = [];
         covers.push(patch(255, 503, 930, 24, "dots"));
         covers.push(patch(135, 546, 1172, 40, "selrow"));
         for (const fx0 of [137.1, 480, 548.5, 891.4, 960, 1302.9])
           for (const fy0 of [240, 468.6]) covers.push(patch(fx0 - 11, fy0 - 11, 22, 22, `c${fx0}-${fy0}`));
+        const CUBE = 34.3, AREA_TOP = 240, AREA_BOT = 540;
         return (<>
           {covers}
           {OPT_FRAMES.map((fr, i) => {
             const d = dreams[i];
             if (!d?.preview && !d?.dream) return null;
             const ar = (Number(f.width) || 110) / (Number(f.height) || 80);
-            const fit = fitIn(OPT_W, OPT_BOT - OPT_TOP, ar, 1);
-            const lx = fr.x + fit.dx, ly = OPT_TOP + fit.dy;
+            let lw: number, lh: number;
+            if (ar >= 1) { lw = OPT_W; lh = OPT_W / ar; }          /* horizontal: full Select width */
+            else { lh = AREA_BOT - AREA_TOP; lw = lh * ar; if (lw > OPT_W - 2 * CUBE) { lw = OPT_W - 2 * CUBE; lh = lw / ar; } }
+            const lx = fr.x + (OPT_W - lw) / 2;
+            const ly = AREA_TOP + (ar >= 1 ? 0 : (AREA_BOT - AREA_TOP - lh) / 2);
             return (
               <div key={i}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={d.preview || d.dream} alt={d.style} onClick={() => setGallery({ imgs: dreams.map((dd) => dd.preview || dd.dream), i })}
-                  style={{ ...px(lx, ly, fit.w, fit.h), cursor: "zoom-in", objectFit: "fill" }} />
-                {cross(lx, ly, `tl${i}`)}{cross(lx + fit.w, ly, `tr${i}`)}
-                {cross(lx, ly + fit.h, `bl${i}`)}{cross(lx + fit.w, ly + fit.h, `br${i}`)}
+                  style={{ ...px(lx, ly, lw, lh), cursor: "zoom-in", objectFit: "fill" }} />
+                {cross(lx, ly, `tl${i}`)}{cross(lx + lw, ly, `tr${i}`)}
+                {cross(lx, ly + lh, `bl${i}`)}{cross(lx + lw, ly + lh, `br${i}`)}
               </div>
             );
           })}
@@ -410,10 +429,11 @@ export default function NewUI() {
               style={{
                 ...px(fr.x + 0.2, 548.6, OPT_W, 34.3), cursor: "pointer",
                 font: `700 15px ${HNW}`, letterSpacing: 0.3, transition: `all 180ms ${EASE}`,
-                background: selected === i ? "#fff" : "#111",
-                color: selected === i ? "#111" : "#fff",
-                border: "2px solid #111", boxSizing: "border-box",
-              }}>Select</button>
+                background: selected === i ? "#111" : "#fff",
+                color: selected === i ? "#fff" : "#111",
+                border: "1px solid #111", boxSizing: "border-box",
+                display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 2,
+              }}>{selected === i ? "Selected" : "Select"}</button>
           ))}
         </>);
       }
@@ -422,43 +442,56 @@ export default function NewUI() {
           {patch(596, 424, 110, 18, "cnt2")}
           <span style={{ ...px(600.2, 425, 110, 16), font: `11px ${HNW}` }}>{(b.description || "").trim() ? (b.description || "").trim().split(/\s+/).length : 0} / 300 words</span>
           <textarea value={b.description || ""} onChange={(e) => setB((m) => ({ ...m, description: e.target.value }))}
-            style={{ ...px(139, 212, 460, 195), ...inputStyle, fontStyle: "normal", fontSize: 14, resize: "none", lineHeight: 1.45, overflow: "auto" }} />
+            style={{ ...px(148, 251, 528, 168), ...inputStyle, fontStyle: "normal", textDecoration: "none", fontSize: 14, resize: "none", lineHeight: 1.45, overflow: "auto", background: "transparent" }} />
           {patch(987, 230, 330, 300, "bpcol")}
           {BACK_ROWS.map((k, i) => (
             <input key={k} value={b[k] || ""} placeholder={BACK_PH[i]}
               onChange={(e) => setB((m) => ({ ...m, [k]: e.target.value }))}
-              style={{ ...px(989.6, 247.1 + i * 33.1 - 16, 325, 22), ...inputStyle, fontSize: 14 }} />
+              style={{ ...px(989.6, 247.1 + i * 33.1 - 16.5, 325, 20), ...inputStyle, fontSize: 15 }} />
           ))}
           {/* create/upload toggles on the baked outline boxes; uploads are real */}
           <button onClick={() => { setBarcodeImg(""); }} style={{ ...px(138, 480, 239.1, 34.3), ...ghost, outline: !barcodeImg ? "2px solid #111" : "none", outlineOffset: -4 }} />
-          <label style={{ ...px(445.7, 480, 240, 34.3), cursor: "pointer", outline: barcodeImg ? "2px solid #111" : "none", outlineOffset: -4, position: "absolute" }}>
+          <label style={{ ...px(445.7, 480, 240, 34.3), cursor: "pointer", display: "block", outline: barcodeImg ? "2px solid #111" : "none", outlineOffset: -4, position: "absolute" }}>
             <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
               const file = e.target.files?.[0]; if (!file) return;
               const rd = new FileReader(); rd.onload = () => setBarcodeImg(String(rd.result)); rd.readAsDataURL(file);
             }} />
           </label>
           <button onClick={() => { setQrImg(""); }} style={{ ...px(754.3, 480, 240.1, 34.3), ...ghost, outline: !qrImg ? "2px solid #111" : "none", outlineOffset: -4 }} />
-          <label style={{ ...px(1064, 480, 238.4, 34.3), cursor: "pointer", outline: qrImg ? "2px solid #111" : "none", outlineOffset: -4, position: "absolute" }}>
+          <label style={{ ...px(1064, 480, 238.4, 34.3), cursor: "pointer", display: "block", outline: qrImg ? "2px solid #111" : "none", outlineOffset: -4, position: "absolute" }}>
             <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
               const file = e.target.files?.[0]; if (!file) return;
               const rd = new FileReader(); rd.onload = () => setQrImg(String(rd.result)); rd.readAsDataURL(file);
             }} />
           </label>
         </>);
-      case "compliance":
+      case "compliance": {
+        const RING_X = [282.0, 534.5, 786.9, 1039.3];   /* pixel-detected */
+        const RING_Y = [355.1, 407.1, 459.1, 511.1];
+        const RC: { code: string; col: number; row: number }[] = [
+          { code: "EU", col: 0, row: 0 }, { code: "US", col: 0, row: 1 }, { code: "GB", col: 0, row: 2 }, { code: "JP", col: 0, row: 3 },
+          { code: "AU", col: 1, row: 0 }, { code: "NZ", col: 1, row: 1 }, { code: "CN", col: 1, row: 2 },
+          { code: "KR", col: 2, row: 0 }, { code: "BR", col: 2, row: 1 }, { code: "MX", col: 2, row: 2 },
+          { code: "IL", col: 3, row: 0 }, { code: "GE", col: 3, row: 1 }, { code: "CA", col: 3, row: 2 },
+        ];
         return (<>
-          <div style={{ ...px(598, 500, 165, 24), background: "#fff" }} />{/* Arabic removed */}
-          {COMP.map(({ code, col, row }) => {
+          {/* flags column restored from the artboard (owner #16) */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/newui/flags.png" alt="" style={{ ...px(250.9, 289.8, 959.8, 261.1), pointerEvents: "none" }} />
+          {/* Arabic Markets removed — cover name + its flag/ring */}
+          {patch(515, 496, 245, 30, "arab")}
+          {RC.map(({ code, col, row }) => {
             const on = markets.includes(code);
-            const cx = COMP_COLS[col] - 19.5, cy = 357.9 + row * 52.3 - 5.5;
+            const cx0 = RING_X[col], cy0 = RING_Y[row];
             return (
               <button key={code} onClick={() => setMarkets((ms) => on ? ms.filter((m) => m !== code) : [...ms, code])}
-                style={{ ...px(cx - 12, cy - 12, 24, 24), ...ghost }}>
-                {on && <span style={{ position: "absolute", left: 7, top: 7, width: 10, height: 10, borderRadius: 5, background: "#111" }} />}
+                style={{ ...px(cx0 - 14, cy0 - 14, 28, 28), ...ghost }}>
+                {on && <span style={{ position: "absolute", left: 9, top: 9, width: 10, height: 10, borderRadius: 5, background: "#111" }} />}
               </button>
             );
           })}
         </>);
+      }
       case "backdesign": {
         const fit = fitIn(BD_AREA.w, BD_AREA.h, backDims.w, backDims.h);
         const lx = BD_AREA.x + fit.dx, ly = BD_AREA.y + fit.dy;
@@ -472,7 +505,7 @@ export default function NewUI() {
               style={{ ...px(lx, ly, fit.w, fit.h), cursor: "zoom-in", objectFit: "fill" }} />
             {cross(lx, ly, "b1")}{cross(lx + fit.w, ly, "b2")}{cross(lx, ly + fit.h, "b3")}{cross(lx + fit.w, ly + fit.h, "b4")}
             <button onClick={() => go("backdetails", -1)}
-              style={{ ...px(lx, 548.6, fit.w, 34.3), cursor: "pointer", font: `700 15px ${HNW}`, background: "#111", color: "#fff", border: "2px solid #111", boxSizing: "border-box" }}>Edit</button>
+              style={{ ...px(lx, 548.6, fit.w, 34.3), cursor: "pointer", font: `700 15px ${HNW}`, background: "#111", color: "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 2 }}>Edit</button>
           </>)}
         </>);
       }
@@ -484,15 +517,16 @@ export default function NewUI() {
         ];
         return (<>
           {cols.map(([key, opts, cx0]) => opts.map((opt, i) => {
+            const ROWS_Y = [279.5, 309.5, 338.5, 368.5, 397.5, 426.5];   /* pixel-detected */
             const on = bottle[key] === opt;
             return (
               <button key={String(key) + opt} onClick={() => setBottle((m) => ({ ...m, [key]: opt }))}
-                style={{ ...px(Number(cx0) - 12, 283.1 + i * 29.8 - 12, 24, 24), ...ghost }}>
+                style={{ ...px(Number(cx0) - 12, ROWS_Y[i] - 12, 24, 24), ...ghost }}>
                 {on && <span style={{ position: "absolute", left: 8, top: 8, width: 8, height: 8, borderRadius: 4, background: "#111" }} />}
               </button>
             );
           }))}
-          {([["Matte", 1104.6, 281.8], ["Glossy", 1172.1, 281.8], ["No cap", 1104.6, 312.6]] as const).map(([opt, cx0, cy0]) => {
+          {([["Matte", 1104.5, 279.5], ["Glossy", 1172, 279.5], ["No cap", 1104.5, 309.5]] as const).map(([opt, cx0, cy0]) => {
             const on = bottle.finish === opt;
             return (
               <button key={opt} onClick={() => setBottle((m) => ({ ...m, finish: opt }))}
@@ -501,6 +535,13 @@ export default function NewUI() {
               </button>
             );
           })}
+          {/* cover the design's PRESELECTED dots (Bordeaux/Olive/Cork/Matte) */}
+          {[[384.5, 279.5], [624.5, 279.5], [863.5, 279.5], [1104.5, 279.5]].map(([dx, dy], di) => (
+            <div key={"presel" + di} style={{ ...px(dx - 5.5, dy - 5.5, 11, 11), background: "#fff", borderRadius: 6 }} />
+          ))}
+          {/* cover the frozen baked slider cursor; redraw the track through it */}
+          <div style={{ ...px(1250, 406, 22, 21), background: "#fff" }} />
+          <div style={{ ...px(1260.6, 406, 1, 21), background: "#111" }} />
           {/* colour wheel (restored artwork) + picker dot */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/newui/colorwheel.png" alt="" style={{ ...px(1097.1, 359.2, 137.2, 137.2), pointerEvents: "none" }} />
@@ -508,7 +549,7 @@ export default function NewUI() {
             onPointerDown={(e) => { dragRef.current = "wheel"; e.currentTarget.setPointerCapture(e.pointerId); wheelPick(e.clientX, e.clientY, e.currentTarget); }}
             onPointerMove={(e) => { if (dragRef.current === "wheel") wheelPick(e.clientX, e.clientY, e.currentTarget); }}
             onPointerUp={() => { dragRef.current = ""; }}>
-            <span style={{ position: "absolute", left: `${wheel.x * 100}%`, top: `${wheel.y * 100}%`, transform: "translate(-50%,-50%)", width: 9.8, height: 9.8, borderRadius: 5, background: "#111", border: "1.5px solid #fff", pointerEvents: "none" }} />
+            <span style={{ position: "absolute", left: `${wheel.x * 100}%`, top: `${wheel.y * 100}%`, transform: "translate(-50%,-50%)", width: 15.2, height: 15.2, borderRadius: 8, background: "transparent", border: "1.5px solid #111", pointerEvents: "none", boxSizing: "border-box" }} />
           </div>
           {/* lightness track (baked line x1261.1 y358.8–495.4) */}
           <div style={{ ...px(1245, 350, 34, 155), cursor: "grab" }}
@@ -519,13 +560,14 @@ export default function NewUI() {
               setShade(Math.min(1, Math.max(0, (e.clientY - r.top - 8.8 * scale) / (r.height - 17.6 * scale))));
             }}
             onPointerUp={() => { dragRef.current = ""; }}>
-            <span style={{ position: "absolute", left: 16.1 - 4.9, top: 8.8 + shade * 136.6 - 4.9, width: 9.8, height: 9.8, borderRadius: 5, background: "#111", border: "1.5px solid #fff", boxShadow: "0 0 0 1px #111" }} />
+            <span style={{ position: "absolute", left: 16.1 - 7.6, top: 8.8 + shade * 136.6 - 7.6, width: 15.2, height: 15.2, borderRadius: 8, background: "#fff", border: "1.5px solid #111", boxSizing: "border-box" }} />
           </div>
           {/* result colour bar (baked rect 1097.1,532.6,171.4×18.3) */}
-          <div style={{ ...px(1097.6, 533.1, 170.4, 17.3), background: shadeRgb() }} />
-          {/* bottle photo in its area (owner's artwork) */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/newui/bottle-photo.png" alt="bottle" style={{ ...px(137.1, 172, 205.7, 411.4), objectFit: "contain", objectPosition: "center" }} />
+          <div style={{ ...px(1095.6, 531.1, 174.4, 21.3), background: shadeRgb(), border: "1px solid #111", boxSizing: "border-box" }} />
+          {/* bottle placeholder (owner #18 — option images come later) */}
+          <div style={{ ...px(137.1, 172, 205.7, 411.4), background: "#F4F3EE", display: "flex", alignItems: "center", justifyContent: "center", font: `12px ${HNW}`, color: "#999", textAlign: "center" }}>
+            [ bottle<br />{bottle.type}<br />{bottle.color} · {bottle.closure} ]
+          </div>
         </>);
       }
       case "assets": {
@@ -562,20 +604,19 @@ export default function NewUI() {
               style={{ ...px(1108.6, 283.6, 177.4, 88.7), objectFit: "contain", cursor: "zoom-in" }} />
           )}
           {/* pack selection dots (owner #24) + live total */}
-          {PACK.map((it, i) => (
+          {PACK.map((it, i) => {
+            const CY = [529, 563.5, 597.5, 632, 666.5];   /* pixel-detected */
+            return (
             <button key={it.name} onClick={() => setPackSel((ps) => ps.map((v, k) => (k === i ? !v : v)))}
-              style={{ ...px(139, it.base - 18, 24, 24), ...ghost }}>
-              <span style={{ position: "absolute", left: 3, top: 3, width: 16, height: 16, borderRadius: 8, border: "1px solid #111" }} />
-              {packSel[i] && <span style={{ position: "absolute", left: 7, top: 7, width: 8, height: 8, borderRadius: 4, background: "#111" }} />}
+              style={{ ...px(143.5 - 14, CY[i] - 14, 28, 28), ...ghost }}>
+              {packSel[i] && <span style={{ position: "absolute", left: 9, top: 9, width: 10, height: 10, borderRadius: 5, background: "#111" }} />}
             </button>
-          ))}
+          ); })}
           {patch(985, 684, 100, 24, "tot")}
           <span style={{ ...px(850.2, 686, 240, 20), font: `700 19px ${HNW}` }}>TOTAL SUM: ${total}</span>
           {/* agree: circle like the others (owner #24) */}
-          {patch(140, 688, 26, 26, "agr")}
-          <button onClick={() => setAgree(!agree)} style={{ ...px(139, 687, 26, 26), ...ghost }}>
-            <span style={{ position: "absolute", left: 4, top: 4, width: 16, height: 16, borderRadius: 8, border: "1px solid #111" }} />
-            {agree && <span style={{ position: "absolute", left: 8, top: 8, width: 8, height: 8, borderRadius: 4, background: "#111" }} />}
+          <button onClick={() => setAgree(!agree)} style={{ ...px(143.5 - 14, 701 - 14, 28, 28), ...ghost }}>
+            {agree && <span style={{ position: "absolute", left: 9, top: 9, width: 10, height: 10, borderRadius: 5, background: "#111" }} />}
           </button>
           <button aria-label="pay" onClick={proceedToPayment} style={{ ...px(1090, 682, 250, 46), ...ghost }} />
           <button aria-label="back" onClick={goBack} style={{ ...px(56, 664, 60, 44), ...ghost }} />
@@ -588,7 +629,8 @@ export default function NewUI() {
   const step = STEP_OF[page];
   const thick = THICK[page];
   const bandBottom = BAND_BOTTOM[page];
-  const fullSlide = page === "vision" && prev === "welcome" || page === "welcome";
+  const fullSlide = (page === "vision" && prev === "welcome") || page === "welcome";
+  const fade = page === "loader" || prev === "loader";
 
   return (
     <main style={{ background: "#000", minHeight: "100vh", margin: 0, padding: 0 }}>
@@ -600,26 +642,31 @@ export default function NewUI() {
         input::placeholder, textarea::placeholder { color: #111; opacity: 1; font-style: italic; }
         @keyframes nuiIn { from { transform: translateX(${dir > 0 ? "100%" : "-100%"}) } to { transform: translateX(0) } }
         @keyframes nuiOut { from { transform: translateX(0) } to { transform: translateX(${dir > 0 ? "-100%" : "100%"}) } }
-        @keyframes arrowFly { from { left: 122px } to { left: 1324px } }`}</style>
+        @keyframes arrowFly { from { left: 122px } to { left: 1324px } }
+        @keyframes nuiFadeIn { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes nuiFadeOut { from { opacity: 1 } to { opacity: 0 } }
+        @keyframes szGrow { from { transform: scale(0) } to { transform: scale(1) } }`}</style>
       <div style={{ width: W * scale, height: H * scale, position: "relative", margin: "0 auto" }}>
         <div style={{ width: W, height: H, transform: `scale(${scale})`, transformOrigin: "top left", position: "absolute", overflow: "hidden", background: "#fff" }}>
 
           {/* sliding zone: full page on welcome transitions, content band otherwise */}
           <div style={{ position: "absolute", left: 0, top: fullSlide ? 0 : BAND_TOP, width: W, height: (fullSlide ? H : bandBottom - BAND_TOP), overflow: "hidden" }}>
             {prev && (
-              <div style={{ position: "absolute", inset: 0, animation: `nuiOut ${SLIDE_MS}ms ${EASE} forwards` }}>
+              <div style={{ position: "absolute", inset: 0, animation: `${fade ? "nuiFadeOut" : "nuiOut"} ${fade ? 300 : SLIDE_MS}ms ${EASE} forwards` }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={`/newui/${prev}.svg`} alt="" style={{ position: "absolute", left: 0, top: fullSlide ? 0 : -BAND_TOP, width: W, height: H }} />
               </div>
             )}
-            <div style={{ position: "absolute", inset: 0, animation: prev ? `nuiIn ${SLIDE_MS}ms ${EASE}` : "none" }}>
+            <div style={{ position: "absolute", inset: 0, animation: prev ? `${fade ? "nuiFadeIn" : "nuiIn"} ${fade ? 300 : SLIDE_MS}ms ${EASE}` : "none" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={`/newui/${page}.svg`} alt="" draggable={false} style={{ position: "absolute", left: 0, top: fullSlide ? 0 : -BAND_TOP, width: W, height: H, userSelect: "none" }} />
             </div>
           </div>
 
-          {/* interactive overlays live in full-canvas coordinates */}
-          <div style={{ position: "absolute", inset: 0 }}>{renderOverlay(page)}</div>
+          {/* interactive overlays appear AFTER the slide (owner #3) */}
+          <div style={{ position: "absolute", inset: 0, opacity: prev ? 0 : 1, transition: prev ? "none" : "opacity 180ms ease-out" }}>
+            {!prev && renderOverlay(page)}
+          </div>
 
           {/* STATIC header (real fonts, extracted geometry) */}
           <div style={{ ...px(0, 0, W, HEADER_H), background: "#000" }}>
@@ -638,7 +685,7 @@ export default function NewUI() {
                 <span key={i} style={{ ...px(cx0 - 4.9, 685.59 - 4.9 - 660, 9.8, 9.8), borderRadius: 5, border: "1px solid #111", background: step >= i ? "#111" : "#fff", transition: `background 300ms ${EASE}`, boxSizing: "border-box" }} />
               ))}
               {STEP_LABELS.map(([t, x0]) => (
-                <span key={t} style={{ ...px(x0, 706 - 660, 260, 22), font: `700 19px ${HNW}`, color: "#111" }}>{t}</span>
+                <span key={t} style={{ ...px(x0, 708.5 - 660, 260, 18), font: `700 15px ${HNW}`, color: "#111", lineHeight: "15px" }}>{t}</span>
               ))}
               {/* back arrow */}
               {page !== "vision" && (
