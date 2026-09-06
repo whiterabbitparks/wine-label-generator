@@ -775,10 +775,13 @@ export default function NewUI() {
           </div>
           {/* result colour bar (baked rect 1097.1,532.6,171.4×18.3) */}
           <div style={{ ...px(1095.6, 531.1, 174.4, 21.3), background: shadeRgb(), border: "1px solid #111", boxSizing: "border-box" }} />
-          {/* bottle placeholder (owner #18 — option images come later) */}
-          <div style={{ ...px(137.1, 172, 205.7, 411.4), background: "#F4F3EE", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", font: `12px ${HNW}`, color: "#999", textAlign: "center", lineHeight: 1.6 }}>
-            [ bottle<br />{bottle.type}<br />{bottle.color} · {bottle.closure} ]
-          </div>
+          {/* the owner's bottle-type photos (public/newui/bottles, 800×1600
+              = the area's exact 1:2 ratio); keyed by type so a change
+              re-fades softly */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img key={bottle.type} alt={bottle.type}
+            src={`/newui/bottles/${({ "Bordeaux": "bordeaux", "Bordeaux Prestige": "bordeaux-prestige", "Burgundy": "burgundy", "Sparkling": "sparkling", "Alsace / Rhine": "alsace-rhine", "Ice Wine": "ice-wine" } as Record<string, string>)[bottle.type] || "bordeaux"}.jpg`}
+            style={{ ...px(137.1, 172, 205.7, 411.4), objectFit: "cover", animation: inSlide ? "none" : `nuiFadeIn 240ms ${EASE}`, pointerEvents: "none" }} />
         </>);
       }
       case "assets": {

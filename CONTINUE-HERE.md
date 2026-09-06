@@ -1899,3 +1899,10 @@ composition-contract tightening, then customer wiring.
   label whenever artwork or downscale smearing touched a corner
   (owner: "back label bg darker most of the time"). Median is
   outlier-proof; needs a real generation run to eyeball.
+- BOTTLE PHOTOS (owner uploads 2026-09-06): the owner's 6 line-art
+  bottle images (WAIN/Bottle types, 800×1600 = the area's exact 1:2)
+  live in public/newui/bottles/{bordeaux,bordeaux-prestige,burgundy,
+  sparkling,alsace-rhine,ice-wine}.jpg; the BOTTLE page placeholder is
+  replaced by an <img> keyed by bottle.type (240ms fade on change,
+  object-fit cover at 137.1,172,205.7×411.4). Colour/closure variants
+  don't change the photo yet — owner to supply if wanted.
