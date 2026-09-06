@@ -1906,3 +1906,8 @@ composition-contract tightening, then customer wiring.
   replaced by an <img> keyed by bottle.type (240ms fade on change,
   object-fit cover at 137.1,172,205.7×411.4). Colour/closure variants
   don't change the photo yet — owner to supply if wanted.
+- NEW UI v12 — round 12 (owner 2026-09-06, 3 items): backdesign Select
+  button removed (backSel state gone); size-box frame div inset 16 not
+  16.5 so the 1px inside-drawn border's centreline lands exactly on the
+  pluses' 16.5 axis (left pluses looked off the line); bottle photo got
+  its four corner pluses drawn ON TOP (the JPEG covered the baked ones).

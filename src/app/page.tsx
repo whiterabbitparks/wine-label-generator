@@ -166,7 +166,6 @@ export default function NewUI() {
   const [agree, setAgree] = useState(false);
   const [gallery, setGallery] = useState<{ imgs: string[]; i: number } | null>(null);
   const [warn, setWarn] = useState("");
-  const [backSel, setBackSel] = useState(false);
   const [barcodeMode, setBarcodeMode] = useState<"" | "create" | "upload">("");
   const [qrMode, setQrMode] = useState<"" | "create" | "upload">("");
   /* live font metrics of 'italic 15px HNW' (per-browser; Safari ≠ Chrome) */
@@ -509,7 +508,10 @@ export default function NewUI() {
             animation: `szGrow 780ms ${EASE_IO}`, transformOrigin: "calc(100% - 16.5px) 16.5px",
             pointerEvents: "none",
           }}>
-            <div style={{ position: "absolute", inset: 16.5, border: "1px solid #111" }} />
+            {/* inset 16 (not 16.5): the 1px border draws INSIDE the box, so
+                its centreline lands exactly on the pluses' 16.5 axis
+                (round 12 #2 — left pluses looked shifted off the line) */}
+            <div style={{ position: "absolute", inset: 16, border: "1px solid #111" }} />
             <svg style={{ position: "absolute", left: 16.5, top: 16.5, width: "calc(100% - 33px)", height: "calc(100% - 33px)" }} viewBox="0 0 100 100" preserveAspectRatio="none">
               <line x1="100" y1="0" x2="0" y2="100" stroke="#000" strokeWidth="1" vectorEffect="non-scaling-stroke" />
             </svg>
@@ -724,9 +726,6 @@ export default function NewUI() {
             {cross(lx, ly, "b1")}{cross(lx + fit.w, ly, "b2")}{cross(lx, ly + fit.h, "b3")}{cross(lx + fit.w, ly + fit.h, "b4")}
             <button onClick={() => go("backdetails", -1)}
               style={{ ...px(lx, 548.6, fit.w, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>Edit</button>
-            {/* round 7 #18: Select under Edit, same inverted logic as options */}
-            <button onClick={() => setBackSel(!backSel)}
-              style={{ ...px(lx, 591.5, fit.w, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, transition: `all 240ms ${EASE}`, background: backSel ? "#111" : "#fff", color: backSel ? "#fff" : "#111", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>{backSel ? "Selected" : "Select"}</button>
           </>)}
         </>);
       }
@@ -782,6 +781,8 @@ export default function NewUI() {
           <img key={bottle.type} alt={bottle.type}
             src={`/newui/bottles/${({ "Bordeaux": "bordeaux", "Bordeaux Prestige": "bordeaux-prestige", "Burgundy": "burgundy", "Sparkling": "sparkling", "Alsace / Rhine": "alsace-rhine", "Ice Wine": "ice-wine" } as Record<string, string>)[bottle.type] || "bordeaux"}.jpg`}
             style={{ ...px(137.1, 172, 205.7, 411.4), objectFit: "cover", animation: inSlide ? "none" : `nuiFadeIn 240ms ${EASE}`, pointerEvents: "none" }} />
+          {/* round 12 #3: corner pluses back ON TOP of the photo */}
+          {cross(137.14, 172, "bt1")}{cross(342.84, 172, "bt2")}{cross(137.14, 583.41, "bt3")}{cross(342.84, 583.41, "bt4")}
         </>);
       }
       case "assets": {
