@@ -35,8 +35,9 @@ const STYLE_MOOD: Record<string, string> = {
   contemporary:
     "modern boutique wine label — bold editorial typography, expressive illustration (linocut, silkscreen, collage, gouache), confident whitespace",
   punk:
-    "loud natural-wine label — raw expressive artwork, punchy type, fearless colour, poster energy; " +
-    "background and illustration belong to one painted world",
+    /* owner 2026-09-06: NO background/colour directives for punk — the
+       image alone dictates its ground (supersedes "one painted world") */
+    "loud natural-wine label — raw expressive artwork, punchy type, poster energy",
   minimalist:
     "minimalist wine label — restraint above all: generous empty ground, very few elements, one quiet motif or subtle abstraction, precise understated typography, calm confident whitespace",
   free: "whatever serves the story best — full artistic freedom",
@@ -120,7 +121,16 @@ export async function runDreamPhase(p: DreamParams): Promise<{ dream: string; pr
       // board and charter; "free" dreams run uncharted.
       if (style !== "free") {
         const ch = (await db.collection("settings").findOne({ _id: `dream-charter-${style}` } as never)) as { text?: string } | null;
-        if (ch?.text) guidance += ` House LAYOUT doctrine for this style (learned from the art director's reference labels — hierarchy, alignment, density, grounds; the illustration's artistic style is governed separately below): ${ch.text}`;
+        if (ch?.text) {
+          /* owner 2026-09-06: punk grounds are entirely the image's own
+             choice — strip the charter's "Grounds:" colour sentence for
+             punk (supersedes the 2026-09-03 "charter Grounds language
+             stays active" ruling, for punk only) */
+          const doctrine = style === "punk"
+            ? ch.text.replace(/Grounds:[^.]*(\.|$)/gi, "").replace(/\s{2,}/g, " ").trim()
+            : ch.text;
+          guidance += ` House LAYOUT doctrine for this style (learned from the art director's reference labels — hierarchy, alignment, density${style === "punk" ? "" : ", grounds"}; the illustration's artistic style is governed separately below): ${doctrine}`;
+        }
         const cd = (await db.collection("settings").findOne({ _id: `dream-cards-${style}` } as never)) as { cards?: { key: string; arrangement: string }[] } | null;
         const card = dealCompositionCard(style, cd?.cards || []);
         if (card) {

@@ -1865,3 +1865,25 @@ composition-contract tightening, then customer wiring.
   ring stroke poked past the capsule — erased under it (#9). Crosses
   zIndex 5 everywhere + drawn over the assets shot boxes (#10). All
   buttons 12px (backdesign Edit was 15 bold, #8).
+- NEW UI v9 — round 9 (owner 2026-09-06, 7 items). (1) Into the LOADER
+  the old page now fully slides out FIRST, then the loader fades in
+  (faded() gained a delay param = SLIDE_TOTAL; go()'s setPrev timeout
+  extends by FADE_MS for next==='loader'; out of the loader stays
+  fade-out + slide-in together). (2) Loader subtext (italic 13px):
+  "Please stay on this page — preparing your labels usually takes
+  15–35 seconds." (3) Width/Height: caption + number + mm now share
+  ONE baseline-aligned flex line (captions were sitting high because
+  span line-boxes and input line-boxes baseline differently).
+  (4) Size box top = the Producer row's input RULE y253.77 (area h
+  297.5 to Wine Type's baseline). (5) COMPLIANCE RING TRAP: the svg
+  has TWO ring sets at each cell — hidden r=7.5 paths AND the visible
+  r=9.06 st3 rings 1.6px lower (centres y 352.87+52i). Covers (d23)
+  hide the baked rings and dotBtn draws the same rings the final-pack
+  page uses ({ring:true, cover:23}). (6) PUNK GROUNDS FREED
+  (dream/engine.ts, supersedes 2026-09-03 "charter Grounds stays
+  active" FOR PUNK ONLY): STYLE_MOOD.punk lost "fearless colour /
+  one painted world" background language, and the charter's "Grounds:"
+  sentence is stripped from punk prompts at assembly (charter doc in
+  Mongo untouched — re-analysis keeps working). Contrast law stays.
+  (7) All animations slower: SLIDE_MS 650, STRIP_DELAYS 0/55/110,
+  FADE_MS 420, size-box 600/780ms, buttons 240ms, loader wine 650ms.

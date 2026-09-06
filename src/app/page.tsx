@@ -17,10 +17,12 @@ const BAND_TOP = HEADER_H;
 const EASE = "cubic-bezier(0.33, 1, 0.68, 1)";
 /* owner (round 7): size-box motion = quick middle, prolonged ease-in/out */
 const EASE_IO = "cubic-bezier(0.8, 0, 0.2, 1)";
-const SLIDE_MS = 520;
+/* round 9 #7: everything a touch slower, to be appreciated */
+const SLIDE_MS = 650;
+const FADE_MS = 420;
 /* parallax slide: each page moves as three vertical bands — top lands
    first, lower bands trail slightly (same speed/easing, staggered start) */
-const STRIP_DELAYS = [0, 45, 90];
+const STRIP_DELAYS = [0, 55, 110];
 const SLIDE_TOTAL = SLIDE_MS + STRIP_DELAYS[STRIP_DELAYS.length - 1];
 const HNW = "'HNW', 'Helvetica Neue', Helvetica, sans-serif";
 
@@ -219,7 +221,8 @@ export default function NewUI() {
 
   const go = useCallback((next: PageKey, d = 1) => {
     setPrev(page); setDir(d); setPage(next);
-    setTimeout(() => setPrev(null), SLIDE_TOTAL + 60);
+    /* into the loader the fade starts only after the slide-out (round 9 #1) */
+    setTimeout(() => setPrev(null), (next === "loader" ? SLIDE_TOTAL + FADE_MS : SLIDE_TOTAL) + 60);
   }, [page]);
 
   const goBack = useCallback(() => {
@@ -359,12 +362,13 @@ export default function NewUI() {
   );
   /* selection dot, ALWAYS concentric with its ring (round 7 #17): both the
      optional drawn ring and the dot are centred in the same button */
-  const dotBtn = (cx: number, cy: number, on: boolean, click: () => void, key: string, opts?: { ring?: boolean; coverDot?: boolean; r?: number }) => {
+  const dotBtn = (cx: number, cy: number, on: boolean, click: () => void, key: string, opts?: { ring?: boolean; coverDot?: boolean; cover?: number; r?: number }) => {
     const r = opts?.r ?? 7.5;
     const c: React.CSSProperties = { position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", borderRadius: "50%" };
     return (
       <button key={key} onClick={click} style={{ ...px(cx - 13, cy - 13, 26, 26), ...ghost }}>
         {opts?.coverDot && <span style={{ ...c, width: 11, height: 11, background: "#fff" }} />}
+        {opts?.cover && <span style={{ ...c, width: opts.cover, height: opts.cover, background: "#fff" }} />}
         {opts?.ring && <span style={{ ...c, width: 2 * r, height: 2 * r, border: "2px solid #111", background: "#fff", boxSizing: "border-box" }} />}
         {on && <span style={{ ...c, width: 7.5, height: 7.5, background: "#111" }} />}
       </button>
@@ -451,10 +455,9 @@ export default function NewUI() {
           </label>
         </>);
       case "front": {
-        /* size area (round 7 #6): top = Producer's cap line, bottom =
-           Wine Type's baseline (design row pitch is 30 — from the SVG
-           tspans; the raster's 30.33 was a rasterizer artifact) */
-        const area = { right: 1302.86, top: 240.6, w: 488.43, h: 310.67 };
+        /* size area: top = the Producer row's input RULE (round 9 #4),
+           bottom = Wine Type's baseline (design row pitch 30) */
+        const area = { right: 1302.86, top: 253.77, w: 488.43, h: 297.5 };
         const wmm = Number(f.width) || 110, hmm = Number(f.height) || 80;
         const k = Math.min(area.w / wmm, area.h / hmm);
         const bw = wmm * k, bh = hmm * k;
@@ -492,8 +495,8 @@ export default function NewUI() {
           {!inSlide && <div key="szf" style={{
             position: "absolute", right: W - area.right - 16.5, top: area.top - 16.5,
             width: bw + 33, height: bh + 33,
-            transition: `width 480ms ${EASE_IO}, height 480ms ${EASE_IO}`,
-            animation: `szGrow 600ms ${EASE_IO}`, transformOrigin: "calc(100% - 16.5px) 16.5px",
+            transition: `width 600ms ${EASE_IO}, height 600ms ${EASE_IO}`,
+            animation: `szGrow 780ms ${EASE_IO}`, transformOrigin: "calc(100% - 16.5px) 16.5px",
             pointerEvents: "none",
           }}>
             <div style={{ position: "absolute", inset: 16.5, border: "1px solid #111" }} />
@@ -507,18 +510,16 @@ export default function NewUI() {
               </svg>
             ))}
           </div>}
-          {/* Width/Height row on Volume's baseline 611.27 (round 8 #2/#7);
-              only the NUMBER carries the underline, sized to its digits
-              so no empty underlined tail remains (#4/#8) */}
-          {([["Width:", 951.3, "width", 46.4], ["Height:", 1076.81, "height", 51.6]] as const).map(([cap, cx0, key2, off]) => (
-            <span key={key2}>
-              <span style={{ ...px(cx0, 611.27 - WH_BASE, 52, 15), font: `700 14px ${HNW}`, lineHeight: "15px" }}>{cap}</span>
-              <div style={{ position: "absolute", left: cx0 + off, top: 611.27 - WH_BASE, display: "flex", alignItems: "baseline" }}>
-                <input value={f[key2]} onChange={(e) => setF((m) => ({ ...m, [key2]: e.target.value.replace(/[^\d.]/g, "") }))}
-                  style={{ width: Math.max(1, (f[key2] || "").length) * 8.2 + 4, font: `italic 14px ${HNW}`, lineHeight: "15px", border: "none", borderBottom: "1px solid #111", outline: "none", background: "transparent", padding: 0, textAlign: "center" }} />
-                <span style={{ font: `italic 14px ${HNW}`, lineHeight: "15px", marginLeft: 4 }}>mm</span>
-              </div>
-            </span>
+          {/* Width/Height row on Volume's baseline 611.27; caption, number
+              and unit share ONE baseline-aligned flex line (round 9 #3);
+              only the NUMBER carries the underline, sized to its digits */}
+          {([["Width:", 951.3, "width"], ["Height:", 1076.81, "height"]] as const).map(([cap, cx0, key2]) => (
+            <div key={key2} style={{ position: "absolute", left: cx0, top: 611.27 - WH_BASE, display: "flex", alignItems: "baseline" }}>
+              <span style={{ font: `700 14px ${HNW}`, lineHeight: "15px" }}>{cap}</span>
+              <input value={f[key2]} onChange={(e) => setF((m) => ({ ...m, [key2]: e.target.value.replace(/[^\d.]/g, "") }))}
+                style={{ width: Math.max(1, (f[key2] || "").length) * 8.2 + 4, font: `italic 14px ${HNW}`, lineHeight: "15px", border: "none", borderBottom: "1px solid #111", outline: "none", background: "transparent", padding: 0, textAlign: "center", marginLeft: 3 }} />
+              <span style={{ font: `italic 14px ${HNW}`, lineHeight: "15px", marginLeft: 4 }}>mm</span>
+            </div>
           ))}
         </>);
       }
@@ -529,7 +530,7 @@ export default function NewUI() {
           {/* glass optically centred in the window (round 7 #10) */}
           <div style={{ ...px(601, 309.5, 238, 320) }}>
             <svg viewBox="0 0 595.276 609.089" width="238" aria-label="Designing your label">
-              <clipPath id="nuiWineClip"><rect x="230" y={266.6 - fill * 95} width="140" height={fill * 95 + 4} style={{ transition: `all 500ms ${EASE}` }} /></clipPath>
+              <clipPath id="nuiWineClip"><rect x="230" y={266.6 - fill * 95} width="140" height={fill * 95 + 4} style={{ transition: `all 650ms ${EASE}` }} /></clipPath>
               <path fill="#BA141A" clipPath="url(#nuiWineClip)" d="M352.397 185.696 C353.872 199.478 353.325 211.872 350.76 222.63 C346.838 239.075 336.88 251.431 321.163 259.355 C311.285 264.336 301.979 266.038 298.571 266.527 C296.674 266.308 286.165 264.888 274.916 259.216 C259.199 251.292 249.241 238.936 245.319 222.491 C242.762 211.769 242.21 199.422 243.667 185.696 Z" />
               <g fill="none" stroke="#231F20" strokeWidth="7.426">
                 <path d="M254.813 401.491 L297.631 401.491 L297.631 276.2 C297.631 276.2 246.711 271.948 235.438 224.682 C222.211 169.219 254.078 108.466 254.078 108.466 L341.155 108.635 C341.155 108.635 373.068 169.358 359.84 224.821 C348.568 272.087 297.648 276.339 297.648 276.339" />
@@ -542,6 +543,10 @@ export default function NewUI() {
             {[0, 1, 2].map((d) => (
               <span key={d} style={{ animation: `nuiDot 1.2s ${d * 0.2}s infinite` }}>.</span>
             ))}
+          </span>
+          {/* round 9 #2 */}
+          <span style={{ ...px(0, 520, W, 18), font: `italic 13px ${HNW}`, color: "#555", textAlign: "center", display: "block" }}>
+            Please stay on this page — preparing your labels usually takes 15–35 seconds.
           </span>
         </>);
       }
@@ -579,7 +584,7 @@ export default function NewUI() {
               style={{
                 ...px(fr.x + 0.2, 548.6, OPT_W, 34.3), cursor: "pointer",
                 /* round 7 #11: WHITE by default, inverts to black "Selected" */
-                font: `12px ${HNW}`, letterSpacing: 0.3, transition: `all 180ms ${EASE}`,
+                font: `12px ${HNW}`, letterSpacing: 0.3, transition: `all 240ms ${EASE}`,
                 background: selected === i ? "#111" : "#fff",
                 color: selected === i ? "#fff" : "#111",
                 border: "1px solid #111", boxSizing: "border-box",
@@ -617,7 +622,7 @@ export default function NewUI() {
           {(() => {
             const modeStyle = (active: boolean): React.CSSProperties => ({
               /* classic theme's global CSS uppercases <label> — undo it */
-              cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, textTransform: "none", transition: `all 180ms ${EASE}`,
+              cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, textTransform: "none", transition: `all 240ms ${EASE}`,
               background: active ? "#111" : "#fff", color: active ? "#fff" : "#111",
               border: "1px solid #111", boxSizing: "border-box",
               display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4,
@@ -653,7 +658,9 @@ export default function NewUI() {
         const RING_X = [282.87, 536.4, 788.92, 1045.54];   /* baked VECTOR ring centres (compliance.svg paths) */
         const FLAG_X = [317.7, 570.2, 822.6, 1075.0];      /* flag centres inside flags.png */
         const PNG_ROW = [351.8, 403.5, 455.5, 505.8];      /* flag row centres inside flags.png */
-        const ROW_C = [351.3, 403.1, 455.7, 508.3];        /* row line = the baked rings' own centres */
+        /* the VISIBLE baked rings are the r=9.06 st3 paths (there is a
+           second, hidden r=7.5 set 1.6px higher — round 9 trap) */
+        const ROW_C = [352.87, 404.87, 456.87, 508.87];
         const RC: { code: string; col: number; row: number }[] = [
           { code: "EU", col: 0, row: 0 }, { code: "US", col: 0, row: 1 }, { code: "GB", col: 0, row: 2 }, { code: "JP", col: 0, row: 3 },
           { code: "AU", col: 1, row: 0 }, { code: "NZ", col: 1, row: 1 }, { code: "CN", col: 1, row: 2 },
@@ -663,7 +670,7 @@ export default function NewUI() {
         return (<>
           {/* Arabic Markets removed — cover the SVG name text + its baked ring */}
           {patch(598, 500, 138, 20, "arab")}
-          <div style={{ ...px(536.4 - 13, 508.3 - 13, 26, 28), background: "#fff" }} />
+          <div style={{ ...px(536.4 - 13, 508.87 - 13, 26, 27), background: "#fff" }} />
           {RC.map(({ code, col, row }) => {
             const on = markets.includes(code);
             const cx0 = RING_X[col], cy0 = ROW_C[row];
@@ -676,7 +683,9 @@ export default function NewUI() {
                   backgroundPosition: `${-(FLAG_X[col] - 13 - 250.9)}px ${-(PNG_ROW[row] - 10 - 289.8)}px`,
                   pointerEvents: "none",
                 }} />
-                {dotBtn(cx0, cy0, on, () => setMarkets((ms) => on ? ms.filter((m) => m !== code) : [...ms, code]), `d${code}`)}
+                {/* round 9 #5: cover the baked ring, draw our own — the
+                    exact circles the final-pack page uses */}
+                {dotBtn(cx0, cy0, on, () => setMarkets((ms) => on ? ms.filter((m) => m !== code) : [...ms, code]), `d${code}`, { ring: true, cover: 23 })}
               </span>
             );
           })}
@@ -701,7 +710,7 @@ export default function NewUI() {
               style={{ ...px(lx, 548.6, fit.w, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>Edit</button>
             {/* round 7 #18: Select under Edit, same inverted logic as options */}
             <button onClick={() => setBackSel(!backSel)}
-              style={{ ...px(lx, 591.5, fit.w, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, transition: `all 180ms ${EASE}`, background: backSel ? "#111" : "#fff", color: backSel ? "#fff" : "#111", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>{backSel ? "Selected" : "Select"}</button>
+              style={{ ...px(lx, 591.5, fit.w, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, transition: `all 240ms ${EASE}`, background: backSel ? "#111" : "#fff", color: backSel ? "#fff" : "#111", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>{backSel ? "Selected" : "Select"}</button>
           </>)}
         </>);
       }
@@ -850,7 +859,6 @@ export default function NewUI() {
   const thick = THICK[page];
   const bandBottom = BAND_BOTTOM[page];
   const fullSlide = (page === "vision" && prev === "welcome") || page === "welcome";
-  const fade = page === "loader" || prev === "loader";
 
   return (
     <main style={{ background: "#000", minHeight: "100vh", margin: 0, padding: 0 }}>
@@ -898,16 +906,18 @@ export default function NewUI() {
                 </div>
               ));
             };
-            const faded = (p: PageKey, anim: string) => (
-              <div key={p} style={{ position: "absolute", inset: 0, animation: `${anim} 300ms ${EASE} both`, pointerEvents: "none" }}>
+            const faded = (p: PageKey, anim: string, delay = 0) => (
+              <div key={p} style={{ position: "absolute", inset: 0, animation: `${anim} ${FADE_MS}ms ${EASE} ${delay}ms both`, pointerEvents: "none" }}>
                 <div style={{ position: "absolute", left: 0, top: pageTop, width: W, height: H }}>{pageSpace(p, true)}</div>
               </div>
             );
             return (
               <div style={{ position: "absolute", left: 0, top: fullSlide ? 0 : BAND_TOP, width: W, height: zoneH, overflow: "hidden" }}>
-                {prev && (fade ? faded(prev, "nuiFadeOut") : strips(prev, "nuiOut"))}
+                {/* round 9 #1: entering the loader, the old page fully slides
+                    out FIRST, then the loader fades in */}
+                {prev && (prev === "loader" ? faded(prev, "nuiFadeOut") : strips(prev, "nuiOut"))}
                 {prev
-                  ? (fade ? faded(page, "nuiFadeIn") : strips(page, "nuiIn"))
+                  ? (page === "loader" ? faded(page, "nuiFadeIn", SLIDE_TOTAL) : strips(page, "nuiIn"))
                   : <div style={{ position: "absolute", left: 0, top: pageTop, width: W, height: H }}>{pageSpace(page, false)}</div>}
               </div>
             );
