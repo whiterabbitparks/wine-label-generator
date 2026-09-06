@@ -451,6 +451,24 @@ export default function NewUI() {
       <line x1="0.5" y1={thick ? 16.5 : 9} x2={thick ? 32.5 : 17.5} y2={thick ? 16.5 : 9} stroke="#000" strokeWidth={thick ? 3 : 1} />
     </svg>
   );
+  /* mini loader glass for asset boxes (round 14 #10): half the label
+     loader's size; the ACTIVE one fills over ~45s as its image renders */
+  const miniGlass = (key: string, active: boolean) => (
+    <svg key={key} viewBox="0 0 595.276 609.089" width="119" style={{ display: "block" }}>
+      <defs>
+        <clipPath id={`mg-${key.replace(/[^a-z0-9]/gi, "")}`}>
+          <rect x="230" y="171.6" width="140" height="99"
+            style={active ? { animation: "nuiWineRise 45s cubic-bezier(0.2, 0.6, 0.5, 1) forwards" } : { transform: "translateY(92px)" }} />
+        </clipPath>
+      </defs>
+      <path fill="#BA141A" clipPath={`url(#mg-${key.replace(/[^a-z0-9]/gi, "")})`} d="M352.397 185.696 C353.872 199.478 353.325 211.872 350.76 222.63 C346.838 239.075 336.88 251.431 321.163 259.355 C311.285 264.336 301.979 266.038 298.571 266.527 C296.674 266.308 286.165 264.888 274.916 259.216 C259.199 251.292 249.241 238.936 245.319 222.491 C242.762 211.769 242.21 199.422 243.667 185.696 Z" />
+      <g fill="none" stroke="#231F20" strokeWidth="7.426">
+        <path d="M254.813 401.491 L297.631 401.491 L297.631 276.2 C297.631 276.2 246.711 271.948 235.438 224.682 C222.211 169.219 254.078 108.466 254.078 108.466 L341.155 108.635 C341.155 108.635 373.068 169.358 359.84 224.821 C348.568 272.087 297.648 276.339 297.648 276.339" />
+        <path d="M297.8 276.2 L297.8 401.491 L340.618 401.491" />
+      </g>
+    </svg>
+  );
+
   /* centred contain-fit inside an area (owner #12) */
   const fitIn = (areaW: number, areaH: number, imgW: number, imgH: number) => {
     const k = Math.min(areaW / imgW, areaH / imgH);
@@ -753,8 +771,13 @@ export default function NewUI() {
           {RC.map(({ code, col, row }) => {
             const on = markets.includes(code);
             const cx0 = RING_X[col], cy0 = ROW_C[row];
+            const NAME_X = [347.05, 601.76, 851.43, 1107.64];
+            const toggle = () => setMarkets((ms) => on ? ms.filter((m) => m !== code) : [...ms, code]);
             return (
               <span key={code}>
+                {/* round 14 #1: the whole row (ring→flag→name) is clickable */}
+                <button onClick={toggle} aria-label={code}
+                  style={{ ...px(cx0 - 14, cy0 - 14, NAME_X[col] + 165 - (cx0 - 14), 28), ...ghost }} />
                 {/* flag window sliced from flags.png, centred on the row line */}
                 <div style={{
                   ...px(FLAG_X[col] - 13, cy0 - 10, 26, 20),
@@ -851,37 +874,47 @@ export default function NewUI() {
         const order = [heroAsset, ...[0, 1, 2, 3, 4].filter((i) => i !== heroAsset)];
         const lifeGallery = assets.life.filter(Boolean).map((l) => l.full);
         const shotGallery = [assets.front, assets.back].filter(Boolean).map((s) => s!.full);
-        const pic = (it: { full: string; prev: string } | undefined, w2: number, h2: number, label: string, fs = 12, fit: "cover" | "contain" = "cover", gal?: string[]) =>
+        const pic = (it: { full: string; prev: string } | undefined, w2: number, h2: number, label: string, fs = 12, fit: "cover" | "contain" = "cover", gal?: string[], loadKey?: string) =>
           it ? (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img src={it.prev} alt={label} onClick={() => { const g = gal?.length ? gal : [it.full]; setGallery({ imgs: g, i: Math.max(0, g.indexOf(it.full)) }); }}
-              style={{ width: w2, height: h2, objectFit: fit, display: "block", cursor: "zoom-in" }} />
+              style={{ width: w2, height: h2, objectFit: fit, display: "block", cursor: "zoom-in", animation: `nuiFadeIn ${FADE_MS}ms ${EASE}` }} />
           ) : (
-            <div style={{ width: w2, height: h2, background: "#F4F3EE", display: "flex", alignItems: "center", justifyContent: "center", font: `${fs}px ${HNW}`, color: "#999", textAlign: "center" }}>[ {label} ]</div>
+            <div style={{ width: w2, height: h2, background: "#F4F3EE", display: "flex", alignItems: "center", justifyContent: "center", font: `${fs}px ${HNW}`, color: "#999", textAlign: "center" }}>
+              {/* round 14 #10: while a run is live, every waiting box holds a
+                  mini glass; the one being generated fills up */}
+              {assetsStage && loadKey ? miniGlass(loadKey, assetsStage === loadKey) : <>[ {label} ]</>}
+            </div>
           );
         return (<>
-          {/* generation progress (round 13) */}
+          {/* round 14 #3: number words in the titles */}
+          {patch(136, 542, 132, 18, "t1")}
+          {patch(547.5, 542, 162, 18, "t2")}
+          <span style={{ ...px(138.16, 556.39 - (IN_BASE - 2), 200, 16), font: `700 15px ${HNW}`, lineHeight: "16px" }}>Two Product Shots</span>
+          <span style={{ ...px(548.57, 556.39 - (IN_BASE - 2), 220, 16), font: `700 15px ${HNW}`, lineHeight: "16px" }}>Five Marketing Images</span>
+          {/* round 14 #6: status message in the 12px subtitle style, on the
+              titles' line, left-aligned with the small-thumb block */}
           {assetsStage && (
-            <span style={{ ...px(548.6, 530, 600, 16), font: `italic 13px ${HNW}`, color: "#555" }}>
+            <span style={{ ...px(994.3, 556.39 - 12.4, 310, 32), font: `12px ${HNW}`, color: "#111", lineHeight: "16px" }}>
               Creating your marketing assets — {assetsStage}… please stay on the page.
             </span>
           )}
-          {page === "assets" && selected < 0 && (
-            <span style={{ ...px(548.6, 530, 600, 16), font: `italic 13px ${HNW}`, color: "#BA141A" }}>
+          {!assetsStage && selected < 0 && (
+            <span style={{ ...px(994.3, 556.39 - 12.4, 310, 32), font: `12px ${HNW}`, color: "#BA141A", lineHeight: "16px" }}>
               Select a front label first — assets are built from it.
             </span>
           )}
-          <div style={{ ...px(548.6, 171.9, 338.6, 338.6) }}>{pic(assets.life[order[0]], 338.6, 338.6, `Context ${order[0] + 1}`, 14, "cover", lifeGallery)}</div>
+          <div style={{ ...px(548.6, 171.9, 338.6, 338.6) }}>{pic(assets.life[order[0]], 338.6, 338.6, `Context ${order[0] + 1}`, 14, "cover", lifeGallery, `lifestyle ${order[0] + 1}/5`)}</div>
           {cross(548.6, 171.9, "ah1")}{cross(887.2, 171.9, "ah2")}{cross(548.6, 510.5, "ah3")}{cross(887.2, 510.5, "ah4")}
           {cross(994.3, 171.5, "at1")}{cross(1303.7, 171.5, "at2")}{cross(994.3, 515.3, "at3")}{cross(1303.7, 515.3, "at4")}
           {thumbs.map((t, k) => (
             <button key={k} onClick={() => setHeroAsset(order[k + 1])} style={{ ...px(t.x, t.y, 137.9, 137.9), ...ghost }}>
-              {pic(assets.life[order[k + 1]], 137.9, 137.9, `Context ${order[k + 1] + 1}`, 12, "cover", lifeGallery)}
+              {pic(assets.life[order[k + 1]], 137.9, 137.9, `Context ${order[k + 1] + 1}`, 12, "cover", lifeGallery, `lifestyle ${order[k + 1] + 1}/5`)}
             </button>
           ))}
           {/* product shots in the CROSS-MARKED area (137.1–411.4 × 171.9–514.8) */}
-          <div style={{ ...px(139, 174, 133, 339) }}>{pic(assets.front, 133, 339, "Shot: Face", 12, "contain", shotGallery)}</div>
-          <div style={{ ...px(276.3, 174, 133, 339) }}>{pic(assets.back, 133, 339, "Shot: Back", 12, "contain", shotGallery)}</div>
+          <div style={{ ...px(139, 174, 133, 339) }}>{pic(assets.front, 133, 339, "Shot: Face", 12, "contain", shotGallery, "front shot")}</div>
+          <div style={{ ...px(276.3, 174, 133, 339) }}>{pic(assets.back, 133, 339, "Shot: Back", 12, "contain", shotGallery, "back shot")}</div>
           {/* round 8 #10: pluses over everything */}
           {cross(137.1, 171.9, "as1")}{cross(411.4, 171.9, "as2")}{cross(137.1, 514.8, "as3")}{cross(411.4, 514.8, "as4")}
         </>);
@@ -895,39 +928,49 @@ export default function NewUI() {
           )}
           {backPng && (<>
             {/* slot 2 — cover the baked mock WITHOUT touching the dashed
-                divider at x685.7 (round 8 #12), centre the real back label */}
+                divider at x685.7 (round 8 #12), centre the real back label
+                on the dashed band's midline (round 14 #8) */}
             {patch(452, 268, 230, 180, "bmock2")}
             {(() => {
               const fit2 = fitIn(227, 160, backDims.w, backDims.h);
               return (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img src={backPng} alt="back" onClick={() => setGallery({ imgs: [backPng], i: 0 })}
-                  style={{ ...px(452 + fit2.dx, 275 + fit2.dy, fit2.w, fit2.h), objectFit: "fill", cursor: "zoom-in" }} />
+                  style={{ ...px(452 + fit2.dx, 280 + fit2.dy, fit2.w, fit2.h), objectFit: "fill", cursor: "zoom-in" }} />
               );
             })()}
           </>)}
-          {/* round 8 #14: real sizes instead of ???x??? in slots 1+2 */}
-          {patch(137, 208, 208, 20, "fmt1")}
-          {patch(445.7, 208, 208, 20, "fmt2")}
-          <span style={{ ...px(137.14, 222.4 - (IN_BASE - 2), 280, 16), font: `13px ${HNW}`, lineHeight: "16px" }}>
+          {/* round 8 #14 / round 14 #9: real sizes instead of ???x???, in the
+              design's own 12px subtitle size on its baseline 227.13 */}
+          {patch(137, 214, 208, 19, "fmt1")}
+          {patch(445.7, 214, 208, 19, "fmt2")}
+          <span style={{ ...px(137.14, 227.13 - 12.4, 280, 16), font: `12px ${HNW}`, lineHeight: "16px" }}>
             Tiff / {f.width || "110"}x{f.height || "80"}mm / 300dpi / CMYK</span>
-          <span style={{ ...px(445.71, 222.4 - (IN_BASE - 2), 280, 16), font: `13px ${HNW}`, lineHeight: "16px" }}>
+          <span style={{ ...px(445.71, 227.13 - 12.4, 280, 16), font: `12px ${HNW}`, lineHeight: "16px" }}>
             SVG / {backDims.w > 1 ? Math.round((backDims.w / 300) * 25.4) : f.width || "110"}x{f.height || "80"}mm / 300dpi / CMYK</span>
-          {/* slots 3-5: real generated assets when available (round 13),
-              placeholders otherwise */}
-          {([
-            { x: 696, w: 82, label: "Shot: Face", it: assets.front, fit: "contain" },
-            { x: 799, w: 82, label: "Shot: Back", it: assets.back, fit: "contain" },
-            { x: 906, w: 176, label: "Context", it: assets.life[heroAsset], fit: "cover" },
-            { x: 1112, w: 176, label: "Landing Page", it: undefined, fit: "cover" },
-          ] as { x: number; w: number; label: string; it?: { full: string; prev: string }; fit: "cover" | "contain" }[]).map((s) =>
-            s.it ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img key={s.label} src={s.it.prev} alt={s.label} onClick={() => setGallery({ imgs: [s.it!.full], i: 0 })}
-                style={{ ...px(s.x, 284, s.w, 150), objectFit: s.fit, cursor: "zoom-in" }} />
-            ) : (
-              <div key={s.label} style={{ ...px(s.x, 284, s.w, 150), background: "#F4F3EE", display: "flex", alignItems: "center", justifyContent: "center", font: `10px ${HNW}`, color: "#999", textAlign: "center" }}>[ {s.label} ]</div>
-            ))}
+          {/* round 14 #2: slots 3-4 at the DESIGN's exact geometry — two tall
+              shots; marketing = hero square + a row of 4 small thumbs */}
+          {(() => {
+            const box = (x: number, y: number, w2: number, h2: number, it: { full: string; prev: string } | undefined, label: string, fit: "cover" | "contain", gal?: string[], fs = 10) =>
+              it ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img key={`${label}@${x}`} src={it.prev} alt={label} onClick={() => { const g = gal?.length ? gal : [it.full]; setGallery({ imgs: g, i: Math.max(0, g.indexOf(it.full)) }); }}
+                  style={{ ...px(x, y, w2, h2), objectFit: fit, cursor: "zoom-in" }} />
+              ) : (
+                <div key={`${label}@${x}`} style={{ ...px(x, y, w2, h2), background: "#F4F3EE", display: "flex", alignItems: "center", justifyContent: "center", font: `${fs}px ${HNW}`, color: "#999", textAlign: "center" }}>{label ? `[ ${label} ]` : ""}</div>
+              );
+            const lifeG = assets.life.filter(Boolean).map((l) => l.full);
+            const shotG = [assets.front, assets.back].filter(Boolean).map((s) => s!.full);
+            const others = [0, 1, 2, 3, 4].filter((i) => i !== heroAsset);
+            return (<>
+              {box(688, 266.3, 97.6, 184.9, assets.front, "Shot: Face", "contain", shotG)}
+              {box(791.1, 265.7, 96.9, 185.4, assets.back, "Shot: Back", "contain", shotG)}
+              {box(925.71, 273.84, 137.9, 137.9, assets.life[heroAsset], "Context", "cover", lifeG)}
+              {[925.71, 963.75, 1001.89, 1040.03].map((tx, k) =>
+                box(tx, 422.44, 25.1, 25.1, assets.life[others[k]], "", "cover", lifeG))}
+              {box(1112, 284, 176, 150, undefined, "Landing Page", "cover")}
+            </>);
+          })()}
           {/* round 8 #11/#15: the whole pricing block re-rendered 20.5px
               higher — no top dashed rule, agree row lands on the back
               arrow's line, ring+dot+text aligned by construction */}
@@ -949,7 +992,7 @@ export default function NewUI() {
               {dotBtn(144.64, 686, agree, () => setAgree(!agree), "agree", { ring: true })}
               <span style={{ ...px(171.43, 691.3 - B, 400, 16), font: `15px ${HNW}`, lineHeight: "16px" }}>I agree to the <u>Terms &amp; Conditions</u></span>
               <span style={{ ...px(852.24, 691.3 - B - 3, 240, 20), font: `700 19px ${HNW}`, lineHeight: "20px" }}>TOTAL SUM: ${total}</span>
-              <button onClick={proceedToPayment} style={{ ...px(1032, 669.5, 268, 32), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 2 }}>Proceed to payment</button>
+              <button onClick={proceedToPayment} style={{ ...px(1032, 669.5, 268, 32), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>Proceed to payment</button>
             </>);
           })()}
           <button aria-label="back" onClick={goBack} style={{ ...px(56, 664, 60, 44), ...ghost }} />
@@ -981,6 +1024,7 @@ export default function NewUI() {
         @font-face { font-family: 'Helvetica Neue World'; src: url('/newui/fonts/HNW-45Lt.woff2') format('woff2'); font-weight: 300; font-style: normal; font-display: block; }
         input::placeholder, textarea::placeholder { color: #B3B3B3; opacity: 1; font-style: italic; }
         @keyframes nuiDot { 0% { opacity: 0.15 } 30% { opacity: 1 } 60%, 100% { opacity: 0.15 } }
+        @keyframes nuiWineRise { from { transform: translateY(92px) } to { transform: translateY(4px) } }
         @keyframes nuiIn { from { transform: translateX(${dir > 0 ? "100%" : "-100%"}) } to { transform: translateX(0) } }
         @keyframes nuiOut { from { transform: translateX(0) } to { transform: translateX(${dir > 0 ? "-100%" : "100%"}) } }
         @keyframes arrowFly { from { left: 122px } to { left: 1324px } }

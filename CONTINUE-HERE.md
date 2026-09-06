@@ -1951,3 +1951,29 @@ composition-contract tightening, then customer wiring.
   tier would be ≈ $2.20. Live test 2026-09-06: Bordeaux + olive glass
   + red saperavi + matte dark-red cork capsule — all physics honoured,
   label reproduced exactly, cutout clean.
+- MARKETING ROUND 14 (owner 2026-09-06, 10 items): (1) compliance rows
+  fully clickable (wide ghost button ring→name). (2) checkout slots
+  3-4 rebuilt at the ORIGINAL design's geometry (source of truth:
+  WAIN/NEW UI/New_UI_Check Out copy.svg — the app's checkout.svg had
+  its mock rasters stripped; <image> transforms decoded): shots
+  97.6×184.9@(688,266.3) + 96.9×185.4@(791.1,265.7); marketing =
+  137.9px hero @(925.71,273.84) + FOUR 25.1px thumbs at
+  x[925.71,963.75,1001.89,1040.03] y422.44. (3) assets titles covered
+  and re-rendered as "Two Product Shots" / "Five Marketing Images"
+  (baked block translate(138.16/548.57, 556.39), st8 bold 15).
+  (4) BOTTLE SHAPE: the owner's line-art bottle JPGs ride as a SECOND
+  image input on shots AND lifestyle ("technical outline — match the
+  silhouette precisely, render photoreal") — verified live: Burgundy
+  came back with true sloping shoulders, no line-art bleed. (5) NO
+  FACES house rule in every lifestyle prompt + scenario rewrites
+  (sommelier from shoulders down, pour = hands only). (6) assets
+  status message moved to x994.3 on the titles' baseline 556.39 in
+  the 12px subtitle style. (7) pay button padding 0 (was pushed up).
+  (8) back label centred on the dashed band midline (y280 fit area).
+  (9) checkout format lines are 12px on baseline 227.13 (design
+  tspans: title y0 bold15, desc y+14.4 12px, format y+43.2 12px).
+  (10) MINI LOADER GLASSES: during a run every waiting asset box
+  shows a half-size loader glass; the actively-generating one fills
+  over ~45s (nuiWineRise keyframes on the clip rect transform), and
+  the arriving image fades in over it. TRAP: unique clipPath ids per
+  glass (sanitized stage keys).

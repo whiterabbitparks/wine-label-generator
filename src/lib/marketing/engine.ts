@@ -1,5 +1,7 @@
 import sharp from "sharp";
 import { PNG } from "pngjs";
+import fs from "node:fs";
+import path from "node:path";
 import { getDb } from "@/lib/db";
 import { generateImageRawWithRetry, imageQuality } from "@/lib/image-provider";
 
@@ -25,6 +27,23 @@ export const BOTTLE_SPECS: Record<string, BottleSpec> = {
   "Alsace / Rhine": { heightCM: 35, diamCM: 7.0, shape: "tall slender Alsace flute bottle — long elegant body, very gradual shoulder taper, long neck" },
   "Ice Wine": { heightCM: 32, diamCM: 5.5, shape: "slim 375 ml ice-wine flute — very slender tall body, delicate proportions" },
 };
+
+/* the owner's line-art bottle drawings double as SHAPE SPECS: they ride
+   along as a second image input so the generated bottle's silhouette
+   matches the chosen type exactly (owner round 14 #4 — "shape is not
+   consistent"). These are product specifications, not style boards. */
+const BOTTLE_SLUG: Record<string, string> = {
+  "Bordeaux": "bordeaux", "Bordeaux Prestige": "bordeaux-prestige", "Burgundy": "burgundy",
+  "Sparkling": "sparkling", "Alsace / Rhine": "alsace-rhine", "Ice Wine": "ice-wine",
+};
+function bottleShapeRef(type: string): string | null {
+  const slug = BOTTLE_SLUG[type];
+  if (!slug) return null;
+  try {
+    const p = path.join(process.cwd(), "public", "newui", "bottles", `${slug}.jpg`);
+    return "data:image/jpeg;base64," + fs.readFileSync(p).toString("base64");
+  } catch { return null; }
+}
 
 /* ---- liquid appearance through the glass --------------------------- */
 
@@ -99,24 +118,27 @@ function bottleDescription(b: MarketingBrief) {
   };
 }
 
-export function buildShotPrompt(b: MarketingBrief, side: "front" | "back") {
+export function buildShotPrompt(b: MarketingBrief, side: "front" | "back", hasShape: boolean) {
   const d = bottleDescription(b);
   return (
     `Professional studio product photograph of a single wine bottle, photographed dead straight-on, ` +
     `${side === "front" ? "showing the FRONT of the bottle" : "showing the BACK of the bottle"}, the whole bottle in frame from base to closure with a small margin. ` +
     `${d.text} ` +
-    `The attached image is the wine's ${side} label — apply it to the bottle EXACTLY as given: identical layout, typography, artwork and colours, ` +
+    `The FIRST attached image is the wine's ${side} label — apply it to the bottle EXACTLY as given: identical layout, typography, artwork and colours, ` +
     `perfectly legible, wrapped naturally onto the glass curvature with subtle realistic paper sheen. Do NOT redraw, reinterpret, crop or add any text. ` +
+    (hasShape
+      ? `The SECOND attached image is a technical outline drawing of this exact bottle model — match its silhouette, proportions, shoulder curve and neck length PRECISELY, but render a real photographed glass bottle, never a drawing. `
+      : "") +
     `Lighting: crisp premium studio softbox lighting, elegant vertical highlights along the glass, true colours, razor-sharp focus. ` +
-    `CUTOUT: pure transparent background, no surface, no table, no cast shadow, no reflection below the bottle — a clean isolated product cutout.`
+    `CUTOUT: pure transparent background, no surface, no table, no cast shadow, no glow or halo around the silhouette — a clean isolated product cutout.`
   );
 }
 
 /* ---- lifestyle ------------------------------------------------------ */
 
 const SCENARIOS: [string, string][] = [
-  ["sommelier", "a sommelier presents the bottle to camera, holding it label-forward at chest height"],
-  ["pour", "wine is being poured from the bottle into a glass beside it, the label facing camera, motion caught mid-pour"],
+  ["sommelier", "a sommelier in service attire presents the bottle to camera, holding it label-forward at chest height — framed from the shoulders down, no face visible"],
+  ["pour", "wine is being poured from the bottle into a glass beside it (hands only), the label facing camera, motion caught mid-pour"],
   ["grapes", "a close-up of the label while the bottle rests among fresh wine grapes and vine leaves"],
   ["cellar", "the bottle stands label-forward on a wine cellar shelf among other (blurred, anonymous) bottles"],
   ["table", "the bottle on a set dining table with a filled glass, inviting atmosphere, label facing camera"],
@@ -134,14 +156,18 @@ const STYLE_WORLD: Record<string, string> = {
     "Setting and styling are RAW and natural: candid unpolished scenes, natural-wine bar energy, honest daylight, real textures — concrete, worn wood, skin, paper — nothing staged-looking, a free documentary feel.",
 };
 
-export function buildLifestylePrompt(b: MarketingBrief, scenario: string, charter: string) {
+export function buildLifestylePrompt(b: MarketingBrief, scenario: string, charter: string, hasShape: boolean) {
   const d = bottleDescription(b);
   return (
     `Photorealistic promotional lifestyle photograph for a wine brand: ${scenario}. ` +
     `${STYLE_WORLD[b.style] || STYLE_WORLD.contemporary} ` +
     (charter ? `Art director's world notes for this brand (follow their spirit): ${charter} ` : "") +
     `The wine bottle: ${d.text} ` +
-    `The attached image is the wine's front label — it appears on the bottle EXACTLY as given, legible and true to its colours; never redraw or replace it. ` +
+    `The FIRST attached image is the wine's front label — it appears on the bottle EXACTLY as given, legible and true to its colours; never redraw or replace it. ` +
+    (hasShape
+      ? `The SECOND attached image is a technical outline of this exact bottle model — the bottle in the photo matches that silhouette and its proportions precisely. `
+      : "") +
+    `PEOPLE (house rule): never show a human face — any person appears from behind, framed below the shoulders, or as hands only. ` +
     `Shot on professional camera, beautiful natural light for the scene, crisp focus on the bottle and label. Square composition. No added text, no watermarks, no logos other than the label itself.`
   );
 }
@@ -217,12 +243,16 @@ export async function generateMarketingAssets(
     charter = c?.text || "";
   } catch { /* charter is optional */ }
 
+  /* the owner's line-art drawing of the chosen bottle rides along as a
+     silhouette spec (round 14 #4) */
+  const shape = bottleShapeRef(b.bottleType);
+
   /* sequential on purpose: OpenAI allows ~5 images/min — the retry absorbs
      the occasional 429, and the stream keeps the page honest meanwhile */
   send({ type: "progress", stage: "front shot" });
   const front = await generateImageRawWithRetry({
-    prompt: buildShotPrompt(b, "front"),
-    references: [frontLabel], transparent: true, size: { w: 1024, h: 1536 },
+    prompt: buildShotPrompt(b, "front", !!shape),
+    references: shape ? [frontLabel, shape] : [frontLabel], transparent: true, size: { w: 1024, h: 1536 },
   });
   const frontSized = await sizeShot(front, final);
   send({ type: "shot", side: "front", image: frontSized, preview: await previewOf(front) });
@@ -230,8 +260,8 @@ export async function generateMarketingAssets(
   if (backLabel) {
     send({ type: "progress", stage: "back shot" });
     const back = await generateImageRawWithRetry({
-      prompt: buildShotPrompt(b, "back"),
-      references: [backLabel], transparent: true, size: { w: 1024, h: 1536 },
+      prompt: buildShotPrompt(b, "back", !!shape),
+      references: shape ? [backLabel, shape] : [backLabel], transparent: true, size: { w: 1024, h: 1536 },
     });
     send({ type: "shot", side: "back", image: await sizeShot(back, final), preview: await previewOf(back) });
   }
@@ -241,8 +271,8 @@ export async function generateMarketingAssets(
     send({ type: "progress", stage: `lifestyle ${i + 1}/5` });
     try {
       const img = await generateImageRawWithRetry({
-        prompt: buildLifestylePrompt(b, scenarios[i][1], charter),
-        references: [frontLabel], size: { w: 1024, h: 1024 },
+        prompt: buildLifestylePrompt(b, scenarios[i][1], charter, !!shape),
+        references: shape ? [frontLabel, shape] : [frontLabel], size: { w: 1024, h: 1024 },
       });
       send({ type: "life", i, image: await sizeLifestyle(img, final), preview: await previewOf(img) });
     } catch (e) {
