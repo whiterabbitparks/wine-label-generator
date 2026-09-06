@@ -1780,3 +1780,52 @@ composition-contract tightening, then customer wiring.
   font. Verified on prod build: mid-slide frames clean, rest-state
   pixel-identical, npm run build passes (engine untouched — no
   golden/parity re-run needed).
+- NEW UI v7 — the 25-item precision round (owner 2026-09-06). DEV AID:
+  /?page=bottle jumps to any page without generating. INPUT ROWS
+  (front+backdetails, items 1/2/4/5/14): text-decoration underlines are
+  GONE — each row is an input (transparent bg, italic, baseline-true via
+  IN_BASE=15.5 for 15px/20px-line text — pixel-measured ±1px against the
+  baked labels) over a FIXED-LENGTH 1px black rule (front x264.9 w564.1
+  at baseline+2.5; back x989.6 w313.3); placeholders 50% grey (#808080),
+  E.G.→E.g. Intro text replaced ("Feel free to leave out fields you
+  don't want on your front label."). SIZE BOX (6-9): area top 240.6
+  (Producer cap line) bottom 554.57 (Wine Type baseline); W/H row on
+  Volume's baseline 615.23, only the NUMBERS underlined (borderBottom);
+  frame is EDGE-ANCHORED (right/top fixed, width/height transition
+  480ms cubic-bezier(.8,0,.2,1)) so the top-right plus never moves and
+  corners glide; design diagonal (TR→BL) inside as a stretch-SVG with
+  non-scaling stroke. LOADER (10): glass centred (top 309.5 → optical
+  centre 411.5), "Designing your label" + three dots animating opacity
+  (nuiDot 1.2s staggered). SELECT INVERTED (11/18): white/outlined →
+  black "Selected" (options + new Select under backdesign's Edit,
+  backSel state); forward arrow on options without a selection shows a
+  red centred warning "Select a label design to continue" (3.2s). RING
+  TRUTH (16/17/19/24 — the recurring off-centre dots): all baked rings
+  are r=7.5 VECTOR paths whose centres the SVGs give exactly; the old
+  pixel-detected coords were 2-6px off. Dots (dotBtn helper) now sit at
+  path centres: bottle cx385.64/625.64/864.64 cy283.07+~29.5/row,
+  finish 1104.64/1173.21; checkout cx144.64 cy=row baseline−4.93
+  ([531.56,565.85,600,634.42,668.84], agree 706.9). Bottle's 4 baked
+  preselect dots covered by 11px white circles inside the rings.
+  COMPLIANCE (15/16): flags.png contained a RASTER copy of names (old
+  font!) AND rings that covered the SVG's real HNW names and its
+  perfectly-aligned vector rings (centres x282.87/536.4/788.92/1045.54,
+  y351.3/403.1/455.7/508.3) — now only 26×20 per-flag background
+  windows of flags.png are shown (row-centred on the ring lines), names
+  + rings come from the SVG, Arabic's orphan ring+name covered.
+  BACKDETAILS BUTTONS (13): create/upload toggles are real buttons
+  (active=black / inactive=white outlined, Select-language); TRAP: the
+  classic theme's global CSS uppercases <label> — textTransform:none
+  required on any NEW UI label with visible text. BOTTLE (19-21):
+  slider = the design's white→black gradient capsule rebuilt in CSS at
+  (1253.57,359.19,15×136.64,r7.5) — covers the frozen baked cursor
+  without erasing the gradient (the old white patch was the "erased
+  part"); cursor maps shade over the cap-centre travel (366.69→488.33);
+  wheel marker starts centred with rgb 255,255,255 → result box starts
+  WHITE; red ⊘ on "No cap" is the design's own icon. CHECKOUT (22-25):
+  slots 3/4 get placeholder content (Shot Face/Back at x696/799 w82,
+  Context at x906 w176, y284 h150 — real assets pending owner images);
+  baked "TOTAL SUM: $200" (ends x1015; button starts x1032) covered by
+  patch(848,694,172,22) and the live total rendered on the design
+  baseline 711.83; the LAST dashed pricing rule (y685.99) covered.
+  All verified by ?page= screenshots on the prod build.

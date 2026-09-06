@@ -15,6 +15,8 @@ const W = 1440, H = 823;
 const HEADER_H = 68.57, FOOTER_Y = 754.07;
 const BAND_TOP = HEADER_H;
 const EASE = "cubic-bezier(0.33, 1, 0.68, 1)";
+/* owner (round 7): size-box motion = quick middle, prolonged ease-in/out */
+const EASE_IO = "cubic-bezier(0.8, 0, 0.2, 1)";
 const SLIDE_MS = 520;
 /* parallax slide: each page moves as three vertical bands — top lands
    first, lower bands trail slightly (same speed/easing, staggered start) */
@@ -116,6 +118,11 @@ async function groundOf(url: string): Promise<string> {
 
 export default function NewUI() {
   const [page, setPage] = useState<PageKey>("welcome");
+  /* dev aid: /?page=bottle jumps straight to a page (no generation needed) */
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get("page");
+    if (q && (ORDER as readonly string[]).includes(q)) setPage(q as PageKey);
+  }, []);
   const [prev, setPrev] = useState<PageKey | null>(null);
   const [dir, setDir] = useState(1);
   const [scale, setScale] = useState(1);
@@ -137,12 +144,15 @@ export default function NewUI() {
   const [backSig, setBackSig] = useState("");
   const [backDims, setBackDims] = useState({ w: 1, h: 1 });
   const [bottle, setBottle] = useState<Record<string, string>>({ type: "Bordeaux", color: "Olive Green", closure: "Cork", finish: "Matte" });
-  const [wheel, setWheel] = useState({ x: 0.5, y: 0.5, rgb: [180, 40, 40] as number[] });
+  /* round 7 #20: marker starts centred; result box starts WHITE */
+  const [wheel, setWheel] = useState({ x: 0.5, y: 0.5, rgb: [255, 255, 255] as number[] });
   const [shade, setShade] = useState(0.5);
   const [heroAsset, setHeroAsset] = useState(0);
   const [packSel, setPackSel] = useState<boolean[]>([true, true, true, true, false]);
   const [agree, setAgree] = useState(false);
   const [gallery, setGallery] = useState<{ imgs: string[]; i: number } | null>(null);
+  const [warn, setWarn] = useState("");
+  const [backSel, setBackSel] = useState(false);
   const [imgDims, setImgDims] = useState<Record<number, { w: number; h: number }>>({});
   useEffect(() => {
     dreams.forEach((d, i) => {
@@ -309,8 +319,29 @@ export default function NewUI() {
   const px = (x: number, y: number, w?: number, h?: number): React.CSSProperties => ({ position: "absolute", left: x, top: y, width: w, height: h });
   const ghost: React.CSSProperties = { background: "transparent", border: "none", cursor: "pointer", padding: 0 };
   const patch = (x: number, y: number, w: number, h: number, key?: string) => <div key={key} style={{ ...px(x, y, w, h), background: "#fff" }} />;
-  /* owner #15: input text matches placeholder style — italic (design st16) */
-  const inputStyle: React.CSSProperties = { font: `italic 15px ${HNW}`, textDecoration: "underline", border: "none", outline: "none", background: "#fff", padding: 0, color: "#111", lineHeight: "20px" };
+  /* owner #15 / round 7 #2: input text italic (design st16); the underline is
+     a SEPARATE fixed-length row line, not text-decoration */
+  const inputStyle: React.CSSProperties = { font: `italic 15px ${HNW}`, border: "none", outline: "none", background: "transparent", padding: 0, color: "#111", lineHeight: "20px" };
+  /* baseline offset of a 15px/20px-line input — calibrated so typed text
+     shares the baked labels' exact baseline (round 7 #1) */
+  const IN_BASE = 15.5;
+  /* fixed-length input rule — 1px black, same weight as the progress line */
+  const rowLine = (x: number, y: number, w2: number, key?: string) => (
+    <div key={key} style={{ position: "absolute", left: x, top: y, width: w2, height: 1, background: "#111" }} />
+  );
+  /* selection dot, ALWAYS concentric with its ring (round 7 #17): both the
+     optional drawn ring and the dot are centred in the same button */
+  const dotBtn = (cx: number, cy: number, on: boolean, click: () => void, key: string, opts?: { ring?: boolean; coverDot?: boolean; r?: number }) => {
+    const r = opts?.r ?? 7.5;
+    const c: React.CSSProperties = { position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", borderRadius: "50%" };
+    return (
+      <button key={key} onClick={click} style={{ ...px(cx - 13, cy - 13, 26, 26), ...ghost }}>
+        {opts?.coverDot && <span style={{ ...c, width: 11, height: 11, background: "#fff" }} />}
+        {opts?.ring && <span style={{ ...c, width: 2 * r, height: 2 * r, border: "2px solid #111", background: "#fff", boxSizing: "border-box" }} />}
+        {on && <span style={{ ...c, width: 7.5, height: 7.5, background: "#111" }} />}
+      </button>
+    );
+  };
   const cross = (cx: number, cy: number, key: string, thick = false) => (
     /* thick arms = 33px, matching the baked st14 pluses (532.06→565.02) */
     <svg key={key} style={{ ...px(cx - (thick ? 16.5 : 9), cy - (thick ? 16.5 : 9), thick ? 33 : 18, thick ? 33 : 18), pointerEvents: "none" }} viewBox={thick ? "0 0 33 33" : "0 0 18 18"}>
@@ -326,7 +357,7 @@ export default function NewUI() {
   };
 
   const FRONT_ROWS = ["producer", "wine", "appellation", "classification", "vintage", "grape", "regionCountry", "special", "sweetness", "colour", "wineType", "alcohol", "volume"];
-  const FRONT_PH = ["E.G. GRAND VIN", "E.g. Château Margaux", "E.g. Margaux AOC", "E.g. Grand Cru Classé", "E.g. 2018", "E.g. Cabernet Sauvignon", "E.g. Bordeaux, France", "E.g. Vieilles Vignes", "Dry, etc.", "E.g. Red, White etc.", "E.g. Wine, Sparkling Wine, etc.", "E.g. 12.5%", "E.g. 750 mL"];
+  const FRONT_PH = ["E.g. GRAND VIN", "E.g. Château Margaux", "E.g. Margaux AOC", "E.g. Grand Cru Classé", "E.g. 2018", "E.g. Cabernet Sauvignon", "E.g. Bordeaux, France", "E.g. Vieilles Vignes", "Dry, etc.", "E.g. Red, White etc.", "E.g. Wine, Sparkling Wine, etc.", "E.g. 12.5%", "E.g. 750 mL"];
   const BACK_ROWS = ["producerCompany", "producerAddress", "importer", "importerAddress", "bottlingDate", "lot", "web"];
   const BACK_PH = ['E.g. "Popiashvili Cellar" LLC', "E.g. #36 S. Chikovani st. 0171 Tbilisi, Georgia", 'E.g. "Teller Wines" LLC', "E.g. #36 S. Chikovani st. 0171 Tbilisi, Georgia", "E.g. 22/04/2019", "E.g. L206026342", "E.g. www.popiashvili.com"];
 
@@ -392,62 +423,78 @@ export default function NewUI() {
           </label>
         </>);
       case "front": {
-        /* design truth (front.svg st14 pluses): frame corners at
-           (814.43,172.29)-(1302.86,549.41) */
-        const area = { right: 1302.86, top: 172.29, w: 488.43, h: 377.12 };
+        /* size area (round 7 #6): top = Producer's cap line, bottom =
+           Wine Type's baseline; right edge from the design frame */
+        const area = { right: 1302.86, top: 240.6, w: 488.43, h: 313.97 };
         const wmm = Number(f.width) || 110, hmm = Number(f.height) || 80;
         const k = Math.min(area.w / wmm, area.h / hmm);
         const bw = wmm * k, bh = hmm * k;
-        const fx0 = area.right - bw, fy0 = area.top;
         return (<>
-          {/* cover baked E.g. column; live italic-underlined inputs */}
-          {patch(263, 234, 550, 372, "phcol")}
-          {FRONT_ROWS.map((k2, i) => (
-            <input key={k2} value={f[k2] || ""} placeholder={FRONT_PH[i]}
-              onChange={(e) => setF((m) => ({ ...m, [k2]: e.target.value }))}
-              style={{ ...px(264.9, 251.3 + i * 30.33 - 16.5, 540, 20), ...inputStyle }} />
-          ))}
+          {/* round 7 #3: shorter intro replaces the baked paragraph */}
+          {patch(134, 166, 560, 46, "intro")}
+          <span style={{ ...px(136.97, 183.62 - 15.5, 560, 20), font: `15px ${HNW}`, color: "#111", lineHeight: "20px" }}>
+            Feel free to leave out fields you don&apos;t want on your front label.
+          </span>
+          {/* cover baked E.g. column incl. its underlines */}
+          {patch(263, 234, 572, 390, "phcol")}
+          {FRONT_ROWS.map((k2, i) => {
+            const base = 251.27 + i * 30.33;
+            return (
+              <span key={k2}>
+                <input value={f[k2] || ""} placeholder={FRONT_PH[i]}
+                  onChange={(e) => setF((m) => ({ ...m, [k2]: e.target.value }))}
+                  style={{ ...px(264.9, base - IN_BASE, 556, 20), ...inputStyle }} />
+                {rowLine(264.9, base + 2.5, 564.1, `ln${i}`)}
+              </span>
+            );
+          })}
           {/* cover the ENTIRE baked size area (rect + diagonal + pluses whose
               arms reach x1319.34 / y154.95-565.02 + dashed line y617.1) */}
           {patch(806, 148, 517, 480, "szarea")}
           {/* left tips of the baked corner pluses reach x798, past the big patch */}
           {patch(796, 155, 11, 36, "szl1")}
           {patch(796, 531, 11, 36, "szl2")}
-          {/* the ANIMATED OUTER FRAME (owner #4/#5): 3px black + corner
-              pluses, anchored TOP-RIGHT, stretching in diagonally */}
-          {/* frame + pluses grow TOGETHER, anchored on the top-right plus;
+          {/* the ANIMATED OUTER FRAME: 1px black + corner pluses + the
+              design's corner-to-corner diagonal (round 7 #9). Edge-anchored
+              layout: the top-right plus NEVER moves; size changes glide via
+              width/height transitions (quick-in, prolonged-out easing);
               hidden while ghosted so the grow plays once the page lands */}
           {!inSlide && <div key="szf" style={{
-            ...px(fx0 - 16.5, fy0 - 16.5, bw + 33, bh + 33),
-            transformOrigin: `${16.5 + bw}px 16.5px`, transition: `all 380ms ${EASE}`,
-            animation: `szGrow 650ms ${EASE}`, pointerEvents: "none",
+            position: "absolute", right: W - area.right - 16.5, top: area.top - 16.5,
+            width: bw + 33, height: bh + 33,
+            transition: `width 480ms ${EASE_IO}, height 480ms ${EASE_IO}`,
+            animation: `szGrow 600ms ${EASE_IO}`, transformOrigin: "calc(100% - 16.5px) 16.5px",
+            pointerEvents: "none",
           }}>
-            <div style={{ position: "absolute", left: 16.5, top: 16.5, width: bw, height: bh, border: "1px solid #111", boxSizing: "border-box" }} />
-            {[[0, 0], [bw, 0], [0, bh], [bw, bh]].map(([dx, dy], ci) => (
-              <svg key={ci} style={{ position: "absolute", left: dx, top: dy, width: 33, height: 33 }} viewBox="0 0 33 33">
+            <div style={{ position: "absolute", inset: 16.5, border: "1px solid #111" }} />
+            <svg style={{ position: "absolute", left: 16.5, top: 16.5, width: "calc(100% - 33px)", height: "calc(100% - 33px)" }} viewBox="0 0 100 100" preserveAspectRatio="none">
+              <line x1="100" y1="0" x2="0" y2="100" stroke="#000" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+            </svg>
+            {([["left", "top"], ["right", "top"], ["left", "bottom"], ["right", "bottom"]] as const).map(([hx, vy], ci) => (
+              <svg key={ci} style={{ position: "absolute", [hx]: 0, [vy]: 0, width: 33, height: 33 }} viewBox="0 0 33 33">
                 <line x1="16.5" y1="0.5" x2="16.5" y2="32.5" stroke="#000" strokeWidth="3" />
                 <line x1="0.5" y1="16.5" x2="32.5" y2="16.5" stroke="#000" strokeWidth="3" />
               </svg>
             ))}
           </div>}
-          {/* Width/Height row — design truth (front.svg): bold 14px captions at
-              x951.3/1076.81 baseline 601.47; values ITALIC UNDERLINED 14px
-              (st17 input-style) at x997.7/1128.4 with the unit attached */}
-          <span style={{ ...px(951.3, 601.47 - 12, 48, 15), font: `700 14px ${HNW}`, lineHeight: "15px" }}>Width:</span>
+          {/* Width/Height row on Volume's baseline (round 7 #7); only the
+              NUMBER carries the input underline (#8) */}
+          <span style={{ ...px(951.3, 615.23 - 12.9, 48, 15), font: `700 14px ${HNW}`, lineHeight: "15px" }}>Width:</span>
           <input value={f.width} onChange={(e) => setF((m) => ({ ...m, width: e.target.value.replace(/[^\d.]/g, "") }))}
-            style={{ ...px(997.7, 601.47 - 12, 32, 16), font: `italic 14px ${HNW}`, textDecoration: "underline", lineHeight: "15px", border: "none", outline: "none", background: "#fff", padding: 0 }} />
-          <span style={{ ...px(1029.7, 601.47 - 12, 28, 16), font: `italic 14px ${HNW}`, textDecoration: "underline", lineHeight: "15px" }}>mm</span>
-          <span style={{ ...px(1076.81, 601.47 - 12, 54, 15), font: `700 14px ${HNW}`, lineHeight: "15px" }}>Height:</span>
+            style={{ ...px(997.7, 615.23 - 12.9, 32, 16), font: `italic 14px ${HNW}`, lineHeight: "15px", border: "none", borderBottom: "1px solid #111", outline: "none", background: "transparent", padding: 0 }} />
+          <span style={{ ...px(1033.7, 615.23 - 12.9, 28, 16), font: `italic 14px ${HNW}`, lineHeight: "15px" }}>mm</span>
+          <span style={{ ...px(1076.81, 615.23 - 12.9, 54, 15), font: `700 14px ${HNW}`, lineHeight: "15px" }}>Height:</span>
           <input value={f.height} onChange={(e) => setF((m) => ({ ...m, height: e.target.value.replace(/[^\d.]/g, "") }))}
-            style={{ ...px(1128.4, 601.47 - 12, 26, 16), font: `italic 14px ${HNW}`, textDecoration: "underline", lineHeight: "15px", border: "none", outline: "none", background: "#fff", padding: 0 }} />
-          <span style={{ ...px(1154.4, 601.47 - 12, 28, 16), font: `italic 14px ${HNW}`, textDecoration: "underline", lineHeight: "15px" }}>mm</span>
+            style={{ ...px(1128.4, 615.23 - 12.9, 26, 16), font: `italic 14px ${HNW}`, lineHeight: "15px", border: "none", borderBottom: "1px solid #111", outline: "none", background: "transparent", padding: 0 }} />
+          <span style={{ ...px(1158.4, 615.23 - 12.9, 28, 16), font: `italic 14px ${HNW}`, lineHeight: "15px" }}>mm</span>
         </>);
       }
       case "loader": {
         const fill = Math.max(0.04, genProgress);
         return (<>
           {patch(400, 120, 640, 480, "lcover")}
-          <div style={{ ...px(601, 140, 238, 320) }}>
+          {/* glass optically centred in the window (round 7 #10) */}
+          <div style={{ ...px(601, 309.5, 238, 320) }}>
             <svg viewBox="0 0 595.276 609.089" width="238" aria-label="Designing your label">
               <clipPath id="nuiWineClip"><rect x="230" y={266.6 - fill * 95} width="140" height={fill * 95 + 4} style={{ transition: `all 500ms ${EASE}` }} /></clipPath>
               <path fill="#BA141A" clipPath="url(#nuiWineClip)" d="M352.397 185.696 C353.872 199.478 353.325 211.872 350.76 222.63 C346.838 239.075 336.88 251.431 321.163 259.355 C311.285 264.336 301.979 266.038 298.571 266.527 C296.674 266.308 286.165 264.888 274.916 259.216 C259.199 251.292 249.241 238.936 245.319 222.491 C242.762 211.769 242.21 199.422 243.667 185.696 Z" />
@@ -457,7 +504,12 @@ export default function NewUI() {
               </g>
             </svg>
           </div>
-          <span style={{ ...px(0, 500, W, 20), font: `15px ${HNW}`, textAlign: "center", display: "block" }}>Designing your label…</span>
+          <span style={{ ...px(0, 492, W, 20), font: `15px ${HNW}`, textAlign: "center", display: "block" }}>
+            Designing your label
+            {[0, 1, 2].map((d) => (
+              <span key={d} style={{ animation: `nuiDot 1.2s ${d * 0.2}s infinite` }}>.</span>
+            ))}
+          </span>
         </>);
       }
       case "options": {
@@ -490,18 +542,21 @@ export default function NewUI() {
             );
           })}
           {OPT_FRAMES.map((fr, i) => (
-            <button key={"s" + i} onClick={() => setSelected(i)}
+            <button key={"s" + i} onClick={() => { setSelected(i); setWarn(""); }}
               style={{
                 ...px(fr.x + 0.2, 548.6, OPT_W, 34.3), cursor: "pointer",
-                /* design truth (options.svg): default button is SOLID BLACK with white
-                   12px 55Roman "Select"; selecting inverts it (owner: "inverted Select→Selected") */
+                /* round 7 #11: WHITE by default, inverts to black "Selected" */
                 font: `12px ${HNW}`, letterSpacing: 0.3, transition: `all 180ms ${EASE}`,
-                background: selected === i ? "#fff" : "#111",
-                color: selected === i ? "#111" : "#fff",
+                background: selected === i ? "#111" : "#fff",
+                color: selected === i ? "#fff" : "#111",
                 border: "1px solid #111", boxSizing: "border-box",
                 display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4,
               }}>{selected === i ? "Selected" : "Select"}</button>
           ))}
+          {/* round 7 #12: gate message when proceeding without a selection */}
+          {warn && (
+            <span style={{ ...px(0, 604, W, 18), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block" }}>{warn}</span>
+          )}
         </>);
       }
       case "backdetails":
@@ -510,33 +565,63 @@ export default function NewUI() {
           <span style={{ ...px(552, 422, 116, 15), font: `11px ${HNW}`, textAlign: "right" }}>{(b.description || "").trim() ? (b.description || "").trim().split(/\s+/).length : 0} / 300 words</span>
           <textarea value={b.description || ""} onChange={(e) => setB((m) => ({ ...m, description: e.target.value }))}
             style={{ ...px(148, 251, 528, 168), ...inputStyle, fontStyle: "normal", textDecoration: "none", fontSize: 14, resize: "none", lineHeight: 1.45, overflow: "auto", background: "transparent" }} />
-          {patch(987, 230, 330, 300, "bpcol")}
-          {BACK_ROWS.map((k, i) => (
-            <input key={k} value={b[k] || ""} placeholder={BACK_PH[i]}
-              onChange={(e) => setB((m) => ({ ...m, [k]: e.target.value }))}
-              style={{ ...px(989.6, 247.1 + i * 33.1 - 16.5, 325, 20), ...inputStyle, fontSize: 15 }} />
-          ))}
-          {/* create/upload toggles on the baked outline boxes; uploads are real */}
-          <button onClick={() => { setBarcodeImg(""); }} style={{ ...px(138, 480, 239.1, 34.3), ...ghost, outline: !barcodeImg ? "2px solid #111" : "none", outlineOffset: -4 }} />
-          <label style={{ ...px(445.7, 480, 240, 34.3), cursor: "pointer", display: "block", outline: barcodeImg ? "2px solid #111" : "none", outlineOffset: -4, position: "absolute" }}>
-            <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
-              const file = e.target.files?.[0]; if (!file) return;
-              const rd = new FileReader(); rd.onload = () => setBarcodeImg(String(rd.result)); rd.readAsDataURL(file);
-            }} />
-            {barcodeImg && <span style={{ position: "absolute", left: 0, top: 38, width: 240, font: `11px ${HNW}`, color: "#3f6d2a", textAlign: "center" }}>✓ barcode uploaded</span>}
-          </label>
-          <button onClick={() => { setQrImg(""); }} style={{ ...px(754.3, 480, 240.1, 34.3), ...ghost, outline: !qrImg ? "2px solid #111" : "none", outlineOffset: -4 }} />
-          <label style={{ ...px(1064, 480, 238.4, 34.3), cursor: "pointer", display: "block", outline: qrImg ? "2px solid #111" : "none", outlineOffset: -4, position: "absolute" }}>
-            <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
-              const file = e.target.files?.[0]; if (!file) return;
-              const rd = new FileReader(); rd.onload = () => setQrImg(String(rd.result)); rd.readAsDataURL(file);
-            }} />
-            {qrImg && <span style={{ position: "absolute", left: 0, top: 38, width: 238, font: `11px ${HNW}`, color: "#3f6d2a", textAlign: "center" }}>✓ QR uploaded</span>}
-          </label>
+          {/* cover baked E.g. column incl. its underlines (they overrun the
+              right margin in the artboard) */}
+          {patch(985, 228, 380, 242, "bpcol")}
+          {BACK_ROWS.map((k, i) => {
+            const base = 247.11 + i * 33.1;
+            return (
+              <span key={k}>
+                <input value={b[k] || ""} placeholder={BACK_PH[i]}
+                  onChange={(e) => setB((m) => ({ ...m, [k]: e.target.value }))}
+                  style={{ ...px(989.6, base - IN_BASE, 310, 20), ...inputStyle }} />
+                {rowLine(989.6, base + 2.5, 313.3, `bln${i}`)}
+              </span>
+            );
+          })}
+          {/* round 7 #13: create/upload toggles rebuilt as real buttons —
+              active mode is BLACK, inactive is white/outlined (same
+              language as Select/Selected); no more outline artifacts */}
+          {(() => {
+            const modeStyle = (active: boolean): React.CSSProperties => ({
+              /* classic theme's global CSS uppercases <label> — undo it */
+              cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, textTransform: "none", transition: `all 180ms ${EASE}`,
+              background: active ? "#111" : "#fff", color: active ? "#fff" : "#111",
+              border: "1px solid #111", boxSizing: "border-box",
+              display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4,
+            });
+            return (<>
+              <button onClick={() => setBarcodeImg("")} style={{ ...px(138.04, 480, 239.1, 34.3), ...modeStyle(!barcodeImg) }}>Create Barcode</button>
+              <label style={{ ...px(445.71, 480, 240, 34.3), ...modeStyle(!!barcodeImg) }}>
+                <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
+                  const file = e.target.files?.[0]; if (!file) return;
+                  const rd = new FileReader(); rd.onload = () => setBarcodeImg(String(rd.result)); rd.readAsDataURL(file);
+                }} />
+                Upload Barcode
+                {barcodeImg && <span style={{ position: "absolute", left: 0, top: 38, width: 240, font: `11px ${HNW}`, color: "#3f6d2a", textAlign: "center" }}>✓ barcode uploaded</span>}
+              </label>
+              <button onClick={() => setQrImg("")} style={{ ...px(754.29, 480, 240.1, 34.3), ...modeStyle(!qrImg) }}>Create QR Code</button>
+              <label style={{ ...px(1063.99, 480, 238.4, 34.3), ...modeStyle(!!qrImg) }}>
+                <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
+                  const file = e.target.files?.[0]; if (!file) return;
+                  const rd = new FileReader(); rd.onload = () => setQrImg(String(rd.result)); rd.readAsDataURL(file);
+                }} />
+                Upload QR Code
+                {qrImg && <span style={{ position: "absolute", left: 0, top: 38, width: 238, font: `11px ${HNW}`, color: "#3f6d2a", textAlign: "center" }}>✓ QR uploaded</span>}
+              </label>
+            </>);
+          })()}
         </>);
       case "compliance": {
-        const RING_X = [282.0, 534.5, 786.9, 1039.3];   /* pixel-detected */
-        const RING_Y = [355.1, 407.1, 459.1, 511.1];
+        /* round 7 #15-17: flags.png contains a RASTER copy of the country
+           names (old font) and rings — it used to cover the SVG's real
+           Helvetica names AND its perfectly-placed vector rings. Now only
+           small per-flag windows of the image are shown; the vector names
+           and rings show through; dots sit at the rings' exact centres. */
+        const RING_X = [282.87, 536.4, 788.92, 1045.54];   /* baked VECTOR ring centres (compliance.svg paths) */
+        const FLAG_X = [317.7, 570.2, 822.6, 1075.0];      /* flag centres inside flags.png */
+        const PNG_ROW = [351.8, 403.5, 455.5, 505.8];      /* flag row centres inside flags.png */
+        const ROW_C = [351.3, 403.1, 455.7, 508.3];        /* row line = the baked rings' own centres */
         const RC: { code: string; col: number; row: number }[] = [
           { code: "EU", col: 0, row: 0 }, { code: "US", col: 0, row: 1 }, { code: "GB", col: 0, row: 2 }, { code: "JP", col: 0, row: 3 },
           { code: "AU", col: 1, row: 0 }, { code: "NZ", col: 1, row: 1 }, { code: "CN", col: 1, row: 2 },
@@ -544,19 +629,23 @@ export default function NewUI() {
           { code: "IL", col: 3, row: 0 }, { code: "GE", col: 3, row: 1 }, { code: "CA", col: 3, row: 2 },
         ];
         return (<>
-          {/* flags column restored from the artboard (owner #16) */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/newui/flags.png" alt="" style={{ ...px(250.9, 289.8, 959.8, 261.1), pointerEvents: "none" }} />
-          {/* Arabic Markets removed — cover name + its flag/ring */}
-          {patch(515, 496, 245, 30, "arab")}
+          {/* Arabic Markets removed — cover the SVG name text + its baked ring */}
+          {patch(598, 500, 138, 20, "arab")}
+          <div style={{ ...px(536.4 - 13, 508.3 - 13, 26, 26), background: "#fff", borderRadius: 13 }} />
           {RC.map(({ code, col, row }) => {
             const on = markets.includes(code);
-            const cx0 = RING_X[col], cy0 = RING_Y[row];
+            const cx0 = RING_X[col], cy0 = ROW_C[row];
             return (
-              <button key={code} onClick={() => setMarkets((ms) => on ? ms.filter((m) => m !== code) : [...ms, code])}
-                style={{ ...px(cx0 - 14, cy0 - 14, 28, 28), ...ghost }}>
-                {on && <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 10, height: 10, borderRadius: 5, background: "#111" }} />}
-              </button>
+              <span key={code}>
+                {/* flag window sliced from flags.png, centred on the row line */}
+                <div style={{
+                  ...px(FLAG_X[col] - 13, cy0 - 10, 26, 20),
+                  backgroundImage: "url(/newui/flags.png)", backgroundSize: "959.8px 261.1px",
+                  backgroundPosition: `${-(FLAG_X[col] - 13 - 250.9)}px ${-(PNG_ROW[row] - 10 - 289.8)}px`,
+                  pointerEvents: "none",
+                }} />
+                {dotBtn(cx0, cy0, on, () => setMarkets((ms) => on ? ms.filter((m) => m !== code) : [...ms, code]), `d${code}`)}
+              </span>
             );
           })}
         </>);
@@ -575,42 +664,31 @@ export default function NewUI() {
             {cross(lx, ly, "b1")}{cross(lx + fit.w, ly, "b2")}{cross(lx, ly + fit.h, "b3")}{cross(lx + fit.w, ly + fit.h, "b4")}
             <button onClick={() => go("backdetails", -1)}
               style={{ ...px(lx, 548.6, fit.w, 34.3), cursor: "pointer", font: `700 15px ${HNW}`, background: "#111", color: "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 2 }}>Edit</button>
+            {/* round 7 #18: Select under Edit, same inverted logic as options */}
+            <button onClick={() => setBackSel(!backSel)}
+              style={{ ...px(lx, 591.5, fit.w, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, transition: `all 180ms ${EASE}`, background: backSel ? "#111" : "#fff", color: backSel ? "#fff" : "#111", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>{backSel ? "Selected" : "Select"}</button>
           </>)}
         </>);
       }
       case "bottle": {
-        const cols: [string, string[], number][] = [
-          ["type", ["Bordeaux", "Bordeaux Prestige", "Burgundy", "Sparkling", "Alsace / Rhine", "Ice Wine"], 385.6],
-          ["color", ["Olive Green", "Transparent", "Amber"], 625.6],
-          ["closure", ["Cork", "Screw Cap", "Wax Seal", "Crown Cap", "Sparkling Cork"], 864.6],
+        /* ring centres extracted from bottle.svg circle paths (round 7 #19) */
+        const cols: { key: string; cx: number; items: [string, number][] }[] = [
+          { key: "type", cx: 385.64, items: [["Bordeaux", 283.07], ["Bordeaux Prestige", 312.07], ["Burgundy", 341.07], ["Sparkling", 371.07], ["Alsace / Rhine", 400.07], ["Ice Wine", 429.07]] },
+          { key: "color", cx: 625.64, items: [["Olive Green", 283.07], ["Transparent", 312.07], ["Amber", 341.07]] },
+          { key: "closure", cx: 864.64, items: [["Cork", 283.07], ["Screw Cap", 312.07], ["Wax Seal", 341.07], ["Crown Cap", 371.07], ["Sparkling Cork", 400.07]] },
         ];
+        const finish: [string, number, number][] = [["Matte", 1104.64, 281.78], ["Glossy", 1173.21, 281.78], ["No cap", 1104.64, 312.58]];
         return (<>
-          {cols.map(([key, opts, cx0]) => opts.map((opt, i) => {
-            const ROWS_Y = [279.5, 309.5, 338.5, 368.5, 397.5, 426.5];   /* pixel-detected */
-            const on = bottle[key] === opt;
-            return (
-              <button key={String(key) + opt} onClick={() => setBottle((m) => ({ ...m, [key]: opt }))}
-                style={{ ...px(Number(cx0) - 12, ROWS_Y[i] - 12, 24, 24), ...ghost }}>
-                {on && <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 8, height: 8, borderRadius: 4, background: "#111" }} />}
-              </button>
-            );
-          }))}
-          {([["Matte", 1104.5, 279.5], ["Glossy", 1172, 279.5], ["No cap", 1104.5, 309.5]] as const).map(([opt, cx0, cy0]) => {
-            const on = bottle.finish === opt;
-            return (
-              <button key={opt} onClick={() => setBottle((m) => ({ ...m, finish: opt }))}
-                style={{ ...px(cx0 - 12, cy0 - 12, 24, 24), ...ghost }}>
-                {on && <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 8, height: 8, borderRadius: 4, background: "#111" }} />}
-              </button>
-            );
-          })}
-          {/* cover the design's PRESELECTED dots (Bordeaux/Olive/Cork/Matte) */}
-          {[[384.5, 279.5], [624.5, 279.5], [863.5, 279.5], [1104.5, 279.5]].map(([dx, dy], di) => (
-            <div key={"presel" + di} style={{ ...px(dx - 5.5, dy - 5.5, 11, 11), background: "#fff", borderRadius: 6 }} />
+          {cols.map(({ key, cx, items }) => items.map(([opt, cy], i) =>
+            /* first rows carry the design's baked preselect dots — cover them */
+            dotBtn(cx, cy, bottle[key] === opt, () => setBottle((m) => ({ ...m, [key]: opt })), key + opt, { coverDot: i === 0 })
           ))}
-          {/* cover the frozen baked slider cursor; redraw the track through it */}
-          <div style={{ ...px(1250, 406, 22, 21), background: "#fff" }} />
-          <div style={{ ...px(1260.6, 406, 1, 21), background: "#111" }} />
+          {finish.map(([opt, cx0, cy0]) =>
+            dotBtn(cx0, cy0, bottle.finish === opt, () => setBottle((m) => ({ ...m, finish: opt })), "f" + opt, { coverDot: opt === "Matte" })
+          )}
+          {/* round 7 #21: the design's gradient capsule rebuilt 1:1 in CSS —
+              covers the frozen baked cursor without erasing the gradient */}
+          <div style={{ ...px(1253.57, 359.19, 15, 136.64), borderRadius: 7.5, background: "linear-gradient(#fff, #000)", pointerEvents: "none" }} />
           {/* colour wheel (restored artwork) + picker dot */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/newui/colorwheel.png" alt="" style={{ ...px(1097.1, 359.2, 137.2, 137.2), pointerEvents: "none" }} />
@@ -620,16 +698,17 @@ export default function NewUI() {
             onPointerUp={() => { dragRef.current = ""; }}>
             <span style={{ position: "absolute", left: `${wheel.x * 100}%`, top: `${wheel.y * 100}%`, transform: "translate(-50%,-50%)", width: 15.2, height: 15.2, borderRadius: 8, background: "transparent", border: "1.5px solid #111", pointerEvents: "none", boxSizing: "border-box" }} />
           </div>
-          {/* lightness track (baked line x1261.1 y358.8–495.4) */}
-          <div style={{ ...px(1245, 350, 34, 155), cursor: "grab" }}
+          {/* lightness drag: cursor travels between the capsule's cap centres */}
+          <div style={{ ...px(1245, 352, 32, 152), cursor: "grab" }}
             onPointerDown={(e) => { dragRef.current = "shade"; e.currentTarget.setPointerCapture(e.pointerId); }}
             onPointerMove={(e) => {
               if (dragRef.current !== "shade") return;
               const r = e.currentTarget.getBoundingClientRect();
-              setShade(Math.min(1, Math.max(0, (e.clientY - r.top - 8.8 * scale) / (r.height - 17.6 * scale))));
+              const yy = (e.clientY - r.top) / r.height * 152;
+              setShade(Math.min(1, Math.max(0, (yy - 14.69) / 121.64)));
             }}
             onPointerUp={() => { dragRef.current = ""; }}>
-            <span style={{ position: "absolute", left: 16.1 - 7.6, top: 8.8 + shade * 136.6 - 7.6, width: 15.2, height: 15.2, borderRadius: 8, background: "transparent", border: "1.5px solid #111", boxSizing: "border-box" }} />
+            <span style={{ position: "absolute", left: 1261.07 - 1245 - 7.6, top: 14.69 + shade * 121.64 - 7.6, width: 15.2, height: 15.2, borderRadius: 8, background: "transparent", border: "1.5px solid #111", boxSizing: "border-box" }} />
           </div>
           {/* result colour bar (baked rect 1097.1,532.6,171.4×18.3) */}
           <div style={{ ...px(1095.6, 531.1, 174.4, 21.3), background: shadeRgb(), border: "1px solid #111", boxSizing: "border-box" }} />
@@ -676,21 +755,28 @@ export default function NewUI() {
             <img src={backPng} alt="back" onClick={() => setGallery({ imgs: [backPng], i: 0 })}
               style={{ ...px(458, 274, 244, 168), objectFit: "contain", cursor: "zoom-in" }} />
           </>)}
-          {/* pack selection dots (owner #24) + live total */}
+          {/* round 7 #22: slots 3 (product shots) and 4 (marketing) get their
+              content placeholders (real assets pending owner images) */}
+          {[
+            { x: 696, w: 82, label: "Shot: Face" }, { x: 799, w: 82, label: "Shot: Back" },
+            { x: 906, w: 176, label: "Context 1" },
+          ].map((s) => (
+            <div key={s.label} style={{ ...px(s.x, 284, s.w, 150), background: "#F4F3EE", display: "flex", alignItems: "center", justifyContent: "center", font: `10px ${HNW}`, color: "#999", textAlign: "center" }}>[ {s.label} ]</div>
+          ))}
+          {/* round 7 #25: the design's LAST dashed pricing rule is removed */}
+          {patch(136, 684.5, 1168, 3, "dash5")}
+          {/* pack dots at the baked rings' exact centres (checkout.svg paths:
+              cx 144.64, cy = row baseline − 4.93) — round 7 #24 */}
           {PACK.map((it, i) => {
-            const CY = [529, 563.5, 597.5, 632, 666.5];   /* pixel-detected */
-            return (
-            <button key={it.name} onClick={() => setPackSel((ps) => ps.map((v, k) => (k === i ? !v : v)))}
-              style={{ ...px(143.5 - 14, CY[i] - 14, 28, 28), ...ghost }}>
-              {packSel[i] && <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 10, height: 10, borderRadius: 5, background: "#111" }} />}
-            </button>
-          ); })}
-          {patch(985, 684, 100, 24, "tot")}
-          <span style={{ ...px(850.2, 686, 240, 20), font: `700 19px ${HNW}` }}>TOTAL SUM: ${total}</span>
-          {/* agree: circle like the others (owner #24) */}
-          <button onClick={() => setAgree(!agree)} style={{ ...px(143.5 - 14, 701 - 14, 28, 28), ...ghost }}>
-            {agree && <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 10, height: 10, borderRadius: 5, background: "#111" }} />}
-          </button>
+            const CY = [531.56, 565.85, 600, 634.42, 668.84];
+            return dotBtn(144.64, CY[i], !!packSel[i], () => setPackSel((ps) => ps.map((v, k) => (k === i ? !v : v))), it.name);
+          })}
+          {/* round 7 #23: cover the baked "TOTAL SUM: $200", render the live
+              total on the design's own baseline */}
+          {patch(848, 694, 172, 22, "tot")}
+          <span style={{ ...px(852.24, 711.83 - 16, 240, 20), font: `700 19px ${HNW}`, lineHeight: "20px" }}>TOTAL SUM: ${total}</span>
+          {/* agree circle, concentric like the others */}
+          {dotBtn(144.64, 706.9, agree, () => setAgree(!agree), "agree")}
           <button aria-label="pay" onClick={proceedToPayment} style={{ ...px(1090, 682, 250, 46), ...ghost }} />
           <button aria-label="back" onClick={goBack} style={{ ...px(56, 664, 60, 44), ...ghost }} />
         </>);
@@ -720,7 +806,8 @@ export default function NewUI() {
         @font-face { font-family: 'Helvetica Neue World'; src: url('/newui/fonts/HNW-56It.woff2') format('woff2'); font-weight: 400; font-style: italic; font-display: block; }
         @font-face { font-family: 'Helvetica Neue World'; src: url('/newui/fonts/HNW-75Bold.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: block; }
         @font-face { font-family: 'Helvetica Neue World'; src: url('/newui/fonts/HNW-45Lt.woff2') format('woff2'); font-weight: 300; font-style: normal; font-display: block; }
-        input::placeholder, textarea::placeholder { color: #111; opacity: 1; font-style: italic; }
+        input::placeholder, textarea::placeholder { color: #808080; opacity: 1; font-style: italic; }
+        @keyframes nuiDot { 0% { opacity: 0.15 } 30% { opacity: 1 } 60%, 100% { opacity: 0.15 } }
         @keyframes nuiIn { from { transform: translateX(${dir > 0 ? "100%" : "-100%"}) } to { transform: translateX(0) } }
         @keyframes nuiOut { from { transform: translateX(0) } to { transform: translateX(${dir > 0 ? "-100%" : "100%"}) } }
         @keyframes arrowFly { from { left: 122px } to { left: 1324px } }
@@ -791,18 +878,22 @@ export default function NewUI() {
                 </button>
               )}
               {/* forward arrow */}
-              <button aria-label="next" disabled={page === "options" && selected < 0}
+              <button aria-label="next"
                 onClick={() => {
                   if (page === "vision") go("front");
                   else if (page === "front") nextFromFront();
-                  else if (page === "options") { if (selected >= 0) go("backdetails"); }
+                  else if (page === "options") {
+                    /* round 7 #12: warn instead of silently ignoring */
+                    if (selected >= 0) go("backdetails");
+                    else { setWarn("Select a label design to continue"); setTimeout(() => setWarn(""), 3200); }
+                  }
                   else if (page === "backdetails") go("compliance");
                   else if (page === "compliance") nextFromCompliance();
                   else if (page === "backdesign") go("bottle");
                   else if (page === "bottle") go("assets");
                   else if (page === "assets") go("checkout");
                 }}
-                style={{ ...px(1324, 666 - 660, 60, 40), ...ghost, opacity: page === "options" && selected < 0 ? 0.25 : 1 }}>
+                style={{ ...px(1324, 666 - 660, 60, 40), ...ghost }}>
                 <svg viewBox="0 0 60 40" width="60" height="40"><line x1="13" y1="20" x2="47" y2="20" stroke="#000" strokeWidth="3" /><polyline points="37,9.5 47.5,20 37,30.5" fill="none" stroke="#000" strokeWidth="3" /></svg>
               </button>
             </div>
