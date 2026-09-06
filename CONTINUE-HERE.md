@@ -1887,3 +1887,15 @@ composition-contract tightening, then customer wiring.
   Mongo untouched — re-analysis keeps working). Contrast law stays.
   (7) All animations slower: SLIDE_MS 650, STRIP_DELAYS 0/55/110,
   FADE_MS 420, size-box 600/780ms, buttons 240ms, loader wine 650ms.
+- NEW UI v10 — round 10 (owner 2026-09-06, 4 items). (1) Width/Height
+  block is right-anchored to the size box's right edge x1302.86 (one
+  flex line, Height group marginLeft 24), same Volume baseline.
+  (2) Create Barcode / Create QR toggle OFF on second click (mode "").
+  (3) Compliance ring rows are IRREGULAR — exact big-ring centres
+  352.87/404.68/457.29/509.89 (uniform +52 left a black sliver of the
+  baked Japan ring under its cover). (4) BACK-LABEL GROUND FIX:
+  groundOf() now takes the MEDIAN of 112 border-ring samples on a
+  120px canvas — the old 5-corner AVERAGE went darker than the front
+  label whenever artwork or downscale smearing touched a corner
+  (owner: "back label bg darker most of the time"). Median is
+  outlier-proof; needs a real generation run to eyeball.

@@ -99,20 +99,30 @@ const DEMO_FRONT: Record<string, string> = {
 
 interface Dream { style: string; dream: string; preview: string | null }
 
-/* dominant ground colour of a label image (corner sampling) */
+/* ground colour of a label image — MEDIAN of many border samples
+   (round 10 #4: the old 5-corner AVERAGE went dark whenever artwork or
+   downscale smearing touched a corner; a median ignores such outliers) */
 async function groundOf(url: string): Promise<string> {
   return new Promise((res) => {
     const img = new Image();
     img.onload = () => {
       try {
-        const c = document.createElement("canvas"); c.width = 40; c.height = 40;
+        const S = 120;
+        const c = document.createElement("canvas"); c.width = S; c.height = S;
         const cx = c.getContext("2d")!;
-        cx.drawImage(img, 0, 0, 40, 40);
-        const pts = [[2, 2], [37, 2], [2, 37], [37, 37], [20, 2]];
-        let r = 0, g = 0, b = 0;
-        for (const [x, y] of pts) { const d = cx.getImageData(x, y, 1, 1).data; r += d[0]; g += d[1]; b += d[2]; }
-        const hx = (v: number) => Math.round(v / pts.length).toString(16).padStart(2, "0");
-        res("#" + hx(r) + hx(g) + hx(b));
+        cx.drawImage(img, 0, 0, S, S);
+        const d = cx.getImageData(0, 0, S, S).data;
+        const inset = 4, rs: number[] = [], gs: number[] = [], bs: number[] = [];
+        for (let i = 0; i < 28; i++) {
+          const t = inset + Math.round((i / 27) * (S - 2 * inset - 1));
+          for (const [x, y] of [[t, inset], [t, S - 1 - inset], [inset, t], [S - 1 - inset, t]]) {
+            const o = (y * S + x) * 4;
+            rs.push(d[o]); gs.push(d[o + 1]); bs.push(d[o + 2]);
+          }
+        }
+        const med = (a: number[]) => a.sort((p, q) => p - q)[Math.floor(a.length / 2)];
+        const hx = (v: number) => v.toString(16).padStart(2, "0");
+        res("#" + hx(med(rs)) + hx(med(gs)) + hx(med(bs)));
       } catch { res("#FFFFFF"); }
     };
     img.onerror = () => res("#FFFFFF");
@@ -510,17 +520,20 @@ export default function NewUI() {
               </svg>
             ))}
           </div>}
-          {/* Width/Height row on Volume's baseline 611.27; caption, number
-              and unit share ONE baseline-aligned flex line (round 9 #3);
-              only the NUMBER carries the underline, sized to its digits */}
-          {([["Width:", 951.3, "width"], ["Height:", 1076.81, "height"]] as const).map(([cap, cx0, key2]) => (
-            <div key={key2} style={{ position: "absolute", left: cx0, top: 611.27 - WH_BASE, display: "flex", alignItems: "baseline" }}>
-              <span style={{ font: `700 14px ${HNW}`, lineHeight: "15px" }}>{cap}</span>
-              <input value={f[key2]} onChange={(e) => setF((m) => ({ ...m, [key2]: e.target.value.replace(/[^\d.]/g, "") }))}
-                style={{ width: Math.max(1, (f[key2] || "").length) * 8.2 + 4, font: `italic 14px ${HNW}`, lineHeight: "15px", border: "none", borderBottom: "1px solid #111", outline: "none", background: "transparent", padding: 0, textAlign: "center", marginLeft: 3 }} />
-              <span style={{ font: `italic 14px ${HNW}`, lineHeight: "15px", marginLeft: 4 }}>mm</span>
-            </div>
-          ))}
+          {/* Width/Height block right-aligned to the size box's right edge
+              (round 10 #1), all on Volume's baseline; caption, number and
+              unit share ONE baseline-aligned flex line; only the NUMBER
+              carries the underline, sized to its digits */}
+          <div style={{ position: "absolute", right: W - 1302.86, top: 611.27 - WH_BASE, display: "flex", alignItems: "baseline" }}>
+            {([["Width:", "width"], ["Height:", "height"]] as const).map(([cap, key2], gi) => (
+              <span key={key2} style={{ display: "flex", alignItems: "baseline", marginLeft: gi ? 24 : 0 }}>
+                <span style={{ font: `700 14px ${HNW}`, lineHeight: "15px" }}>{cap}</span>
+                <input value={f[key2]} onChange={(e) => setF((m) => ({ ...m, [key2]: e.target.value.replace(/[^\d.]/g, "") }))}
+                  style={{ width: Math.max(1, (f[key2] || "").length) * 8.2 + 4, font: `italic 14px ${HNW}`, lineHeight: "15px", border: "none", borderBottom: "1px solid #111", outline: "none", background: "transparent", padding: 0, textAlign: "center", marginLeft: 3 }} />
+                <span style={{ font: `italic 14px ${HNW}`, lineHeight: "15px", marginLeft: 4 }}>mm</span>
+              </span>
+            ))}
+          </div>
         </>);
       }
       case "loader": {
@@ -628,7 +641,7 @@ export default function NewUI() {
               display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4,
             });
             return (<>
-              <button onClick={() => { setBarcodeImg(""); setBarcodeMode("create"); }} style={{ ...px(138.04, 480, 239.1, 34.3), ...modeStyle(barcodeMode === "create") }}>Create Barcode</button>
+              <button onClick={() => { setBarcodeImg(""); setBarcodeMode(barcodeMode === "create" ? "" : "create"); }} style={{ ...px(138.04, 480, 239.1, 34.3), ...modeStyle(barcodeMode === "create") }}>Create Barcode</button>
               <label style={{ ...px(445.71, 480, 240, 34.3), ...modeStyle(barcodeMode === "upload") }}>
                 <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
                   const file = e.target.files?.[0]; if (!file) return;
@@ -637,7 +650,7 @@ export default function NewUI() {
                 Upload Barcode
                 {barcodeImg && <span style={{ position: "absolute", left: 0, top: 38, width: 240, font: `11px ${HNW}`, color: "#3f6d2a", textAlign: "center" }}>✓ barcode uploaded</span>}
               </label>
-              <button onClick={() => { setQrImg(""); setQrMode("create"); }} style={{ ...px(754.29, 480, 240.1, 34.3), ...modeStyle(qrMode === "create") }}>Create QR Code</button>
+              <button onClick={() => { setQrImg(""); setQrMode(qrMode === "create" ? "" : "create"); }} style={{ ...px(754.29, 480, 240.1, 34.3), ...modeStyle(qrMode === "create") }}>Create QR Code</button>
               <label style={{ ...px(1063.99, 480, 238.4, 34.3), ...modeStyle(qrMode === "upload") }}>
                 <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
                   const file = e.target.files?.[0]; if (!file) return;
@@ -659,8 +672,11 @@ export default function NewUI() {
         const FLAG_X = [317.7, 570.2, 822.6, 1075.0];      /* flag centres inside flags.png */
         const PNG_ROW = [351.8, 403.5, 455.5, 505.8];      /* flag row centres inside flags.png */
         /* the VISIBLE baked rings are the r=9.06 st3 paths (there is a
-           second, hidden r=7.5 set 1.6px higher — round 9 trap) */
-        const ROW_C = [352.87, 404.87, 456.87, 508.87];
+           second, hidden r=7.5 set 1.6px higher — round 9 trap). Their
+           row pitch is IRREGULAR — exact centres from the paths
+           (round 10 #3: the uniform +52 guess left a sliver of the
+           baked Japan ring peeking under the cover) */
+        const ROW_C = [352.87, 404.68, 457.29, 509.89];
         const RC: { code: string; col: number; row: number }[] = [
           { code: "EU", col: 0, row: 0 }, { code: "US", col: 0, row: 1 }, { code: "GB", col: 0, row: 2 }, { code: "JP", col: 0, row: 3 },
           { code: "AU", col: 1, row: 0 }, { code: "NZ", col: 1, row: 1 }, { code: "CN", col: 1, row: 2 },
@@ -670,7 +686,7 @@ export default function NewUI() {
         return (<>
           {/* Arabic Markets removed — cover the SVG name text + its baked ring */}
           {patch(598, 500, 138, 20, "arab")}
-          <div style={{ ...px(536.4 - 13, 508.87 - 13, 26, 27), background: "#fff" }} />
+          <div style={{ ...px(536.4 - 13, 509.89 - 13, 26, 27), background: "#fff" }} />
           {RC.map(({ code, col, row }) => {
             const on = markets.includes(code);
             const cx0 = RING_X[col], cy0 = ROW_C[row];
