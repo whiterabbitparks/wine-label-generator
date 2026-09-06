@@ -451,10 +451,11 @@ export default function NewUI() {
       <line x1="0.5" y1={thick ? 16.5 : 9} x2={thick ? 32.5 : 17.5} y2={thick ? 16.5 : 9} stroke="#000" strokeWidth={thick ? 3 : 1} />
     </svg>
   );
-  /* mini loader glass for asset boxes (round 14 #10): half the label
-     loader's size; the ACTIVE one fills over ~45s as its image renders */
+  /* mini loader glass for asset boxes (round 14 #10, shrunk round 15 #1):
+     viewBox cropped to the glass itself so flex-centring is exact; the
+     ACTIVE one fills over ~45s as its image renders */
   const miniGlass = (key: string, active: boolean) => (
-    <svg key={key} viewBox="0 0 595.276 609.089" width="119" style={{ display: "block" }}>
+    <svg key={key} viewBox="215 95 170 315" width="15" style={{ display: "block" }}>
       <defs>
         <clipPath id={`mg-${key.replace(/[^a-z0-9]/gi, "")}`}>
           <rect x="230" y="171.6" width="140" height="99"
@@ -992,7 +993,9 @@ export default function NewUI() {
               {dotBtn(144.64, 686, agree, () => setAgree(!agree), "agree", { ring: true })}
               <span style={{ ...px(171.43, 691.3 - B, 400, 16), font: `15px ${HNW}`, lineHeight: "16px" }}>I agree to the <u>Terms &amp; Conditions</u></span>
               <span style={{ ...px(852.24, 691.3 - B - 3, 240, 20), font: `700 19px ${HNW}`, lineHeight: "20px" }}>TOTAL SUM: ${total}</span>
-              <button onClick={proceedToPayment} style={{ ...px(1032, 669.5, 268, 32), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", padding: 0 }}>Proceed to payment</button>
+              {/* paddingBottom 5 measured-in: HNW's tall ascent leaves the
+                  glyphs 2.5px low in a naively-centred flex line */}
+              <button onClick={proceedToPayment} style={{ ...px(1032, 669.5, 268, 32), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 0 5px" }}>Proceed to payment</button>
             </>);
           })()}
           <button aria-label="back" onClick={goBack} style={{ ...px(56, 664, 60, 44), ...ghost }} />

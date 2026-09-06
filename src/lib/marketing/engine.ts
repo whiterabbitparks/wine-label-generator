@@ -75,14 +75,17 @@ function liquidLine(wineColour: string, glass: string): string {
 function closureLine(closure: string, colourCSS: string, finish: string) {
   const fin = /glossy/i.test(finish) ? "glossy" : /no cap/i.test(finish) ? "" : "matte";
   const col = colourCSS || "deep red";
+  /* "CLOSURE — NON-NEGOTIABLE" + an explicit no-cork clause for non-cork
+     closures: round 15 #2 — a selected screw cap still rendered as cork
+     (the silhouette outline shows a corked top and was winning) */
   if (/no cap/i.test(finish))
-    return "closure: a natural cork sits flush in the bare bottle mouth — NO capsule, NO foil, the glass lip fully visible";
+    return "CLOSURE — NON-NEGOTIABLE: a natural cork sits flush in the bare bottle mouth — NO capsule, NO foil, the glass lip fully visible";
   switch (closure) {
-    case "Screw Cap": return `closure: a ${fin} ${col} aluminium screw cap with a clean straight skirt`;
-    case "Wax Seal": return `closure: the neck is hand-dipped in ${fin} ${col} sealing wax with natural drips ending just below the lip`;
-    case "Crown Cap": return `closure: a ${fin} ${col} crown cap (beer-style), bare neck below it`;
-    case "Sparkling Cork": return `closure: a mushroom sparkling cork under a wire cage, dressed in a ${fin} ${col} foil hood down the neck`;
-    default: return `closure: a natural cork under a ${fin} ${col} foil capsule covering the bottle lip and upper neck`;
+    case "Screw Cap": return `CLOSURE — NON-NEGOTIABLE: a ${fin} ${col} aluminium SCREW CAP with a clean straight skirt over the bottle mouth and upper neck. There is NO cork and NO foil capsule — a screw cap only`;
+    case "Wax Seal": return `CLOSURE — NON-NEGOTIABLE: the neck is hand-dipped in ${fin} ${col} sealing wax with natural drips ending just below the lip. No foil capsule`;
+    case "Crown Cap": return `CLOSURE — NON-NEGOTIABLE: a ${fin} ${col} CROWN CAP (beer-style) on the bottle mouth, bare glass neck below it. There is NO cork and NO capsule`;
+    case "Sparkling Cork": return `CLOSURE — NON-NEGOTIABLE: a mushroom sparkling cork under a wire cage, dressed in a ${fin} ${col} foil hood down the neck`;
+    default: return `CLOSURE — NON-NEGOTIABLE: a natural cork under a ${fin} ${col} foil capsule covering the bottle lip and upper neck`;
   }
 }
 
@@ -127,7 +130,7 @@ export function buildShotPrompt(b: MarketingBrief, side: "front" | "back", hasSh
     `The FIRST attached image is the wine's ${side} label — apply it to the bottle EXACTLY as given: identical layout, typography, artwork and colours, ` +
     `perfectly legible, wrapped naturally onto the glass curvature with subtle realistic paper sheen. Do NOT redraw, reinterpret, crop or add any text. ` +
     (hasShape
-      ? `The SECOND attached image is a technical outline drawing of this exact bottle model — match its silhouette, proportions, shoulder curve and neck length PRECISELY, but render a real photographed glass bottle, never a drawing. `
+      ? `The SECOND attached image is a technical outline drawing of this exact bottle model — match its GLASS silhouette, proportions, shoulder curve and neck length PRECISELY, but render a real photographed glass bottle, never a drawing. IGNORE the closure/top drawn in the outline — the closure is specified above and OVERRIDES the drawing. `
       : "") +
     `Lighting: crisp premium studio softbox lighting, elegant vertical highlights along the glass, true colours, razor-sharp focus. ` +
     `CUTOUT: pure transparent background, no surface, no table, no cast shadow, no glow or halo around the silhouette — a clean isolated product cutout.`
@@ -165,7 +168,7 @@ export function buildLifestylePrompt(b: MarketingBrief, scenario: string, charte
     `The wine bottle: ${d.text} ` +
     `The FIRST attached image is the wine's front label — it appears on the bottle EXACTLY as given, legible and true to its colours; never redraw or replace it. ` +
     (hasShape
-      ? `The SECOND attached image is a technical outline of this exact bottle model — the bottle in the photo matches that silhouette and its proportions precisely. `
+      ? `The SECOND attached image is a technical outline of this exact bottle model — the bottle in the photo matches that GLASS silhouette and its proportions precisely (the closure drawn in the outline is irrelevant; the closure specified above overrides it). `
       : "") +
     `PEOPLE (house rule): never show a human face — any person appears from behind, framed below the shoulders, or as hands only. ` +
     `Shot on professional camera, beautiful natural light for the scene, crisp focus on the bottle and label. Square composition. No added text, no watermarks, no logos other than the label itself.`

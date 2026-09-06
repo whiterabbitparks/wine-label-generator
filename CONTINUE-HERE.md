@@ -1977,3 +1977,16 @@ composition-contract tightening, then customer wiring.
   over ~45s (nuiWineRise keyframes on the clip rect transform), and
   the arriving image fades in over it. TRAP: unique clipPath ids per
   glass (sanitized stage keys).
+- MARKETING ROUND 15 (owner 2026-09-06, closing the day): (1) mini
+  glasses shrunk to 15px wide with the viewBox CROPPED to the glass
+  itself ('215 95 170 315') — the old full 595×609 viewBox carried
+  huge whitespace below the glass, which is why it sat high in the
+  boxes. (2) SCREW CAP BUG: the silhouette outline drawings show a
+  corked top and were overriding the closure selection — closureLine
+  now leads "CLOSURE — NON-NEGOTIABLE" with explicit "NO cork, NO
+  capsule" clauses for non-cork closures, and both prompts tell the
+  model the outline's drawn closure is irrelevant. Verified live:
+  glossy black knurled screw cap, no cork. (3) pay-button text was
+  2.5px low (HNW's tall ascent vs naive flex centring) —
+  paddingBottom 5 measured in: ink centre now within 0.5px of the
+  button centre.
