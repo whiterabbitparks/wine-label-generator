@@ -150,7 +150,7 @@ function allergenLines(codes: string[]): string[] {
 
 export async function composeBackLabel(
   raw: BackLabelData,
-  opts: { heightMM: number; markets: string[] }
+  opts: { heightMM: number; markets: string[]; bgColor?: string }
 ): Promise<{ svg: string; widthMM: number; heightMM: number; barcodeDigits: string }> {
   /* TEMP placeholders — remove before launch (like DEMO_FILL) */
   const d: Required<BackLabelData> = {
@@ -282,7 +282,7 @@ export async function composeBackLabel(
   const H = BASE * s;
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${Wmm.toFixed(1)} ${H.toFixed(1)}" width="${Wmm.toFixed(1)}mm" height="${H.toFixed(1)}mm">` +
-    `<rect width="${Wmm.toFixed(1)}" height="${H.toFixed(1)}" fill="#FFFFFF"/>` + body + `</svg>`;
+    `<rect width="${Wmm.toFixed(1)}" height="${H.toFixed(1)}" fill="${/^#[0-9a-fA-F]{6}$/.test(opts.bgColor || "") ? opts.bgColor : "#FFFFFF"}"/>` + body + `</svg>`;
   return { svg, widthMM: Wmm, heightMM: H, barcodeDigits: bc.digits };
 }
 

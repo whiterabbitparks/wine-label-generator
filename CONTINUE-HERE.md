@@ -1662,3 +1662,37 @@ composition-contract tightening, then customer wiring.
   1093.7; loader dots under "Designing your label…" (639.9,514).
   Browser-verified: start arrow, next/back arrows, slides, baked black
   bar rendering. The bottom progress line lengths are baked per page.
+- NEW UI v3 — the 24-point precision round (owner 2026-09-05), all
+  verified by scripted browser: (1) REAL Helvetica Neue World fonts
+  found on the owner's system (Linotype TTFs) and self-hosted
+  (public/newui/fonts, @font-face 'HNW' 300/400/400i/700).
+  (2) Header/footer/progress bar are STATIC layers rebuilt 1:1 from
+  extracted geometry with the real fonts; only the content band slides
+  (welcome→vision slides full so the bar rides in). Thick progress line
+  animates to per-page endpoints extracted from the artboards (front
+  334.48 … assets 1106.38; checkout has no bar by design). Circles fill
+  by stage. (3) Welcome arrow flies left→right during the first slide.
+  (4/5) Front size box animates + follows W/H inputs inside the design's
+  814×377 area; baked value texts covered, live captioned inputs.
+  (6) Textareas bounded to design boxes, live word counters. (7) Loader
+  wine rises with real generation progress (⅓ per style) via multiply
+  blend. (8) Text re-centred; my extra dots gone. (9/10) Baked dots +
+  Select+magnifier boxes covered; single full-width Select per label.
+  (11/12) Labels centre-fit in frames; crosses drawn at the LIVE label's
+  corners (baked crosses covered). (13) DEMO_FRONT template texts fill
+  empty fields at generation (TEMP). (14) Front/back generations cached
+  by input signature — revisits never regenerate. (15) Baked E.g. texts
+  covered; real inputs with italic placeholders that clear on focus;
+  typed text italic like the design. (16) Upload Barcode/QR wired into
+  the back label (barcodeImage/qrImage). (17) Compliance/bottle/checkout
+  selection = small black dot INSIDE the design's own rings (no doubled
+  circles). (19) Back label bg = front label's sampled ground colour
+  (bgColor param), centre-fit in the 342.9 square. (20) Edit button =
+  label width. (21) Gallery mode (dark overlay, ‹ › ×) on front labels,
+  back label, checkout previews. (22) Bottle: colour wheel artwork
+  RESTORED from the original artboard (public/newui/colorwheel.png),
+  drag-pick + lightness slider on the baked track + result bar; owner's
+  bottle photo restored into its area. (23) Product shots fitted to the
+  cross-marked area. (24) Pack items selectable (dot circles), LIVE
+  total, agree square → circle. E2E-verified end to end incl. one real
+  generation run.

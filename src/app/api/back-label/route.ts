@@ -16,8 +16,9 @@ export async function POST(req: Request) {
   }
   const markets = (body.markets || ["EU", "US"]).filter((m) => m in MARKETS).slice(0, 13);
   const heightMM = Math.min(200, Math.max(40, Number(body.heightMM) || 73.3));
+  const bgColor = String((body as { bgColor?: string }).bgColor || "");
   try {
-    const out = await composeBackLabel(body.data || {}, { heightMM, markets });
+    const out = await composeBackLabel(body.data || {}, { heightMM, markets, bgColor });
     const fmt = String(body.format || "json");
     if (fmt === "json")
       return new Response(JSON.stringify(out), { headers: { "Content-Type": "application/json" } });
