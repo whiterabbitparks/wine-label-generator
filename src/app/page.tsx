@@ -191,6 +191,8 @@ export default function NewUI() {
   const [markets, setMarkets] = useState<string[]>([]);   /* round 8 #7: none preselected */
   const [barcodeImg, setBarcodeImg] = useState("");
   const [qrImg, setQrImg] = useState("");
+  /* ingredients text file for the future QR landing page (owner 2026-09-07) */
+  const [ingredients, setIngredients] = useState("");
   const [backPng, setBackPng] = useState("");
   const [backPayload, setBackPayload] = useState<Record<string, unknown> | null>(null);
   const [backSig, setBackSig] = useState("");
@@ -849,6 +851,17 @@ export default function NewUI() {
                 {barcodeImg && <span style={{ position: "absolute", left: 0, top: 38, width: 240, font: `11px ${HNW}`, color: "#3f6d2a", textAlign: "center" }}>✓ barcode uploaded</span>}
               </label>
               <button onClick={() => { setQrImg(""); setQrMode(qrMode === "create" ? "" : "create"); }} style={{ ...px(754.29, 480, 240.1, 34.3), ...modeStyle(qrMode === "create") }}>Create QR Code</button>
+              {/* owner 2026-09-07: with Create QR active, the ingredients
+                  for the future landing page can be uploaded as a text file */}
+              {qrMode === "create" && (
+                <label style={{ ...px(754.29, 604, 240.1, 34.3), ...modeStyle(false) }}>
+                  <input type="file" accept=".txt,.md,.csv,text/plain" style={{ display: "none" }} onChange={(e) => {
+                    const file = e.target.files?.[0]; if (!file) return;
+                    const rd = new FileReader(); rd.onload = () => setIngredients(String(rd.result).slice(0, 20000)); rd.readAsText(file);
+                  }} />
+                  {ingredients ? "Ingredients uploaded ✓" : "Upload Ingredients"}
+                </label>
+              )}
               <label style={{ ...px(1063.99, 480, 238.4, 34.3), ...modeStyle(qrMode === "upload") }}>
                 <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
                   const file = e.target.files?.[0]; if (!file) return;
@@ -1033,7 +1046,7 @@ export default function NewUI() {
           {/* round 14 #6: status message in the 12px subtitle style, on the
               titles' line, left-aligned with the small-thumb block */}
           {assetsStage && (
-            <span style={{ ...px(994.3, 556.39 - 12.4, 310, 32), font: `12px ${HNW}`, color: "#111", lineHeight: "16px" }}>
+            <span style={{ ...px(994.3, 556.39 - 12.4, 310, 32), font: `12px ${HNW}`, color: "#BA141A", lineHeight: "16px" }}>
               Creating your marketing assets — {assetsStage}… please stay on the page.
             </span>
           )}
