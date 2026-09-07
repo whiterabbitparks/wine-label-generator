@@ -1990,6 +1990,11 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- SHOT REFS BOARD (owner 2026-09-07): the admin Marketing tab gained a
+  GLOBAL "product shots" board (pseudo-style 'shots' in marketing-refs;
+  studio-photography analysis prompt) — its charter
+  (settings/marketing-charter-shots) rides every front/back bottle shot
+  via buildShotPrompt. Lifestyle boards stay per style.
 - ROUND 18 (owner 2026-09-07, 5 items): (1) 2mm BLEED on back-label
   SVG + TIFF deliverables (composeBackLabel opts.bleedMM; backgrounds
   extend into bleed, ground-stop line unmoved; previews stay trimmed;
