@@ -1990,6 +1990,20 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 19 (owner 2026-09-07): (1) CACHE BUG — the marketing-assets
+  cache signature ignored charters, so freshly analyzed reference
+  boards replayed OLD images verbatim; loadMarketingCharters() is now
+  hashed into the signature (route) and passed into the engine, and
+  the lifestyle charter LEADS the prompt ("ART DIRECTION — follow
+  CLOSELY … overrides the generic defaults") instead of trailing the
+  style world. (2) LOADER MOVEMENT EVERYWHERE: label loader creep was
+  sub-pixel (0.3/60s) — now 1.2%/s for 25s then a trickle to 0.45,
+  MONOTONIC via fillMax ref (creep reset on a real jump could lower
+  the level); assets waiting-glass crawl 0.6%/s to 0.5. Glasses 15px
+  (top edge kept via marginTop 2), dots 16.5px. (3) ONE-LABEL BUG:
+  the 3-style parallel burst can rate-limit styles out (owner got a
+  single card) — rejected styles now retry ONCE sequentially, and
+  cards re-sort to style order.
 - SHOT REFS BOARD (owner 2026-09-07): the admin Marketing tab gained a
   GLOBAL "product shots" board (pseudo-style 'shots' in marketing-refs;
   studio-photography analysis prompt) — its charter

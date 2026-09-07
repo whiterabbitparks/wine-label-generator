@@ -1,4 +1,4 @@
-import { generateMarketingAssets, type MarketingBrief, type AssetEvent } from "@/lib/marketing/engine";
+import { generateMarketingAssets, loadMarketingCharters, type MarketingBrief, type AssetEvent } from "@/lib/marketing/engine";
 
 /* PUBLIC customer endpoint (owner 2026-09-06): the marketing-asset run in
    one streamed call — 2 studio product shots (front/back, transparent
@@ -43,10 +43,11 @@ export async function POST(req: Request) {
     seed: (Number(body.seed) || 0) >>> 0,
   };
 
-  /* signature: everything that changes the output, incl. hashes of the
-     label pixels (a regenerated label must bust the cache) */
+  /* signature: everything that changes the output — label pixels AND the
+     current charters (an edited/analyzed board must bust the cache) */
   const hash = (s: string) => { let h = 5381; for (let i = 0; i < s.length; i += 97) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0; return h.toString(36); };
-  const sig = JSON.stringify({ ...brief, f: hash(front), b: back ? hash(back) : "" });
+  const charters = await loadMarketingCharters(brief.style);
+  const sig = JSON.stringify({ ...brief, f: hash(front), b: back ? hash(back) : "", cl: hash(charters.life), cs: hash(charters.shots) });
 
   const enc = new TextEncoder();
   const stream = new ReadableStream({
@@ -63,7 +64,7 @@ export async function POST(req: Request) {
         await generateMarketingAssets(brief, front, back, (e) => {
           if (e.type !== "progress") events.push(e);
           send(e);
-        });
+        }, charters);
         /* cache only if at least the front shot succeeded */
         if (events.some((e) => e.type === "shot")) cache.set(sig, events);
       } catch (e) {

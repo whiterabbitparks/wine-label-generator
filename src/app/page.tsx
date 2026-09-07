@@ -208,6 +208,9 @@ export default function NewUI() {
     return () => clearInterval(iv);
   }, [assetsStage, page]);
   useEffect(() => { dreamT.current = Date.now(); }, [genProgress, page]);
+  /* the displayed wine level never goes DOWN (creep resets on real jumps) */
+  const fillMax = useRef(0);
+  useEffect(() => { if (page === "loader") fillMax.current = 0; }, [page]);
   const ASSET_STAGES = ["front shot", "back shot", "lifestyle 1/5", "lifestyle 2/5", "lifestyle 3/5", "lifestyle 4/5", "lifestyle 5/5"];
   const assetFill = (key: string) => {
     void tick;   // ticking re-render drives the rise
@@ -217,7 +220,7 @@ export default function NewUI() {
     if (cur < 0 || idx < 0) return 0.08;
     if (idx < cur) return 0.93;                                                 // done, image imminent
     if (idx === cur) return Math.min(0.9, 0.14 + ((now - assetT.current.stage) / 45000) * 0.75);
-    return Math.min(0.4, 0.08 + ((now - assetT.current.run) / 60000) * 0.15);   // waiting: slow crawl
+    return Math.min(0.5, 0.08 + ((now - assetT.current.run) / 1000) * 0.006);   // waiting: visible crawl
   };
 
   /* round 17 #2: the front label's wording suggests the bottle type */
@@ -420,9 +423,19 @@ export default function NewUI() {
       return { style, dream: res.dream || "", preview: res.preview || null };
     };
     try {
-      const settled = await Promise.allSettled(["traditional", "contemporary", "punk"].map(one));
+      const styles3 = ["traditional", "contemporary", "punk"];
+      const settled = await Promise.allSettled(styles3.map(one));
       const ok = settled.filter((x): x is PromiseFulfilledResult<Dream> => x.status === "fulfilled").map((x) => x.value);
+      /* round 19: a parallel burst can rate-limit a style out of the set
+         (owner saw a 1-label session) — retry the failed styles once,
+         sequentially, before giving up on them */
+      for (let i = 0; i < styles3.length; i++) {
+        if (settled[i].status === "rejected") {
+          try { ok.push(await one(styles3[i])); } catch { /* that style stays out */ }
+        }
+      }
       if (!ok.length) throw new Error("all generations failed — try again");
+      ok.sort((a, b2) => styles3.indexOf(a.style) - styles3.indexOf(b2.style));
       setDreams(ok); setSelected(-1); setFrontSig(sigFront()); setBackSig("");
       go("options");
     } catch (e) {
@@ -541,7 +554,9 @@ export default function NewUI() {
      level is FILL-driven from the tick — the active image's glass rises
      with its render, waiting glasses crawl slowly, nothing ever freezes */
   const miniGlass = (key: string, fill: number) => (
-    <svg key={key} viewBox="215 95 170 315" width="13" style={{ display: "block" }}>
+    /* 15% bigger downwards: top edge stays (marginTop compensates the
+       flex-centring shift) — round 19 */
+    <svg key={key} viewBox="215 95 170 315" width="15" style={{ display: "block", marginTop: 2 }}>
       <defs>
         <clipPath id={`mg-${key.replace(/[^a-z0-9]/gi, "")}`}>
           <rect x="230" y={266.6 - fill * 95} width="140" height={fill * 95 + 4}
@@ -707,10 +722,12 @@ export default function NewUI() {
         </>);
       }
       case "loader": {
-        /* round 17 #1: the wine never freezes — it creeps up between real
-           progress jumps (creep resets whenever genProgress advances) */
-        const creep = Math.min(0.28, ((Date.now() - dreamT.current) / 60000) * 0.3) + tick * 0;
-        const fill = Math.min(0.97, Math.max(0.06, genProgress + creep));
+        /* round 19: VISIBLE, never-stalling movement — fast creep for the
+           first ~25s (1.2%/s), then a slow trickle; monotonic via fillMax */
+        const t = Date.now() - dreamT.current + tick * 0;
+        const creep = t < 25000 ? (t / 1000) * 0.012 : Math.min(0.45, 0.3 + ((t - 25000) / 1000) * 0.003);
+        const fill = Math.max(fillMax.current, Math.min(0.97, Math.max(0.06, genProgress + creep)));
+        fillMax.current = fill;
         return (<>
           {patch(400, 120, 640, 480, "lcover")}
           {/* glass optically centred in the window (round 7 #10) */}
@@ -993,7 +1010,7 @@ export default function NewUI() {
               {/* round 17 #1: rising glass + three-dot indicator below it */}
               {assetsStage && loadKey ? (<>
                 {miniGlass(loadKey, assetFill(loadKey))}
-                <span style={{ marginTop: 10, font: `15px ${HNW}`, color: "#111", letterSpacing: 2, lineHeight: "10px" }}>
+                <span style={{ marginTop: 10, font: `16.5px ${HNW}`, color: "#111", letterSpacing: 2.2, lineHeight: "11px" }}>
                   {[0, 1, 2].map((dd) => <span key={dd} style={{ animation: `nuiDot 1.2s ${dd * 0.2}s infinite` }}>.</span>)}
                 </span>
               </>) : <>[ {label} ]</>}

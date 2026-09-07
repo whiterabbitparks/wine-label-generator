@@ -171,8 +171,10 @@ export function buildLifestylePrompt(b: MarketingBrief, scenario: string, charte
   const d = bottleDescription(b);
   return (
     `Photorealistic promotional lifestyle photograph for a wine brand: ${scenario}. ` +
+    /* the owner's reference-derived charter LEADS the prompt (early tokens
+       weigh most) and explicitly outranks the generic style world */
+    (charter ? `ART DIRECTION — this brand's photographic world, follow it CLOSELY in setting, props, light, colour grading and styling (it overrides any generic defaults below): ${charter} ` : "") +
     `${STYLE_WORLD[b.style] || STYLE_WORLD.contemporary} ` +
-    (charter ? `Art director's world notes for this brand (follow their spirit): ${charter} ` : "") +
     `The wine bottle: ${d.text} ` +
     `The FIRST attached image is the wine's front label — it appears on the bottle EXACTLY as given, legible and true to its colours; never redraw or replace it. ` +
     (hasShape
@@ -240,21 +242,27 @@ export interface AssetEvent {
   image?: string; preview?: string; error?: string;
 }
 
+/* charters loaded ONCE per request — the route also hashes them into the
+   cache signature, so editing a board busts stale cached sets (owner bug
+   2026-09-07: new references changed nothing because the cache replayed) */
+export async function loadMarketingCharters(style: string): Promise<{ life: string; shots: string }> {
+  try {
+    const db = await getDb();
+    const c = (await db.collection("settings").findOne({ _id: `marketing-charter-${style}` } as never)) as { text?: string } | null;
+    const sc = (await db.collection("settings").findOne({ _id: "marketing-charter-shots" } as never)) as { text?: string } | null;
+    return { life: c?.text || "", shots: sc?.text || "" };
+  } catch { return { life: "", shots: "" }; }
+}
+
 export async function generateMarketingAssets(
   b: MarketingBrief,
   frontLabel: string,
   backLabel: string | null,
-  send: (e: AssetEvent) => void
+  send: (e: AssetEvent) => void,
+  charters?: { life: string; shots: string }
 ): Promise<void> {
   const final = imageQuality() === "prod";
-  let charter = "", shotCharter = "";
-  try {
-    const db = await getDb();
-    const c = (await db.collection("settings").findOne({ _id: `marketing-charter-${b.style}` } as never)) as { text?: string } | null;
-    charter = c?.text || "";
-    const sc = (await db.collection("settings").findOne({ _id: "marketing-charter-shots" } as never)) as { text?: string } | null;
-    shotCharter = sc?.text || "";
-  } catch { /* charters are optional */ }
+  const { life: charter, shots: shotCharter } = charters || await loadMarketingCharters(b.style);
 
   /* the owner's line-art drawing of the chosen bottle rides along as a
      silhouette spec (round 14 #4) */
