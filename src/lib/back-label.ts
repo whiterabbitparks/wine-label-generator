@@ -162,24 +162,23 @@ export async function composeBackLabel(
   raw: BackLabelData,
   opts: { heightMM: number; markets: string[]; bgColor?: string; bleedMM?: number }
 ): Promise<{ svg: string; widthMM: number; heightMM: number; barcodeDigits: string }> {
-  /* placeholders removed (owner 2026-09-06): the label shows ONLY what the
-     customer typed — empty fields simply stay empty. (Energy keeps a real
-     default: it is computed information, not customer wording.) */
+  /* TEMP demo placeholders (owner RESTORED 2026-09-07 for testing speed —
+     switch off before launch): empty fields fall back to sample content */
   const d: Required<BackLabelData> = {
-    wine: raw.wine || "",
-    producer: raw.producer || "",
-    description: raw.description || "",
-    importer: raw.importer || "",
-    producerCompany: raw.producerCompany || (raw.producer || "").split(",")[0].trim() || "",
-    producerAddress: raw.producerAddress || (raw.producer || "").split(",").slice(1).join(",").trim() || "",
-    importerCompany: raw.importerCompany || (raw.importer || "").split(",")[0].trim() || "",
-    importerAddress: raw.importerAddress || (raw.importer || "").split(",").slice(1).join(",").trim() || "",
-    bottlingDate: raw.bottlingDate || "",
-    lot: raw.lot || "",
-    web: raw.web || "",
-    alcohol: raw.alcohol || "",
-    volume: raw.volume || "",
-    countryOfOrigin: raw.countryOfOrigin || "",
+    wine: raw.wine || "Saperavi Reserve",
+    producer: raw.producer || "Popiashvili Cellars LLC, Kakheti, Georgia",
+    description: raw.description || "A dry red wine from old Saperavi vines. Deep garnet colour; dark berries, tobacco leaf and warm spice on the nose; firm but polished tannins carry a long mineral finish. Eight months in traditional qvevri.",
+    importer: raw.importer || "Teller Wines LLC, 148 W 68 st., 10023 NYC, USA",
+    producerCompany: raw.producerCompany || (raw.producer || "").split(",")[0].trim() || "\u201cPopiashvili Cellars\u201d LLC",
+    producerAddress: raw.producerAddress || (raw.producer || "").split(",").slice(1).join(",").trim() || "36 Chikovani st., 0171 Tbilisi, Georgia",
+    importerCompany: raw.importerCompany || (raw.importer || "").split(",")[0].trim() || "\u201cTeller Wines\u201d LLC",
+    importerAddress: raw.importerAddress || (raw.importer || "").split(",").slice(1).join(",").trim() || "148 W 68 st., 10023 NYC, USA",
+    bottlingDate: raw.bottlingDate || "29/04/2026",
+    lot: raw.lot || "2606142",
+    web: raw.web || "www.popiashvili.com",
+    alcohol: raw.alcohol || "12.5",
+    volume: raw.volume || "750",
+    countryOfOrigin: raw.countryOfOrigin || "Georgia",
     energyKcal: raw.energyKcal || "81",
     barcodeDigits: raw.barcodeDigits || "",
     qrUrl: raw.qrUrl || "",

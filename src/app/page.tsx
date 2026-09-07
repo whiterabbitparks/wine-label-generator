@@ -125,7 +125,15 @@ const IDEAS = [
   "The first snow settling on the last unpicked row",
 ];
 
-/* demo fill removed (owner 2026-09-06): labels carry ONLY typed content */
+/* TEMP demo fill (owner RESTORED 2026-09-07 for testing speed — switch
+   off before launch): empty fields fall back to these sample texts in
+   GENERATED results only; the form stays empty */
+const DEMO_FRONT: Record<string, string> = {
+  producer: "GRAND VIN", wine: "Château Margaux", appellation: "Margaux AOC",
+  classification: "Grand Cru Classé", vintage: "2018", grape: "Cabernet Sauvignon",
+  regionCountry: "Bordeaux, France", special: "Vieilles Vignes", sweetness: "Dry",
+  colour: "Red", wineType: "Still Wine", alcohol: "12.5", volume: "750",
+};
 
 interface Dream { style: string; dream: string; preview: string | null }
 
@@ -293,7 +301,7 @@ export default function NewUI() {
           body: JSON.stringify({
             front: sel.dream, back: backData,
             bottle: { type: bottle.type, color: bottle.color, closure: bottle.closure, finish: bottle.finish, closureColour: shadeRgb() },
-            wine: { colour: f.colour || "", name: f.wine || "" },
+            wine: { colour: f.colour || DEMO_FRONT.colour, name: f.wine || DEMO_FRONT.wine },
             labelMM: { w: Number(f.width) || 110, h: Number(f.height) || 80 },
             style: sel.style, seed,
           }),
@@ -387,7 +395,7 @@ export default function NewUI() {
     setGenProgress(0);
     const aspect = (Number(f.width) || 110) / (Number(f.height) || 80);
     const aspectKey = aspect > 1.15 ? "landscape" : aspect < 0.87 ? "portrait" : "square";
-    const fx = (k: string) => f[k]?.trim() || "";
+    const fx = (k: string) => f[k]?.trim() || DEMO_FRONT[k] || "";
     const data = {
       producer: fx("producer"), wine: fx("wine"), appellation: fx("appellation"),
       classification: fx("classification"), grape: fx("grape"),
@@ -451,14 +459,14 @@ export default function NewUI() {
     const bg = sel ? await groundOf(sel.preview || sel.dream) : "#FFFFFF";
     const payload = {
       data: {
-        wine: f.wine || "",
+        wine: f.wine || DEMO_FRONT.wine,
         producer: [b.producerCompany, b.producerAddress].filter(Boolean).join(", "),
         producerCompany: b.producerCompany || "", producerAddress: b.producerAddress || "",
         importerCompany: b.importer || "", importerAddress: b.importerAddress || "",
         description: b.description || "", importer: [b.importer, b.importerAddress].filter(Boolean).join(", "),
         bottlingDate: b.bottlingDate || "", lot: b.lot || "", web: b.web || "",
         alcohol: (f.alcohol || "12.5").replace("%", ""), volume: (f.volume || "750").replace(/\D/g, "") || "750",
-        countryOfOrigin: (f.regionCountry || "").split(",")[1]?.trim() || "",
+        countryOfOrigin: (f.regionCountry || DEMO_FRONT.regionCountry).split(",")[1]?.trim() || "",
         barcodeImage: barcodeImg, qrImage: qrImg,
         qrUrl: `https://8klabels.com/p/${productCode.current}`,
       },

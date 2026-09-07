@@ -1990,6 +1990,12 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- DEMO FILL RESTORED (owner 2026-09-07, testing speed): empty fields
+  fall back to sample content in GENERATED results again — DEMO_FRONT
+  in page.tsx (front dreams, back payload, assets brief) and the
+  back-label sample set in composeBackLabel (v5 split fields incl.
+  producer/importer company+address). Forms stay empty; SWITCH OFF
+  BEFORE LAUNCH (like DEMO_FILL in the classic shell).
 - ROUND 19 (owner 2026-09-07): (1) CACHE BUG — the marketing-assets
   cache signature ignored charters, so freshly analyzed reference
   boards replayed OLD images verbatim; loadMarketingCharters() is now
