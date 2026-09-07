@@ -36,13 +36,20 @@ const BOTTLE_SLUG: Record<string, string> = {
   "Bordeaux": "bordeaux", "Bordeaux Prestige": "bordeaux-prestige", "Burgundy": "burgundy",
   "Sparkling": "sparkling", "Alsace / Rhine": "alsace-rhine", "Ice Wine": "ice-wine",
 };
-function bottleShapeRef(type: string): string | null {
+function bottleShapeRef(type: string, closure?: string): string | null {
   const slug = BOTTLE_SLUG[type];
   if (!slug) return null;
-  try {
-    const p = path.join(process.cwd(), "public", "newui", "bottles", `${slug}.jpg`);
-    return "data:image/jpeg;base64," + fs.readFileSync(p).toString("base64");
-  } catch { return null; }
+  /* Screw Cap uses the owner's -screw outline so the drawn closure matches
+     the selected one (round 17 #4; sparkling has no screw variant) */
+  const screw = closure === "Screw Cap" && slug !== "sparkling";
+  for (const file of [screw ? `${slug}-screw.jpg` : "", `${slug}.jpg`]) {
+    if (!file) continue;
+    try {
+      const p = path.join(process.cwd(), "public", "newui", "bottles", file);
+      return "data:image/jpeg;base64," + fs.readFileSync(p).toString("base64");
+    } catch { /* try next */ }
+  }
+  return null;
 }
 
 /* ---- liquid appearance through the glass --------------------------- */
@@ -248,7 +255,7 @@ export async function generateMarketingAssets(
 
   /* the owner's line-art drawing of the chosen bottle rides along as a
      silhouette spec (round 14 #4) */
-  const shape = bottleShapeRef(b.bottleType);
+  const shape = bottleShapeRef(b.bottleType, b.closure);
 
   /* sequential on purpose: OpenAI allows ~5 images/min — the retry absorbs
      the occasional 429, and the stream keeps the page honest meanwhile */

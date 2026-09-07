@@ -1,20 +1,25 @@
 import QRCode from "qrcode";
 
-/* BACK LABEL v2 — TEMPLATE-EXACT (owner PDF 2026-09-03: WAIN/
-   Back_Label_Template.pdf, 80×80mm, Avenir Next Condensed → Google's
-   Archivo Narrow, installed in ~/Library/Fonts for librsvg; deploy
-   machines need it too). PURE CODE — nothing AI-generated. Font sizes are
-   the template's exactly: name 12pt, description+columns 8pt, everything
-   else 7pt, ALL CAPS. Barcode 31.7×14.4mm bottom-right, QR 19.2mm beside
-   it — always the same, per the owner's rule. Extra markets extend the
-   width with 80mm panels; the base 80×80 face stays untouched.
-   TEMP placeholders fill empty fields (REMOVE BEFORE LAUNCH). */
+/* BACK LABEL v5 — TEMPLATE-EXACT (owner 2026-09-07: WAIN/Back Label/
+   back-label-template.svg, 80×80mm, Barlow Condensed). PURE CODE —
+   nothing AI-generated. Sizes are the template's exactly: name 12pt
+   semibold, description/columns 8pt, everything else 7pt. Producer LEFT,
+   importer RIGHT-aligned, one LOT/ALC/SULFITES line, ground colour stops
+   at y61.5 → clean white codes band (QR left, BOTTLED beside, EAN right).
+   Empty fields disappear with their titles. Extra markets flow into the
+   regulatory zone; width climbs a ladder when they don't fit. */
 
 export interface BackLabelData {
   wine?: string;
   producer?: string;
   description?: string;
   importer?: string;
+  /* v5 template (owner 2026-09-07): producer/importer split into company +
+     address; joined `producer`/`importer` remain as fallbacks */
+  producerCompany?: string;
+  producerAddress?: string;
+  importerCompany?: string;
+  importerAddress?: string;
   bottlingDate?: string;
   lot?: string;
   web?: string;
@@ -160,6 +165,10 @@ export async function composeBackLabel(
     producer: raw.producer || "",
     description: raw.description || "",
     importer: raw.importer || "",
+    producerCompany: raw.producerCompany || (raw.producer || "").split(",")[0].trim() || "",
+    producerAddress: raw.producerAddress || (raw.producer || "").split(",").slice(1).join(",").trim() || "",
+    importerCompany: raw.importerCompany || (raw.importer || "").split(",")[0].trim() || "",
+    importerAddress: raw.importerAddress || (raw.importer || "").split(",").slice(1).join(",").trim() || "",
     bottlingDate: raw.bottlingDate || "",
     lot: raw.lot || "",
     web: raw.web || "",
@@ -178,45 +187,70 @@ export async function composeBackLabel(
   const T = (x: number, y: number, size: number, text: string, weight = 400, anchor = "start") =>
     `<text x="${(x * s).toFixed(2)}" y="${(y * s).toFixed(2)}" font-size="${(size * s).toFixed(2)}" font-weight="${weight}" text-anchor="${anchor}" font-family="${FAM}">${esc(text)}</text>`;
 
-  /* — v4 FLOW FACE (owner 2026-09-04): the template gives zone ORDER,
-     rules, sizes and the bottom band; content FLOWS. Width climbs a
-     ladder until everything fits the fixed height — wider face = longer
-     paragraph lines = fewer rows. The regulatory zone (where the sample
-     US warning sat) carries the SELECTED markets' texts, in columns when
-     the face is wide. Codes never collide with text: the bottom band is
-     reserved, allergen text gets its measured room, QR sits after it,
-     EAN hugs the right edge. — */
+  /* — v5 TEMPLATE (owner 2026-09-07: WAIN/Back Label/back-label-template.svg,
+     80×80mm, coordinates decoded from the file, pt÷2.83465→mm): title row =
+     wine name LEFT (12pt semibold) + "By BRAND" RIGHT; description;
+     PRODUCER block LEFT | IMPORTED BY block RIGHT-aligned; PRODUCT OF |
+     WWW; ONE LOT / ALC / CONTAINS SULFITES line; then the regulatory zone
+     (selected markets' texts). The GROUND COLOUR STOPS at y61.5 — below is
+     a CLEAN WHITE codes band: QR left (14.55mm at x4), BOTTLED + See
+     ingredients beside it, EAN right with digits. Empty fields disappear
+     WITH their titles; rules stay (structure). Content still flows and the
+     width ladder still absorbs many markets. — */
   const reg = regulatoryBlocks(opts.markets, d);
   const allergen = allergenLines(opts.markets);
-  const importerLabel = opts.markets.length === 1 ? `IMPORTED BY (${opts.markets[0]}):` : "IMPORTED BY:";
-  const CODEBAND = 18.6;             // fixed bottom band height
-  const LH8 = 3.4, LH7 = 2.9;
+  const impSuffix = opts.markets.length === 1 ? ` (${opts.markets[0]})` : "";
+  const BAND_TOP = 61.5;             // the ground colour stops here (template 174.33pt)
+  const LH8 = 3.38, LH7 = 2.9;
+  const brand = up(d.producerCompany.replace(/["\u201c\u201d'\u2019]/g, "").replace(/\b(LLC|LTD|INC|GMBH|S\.?A\.?|CO\.?|COMPANY|WINERY|CELLARS?)\.?,?\s*$/i, "").trim());
 
   const layoutAt = (W: number) => {
-    const CW = W - 8.4;              // content width
+    const RM = W - 4;                // right margin (template 11.34pt = 4mm)
+    const CW = W - 8;                // content width
     const parts: { y: number; x: number; size: number; text: string; weight?: number; anchor?: string }[] = [];
+    const rich: string[] = [];       // pre-built svg fragments (mixed-weight rows)
     const rules: number[] = [];
+    /* title row (template: KORRA @6.70, By NATIA right) */
     let y = 6.7;
-    parts.push({ y, x: 4.2, size: S12, text: up(d.wine), weight: 500 });
-    y += 1.7; rules.push(y); y += 3.6;
-    for (const ln of wrap(up(d.description), S8, CW)) { parts.push({ y, x: 4.2, size: S8, text: ln, weight: 500 }); y += LH8; }
-    y = y - LH8 + 1.6; rules.push(y);
-    /* importer | producer columns share the face width */
-    const colW = (CW - 4) / 2, colR = 4.2 + colW + 4;
+    if (d.wine) parts.push({ y, x: 4, size: S12, text: up(d.wine), weight: 600 });
+    if (brand) rich.push(
+      `<text x="${(RM * s).toFixed(2)}" y="${(y * s).toFixed(2)}" font-size="${(S12 * s).toFixed(2)}" text-anchor="end" font-family="${FAM}">` +
+      `<tspan font-weight="400">By </tspan><tspan font-weight="600">${esc(brand)}</tspan></text>`);
+    y += 1.7; rules.push(y);         // rule @8.40
+    /* description (template @12.00, 8pt, pitch 3.38) */
+    y += 3.6;
+    const descLines = wrap(d.description, S8, CW);
+    for (const ln of descLines) { parts.push({ y, x: 4, size: S8, text: ln }); y += LH8; }
+    if (!descLines.length) y += LH8; // keep the template's empty-row height
+    y = y - LH8 + 1.6; rules.push(y); // rule (template @13.60 with one line)
+    /* producer LEFT | importer RIGHT (template @17.40, 8pt, pitch 3.38) */
+    const colW = (CW - 4) / 2;
     let yl = y + 3.8, yr = y + 3.8;
-    parts.push({ y: yl, x: 4.3, size: S8, text: importerLabel }); yl += LH8;
-    parts.push({ y: yr, x: colR, size: S8, text: "PRODUCER:" }); yr += LH8;
-    for (const ln of wrap(up(d.importer), S8, colW)) { parts.push({ y: yl, x: 4.3, size: S8, text: ln }); yl += LH8; }
-    for (const ln of wrap(up(d.producer), S8, colW)) { parts.push({ y: yr, x: colR, size: S8, text: ln }); yr += LH8; }
-    y = Math.max(yl, yr) - LH8 + 1.8; rules.push(y);
-    parts.push({ y: y + 3.4, x: 4.3, size: S7, text: `PRODUCT OF ${up(d.countryOfOrigin)}.${opts.markets.includes("CA") ? ` / PRODUIT DE ${up(d.countryOfOrigin)}.` : ""}` });
-    parts.push({ y: y + 3.4, x: colR, size: S7, text: up(d.web) });
-    y += 3.4 + 1.9; rules.push(y);
-    parts.push({ y: y + 3.5, x: 4.2, size: S7, text: `BOTTLED: ${d.bottlingDate}   /   LOT: L${d.lot}   /   ${d.alcohol}% ALC./VOL. ${d.volume} ML` });
-    y += 3.5 + 1.6; rules.push(y);
-    /* regulatory zone: flow blocks into columns of ~64mm */
+    if (d.producerCompany || d.producerAddress) {
+      parts.push({ y: yl, x: 4, size: S8, text: `PRODUCER: ${d.producerCompany}${d.producerAddress ? "," : ""}` }); yl += LH8;
+      for (const ln of wrap(d.producerAddress, S8, colW)) { parts.push({ y: yl, x: 4, size: S8, text: ln }); yl += LH8; }
+    }
+    if (d.importerCompany || d.importerAddress) {
+      parts.push({ y: yr, x: RM, size: S8, text: `IMPORTED BY${impSuffix}: ${d.importerCompany}${d.importerAddress ? "," : ""}`, anchor: "end" }); yr += LH8;
+      for (const ln of wrap(d.importerAddress, S8, colW)) { parts.push({ y: yr, x: RM, size: S8, text: ln, anchor: "end" }); yr += LH8; }
+    }
+    y = Math.max(yl, yr, y + 3.8 + LH8) - LH8 + 1.83; rules.push(y);   // rule (template @26.00)
+    /* PRODUCT OF | WWW (template @29.40, 7pt) */
+    if (d.countryOfOrigin)
+      parts.push({ y: y + 3.4, x: 4, size: S7, text: `PRODUCT OF ${up(d.countryOfOrigin)}.${opts.markets.includes("CA") ? ` / PRODUIT DE ${up(d.countryOfOrigin)}.` : ""}` });
+    if (d.web) parts.push({ y: y + 3.4, x: RM, size: S7, text: up(d.web), anchor: "end" });
+    y += 3.4 + 1.9; rules.push(y);   // rule (template @31.30)
+    /* ONE line: LOT / ALC / CONTAINS SULFITES (template @34.80, 7pt) */
+    const lotBits = [
+      d.lot ? `LOT: L${d.lot}` : "",
+      d.alcohol && d.volume ? `${d.alcohol}% ALC./VOL. ${d.volume} ML` : d.alcohol ? `${d.alcohol}% ALC./VOL.` : "",
+      allergen.join(" / "),
+    ].filter(Boolean);
+    parts.push({ y: y + 3.5, x: 4, size: S7, text: lotBits.join(" / ") });
+    y += 3.5 + 1.6; rules.push(y);   // rule (template @36.40)
+    /* regulatory zone (down to the ground stop) */
     const zoneTop = y + 3.3;
-    const zoneBottom = BASE - CODEBAND - 1.2;
+    const zoneBottom = BAND_TOP - 1.4;
     const rcW = Math.min(72, CW);
     const nrc = Math.max(1, Math.floor((CW + 4) / (rcW + 4)));
     const rcRealW = (CW - (nrc - 1) * 4) / nrc;
@@ -227,10 +261,10 @@ export async function composeBackLabel(
       const need = lines.length * LH7 + 1.4;
       if (ry + need - LH7 > zoneBottom && ry > zoneTop) { rc++; ry = zoneTop; }
       if (rc >= nrc || ry + need - LH7 > zoneBottom) { overflow = true; break; }
-      for (const ln of lines) { parts.push({ y: ry, x: 4.2 + rc * (rcRealW + 4), size: S7, text: ln }); ry += LH7; }
+      for (const ln of lines) { parts.push({ y: ry, x: 4 + rc * (rcRealW + 4), size: S7, text: ln }); ry += LH7; }
       ry += 1.4;
     }
-    return { parts, rules, overflow, colR };
+    return { parts, rich, rules, overflow };
   };
 
   /* width ladder: template width first, then grow carefully */
@@ -242,49 +276,47 @@ export async function composeBackLabel(
 
   let body = "";
   for (const r2 of lay.rules)
-    body += `<rect x="${(4.2 * s).toFixed(2)}" y="${(r2 * s).toFixed(2)}" width="${((W - 8.4) * s).toFixed(2)}" height="${(0.2 * s).toFixed(2)}" fill="#000"/>`;
+    body += `<rect x="${(4 * s).toFixed(2)}" y="${(r2 * s).toFixed(2)}" width="${((W - 8) * s).toFixed(2)}" height="${(0.2 * s).toFixed(2)}" fill="#000"/>`;
   for (const pt2 of lay.parts) body += T(pt2.x, pt2.y, pt2.size, pt2.text, pt2.weight || 400, pt2.anchor || "start");
+  body += lay.rich.join("");
 
-  /* — bottom band (reserved; nothing else may enter): allergen ·
-     SEE INGREDIENTS · QR · EAN right-aligned — */
-  const bandTop = BASE - CODEBAND + 0.1; // 61.5 at BASE=80
-  let ay = bandTop + 1.7;
-  let allergenW = 0;
-  for (const ln of allergen) {
-    for (const seg of wrap(ln, S7, 24)) {
-      body += T(4.1, ay, S7, seg); ay += LH7;
-      allergenW = Math.max(allergenW, tw(seg, S7));
-    }
-  }
-  body += T(4.1, BASE - 3.8 + 2.4, S7, "SEE INGREDIENTS:");
-  const qrS = 15.0;
-  const qrX = Math.max(22.4, 4.1 + allergenW + 3);
+  /* — CODES BAND on clean white (template): QR 14.55mm at (4, 61.45);
+     BOTTLED beside it @(21.3, 65.5) 7.7pt; See ingredients @(21.2, 76.0);
+     EAN right-anchored with standard digit typography — */
+  const bandTop = BAND_TOP;
+  const qrS = 14.55, qrX = 4, qrY = 61.45;
   if (d.qrImage) {
-    body += `<image x="${(qrX * s).toFixed(2)}" y="${(bandTop * s).toFixed(2)}" width="${(qrS * s).toFixed(2)}" height="${(qrS * s).toFixed(2)}" href="${d.qrImage}"/>`;
+    body += `<image x="${(qrX * s).toFixed(2)}" y="${(qrY * s).toFixed(2)}" width="${(qrS * s).toFixed(2)}" height="${(qrS * s).toFixed(2)}" href="${d.qrImage}"/>`;
   } else {
-    const qrPng = await QRCode.toDataURL(d.qrUrl || d.web, { margin: 1, width: 300 });
-    body += `<image x="${(qrX * s).toFixed(2)}" y="${(bandTop * s).toFixed(2)}" width="${(qrS * s).toFixed(2)}" height="${(qrS * s).toFixed(2)}" href="${qrPng}"/>`;
+    const qrPng = await QRCode.toDataURL(d.qrUrl || d.web || "https://8klabels.example", { margin: 1, width: 300 });
+    body += `<image x="${(qrX * s).toFixed(2)}" y="${(qrY * s).toFixed(2)}" width="${(qrS * s).toFixed(2)}" height="${(qrS * s).toFixed(2)}" href="${qrPng}"/>`;
   }
+  if (d.bottlingDate) body += T(21.3, 65.5, 7.7 * PT, `BOTTLED: ${d.bottlingDate}`);
+  body += T(21.2, 76.0, S7, "See ingredients");
   const bc = ean13(d.barcodeDigits);
-  const bcW = 31.4, bx = W - 4.2 - bcW;
+  const bcW = 31.6, bx = W - 4.2 - bcW, bcH = 13.9;
   if (d.barcodeImage) {
-    body += `<image x="${(bx * s).toFixed(2)}" y="${(bandTop * s).toFixed(2)}" width="${(bcW * s).toFixed(2)}" height="${(14.9 * s).toFixed(2)}" href="${d.barcodeImage}"/>`;
+    body += `<image x="${(bx * s).toFixed(2)}" y="${(bandTop * s).toFixed(2)}" width="${(bcW * s).toFixed(2)}" height="${(bcH * s).toFixed(2)}" href="${d.barcodeImage}"/>`;
   } else {
     const mod = bcW / 95;
     const GUARD = new Set([0, 1, 2, 45, 46, 47, 48, 49, 92, 93, 94]);
     for (let i = 0; i < bc.modules.length; i++)
       if (bc.modules[i] === "1")
-        body += `<rect x="${((bx + i * mod) * s).toFixed(2)}" y="${(bandTop * s).toFixed(2)}" width="${(mod * s).toFixed(2)}" height="${((GUARD.has(i) ? 13.9 : 12.4) * s).toFixed(2)}" fill="#000"/>`;
-    body += T(bx - 1.2, BASE - 3.8 + 2.4, S7, bc.digits[0], 400, "end");
-    body += T(bx + 3 * (bcW / 95) + (42 * (bcW / 95)) / 2, BASE - 3.8 + 2.4, S7, bc.digits.slice(1, 7).split("").join("\u2009"), 400, "middle");
-    body += T(bx + 50 * (bcW / 95) + (42 * (bcW / 95)) / 2, BASE - 3.8 + 2.4, S7, bc.digits.slice(7).split("").join("\u2009"), 400, "middle");
+        body += `<rect x="${((bx + i * mod) * s).toFixed(2)}" y="${(bandTop * s).toFixed(2)}" width="${(mod * s).toFixed(2)}" height="${((GUARD.has(i) ? bcH : bcH - 1.5) * s).toFixed(2)}" fill="#000"/>`;
+    body += T(bx - 1.2, 76.5, S7, bc.digits[0], 400, "end");
+    body += T(bx + 3 * mod + (42 * mod) / 2, 76.5, S7, bc.digits.slice(1, 7).split("").join("\u2009"), 400, "middle");
+    body += T(bx + 50 * mod + (42 * mod) / 2, 76.5, S7, bc.digits.slice(7).split("").join("\u2009"), 400, "middle");
   }
 
   const Wmm = W * s;
   const H = BASE * s;
+  const bg = /^#[0-9a-fA-F]{6}$/.test(opts.bgColor || "") ? opts.bgColor : "#FFFFFF";
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${Wmm.toFixed(1)} ${H.toFixed(1)}" width="${Wmm.toFixed(1)}mm" height="${H.toFixed(1)}mm">` +
-    `<rect width="${Wmm.toFixed(1)}" height="${H.toFixed(1)}" fill="${/^#[0-9a-fA-F]{6}$/.test(opts.bgColor || "") ? opts.bgColor : "#FFFFFF"}"/>` + body + `</svg>`;
+    /* clean white face; the ground colour covers ONLY above the codes band */
+    `<rect width="${Wmm.toFixed(1)}" height="${H.toFixed(1)}" fill="#FFFFFF"/>` +
+    `<rect width="${Wmm.toFixed(1)}" height="${(BAND_TOP * s).toFixed(2)}" fill="${bg}"/>` +
+    body + `</svg>`;
   return { svg, widthMM: Wmm, heightMM: H, barcodeDigits: bc.digits };
 }
 

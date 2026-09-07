@@ -1990,6 +1990,37 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 17 (owner 2026-09-07, 4 items): (1) LIVING LOADERS — nothing
+  ever freezes: the label loader's wine CREEPS between real progress
+  jumps (dreamT ref resets on genProgress change; creep ≤0.28 over
+  ~56s); assets mini-glasses are FILL-DRIVEN from a 700ms tick
+  (done=0.93, active rises 0.14→0.9 over 45s from the stage
+  timestamp, waiting glasses crawl slowly), 13px wide, with a
+  three-dot nuiDot indicator 10px below each glass. (2) BOTTLE
+  LOGIC: "Sparkling Cork" closure exists ONLY when the Sparkling
+  bottle is selected (baked row covered otherwise; picking a
+  non-sparkling type converts it to Cork); entering BOTTLE auto-picks
+  the type from the front label's wording (sparkling/champagne/
+  prosecco/cava/crémant/pét-nat → Sparkling+Sparkling Cork; ice
+  wine/eiswein → Ice Wine; riesling/gewürz/alsace/rhine/mosel →
+  Alsace; pinot noir/burgund/chardonnay → Burgundy) unless the
+  customer already touched the type (bottleTouched ref). (3) BACK
+  LABEL v5 — template-exact rebuild from WAIN/Back Label/
+  back-label-template.svg (80×80, pt÷2.83465→mm): title = wine name
+  LEFT 12pt semibold + "By BRAND" RIGHT (brand = producerCompany
+  stripped of quotes/LLC; NBSP after "By" — SVG eats trailing tspan
+  spaces); PRODUCER block LEFT / IMPORTED BY block RIGHT-aligned
+  (BackLabelData gained producerCompany/Address + importerCompany/
+  Address; joined fields remain fallbacks); PRODUCT OF | WWW row; ONE
+  "LOT: … / …% ALC./VOL. … ML / CONTAINS SULFITES" line; regulatory
+  zone below; GROUND COLOUR STOPS at y61.5 — codes band on CLEAN
+  WHITE: QR 14.55mm @(4,61.45), BOTTLED @(21.3,65.5) 7.7pt, "See
+  ingredients" @(21.2,76.0), EAN right-anchored. EMPTY FIELDS
+  DISAPPEAR WITH THEIR TITLES; rules stay; flow + width ladder kept.
+  Verified vs the reference render side-by-side. (4) BOTTLE IMAGES
+  refreshed + -screw variants (no sparkling screw): page swaps image
+  when Screw Cap is picked; marketing bottleShapeRef(type, closure)
+  sends the screw outline so the drawn closure finally matches.
 - ROUND 16 (owner 2026-09-06): (1) mini glasses 12px + marginTop 6.
   (2) PLACEHOLDERS OFF LABELS (owner: "show only what is typed",
   front AND back): DEMO_FRONT removed from page.tsx (fx/back payload/

@@ -197,6 +197,44 @@ export default function NewUI() {
   const [assetsSig, setAssetsSig] = useState("");
   const [assetsStage, setAssetsStage] = useState("");
   const assetsRunning = useRef(false);
+  /* living loaders (round 17 #1): a slow tick keeps every glass rising */
+  const [tick, setTick] = useState(0);
+  const assetT = useRef({ run: 0, stage: 0 });
+  const dreamT = useRef(Date.now());
+  const bottleTouched = useRef(false);
+  useEffect(() => {
+    if (!(assetsStage || page === "loader")) return;
+    const iv = setInterval(() => setTick((t) => t + 1), 700);
+    return () => clearInterval(iv);
+  }, [assetsStage, page]);
+  useEffect(() => { dreamT.current = Date.now(); }, [genProgress, page]);
+  const ASSET_STAGES = ["front shot", "back shot", "lifestyle 1/5", "lifestyle 2/5", "lifestyle 3/5", "lifestyle 4/5", "lifestyle 5/5"];
+  const assetFill = (key: string) => {
+    void tick;   // ticking re-render drives the rise
+    const now = Date.now();
+    const cur = ASSET_STAGES.indexOf(assetsStage);
+    const idx = ASSET_STAGES.indexOf(key);
+    if (cur < 0 || idx < 0) return 0.08;
+    if (idx < cur) return 0.93;                                                 // done, image imminent
+    if (idx === cur) return Math.min(0.9, 0.14 + ((now - assetT.current.stage) / 45000) * 0.75);
+    return Math.min(0.4, 0.08 + ((now - assetT.current.run) / 60000) * 0.15);   // waiting: slow crawl
+  };
+
+  /* round 17 #2: the front label's wording suggests the bottle type */
+  useEffect(() => {
+    if (page !== "bottle" || bottleTouched.current) return;
+    const txt = [f.wineType, f.grape, f.wine, f.appellation, f.regionCountry, f.special, f.classification].filter(Boolean).join(" ").toLowerCase();
+    let type = "";
+    if (/sparkling|champagne|prosecco|cava|cr[ée]mant|p[ée]t[\s-]?nat/.test(txt)) type = "Sparkling";
+    else if (/ice\s?wine|eiswein/.test(txt)) type = "Ice Wine";
+    else if (/riesling|gew[uü]rztraminer|alsace|rhine|mosel/.test(txt)) type = "Alsace / Rhine";
+    else if (/pinot noir|burgund|bourgogne|chardonnay/.test(txt)) type = "Burgundy";
+    if (type) setBottle((m) => ({
+      ...m, type,
+      closure: type === "Sparkling" ? "Sparkling Cork" : m.closure === "Sparkling Cork" ? "Cork" : m.closure,
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
   const [packSel, setPackSel] = useState<boolean[]>([true, true, true, true, false]);
   const [agree, setAgree] = useState(false);
   const [gallery, setGallery] = useState<{ imgs: string[]; i: number } | null>(null);
@@ -237,6 +275,7 @@ export default function NewUI() {
     (async () => {
       try {
         setAssets({ life: [] });
+        assetT.current = { run: Date.now(), stage: Date.now() };
         setAssetsStage("preparing");
         let backData: string | null = null;
         if (backPng) {
@@ -268,7 +307,7 @@ export default function NewUI() {
             const line = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1);
             if (!line) continue;
             const m = JSON.parse(line);
-            if (m.type === "progress") setAssetsStage(m.stage || "");
+            if (m.type === "progress") { assetT.current.stage = Date.now(); setAssetsStage(m.stage || ""); }
             else if (m.type === "shot") setAssets((a) => ({ ...a, [m.side]: { full: m.image, prev: m.preview || m.image } }));
             else if (m.type === "life") setAssets((a) => { const life = [...a.life]; life[m.i] = { full: m.image, prev: m.preview || m.image }; return { ...a, life }; });
           }
@@ -398,6 +437,8 @@ export default function NewUI() {
       data: {
         wine: f.wine || "",
         producer: [b.producerCompany, b.producerAddress].filter(Boolean).join(", "),
+        producerCompany: b.producerCompany || "", producerAddress: b.producerAddress || "",
+        importerCompany: b.importer || "", importerAddress: b.importerAddress || "",
         description: b.description || "", importer: [b.importer, b.importerAddress].filter(Boolean).join(", "),
         bottlingDate: b.bottlingDate || "", lot: b.lot || "", web: b.web || "",
         alcohol: (f.alcohol || "12.5").replace("%", ""), volume: (f.volume || "750").replace(/\D/g, "") || "750",
@@ -483,15 +524,15 @@ export default function NewUI() {
       <line x1="0.5" y1={thick ? 16.5 : 9} x2={thick ? 32.5 : 17.5} y2={thick ? 16.5 : 9} stroke="#000" strokeWidth={thick ? 3 : 1} />
     </svg>
   );
-  /* mini loader glass for asset boxes (round 14 #10, shrunk round 15 #1):
-     viewBox cropped to the glass itself so flex-centring is exact; the
-     ACTIVE one fills over ~45s as its image renders */
-  const miniGlass = (key: string, active: boolean) => (
-    <svg key={key} viewBox="215 95 170 315" width="12" style={{ display: "block", marginTop: 6 }}>
+  /* mini loader glass for asset boxes (round 14 #10; round 17 #1): the wine
+     level is FILL-driven from the tick — the active image's glass rises
+     with its render, waiting glasses crawl slowly, nothing ever freezes */
+  const miniGlass = (key: string, fill: number) => (
+    <svg key={key} viewBox="215 95 170 315" width="13" style={{ display: "block" }}>
       <defs>
         <clipPath id={`mg-${key.replace(/[^a-z0-9]/gi, "")}`}>
-          <rect x="230" y="171.6" width="140" height="99"
-            style={active ? { animation: "nuiWineRise 45s cubic-bezier(0.2, 0.6, 0.5, 1) forwards" } : { transform: "translateY(92px)" }} />
+          <rect x="230" y={266.6 - fill * 95} width="140" height={fill * 95 + 4}
+            style={{ transition: "y 750ms linear, height 750ms linear" }} />
         </clipPath>
       </defs>
       <path fill="#BA141A" clipPath={`url(#mg-${key.replace(/[^a-z0-9]/gi, "")})`} d="M352.397 185.696 C353.872 199.478 353.325 211.872 350.76 222.63 C346.838 239.075 336.88 251.431 321.163 259.355 C311.285 264.336 301.979 266.038 298.571 266.527 C296.674 266.308 286.165 264.888 274.916 259.216 C259.199 251.292 249.241 238.936 245.319 222.491 C242.762 211.769 242.21 199.422 243.667 185.696 Z" />
@@ -653,7 +694,10 @@ export default function NewUI() {
         </>);
       }
       case "loader": {
-        const fill = Math.max(0.04, genProgress);
+        /* round 17 #1: the wine never freezes — it creeps up between real
+           progress jumps (creep resets whenever genProgress advances) */
+        const creep = Math.min(0.28, ((Date.now() - dreamT.current) / 60000) * 0.3) + tick * 0;
+        const fill = Math.min(0.97, Math.max(0.06, genProgress + creep));
         return (<>
           {patch(400, 120, 640, 480, "lcover")}
           {/* glass optically centred in the window (round 7 #10) */}
@@ -857,10 +901,20 @@ export default function NewUI() {
         ];
         const finish: [string, number, number][] = [["Matte", 1104.64, 281.78], ["Glossy", 1173.21, 281.78], ["No cap", 1104.64, 312.58]];
         return (<>
-          {cols.map(({ key, cx, items }) => items.map(([opt, cy], i) =>
-            /* first rows carry the design's baked preselect dots — cover them */
-            dotBtn(cx, cy, bottle[key] === opt, () => setBottle((m) => ({ ...m, [key]: opt })), key + opt, { coverDot: i === 0 })
-          ))}
+          {cols.map(({ key, cx, items }) => items
+            /* round 17 #2: Sparkling Cork exists only for the Sparkling bottle */
+            .filter(([opt]) => !(key === "closure" && opt === "Sparkling Cork" && bottle.type !== "Sparkling"))
+            .map(([opt, cy], i) =>
+              dotBtn(cx, cy, bottle[key] === opt, () => {
+                if (key === "type") bottleTouched.current = true;
+                setBottle((m) => ({
+                  ...m, [key]: opt,
+                  ...(key === "type" && opt !== "Sparkling" && m.closure === "Sparkling Cork" ? { closure: "Cork" } : {}),
+                }));
+              }, key + opt, { coverDot: i === 0 })
+            ))}
+          {/* cover the baked Sparkling Cork row when hidden */}
+          {bottle.type !== "Sparkling" && patch(854, 388, 132, 26, "spcork")}
           {finish.map(([opt, cx0, cy0]) =>
             dotBtn(cx0, cy0, bottle.finish === opt, () => setBottle((m) => ({ ...m, finish: opt })), "f" + opt, { coverDot: opt === "Matte" })
           )}
@@ -894,12 +948,19 @@ export default function NewUI() {
           {/* result colour bar (baked rect 1097.1,532.6,171.4×18.3) */}
           <div style={{ ...px(1095.6, 531.1, 174.4, 21.3), background: shadeRgb(), border: "1px solid #111", boxSizing: "border-box" }} />
           {/* the owner's bottle-type photos (public/newui/bottles, 800×1600
-              = the area's exact 1:2 ratio); keyed by type so a change
-              re-fades softly */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img key={bottle.type} alt={bottle.type}
-            src={`/newui/bottles/${({ "Bordeaux": "bordeaux", "Bordeaux Prestige": "bordeaux-prestige", "Burgundy": "burgundy", "Sparkling": "sparkling", "Alsace / Rhine": "alsace-rhine", "Ice Wine": "ice-wine" } as Record<string, string>)[bottle.type] || "bordeaux"}.jpg`}
-            style={{ ...px(139.2, 174, 201.6, 407.4), objectFit: "cover", animation: inSlide ? "none" : `nuiFadeIn 240ms ${EASE}`, pointerEvents: "none" }} />
+              = the area's exact 1:2 ratio); Screw Cap shows the -screw
+              variant (round 17 #4; sparkling has none). Keyed so changes
+              re-fade softly */}
+          {(() => {
+            const slug = ({ "Bordeaux": "bordeaux", "Bordeaux Prestige": "bordeaux-prestige", "Burgundy": "burgundy", "Sparkling": "sparkling", "Alsace / Rhine": "alsace-rhine", "Ice Wine": "ice-wine" } as Record<string, string>)[bottle.type] || "bordeaux";
+            const screw = bottle.closure === "Screw Cap" && slug !== "sparkling";
+            return (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img key={slug + (screw ? "-screw" : "")} alt={bottle.type}
+                src={`/newui/bottles/${slug}${screw ? "-screw" : ""}.jpg`}
+                style={{ ...px(139.2, 174, 201.6, 407.4), objectFit: "cover", animation: inSlide ? "none" : `nuiFadeIn 240ms ${EASE}`, pointerEvents: "none" }} />
+            );
+          })()}
           {/* round 12 #3: corner pluses back ON TOP of the photo */}
           {cross(137.14, 172, "bt1")}{cross(342.84, 172, "bt2")}{cross(137.14, 583.41, "bt3")}{cross(342.84, 583.41, "bt4")}
         </>);
@@ -915,10 +976,14 @@ export default function NewUI() {
             <img src={it.prev} alt={label} onClick={() => { const g = gal?.length ? gal : [it.full]; setGallery({ imgs: g, i: Math.max(0, g.indexOf(it.full)) }); }}
               style={{ width: w2, height: h2, objectFit: fit, display: "block", cursor: "zoom-in", animation: `nuiFadeIn ${FADE_MS}ms ${EASE}` }} />
           ) : (
-            <div style={{ width: w2, height: h2, background: "#F4F3EE", display: "flex", alignItems: "center", justifyContent: "center", font: `${fs}px ${HNW}`, color: "#999", textAlign: "center" }}>
-              {/* round 14 #10: while a run is live, every waiting box holds a
-                  mini glass; the one being generated fills up */}
-              {assetsStage && loadKey ? miniGlass(loadKey, assetsStage === loadKey) : <>[ {label} ]</>}
+            <div style={{ width: w2, height: h2, background: "#F4F3EE", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", font: `${fs}px ${HNW}`, color: "#999", textAlign: "center" }}>
+              {/* round 17 #1: rising glass + three-dot indicator below it */}
+              {assetsStage && loadKey ? (<>
+                {miniGlass(loadKey, assetFill(loadKey))}
+                <span style={{ marginTop: 10, font: `15px ${HNW}`, color: "#111", letterSpacing: 2, lineHeight: "10px" }}>
+                  {[0, 1, 2].map((dd) => <span key={dd} style={{ animation: `nuiDot 1.2s ${dd * 0.2}s infinite` }}>.</span>)}
+                </span>
+              </>) : <>[ {label} ]</>}
             </div>
           );
         return (<>
