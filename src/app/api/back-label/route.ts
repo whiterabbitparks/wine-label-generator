@@ -18,8 +18,11 @@ export async function POST(req: Request) {
   const heightMM = Math.min(200, Math.max(40, Number(body.heightMM) || 73.3));
   const bgColor = String((body as { bgColor?: string }).bgColor || "");
   try {
-    const out = await composeBackLabel(body.data || {}, { heightMM, markets, bgColor });
     const fmt = String(body.format || "json");
+    /* print deliverables carry the owner's 2mm bleed (round 18 #1);
+       screen previews stay trimmed */
+    const bleedMM = fmt === "svg" || fmt === "tiff" ? 2 : 0;
+    const out = await composeBackLabel(body.data || {}, { heightMM, markets, bgColor, bleedMM });
     if (fmt === "json")
       return new Response(JSON.stringify(out), { headers: { "Content-Type": "application/json" } });
     /* editable vector deliverable (owner 2026-09-04) */

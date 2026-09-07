@@ -329,6 +329,9 @@ export default function NewUI() {
   }, [dreams]);
   const [busyMsg, setBusyMsg] = useState("");
   const dragRef = useRef<"" | "wheel" | "shade">("");
+  /* round 18 #5: every order gets a product code — the QR points to its
+     future landing page (domain configurable when it exists) */
+  const productCode = useRef(Math.random().toString(36).slice(2, 10));
   const [boards, setBoards] = useState<Record<string, string>>({});
   useEffect(() => {
     /* inline the artboards: SVG-in-<img> cannot use page fonts (the
@@ -444,6 +447,7 @@ export default function NewUI() {
         alcohol: (f.alcohol || "12.5").replace("%", ""), volume: (f.volume || "750").replace(/\D/g, "") || "750",
         countryOfOrigin: (f.regionCountry || "").split(",")[1]?.trim() || "",
         barcodeImage: barcodeImg, qrImage: qrImg,
+        qrUrl: `https://8klabels.com/p/${productCode.current}`,
       },
       markets, heightMM: Number(f.height) || 80, bgColor: bg,
     };
@@ -470,18 +474,27 @@ export default function NewUI() {
   ];
   const total = PACK.reduce((s, it, i) => s + (packSel[i] ? it.price : 0), 0);
 
+  /* round 18 #4: ONE delivery ZIP named after the wine — labels + fonts,
+     marketing assets, sample contract (TEMP free until payments exist) */
   async function proceedToPayment() {
     if (!agree) { alert("Please agree to the Terms & Conditions."); return; }
-    setBusyMsg("Preparing your files…");
+    setBusyMsg("Packing your delivery…");
     try {
-      if (selected >= 0 && dreams[selected]) {
-        const r = await fetch("/api/dream-tiff", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ image: dreams[selected].dream, name: f.wine || "front-label" }) });
-        if (r.ok) { const u = URL.createObjectURL(await r.blob()); const a = document.createElement("a"); a.href = u; a.download = `${(f.wine || "front-label").replace(/[^\w-]+/g, "-")}-front-300dpi.tiff`; a.click(); setTimeout(() => URL.revokeObjectURL(u), 800); }
-      }
-      if (backPayload) {
-        const r = await fetch("/api/back-label", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...backPayload, format: "svg" }) });
-        if (r.ok) { const u = URL.createObjectURL(await r.blob()); const a = document.createElement("a"); a.href = u; a.download = "back-label.svg"; a.click(); setTimeout(() => URL.revokeObjectURL(u), 800); }
-      }
+      const r = await fetch("/api/package", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          wineName: f.wine || "Wine",
+          front: selected >= 0 ? dreams[selected]?.dream : null,
+          back: backPayload,
+          shots: { front: assets.front?.full, back: assets.back?.full },
+          lifestyle: assets.life.filter(Boolean).map((l) => l.full),
+        }),
+      });
+      if (!r.ok) throw new Error(`packaging failed (${r.status})`);
+      const u = URL.createObjectURL(await r.blob());
+      const a = document.createElement("a");
+      a.href = u; a.download = `${(f.wine || "Wine").replace(/[^\w]+/g, "_")}.zip`; a.click();
+      setTimeout(() => URL.revokeObjectURL(u), 1500);
     } catch { alert("download failed — try again"); }
     setBusyMsg("");
   }

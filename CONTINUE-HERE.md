@@ -1990,6 +1990,26 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 18 (owner 2026-09-07, 5 items): (1) 2mm BLEED on back-label
+  SVG + TIFF deliverables (composeBackLabel opts.bleedMM; backgrounds
+  extend into bleed, ground-stop line unmoved; previews stay trimmed;
+  returned widthMM/heightMM include bleed so the TIFF pixel math
+  stays true). (2) REAL TEXT MEASURING: W400 = per-glyph Barlow
+  Condensed 400 advances measured in Chrome at 100px (the flat 0.41
+  model called spaces 0.41 vs real 0.20 → premature wraps); tw() uses
+  the table ×1.015 safety — description/warning now fill their lines.
+  (3) QR ink runs EXACTLY from the ground-colour line (y61.5) to the
+  barcode digits' baseline (y76.5): size 15.0, margin 0. (4) DELIVERY
+  ZIP (/api/package + src/lib/zip.ts, a dependency-free STORE zip
+  writer with CRC32): WINE_NAME/{1. LABELS/{Front tiff, Back svg,
+  Fonts/Barlow ttfs}, 2. MARKETING ASSETS/{Bottle_Front/Back png,
+  Image01..05 png}, Contract.pdf (hand-rolled minimal valid PDF
+  sample)}; fonts staged in public/fonts/backlabel/; Proceed to
+  payment now downloads this single ZIP (TEMP free). (5) PRODUCT QR:
+  per-order productCode ref → qrUrl https://8klabels.com/p/{code}
+  (placeholder domain; the landing page will resolve it later). ALSO:
+  "By BRAND" needed tspan dx=0.9mm — librsvg drops NBSP glyphs.
+  Verified: zip opens, TIFF/PDF valid, template render side-by-side.
 - ROUND 17 (owner 2026-09-07, 4 items): (1) LIVING LOADERS — nothing
   ever freezes: the label loader's wine CREEPS between real progress
   jumps (dreamT ref resets on genProgress change; creep ≤0.28 over

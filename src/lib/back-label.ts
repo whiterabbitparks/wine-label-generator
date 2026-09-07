@@ -44,14 +44,19 @@ const FAM = "'Barlow Condensed', 'Avenir Next Condensed', Helvetica, sans-serif"
 /* condensed-face width model (mm) */
 /* script-aware width model (measured): condensed Latin 0.41×size; CJK and
    Hangul glyphs are full-width; Hebrew/Georgian sit in between */
+/* REAL Barlow Condensed 400 advances (round 18 #2: measured per glyph in
+   Chrome at 100px, ÷100 — the old flat 0.41 model overestimated spaces
+   (real 0.20) and narrow letters, wrapping lines far too early) */
+const W400: Record<string, number> = {"0":0.444,"1":0.256,"2":0.402,"3":0.408,"4":0.415,"5":0.409,"6":0.41,"7":0.366,"8":0.422,"9":0.403,"A":0.41,"B":0.449,"C":0.446,"D":0.465,"E":0.429,"F":0.404,"G":0.451,"H":0.472,"I":0.215,"J":0.426,"K":0.452,"L":0.396,"M":0.521,"N":0.493,"O":0.456,"P":0.442,"Q":0.443,"R":0.443,"S":0.416,"T":0.423,"U":0.476,"V":0.439,"W":0.623,"X":0.434,"Y":0.424,"Z":0.395,"a":0.413,"b":0.423,"c":0.402,"d":0.423,"e":0.407,"f":0.277,"g":0.413,"h":0.424,"i":0.208,"j":0.2,"k":0.405,"l":0.181,"m":0.648,"n":0.424,"o":0.415,"p":0.428,"q":0.428,"r":0.292,"s":0.374,"t":0.267,"u":0.424,"v":0.379,"w":0.554,"x":0.376,"y":0.368,"z":0.361," ":0.2,".":0.19,",":0.177,":":0.211,";":0.193,"/":0.334,"(":0.222,")":0.222,"%":0.781,"&":0.542,"'":0.119,"\"":0.235,"-":0.313,"\u2013":0.372,"\u2014":0.592,"\u201c":0.25,"\u201d":0.25,"\u2019":0.123,"!":0.251,"?":0.37,"@":0.761,"#":0.589};
 const charW = (ch: string) => {
   const c = ch.codePointAt(0) || 0;
   if ((c >= 0x2e80 && c <= 0x9fff) || (c >= 0x3040 && c <= 0x30ff) || (c >= 0xac00 && c <= 0xd7af) || (c >= 0xff00 && c <= 0xffef) || c === 0x30fb) return 1.02;
   if (c >= 0x0590 && c <= 0x05ff) return 0.5;   // Hebrew
   if (c >= 0x10a0 && c <= 0x10ff) return 0.55;  // Georgian
-  return 0.41;
+  return W400[ch] ?? 0.41;
 };
-const tw = (t: string, size: number) => { let w = 0; for (const ch of t) w += charW(ch) * size; return w; };
+/* 1.5% safety so a hair-wide estimate never overflows the printed line */
+const tw = (t: string, size: number) => { let w = 0; for (const ch of t) w += charW(ch) * size; return w * 1.015; };
 function wrap(text: string, size: number, maxW: number): string[] {
   /* CJK sentences carry no spaces — break oversized tokens by character */
   const words = text.split(/\s+/).filter(Boolean).flatMap((w) => {
@@ -155,7 +160,7 @@ function allergenLines(codes: string[]): string[] {
 
 export async function composeBackLabel(
   raw: BackLabelData,
-  opts: { heightMM: number; markets: string[]; bgColor?: string }
+  opts: { heightMM: number; markets: string[]; bgColor?: string; bleedMM?: number }
 ): Promise<{ svg: string; widthMM: number; heightMM: number; barcodeDigits: string }> {
   /* placeholders removed (owner 2026-09-06): the label shows ONLY what the
      customer typed — empty fields simply stay empty. (Energy keeps a real
@@ -215,7 +220,7 @@ export async function composeBackLabel(
     if (d.wine) parts.push({ y, x: 4, size: S12, text: up(d.wine), weight: 600 });
     if (brand) rich.push(
       `<text x="${(RM * s).toFixed(2)}" y="${(y * s).toFixed(2)}" font-size="${(S12 * s).toFixed(2)}" text-anchor="end" font-family="${FAM}">` +
-      `<tspan font-weight="400">By </tspan><tspan font-weight="600">${esc(brand)}</tspan></text>`);
+      `<tspan font-weight="400">By</tspan><tspan font-weight="600" dx="${(0.9 * s).toFixed(2)}">${esc(brand)}</tspan></text>`);
     y += 1.7; rules.push(y);         // rule @8.40
     /* description (template @12.00, 8pt, pitch 3.38) */
     y += 3.6;
@@ -284,11 +289,13 @@ export async function composeBackLabel(
      BOTTLED beside it @(21.3, 65.5) 7.7pt; See ingredients @(21.2, 76.0);
      EAN right-anchored with standard digit typography — */
   const bandTop = BAND_TOP;
-  const qrS = 14.55, qrX = 4, qrY = 61.45;
+  /* round 18 #3: QR ink runs EXACTLY from the ground-colour line (61.5) to
+     the barcode digits' baseline (76.5) — margin 0, size 15.0 */
+  const qrS = 15.0, qrX = 4, qrY = BAND_TOP;
   if (d.qrImage) {
     body += `<image x="${(qrX * s).toFixed(2)}" y="${(qrY * s).toFixed(2)}" width="${(qrS * s).toFixed(2)}" height="${(qrS * s).toFixed(2)}" href="${d.qrImage}"/>`;
   } else {
-    const qrPng = await QRCode.toDataURL(d.qrUrl || d.web || "https://8klabels.example", { margin: 1, width: 300 });
+    const qrPng = await QRCode.toDataURL(d.qrUrl || d.web || "https://8klabels.example", { margin: 0, width: 300 });
     body += `<image x="${(qrX * s).toFixed(2)}" y="${(qrY * s).toFixed(2)}" width="${(qrS * s).toFixed(2)}" height="${(qrS * s).toFixed(2)}" href="${qrPng}"/>`;
   }
   if (d.bottlingDate) body += T(21.3, 65.5, 7.7 * PT, `BOTTLED: ${d.bottlingDate}`);
@@ -311,13 +318,17 @@ export async function composeBackLabel(
   const Wmm = W * s;
   const H = BASE * s;
   const bg = /^#[0-9a-fA-F]{6}$/.test(opts.bgColor || "") ? opts.bgColor : "#FFFFFF";
+  /* 2mm print bleed on every side for deliverables (round 18 #1, as in the
+     owner's template: backgrounds extend into the bleed, the ground-stop
+     line stays exactly where it is) */
+  const B = Math.max(0, opts.bleedMM || 0);
   const svg =
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${Wmm.toFixed(1)} ${H.toFixed(1)}" width="${Wmm.toFixed(1)}mm" height="${H.toFixed(1)}mm">` +
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-B} ${-B} ${(Wmm + 2 * B).toFixed(1)} ${(H + 2 * B).toFixed(1)}" width="${(Wmm + 2 * B).toFixed(1)}mm" height="${(H + 2 * B).toFixed(1)}mm">` +
     /* clean white face; the ground colour covers ONLY above the codes band */
-    `<rect width="${Wmm.toFixed(1)}" height="${H.toFixed(1)}" fill="#FFFFFF"/>` +
-    `<rect width="${Wmm.toFixed(1)}" height="${(BAND_TOP * s).toFixed(2)}" fill="${bg}"/>` +
+    `<rect x="${-B}" y="${-B}" width="${(Wmm + 2 * B).toFixed(1)}" height="${(H + 2 * B).toFixed(1)}" fill="#FFFFFF"/>` +
+    `<rect x="${-B}" y="${-B}" width="${(Wmm + 2 * B).toFixed(1)}" height="${(BAND_TOP * s + B).toFixed(2)}" fill="${bg}"/>` +
     body + `</svg>`;
-  return { svg, widthMM: Wmm, heightMM: H, barcodeDigits: bc.digits };
+  return { svg, widthMM: Wmm + 2 * B, heightMM: H + 2 * B, barcodeDigits: bc.digits };
 }
 
 function esc(s2: string) {
