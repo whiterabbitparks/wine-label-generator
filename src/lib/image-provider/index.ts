@@ -226,6 +226,9 @@ const RETRIES = 2;
 
 function transientKind(e: unknown): "rate" | "network" | null {
   const msg = e instanceof Error ? e.message : String(e);
+  /* an exhausted credit balance also arrives as 429 — retrying is useless
+     and only delays the honest error (owner hit this live 2026-09-06) */
+  if (msg.includes("insufficient_quota") || msg.includes("credit_balance_exhausted")) return null;
   if (msg.includes("429") || msg.includes("rate_limit")) return "rate";
   const cause = e instanceof Error ? (e.cause as { code?: string; message?: string } | undefined) : undefined;
   const net = `${msg} ${cause?.code ?? ""} ${cause?.message ?? ""}`;
