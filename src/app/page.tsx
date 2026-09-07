@@ -23,7 +23,6 @@ const FADE_MS = 420;
 /* parallax slide: each page moves as three vertical bands — top lands
    first, lower bands trail slightly (same speed/easing, staggered start) */
 const STRIP_DELAYS = [0, 55, 110];
-const SLIDE_TOTAL = SLIDE_MS + STRIP_DELAYS[STRIP_DELAYS.length - 1];
 const HNW = "'HNW', 'Helvetica Neue', Helvetica, sans-serif";
 
 const ORDER = ["welcome", "vision", "front", "loader", "options", "backdetails", "compliance", "backdesign", "bottle", "assets", "checkout"] as const;
@@ -52,6 +51,43 @@ const STRIP_BOUNDS: Record<PageKey, [number, number]> = {
   options: [225, 543], backdetails: [225, 468], compliance: [270, 555],
   backdesign: [165, 540], bottle: [225, 515], assets: [165, 540], checkout: [250, 500],
 };
+
+/* CONTENT-AWARE PARALLAX (owner round 16 #3): these pages slice by their
+   actual content instead of three bands. Each slice is a clip rect in
+   page coordinates with its own delay; mode 'fade' animates in place
+   (the front size box grows during the slide instead of sliding).
+   front: every input row cascades; compliance: country rows cascade;
+   bottle: VERTICAL column slices, each carrying its own dashed divider. */
+type Slice = { x0?: number; y0?: number; x1?: number; y1?: number; delay: number; mode?: "slide" | "fade" };
+const PAGE_SLICES: Partial<Record<PageKey, Slice[]>> = {
+  front: [
+    { y1: 234.77, delay: 0 },
+    ...Array.from({ length: 13 }, (_, i) => ({ x1: 806, y0: 234.77 + i * 30, y1: 264.77 + i * 30, delay: 40 + i * 18 })),
+    { x1: 806, y0: 624.77, delay: 40 + 13 * 18 },
+    { x0: 806, y0: 234.77, delay: 80, mode: "fade" as const },
+  ],
+  compliance: [
+    { y1: 326, delay: 0 },
+    { y0: 326, y1: 378.8, delay: 60 },
+    { y0: 378.8, y1: 431, delay: 130 },
+    { y0: 431, y1: 483.6, delay: 200 },
+    { y0: 483.6, y1: 536, delay: 270 },
+    { y0: 536, delay: 270 },
+  ],
+  bottle: [
+    { x1: 344.1, delay: 0 },
+    { x0: 344.1, x1: 584.1, delay: 60 },
+    { x0: 584.1, x1: 824.1, delay: 120 },
+    { x0: 824.1, x1: 1064.1, delay: 180 },
+    { x0: 1064.1, delay: 240 },
+  ],
+};
+const sliceDefs = (p: PageKey): Slice[] => {
+  if (PAGE_SLICES[p]) return PAGE_SLICES[p]!;
+  const [b1, b2] = STRIP_BOUNDS[p];
+  return [{ y1: b1, delay: STRIP_DELAYS[0] }, { y0: b1, y1: b2, delay: STRIP_DELAYS[1] }, { y0: b2, delay: STRIP_DELAYS[2] }];
+};
+const maxSliceDelay = (p: PageKey) => Math.max(...sliceDefs(p).map((s) => s.delay));
 
 /* Illustrator exports every board with the same global class names (.st0…)
    and ids (clippath…) whose meanings DIFFER per file — with two boards
@@ -89,13 +125,7 @@ const IDEAS = [
   "The first snow settling on the last unpicked row",
 ];
 
-/* TEMP dev fill (owner #13: keep the template texts — remove before launch) */
-const DEMO_FRONT: Record<string, string> = {
-  producer: "GRAND VIN", wine: "Château Margaux", appellation: "Margaux AOC",
-  classification: "Grand Cru Classé", vintage: "2018", grape: "Cabernet Sauvignon",
-  regionCountry: "Bordeaux, France", special: "Vieilles Vignes", sweetness: "Dry",
-  colour: "Red", wineType: "Still Wine", alcohol: "12.5", volume: "750",
-};
+/* demo fill removed (owner 2026-09-06): labels carry ONLY typed content */
 
 interface Dream { style: string; dream: string; preview: string | null }
 
@@ -221,7 +251,7 @@ export default function NewUI() {
           body: JSON.stringify({
             front: sel.dream, back: backData,
             bottle: { type: bottle.type, color: bottle.color, closure: bottle.closure, finish: bottle.finish, closureColour: shadeRgb() },
-            wine: { colour: f.colour || DEMO_FRONT.colour, name: f.wine || DEMO_FRONT.wine },
+            wine: { colour: f.colour || "", name: f.wine || "" },
             labelMM: { w: Number(f.width) || 110, h: Number(f.height) || 80 },
             style: sel.style, seed,
           }),
@@ -291,8 +321,10 @@ export default function NewUI() {
 
   const go = useCallback((next: PageKey, d = 1) => {
     setPrev(page); setDir(d); setPage(next);
-    /* into the loader the fade starts only after the slide-out (round 9 #1) */
-    setTimeout(() => setPrev(null), (next === "loader" ? SLIDE_TOTAL + FADE_MS : SLIDE_TOTAL) + 60);
+    /* into the loader the fade starts only after the slide-out (round 9 #1);
+       slice cascades extend the settle per page (round 16 #3) */
+    const md = SLIDE_MS + Math.max(maxSliceDelay(page), maxSliceDelay(next));
+    setTimeout(() => setPrev(null), (next === "loader" ? md + FADE_MS : md) + 60);
   }, [page]);
 
   const goBack = useCallback(() => {
@@ -310,7 +342,7 @@ export default function NewUI() {
     setGenProgress(0);
     const aspect = (Number(f.width) || 110) / (Number(f.height) || 80);
     const aspectKey = aspect > 1.15 ? "landscape" : aspect < 0.87 ? "portrait" : "square";
-    const fx = (k: string) => f[k]?.trim() || DEMO_FRONT[k] || "";
+    const fx = (k: string) => f[k]?.trim() || "";
     const data = {
       producer: fx("producer"), wine: fx("wine"), appellation: fx("appellation"),
       classification: fx("classification"), grape: fx("grape"),
@@ -364,12 +396,12 @@ export default function NewUI() {
     const bg = sel ? await groundOf(sel.preview || sel.dream) : "#FFFFFF";
     const payload = {
       data: {
-        wine: f.wine || DEMO_FRONT.wine,
+        wine: f.wine || "",
         producer: [b.producerCompany, b.producerAddress].filter(Boolean).join(", "),
         description: b.description || "", importer: [b.importer, b.importerAddress].filter(Boolean).join(", "),
         bottlingDate: b.bottlingDate || "", lot: b.lot || "", web: b.web || "",
         alcohol: (f.alcohol || "12.5").replace("%", ""), volume: (f.volume || "750").replace(/\D/g, "") || "750",
-        countryOfOrigin: (f.regionCountry || DEMO_FRONT.regionCountry).split(",")[1]?.trim() || "Georgia",
+        countryOfOrigin: (f.regionCountry || "").split(",")[1]?.trim() || "",
         barcodeImage: barcodeImg, qrImage: qrImg,
       },
       markets, heightMM: Number(f.height) || 80, bgColor: bg,
@@ -455,7 +487,7 @@ export default function NewUI() {
      viewBox cropped to the glass itself so flex-centring is exact; the
      ACTIVE one fills over ~45s as its image renders */
   const miniGlass = (key: string, active: boolean) => (
-    <svg key={key} viewBox="215 95 170 315" width="15" style={{ display: "block" }}>
+    <svg key={key} viewBox="215 95 170 315" width="12" style={{ display: "block", marginTop: 6 }}>
       <defs>
         <clipPath id={`mg-${key.replace(/[^a-z0-9]/gi, "")}`}>
           <rect x="230" y="171.6" width="140" height="99"
@@ -579,13 +611,15 @@ export default function NewUI() {
           {/* the ANIMATED OUTER FRAME: 1px black + corner pluses + the
               design's corner-to-corner diagonal (round 7 #9). Edge-anchored
               layout: the top-right plus NEVER moves; size changes glide via
-              width/height transitions (quick-in, prolonged-out easing);
-              hidden while ghosted so the grow plays once the page lands */}
-          {!inSlide && <div key="szf" style={{
+              width/height transitions (quick-in, prolonged-out easing).
+              Round 16 #3: the frame GROWS DURING the slide (its slice fades
+              in place), timed to land together with the last input row */}
+          {<div key="szf" style={{
             position: "absolute", right: W - area.right - 16.5, top: area.top - 16.5,
             width: bw + 33, height: bh + 33,
             transition: `width 600ms ${EASE_IO}, height 600ms ${EASE_IO}`,
-            animation: `szGrow 780ms ${EASE_IO}`, transformOrigin: "calc(100% - 16.5px) 16.5px",
+            animation: inSlide ? `szGrow 800ms ${EASE_IO} 90ms both` : "none",
+            transformOrigin: "calc(100% - 16.5px) 16.5px",
             pointerEvents: "none",
           }}>
             {/* inset 16 (not 16.5): the 1px border draws INSIDE the box, so
@@ -1030,6 +1064,8 @@ export default function NewUI() {
         @keyframes nuiWineRise { from { transform: translateY(92px) } to { transform: translateY(4px) } }
         @keyframes nuiIn { from { transform: translateX(${dir > 0 ? "100%" : "-100%"}) } to { transform: translateX(0) } }
         @keyframes nuiOut { from { transform: translateX(0) } to { transform: translateX(${dir > 0 ? "-100%" : "100%"}) } }
+        @keyframes nuiInPx { from { transform: translateX(${dir > 0 ? 1440 : -1440}px) } to { transform: translateX(0) } }
+        @keyframes nuiOutPx { from { transform: translateX(0) } to { transform: translateX(${dir > 0 ? -1440 : 1440}px) } }
         @keyframes arrowFly { from { left: 122px } to { left: 1324px } }
         @keyframes nuiFadeIn { from { opacity: 0 } to { opacity: 1 } }
         @keyframes nuiFadeOut { from { opacity: 1 } to { opacity: 0 } }
@@ -1049,14 +1085,24 @@ export default function NewUI() {
                 {renderOverlay(p, inSlide)}
               </>
             );
-            const strips = (p: PageKey, anim: string) => {
-              const cuts = [0, ...STRIP_BOUNDS[p].map((b) => Math.min(zoneH, Math.max(0, Math.round(b + pageTop)))), zoneH];
-              return cuts.slice(0, -1).map((y0, si) => (
-                <div key={`${p}-${si}`} style={{ position: "absolute", left: 0, top: y0, width: W, height: cuts[si + 1] - y0, overflow: "hidden", animation: `${anim} ${SLIDE_MS}ms ${EASE} ${STRIP_DELAYS[si]}ms both`, pointerEvents: "none" }}>
-                  <div style={{ position: "absolute", left: 0, top: pageTop - y0, width: W, height: H }}>{pageSpace(p, true)}</div>
+            /* content-aware slices (round 16 #3): clip rects with per-slice
+               delays; 'fade' slices animate in place (front size box) */
+            const slices = (p: PageKey, dirIn: boolean) => sliceDefs(p).map((s, si) => {
+              const x0 = s.x0 ?? 0, x1 = s.x1 ?? W;
+              const py0 = s.y0 ?? (fullSlide ? 0 : BAND_TOP);
+              const py1 = s.y1 ?? (fullSlide ? H : bandBottom);
+              const zy0 = Math.max(0, Math.min(zoneH, py0 + pageTop));
+              const zy1 = Math.max(0, Math.min(zoneH, py1 + pageTop));
+              if (zy1 <= zy0 || x1 <= x0) return null;
+              const anim = s.mode === "fade"
+                ? `${dirIn ? "nuiFadeIn" : "nuiFadeOut"} ${FADE_MS}ms ${EASE} ${s.delay}ms both`
+                : `${dirIn ? "nuiInPx" : "nuiOutPx"} ${SLIDE_MS}ms ${EASE} ${s.delay}ms both`;
+              return (
+                <div key={`${p}-${si}`} style={{ position: "absolute", left: x0, top: zy0, width: x1 - x0, height: zy1 - zy0, overflow: "hidden", animation: anim, pointerEvents: "none" }}>
+                  <div style={{ position: "absolute", left: -x0, top: pageTop - zy0, width: W, height: H }}>{pageSpace(p, true)}</div>
                 </div>
-              ));
-            };
+              );
+            }).filter(Boolean);
             const faded = (p: PageKey, anim: string, delay = 0) => (
               <div key={p} style={{ position: "absolute", inset: 0, animation: `${anim} ${FADE_MS}ms ${EASE} ${delay}ms both`, pointerEvents: "none" }}>
                 <div style={{ position: "absolute", left: 0, top: pageTop, width: W, height: H }}>{pageSpace(p, true)}</div>
@@ -1066,9 +1112,9 @@ export default function NewUI() {
               <div style={{ position: "absolute", left: 0, top: fullSlide ? 0 : BAND_TOP, width: W, height: zoneH, overflow: "hidden" }}>
                 {/* round 9 #1: entering the loader, the old page fully slides
                     out FIRST, then the loader fades in */}
-                {prev && (prev === "loader" ? faded(prev, "nuiFadeOut") : strips(prev, "nuiOut"))}
+                {prev && (prev === "loader" ? faded(prev, "nuiFadeOut") : slices(prev, false))}
                 {prev
-                  ? (page === "loader" ? faded(page, "nuiFadeIn", SLIDE_TOTAL) : strips(page, "nuiIn"))
+                  ? (page === "loader" ? faded(page, "nuiFadeIn", SLIDE_MS + maxSliceDelay(prev)) : slices(page, true))
                   : <div style={{ position: "absolute", left: 0, top: pageTop, width: W, height: H }}>{pageSpace(page, false)}</div>}
               </div>
             );

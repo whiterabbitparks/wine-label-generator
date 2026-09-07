@@ -1990,3 +1990,24 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 16 (owner 2026-09-06): (1) mini glasses 12px + marginTop 6.
+  (2) PLACEHOLDERS OFF LABELS (owner: "show only what is typed",
+  front AND back): DEMO_FRONT removed from page.tsx (fx/back payload/
+  assets brief use raw typed values) and composeBackLabel's TEMP
+  placeholder fills emptied (energyKcal keeps its computed default;
+  form E.g. placeholders in inputs stay — they never printed).
+  (3) CONTENT-AWARE PARALLAX: PAGE_SLICES generalizes the strip
+  system — each slice is a clip RECT (page coords) + delay + mode
+  ('slide' via new nuiIn/OutPx ±1440px keyframes — %-keyframes broke
+  on narrow slices — or 'fade' = animate in place). front: headline,
+  THIRTEEN per-row slices (x<806, 30px bands, delay 40+i*18), bottom,
+  and the size REGION as a 'fade' slice while the frame runs szGrow
+  800ms@90ms DURING the slide (inSlide only; settle/cold = static) so
+  rows and box land together (~900ms). compliance: 4 country-row
+  slices (delays 60/130/200/270). bottle: FIVE VERTICAL column slices
+  cut just right of each dashed divider x342.86/582.86/822.86/1062.86
+  (delays 0..240) — every column carries its own dashed frame, no more
+  torn verticals. Other pages keep the 3-band fallback (sliceDefs()).
+  go()/loader-fade timings use per-page maxSliceDelay. All verified
+  mid-flight by screenshot: row staircase + growing box, row cascade,
+  column cascade with intact dashes.
