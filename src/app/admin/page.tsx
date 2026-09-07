@@ -275,14 +275,14 @@ function MarketingRefsCard() {
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
         <b style={{ fontSize: 13 }}>Marketing references</b>
         <span style={{ fontSize: 11.5, color: "#8a887e" }}>
-          promotional / lifestyle photographs you admire, per style — analyzed into a photo-world charter (settings, light, styling) that steers the lifestyle images; the photos never go to the model
+          per-style LIFESTYLE boards + one PRODUCT SHOTS board (studio bottle photography) — each analyzed into a charter that steers its images; the photos never go to the model
         </span>
       </div>
       <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 10, flexWrap: "wrap" }}>
-        {DREAM_STYLES.map((st) => (
+        {[...DREAM_STYLES, "shots"].map((st) => (
           <button key={st} onClick={() => setStyle(st)}
             style={{ font: "inherit", fontSize: 12, padding: "4px 12px", borderRadius: 12, cursor: "pointer", border: "1px solid #5a6b3b", background: style === st ? "#5a6b3b" : "transparent", color: style === st ? "#fff" : "#5a6b3b" }}>
-            {st} ({refs.filter((r) => r.style === st).length}){charters[st] ? " ✓" : ""}
+            {st === "shots" ? "product shots" : st} ({refs.filter((r) => r.style === st).length}){charters[st] ? " ✓" : ""}
           </button>
         ))}
         <label style={{ ...S.btnGhost, display: "inline-block", cursor: "pointer", marginLeft: 8 }}>
@@ -311,7 +311,7 @@ function MarketingRefsCard() {
       )}
       {charters[style] && (
         <div style={{ marginTop: 12, borderTop: "1px dashed #ccc", paddingTop: 10 }}>
-          <b style={{ fontSize: 12.5 }}>Marketing charter — edit freely, it rides every {style} lifestyle image verbatim</b>
+          <b style={{ fontSize: 12.5 }}>Marketing charter — edit freely, it rides every {style === "shots" ? "studio product shot" : `${style} lifestyle image`} verbatim</b>
           <p style={{ fontSize: 11, color: "#a06a2c", margin: "4px 0 8px" }}>
             ⚠ &ldquo;Analyze board&rdquo; regenerates this from the images (your saved edits survive until the next image change).
           </p>

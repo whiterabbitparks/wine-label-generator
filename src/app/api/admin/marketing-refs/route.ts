@@ -15,7 +15,10 @@ import { getDb } from "@/lib/db";
    derived language, never as image inputs. */
 
 const REFS_DIR = path.join(process.cwd(), "data", "marketing-refs");
-const STYLES = ["traditional", "contemporary", "punk"] as const;
+/* per-style LIFESTYLE boards + one global "shots" board (owner 2026-09-07):
+   studio product-shot references are one photographic language, not a
+   style matter — their charter steers the front/back bottle shots */
+const STYLES = ["traditional", "contemporary", "punk", "shots"] as const;
 
 interface RefDoc { id: string; name: string; file: string; thumb: string; at: string; style: string }
 
@@ -80,14 +83,21 @@ export async function POST(req: Request) {
         messages: [
           {
             role: "system",
-            content:
-              "You are an advertising photography analyst. You receive reference photographs for wine " +
-              "promotional imagery. Describe their SHARED WORLD as a compact art-direction guide (max 110 " +
-              "words) for future photo shoots: the kinds of settings and props, the light (time of day, " +
-              "hard/soft, warm/cool), colour grading and mood, framing and depth-of-field habits, how staged " +
-              "or candid the scenes feel, how people appear (if they do). Speak in general terms a " +
-              "photographer could apply to NEW scenes. STRICTLY FORBIDDEN: describing any specific bottle, " +
-              "label, brand or text visible in the references.",
+            content: style === "shots"
+              ? "You are a product-photography analyst. You receive reference photographs of studio wine-bottle " +
+                "shots. Describe their SHARED TECHNIQUE as a compact art-direction guide (max 110 words) for " +
+                "future studio shots: the lighting setup (soft/hard, highlight shapes along the glass, contrast), " +
+                "how reflections and glass transparency are rendered, colour fidelity and grading, sharpness and " +
+                "retouching level, camera height and perspective. Speak in general terms a photographer could " +
+                "apply to ANY bottle. STRICTLY FORBIDDEN: describing any specific bottle shape, label, brand or " +
+                "text visible in the references, and any background/surface description (shots are cutouts)."
+              : "You are an advertising photography analyst. You receive reference photographs for wine " +
+                "promotional imagery. Describe their SHARED WORLD as a compact art-direction guide (max 110 " +
+                "words) for future photo shoots: the kinds of settings and props, the light (time of day, " +
+                "hard/soft, warm/cool), colour grading and mood, framing and depth-of-field habits, how staged " +
+                "or candid the scenes feel, how people appear (if they do). Speak in general terms a " +
+                "photographer could apply to NEW scenes. STRICTLY FORBIDDEN: describing any specific bottle, " +
+                "label, brand or text visible in the references.",
           },
           { role: "user", content: [{ type: "text", text: "The reference photographs:" }, ...images] },
         ],

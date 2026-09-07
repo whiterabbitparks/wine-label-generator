@@ -128,11 +128,12 @@ function bottleDescription(b: MarketingBrief) {
   };
 }
 
-export function buildShotPrompt(b: MarketingBrief, side: "front" | "back", hasShape: boolean) {
+export function buildShotPrompt(b: MarketingBrief, side: "front" | "back", hasShape: boolean, charter = "") {
   const d = bottleDescription(b);
   return (
     `Professional studio product photograph of a single wine bottle, photographed dead straight-on, ` +
     `${side === "front" ? "showing the FRONT of the bottle" : "showing the BACK of the bottle"}, the whole bottle in frame from base to closure with a small margin. ` +
+    (charter ? `Art director's studio notes (follow their spirit): ${charter} ` : "") +
     `${d.text} ` +
     `The FIRST attached image is the wine's ${side} label — apply it to the bottle EXACTLY as given: identical layout, typography, artwork and colours, ` +
     `perfectly legible, wrapped naturally onto the glass curvature with subtle realistic paper sheen. Do NOT redraw, reinterpret, crop or add any text. ` +
@@ -246,12 +247,14 @@ export async function generateMarketingAssets(
   send: (e: AssetEvent) => void
 ): Promise<void> {
   const final = imageQuality() === "prod";
-  let charter = "";
+  let charter = "", shotCharter = "";
   try {
     const db = await getDb();
     const c = (await db.collection("settings").findOne({ _id: `marketing-charter-${b.style}` } as never)) as { text?: string } | null;
     charter = c?.text || "";
-  } catch { /* charter is optional */ }
+    const sc = (await db.collection("settings").findOne({ _id: "marketing-charter-shots" } as never)) as { text?: string } | null;
+    shotCharter = sc?.text || "";
+  } catch { /* charters are optional */ }
 
   /* the owner's line-art drawing of the chosen bottle rides along as a
      silhouette spec (round 14 #4) */
@@ -261,7 +264,7 @@ export async function generateMarketingAssets(
      the occasional 429, and the stream keeps the page honest meanwhile */
   send({ type: "progress", stage: "front shot" });
   const front = await generateImageRawWithRetry({
-    prompt: buildShotPrompt(b, "front", !!shape),
+    prompt: buildShotPrompt(b, "front", !!shape, shotCharter),
     references: shape ? [frontLabel, shape] : [frontLabel], transparent: true, size: { w: 1024, h: 1536 },
   });
   const frontSized = await sizeShot(front, final);
@@ -270,7 +273,7 @@ export async function generateMarketingAssets(
   if (backLabel) {
     send({ type: "progress", stage: "back shot" });
     const back = await generateImageRawWithRetry({
-      prompt: buildShotPrompt(b, "back", !!shape),
+      prompt: buildShotPrompt(b, "back", !!shape, shotCharter),
       references: shape ? [backLabel, shape] : [backLabel], transparent: true, size: { w: 1024, h: 1536 },
     });
     send({ type: "shot", side: "back", image: await sizeShot(back, final), preview: await previewOf(back) });
