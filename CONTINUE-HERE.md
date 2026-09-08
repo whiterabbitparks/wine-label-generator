@@ -1990,6 +1990,21 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ENG/GEO (owner 2026-09-07): full Georgian translation. The switch
+  sits after Contact in the static header (pickLang + localStorage
+  'nui-lang'). TWO dictionaries in src/app/newui-i18n.ts: SVG_GE swaps
+  the artboards' live <tspan> strings in place (translateSvg runs at
+  fetch → boardsGe cache; keys must match SOURCE encoding — &amp;,
+  &apos;, curly ’), UI_GE covers every HTML overlay via t() (t
+  consults UI_GE then SVG_GE). The owner's HNW files carry the full
+  Mkhedruli set — Georgian renders in the real font (Georgian is
+  unicameral: caps rows just render Mkhedruli). Fitted translations:
+  UK → დიდი ბრიტანეთი, Region/Special → წარმოშობა:/მინაწერი: (long
+  labels hit the input column). TRAPS: checkout slot-1 heading is
+  OUTLINED in the artboard (not live text) — covered + re-rendered
+  live in both languages; page.tsx local `const t` (loader creep)
+  renamed `el` to free the t() name; front intro patch widened to 700
+  (translated baked line ran past the old cover).
 - ROUND 21 (owner 2026-09-07, 8 items): (1) loader-exit glitch — the
   fading loader showed through the staggered incoming slices; leaving
   the loader now fades it out on clean white FIRST (outBase = FADE_MS

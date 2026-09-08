@@ -10,6 +10,7 @@
    replaces (E.g. texts, Select+magnifier boxes, corner crosses, dots). */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { UI_GE, SVG_GE, translateSvg } from "./newui-i18n";
 
 const W = 1440, H = 823;
 const HEADER_H = 68.57, FOOTER_Y = 754.07;
@@ -176,6 +177,12 @@ export default function NewUI() {
     if (q && (ORDER as readonly string[]).includes(q)) setPage(q as PageKey);
   }, []);
   const [prev, setPrev] = useState<PageKey | null>(null);
+  /* ENG/GEO (owner 2026-09-07): translates overlays AND baked board text */
+  const [lang, setLang] = useState<"en" | "ge">("en");
+  useEffect(() => { try { const l = localStorage.getItem("nui-lang"); if (l === "ge") setLang("ge"); } catch { } }, []);
+  const pickLang = (l: "en" | "ge") => { setLang(l); try { localStorage.setItem("nui-lang", l); } catch { } };
+  const t = (s: string) => (lang === "ge" ? UI_GE[s] || SVG_GE[s] || s : s);
+  const tStage = (s: string) => (lang === "ge" ? s.replace("front shot", "წინა ფოტო").replace("back shot", "უკანა ფოტო").replace("lifestyle", "სურათი").replace("preparing", "მზადდება") : s);
   const [dir, setDir] = useState(1);
   const [scale, setScale] = useState(1);
   const [arrowFly, setArrowFly] = useState(false);
@@ -349,12 +356,17 @@ export default function NewUI() {
      future landing page (domain configurable when it exists) */
   const productCode = useRef(Math.random().toString(36).slice(2, 10));
   const [boards, setBoards] = useState<Record<string, string>>({});
+  const [boardsGe, setBoardsGe] = useState<Record<string, string>>({});
   useEffect(() => {
     /* inline the artboards: SVG-in-<img> cannot use page fonts (the
        owner's Safari font complaint) — inline SVG can */
     ORDER.forEach((p) => {
       fetch(`/newui/${p}.svg`).then((r) => r.text()).then((t) =>
-        setBoards((m) => ({ ...m, [p]: namespaceSvg(t, p).replace(/<\?xml[^>]*\?>/, "").replace(/<svg /, '<svg preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%" ') }))
+        {
+          const processed = namespaceSvg(t, p).replace(/<\?xml[^>]*\?>/, "").replace(/<svg /, '<svg preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%" ');
+          setBoards((m) => ({ ...m, [p]: processed }));
+          setBoardsGe((m) => ({ ...m, [p]: translateSvg(processed) }));
+        }
       ).catch(() => {});
     });
   }, []);
@@ -646,7 +658,7 @@ export default function NewUI() {
       case "vision":
         return (<>
           {patch(1213, 421, 87, 17, "cnt")}
-          <span style={{ ...px(1178, 422, 110, 15), font: `11px ${HNW}`, color: "#111", textAlign: "right" }}>{vision.trim() ? vision.trim().split(/\s+/).length : 0} / 300 words</span>
+          <span style={{ ...px(1178, 422, 110, 15), font: `11px ${HNW}`, color: "#111", textAlign: "right" }}>{vision.trim() ? vision.trim().split(/\s+/).length : 0} / 300 {t("words")}</span>
           <textarea value={vision} onChange={(e) => setVision(e.target.value)} maxLength={2200}
             style={{ ...px(148, 246, 1144, 168), ...inputStyle, fontStyle: "normal", textDecoration: "none", resize: "none", lineHeight: 1.5, overflow: "auto", background: "transparent" }} />
           <button title="Give me an idea" onClick={() => setVision(IDEAS[Math.floor(Math.random() * IDEAS.length)])}
@@ -656,7 +668,7 @@ export default function NewUI() {
               const file = e.target.files?.[0]; if (!file) { setSketch(null); return; }
               const rd = new FileReader(); rd.onload = () => setSketch(String(rd.result)); rd.readAsDataURL(file);
             }} />
-            {sketch && <span style={{ ...px(0, 38, 300, 16), font: `12px ${HNW}`, color: "#3f6d2a" }}>✓ sketch attached</span>}
+            {sketch && <span style={{ ...px(0, 38, 300, 16), font: `12px ${HNW}`, color: "#3f6d2a" }}>{t("✓ sketch attached")}</span>}
           </label>
         </>);
       case "front": {
@@ -668,9 +680,9 @@ export default function NewUI() {
         const bw = wmm * k, bh = hmm * k;
         return (<>
           {/* round 7 #3: shorter intro replaces the baked paragraph */}
-          {patch(134, 166, 560, 46, "intro")}
+          {patch(134, 166, 700, 46, "intro")}
           <span style={{ ...px(136.97, 183.62 - 15.5, 560, 20), font: `15px ${HNW}`, color: "#111", lineHeight: "20px" }}>
-            Feel free to leave out fields you don&apos;t want on your front label.
+            {t("Feel free to leave out fields you don't want on your front label.")}
           </span>
           {/* cover baked E.g. column incl. its underlines */}
           {patch(263, 234, 572, 390, "phcol")}
@@ -678,7 +690,7 @@ export default function NewUI() {
             const base = 251.27 + i * 30;   /* design pitch 30 (round 8 #2) */
             return (
               <span key={k2}>
-                <input value={f[k2] || ""} placeholder={FRONT_PH[i]}
+                <input value={f[k2] || ""} placeholder={t(FRONT_PH[i])}
                   onChange={(e) => setF((m) => ({ ...m, [k2]: e.target.value }))}
                   style={{ ...px(264.9, base - IN_BASE, 450, 20), ...inputStyle }} />
                 {/* rule ends exactly at the window's horizontal centre (#3) */}
@@ -727,10 +739,10 @@ export default function NewUI() {
           <div style={{ position: "absolute", right: W - 1302.86, top: 611.27 - WH_BASE, display: "flex", alignItems: "baseline" }}>
             {([["Width:", "width"], ["Height:", "height"]] as const).map(([cap, key2], gi) => (
               <span key={key2} style={{ display: "flex", alignItems: "baseline", marginLeft: gi ? 24 : 0 }}>
-                <span style={{ font: `700 14px ${HNW}`, lineHeight: "15px" }}>{cap}</span>
+                <span style={{ font: `700 14px ${HNW}`, lineHeight: "15px" }}>{t(cap)}</span>
                 <input value={f[key2]} onChange={(e) => setF((m) => ({ ...m, [key2]: e.target.value.replace(/[^\d.]/g, "") }))}
                   style={{ width: Math.max(1, (f[key2] || "").length) * 8.2 + 4, font: `italic 14px ${HNW}`, lineHeight: "15px", border: "none", borderBottom: "1px solid #111", outline: "none", background: "transparent", padding: 0, textAlign: "center", marginLeft: 3 }} />
-                <span style={{ font: `italic 14px ${HNW}`, lineHeight: "15px", marginLeft: 4 }}>mm</span>
+                <span style={{ font: `italic 14px ${HNW}`, lineHeight: "15px", marginLeft: 4 }}>{t("mm")}</span>
               </span>
             ))}
           </div>
@@ -739,8 +751,8 @@ export default function NewUI() {
       case "loader": {
         /* round 19: VISIBLE, never-stalling movement — fast creep for the
            first ~25s (1.2%/s), then a slow trickle; monotonic via fillMax */
-        const t = Date.now() - dreamT.current + tick * 0;
-        const creep = t < 25000 ? (t / 1000) * 0.012 : Math.min(0.45, 0.3 + ((t - 25000) / 1000) * 0.003);
+        const el = Date.now() - dreamT.current + tick * 0;
+        const creep = el < 25000 ? (el / 1000) * 0.012 : Math.min(0.45, 0.3 + ((el - 25000) / 1000) * 0.003);
         const fill = Math.max(fillMax.current, Math.min(0.97, Math.max(0.06, genProgress + creep)));
         fillMax.current = fill;
         return (<>
@@ -757,14 +769,14 @@ export default function NewUI() {
             </svg>
           </div>
           <span style={{ ...px(0, 492, W, 20), font: `15px ${HNW}`, textAlign: "center", display: "block" }}>
-            Designing your label
+            {t("Designing your label")}
             {[0, 1, 2].map((d) => (
               <span key={d} style={{ animation: `nuiDot 1.2s ${d * 0.2}s infinite` }}>.</span>
             ))}
           </span>
           {/* round 9 #2 */}
           <span style={{ ...px(0, 520, W, 18), font: `italic 13px ${HNW}`, color: "#555", textAlign: "center", display: "block" }}>
-            Please stay on this page — preparing your labels usually takes 15–35 seconds.
+            {t("Please stay on this page — preparing your labels usually takes 15–35 seconds.")}
           </span>
         </>);
       }
@@ -808,7 +820,7 @@ export default function NewUI() {
                 color: selected === i ? "#fff" : "#111",
                 border: "1px solid #111", boxSizing: "border-box",
                 display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4,
-              }}>{selected === i ? "Selected" : "Select"}</button>
+              }}>{selected === i ? t("Selected") : t("Select")}</button>
           ))}
           {/* round 7 #12: gate message when proceeding without a selection */}
           {warn && (
@@ -819,7 +831,7 @@ export default function NewUI() {
       case "backdetails":
         return (<>
           {patch(560, 421, 122, 17, "cnt2")}
-          <span style={{ ...px(552, 422, 116, 15), font: `11px ${HNW}`, textAlign: "right" }}>{(b.description || "").trim() ? (b.description || "").trim().split(/\s+/).length : 0} / 300 words</span>
+          <span style={{ ...px(552, 422, 116, 15), font: `11px ${HNW}`, textAlign: "right" }}>{(b.description || "").trim() ? (b.description || "").trim().split(/\s+/).length : 0} / 300 {t("words")}</span>
           <textarea value={b.description || ""} onChange={(e) => setB((m) => ({ ...m, description: e.target.value }))}
             style={{ ...px(148, 251, 528, 168), ...inputStyle, fontStyle: "normal", textDecoration: "none", fontSize: 14, resize: "none", lineHeight: 1.45, overflow: "auto", background: "transparent" }} />
           {/* cover baked E.g. column incl. its underlines (they overrun the
@@ -829,7 +841,7 @@ export default function NewUI() {
             const base = 247.11 + i * 32;   /* design pitch 32 (round 8 #2) */
             return (
               <span key={k}>
-                <input value={b[k] || ""} placeholder={BACK_PH[i]}
+                <input value={b[k] || ""} placeholder={t(BACK_PH[i])}
                   onChange={(e) => setB((m) => ({ ...m, [k]: e.target.value }))}
                   style={{ ...px(989.6, base - IN_BASE, 310, 20), ...inputStyle }} />
                 {rowLine(989.6, base + 2.5, 313.3, `bln${i}`)}
@@ -847,16 +859,16 @@ export default function NewUI() {
               display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4,
             });
             return (<>
-              <button onClick={() => { setBarcodeImg(""); setBarcodeMode(barcodeMode === "create" ? "" : "create"); }} style={{ ...px(138.04, 480, 239.1, 34.3), ...modeStyle(barcodeMode === "create") }}>Create Barcode</button>
+              <button onClick={() => { setBarcodeImg(""); setBarcodeMode(barcodeMode === "create" ? "" : "create"); }} style={{ ...px(138.04, 480, 239.1, 34.3), ...modeStyle(barcodeMode === "create") }}>{t("Create Barcode")}</button>
               <label style={{ ...px(445.71, 480, 240, 34.3), ...modeStyle(barcodeMode === "upload") }}>
                 <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
                   const file = e.target.files?.[0]; if (!file) return;
                   const rd = new FileReader(); rd.onload = () => { setBarcodeImg(String(rd.result)); setBarcodeMode("upload"); }; rd.readAsDataURL(file);
                 }} />
-                Upload Barcode
-                {barcodeImg && <span style={{ position: "absolute", left: 0, top: 38, width: 240, font: `11px ${HNW}`, color: "#3f6d2a", textAlign: "center" }}>✓ barcode uploaded</span>}
+                {t("Upload Barcode")}
+                {barcodeImg && <span style={{ position: "absolute", left: 0, top: 38, width: 240, font: `11px ${HNW}`, color: "#3f6d2a", textAlign: "center" }}>{t("✓ barcode uploaded")}</span>}
               </label>
-              <button onClick={() => { setQrImg(""); setQrMode(qrMode === "create" ? "" : "create"); }} style={{ ...px(754.29, 480, 240.1, 34.3), ...modeStyle(qrMode === "create") }}>Create QR Code</button>
+              <button onClick={() => { setQrImg(""); setQrMode(qrMode === "create" ? "" : "create"); }} style={{ ...px(754.29, 480, 240.1, 34.3), ...modeStyle(qrMode === "create") }}>{t("Create QR Code")}</button>
               {/* owner 2026-09-07: with Create QR active, the ingredients
                   for the future landing page can be uploaded as a text file */}
               {qrMode === "create" && (
@@ -865,7 +877,7 @@ export default function NewUI() {
                     const file = e.target.files?.[0]; if (!file) return;
                     const rd = new FileReader(); rd.onload = () => setIngredients(String(rd.result).slice(0, 20000)); rd.readAsText(file);
                   }} />
-                  {ingredients ? "Ingredients uploaded ✓" : "Upload Ingredients"}
+                  {ingredients ? t("Ingredients uploaded ✓") : t("Upload Ingredients")}
                 </label>
               )}
               <label style={{ ...px(1063.99, 480, 238.4, 34.3), ...modeStyle(qrMode === "upload") }}>
@@ -873,8 +885,8 @@ export default function NewUI() {
                   const file = e.target.files?.[0]; if (!file) return;
                   const rd = new FileReader(); rd.onload = () => { setQrImg(String(rd.result)); setQrMode("upload"); }; rd.readAsDataURL(file);
                 }} />
-                Upload QR Code
-                {qrImg && <span style={{ position: "absolute", left: 0, top: 38, width: 238, font: `11px ${HNW}`, color: "#3f6d2a", textAlign: "center" }}>✓ QR uploaded</span>}
+                {t("Upload QR Code")}
+                {qrImg && <span style={{ position: "absolute", left: 0, top: 38, width: 238, font: `11px ${HNW}`, color: "#3f6d2a", textAlign: "center" }}>{t("✓ QR uploaded")}</span>}
               </label>
             </>);
           })()}
@@ -945,7 +957,7 @@ export default function NewUI() {
               style={{ ...px(lx, ly, fit.w, fit.h), cursor: "zoom-in", objectFit: "fill" }} />
             {cross(lx, ly, "b1")}{cross(lx + fit.w, ly, "b2")}{cross(lx, ly + fit.h, "b3")}{cross(lx + fit.w, ly + fit.h, "b4")}
             <button onClick={() => go("backdetails", -1)}
-              style={{ ...px(lx, 548.6, fit.w, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>Edit</button>
+              style={{ ...px(lx, 548.6, fit.w, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>{t("Edit")}</button>
           </>)}
         </>);
       }
@@ -1040,25 +1052,25 @@ export default function NewUI() {
                 <span style={{ marginTop: 10, font: `16.5px ${HNW}`, color: "#111", letterSpacing: 2.2, lineHeight: "11px" }}>
                   {[0, 1, 2].map((dd) => <span key={dd} style={{ animation: `nuiDot 1.2s ${dd * 0.2}s infinite` }}>.</span>)}
                 </span>
-              </>) : <>[ {label} ]</>}
+              </>) : <>[ {t(label)} ]</>}
             </div>
           );
         return (<>
           {/* round 14 #3: number words in the titles */}
           {patch(136, 542, 132, 18, "t1")}
           {patch(547.5, 542, 162, 18, "t2")}
-          <span style={{ ...px(138.16, 556.39 - (IN_BASE - 2), 200, 16), font: `700 15px ${HNW}`, lineHeight: "16px" }}>Two Product Shots</span>
-          <span style={{ ...px(548.57, 556.39 - (IN_BASE - 2), 220, 16), font: `700 15px ${HNW}`, lineHeight: "16px" }}>Five Marketing Images</span>
+          <span style={{ ...px(138.16, 556.39 - (IN_BASE - 2), 200, 16), font: `700 15px ${HNW}`, lineHeight: "16px" }}>{t("Two Product Shots")}</span>
+          <span style={{ ...px(548.57, 556.39 - (IN_BASE - 2), 220, 16), font: `700 15px ${HNW}`, lineHeight: "16px" }}>{t("Five Marketing Images")}</span>
           {/* round 14 #6: status message in the 12px subtitle style, on the
               titles' line, left-aligned with the small-thumb block */}
           {assetsStage && (
             <span style={{ ...px(994.3, 556.39 - 12.4, 310, 32), font: `12px ${HNW}`, color: "#BA141A", lineHeight: "16px" }}>
-              Creating your marketing assets — {assetsStage}… please stay on the page.
+              {t("Creating your marketing assets")} — {tStage(assetsStage)}… {t("please stay on the page.")}
             </span>
           )}
           {!assetsStage && selected < 0 && (
             <span style={{ ...px(994.3, 556.39 - 12.4, 310, 32), font: `12px ${HNW}`, color: "#BA141A", lineHeight: "16px" }}>
-              Select a front label first — assets are built from it.
+              {t("Select a front label first — assets are built from it.")}
             </span>
           )}
           <div style={{ ...px(548.6, 171.9, 338.6, 338.6) }}>{pic(assets.life[order[0]], 338.6, 338.6, `Context ${order[0] + 1}`, 14, "cover", lifeGallery, `lifestyle ${order[0] + 1}/5`)}</div>
@@ -1097,6 +1109,11 @@ export default function NewUI() {
               );
             })()}
           </>)}
+          {/* slot-1 heading is OUTLINED in the artboard (not live text) —
+              covered and re-rendered so ENG/GEO both translate (2026-09-07) */}
+          {patch(136, 168, 185, 38, "slot1h")}
+          <span style={{ ...px(137.14, 183.93 - (IN_BASE - 2), 200, 16), font: `700 15px ${HNW}`, lineHeight: "16px" }}>{t("1. Front label")}</span>
+          <span style={{ ...px(137.14, 198.33 - 12.4, 300, 16), font: `12px ${HNW}`, lineHeight: "16px", whiteSpace: "nowrap" }}>{t("Print ready high resolution file")}</span>
           {/* round 8 #14 / round 14 #9: real sizes instead of ???x???, in the
               design's own 12px subtitle size on its baseline 227.13 */}
           {patch(137, 214, 208, 19, "fmt1")}
@@ -1114,7 +1131,7 @@ export default function NewUI() {
                 <img key={`${label}@${x}`} src={it.prev} alt={label} onClick={() => { const g = gal?.length ? gal : [it.full]; setGallery({ imgs: g, i: Math.max(0, g.indexOf(it.full)) }); }}
                   style={{ ...px(x, y, w2, h2), objectFit: fit, cursor: "zoom-in" }} />
               ) : (
-                <div key={`${label}@${x}`} style={{ ...px(x, y, w2, h2), background: "#F4F3EE", display: "flex", alignItems: "center", justifyContent: "center", font: `${fs}px ${HNW}`, color: "#999", textAlign: "center" }}>{label ? `[ ${label} ]` : ""}</div>
+                <div key={`${label}@${x}`} style={{ ...px(x, y, w2, h2), background: "#F4F3EE", display: "flex", alignItems: "center", justifyContent: "center", font: `${fs}px ${HNW}`, color: "#999", textAlign: "center" }}>{label ? `[ ${t(label)} ]` : ""}</div>
               );
             const lifeG = assets.life.filter(Boolean).map((l) => l.full);
             const shotG = [assets.front, assets.back].filter(Boolean).map((s) => s!.full);
@@ -1141,17 +1158,17 @@ export default function NewUI() {
               ))}
               {PACK.map((it, i) => (
                 <span key={it.name}>
-                  <span style={{ ...px(171.43, rows[i] - B, 500, 16), font: `700 15px ${HNW}`, lineHeight: "16px" }}>{it.name}</span>
+                  <span style={{ ...px(171.43, rows[i] - B, 500, 16), font: `700 15px ${HNW}`, lineHeight: "16px" }}>{t(it.name)}</span>
                   <span style={{ ...px(1152.9, rows[i] - B, 150, 16), font: `700 15px ${HNW}`, lineHeight: "16px", textAlign: "right", display: "block" }}>${it.price}</span>
                   {dotBtn(144.64, rows[i] - 4.93, !!packSel[i], () => setPackSel((ps) => ps.map((v, k) => (k === i ? !v : v))), "pk" + i, { ring: true })}
                 </span>
               ))}
               {dotBtn(144.64, 686, agree, () => setAgree(!agree), "agree", { ring: true })}
-              <span style={{ ...px(171.43, 691.3 - B, 400, 16), font: `15px ${HNW}`, lineHeight: "16px" }}>I agree to the <u>Terms &amp; Conditions</u></span>
-              <span style={{ ...px(852.24, 691.3 - B - 3, 240, 20), font: `700 19px ${HNW}`, lineHeight: "20px" }}>TOTAL SUM: ${total}</span>
+              <span style={{ ...px(171.43, 691.3 - B, 400, 16), font: `15px ${HNW}`, lineHeight: "16px" }}>{t("I agree to the")} <u>{t("Terms & Conditions")}</u></span>
+              <span style={{ ...px(852.24, 691.3 - B - 3, 240, 20), font: `700 19px ${HNW}`, lineHeight: "20px" }}>{t("TOTAL SUM:")} ${total}</span>
               {/* paddingBottom 5 measured-in: HNW's tall ascent leaves the
                   glyphs 2.5px low in a naively-centred flex line */}
-              <button onClick={proceedToPayment} style={{ ...px(1032, 669.5, 268, 32), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 0 5px" }}>Proceed to payment</button>
+              <button onClick={proceedToPayment} style={{ ...px(1032, 669.5, 268, 32), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 0 5px" }}>{t("Proceed to payment")}</button>
             </>);
           })()}
           <button aria-label="back" onClick={goBack} style={{ ...px(56, 664, 60, 44), ...ghost }} />
@@ -1203,7 +1220,7 @@ export default function NewUI() {
             const pageTop = fullSlide ? 0 : -BAND_TOP;
             const pageSpace = (p: PageKey, inSlide: boolean) => (
               <>
-                <div style={{ position: "absolute", inset: 0, userSelect: "none" }} dangerouslySetInnerHTML={{ __html: boards[p] || "" }} />
+                <div style={{ position: "absolute", inset: 0, userSelect: "none" }} dangerouslySetInnerHTML={{ __html: (lang === "ge" ? boardsGe[p] : boards[p]) || boards[p] || "" }} />
                 {renderOverlay(p, inSlide)}
               </>
             );
@@ -1249,9 +1266,13 @@ export default function NewUI() {
           {/* STATIC header (real fonts, extracted geometry) */}
           <div style={{ ...px(0, 0, W, HEADER_H), background: "#000" }}>
             <span style={{ ...px(138.2, 25.5, 100, 20), font: `700 19px ${HNW}`, color: "#fff" }}>8K</span>
-            <span style={{ ...px(1056, 27.5, 90, 16), font: `700 13px ${HNW}`, color: "#fff" }}>About Us</span>
-            <span style={{ ...px(1160, 27.5, 80, 16), font: `700 13px ${HNW}`, color: "#fff" }}>Gallery</span>
-            <span style={{ ...px(1253.5, 27.5, 80, 16), font: `700 13px ${HNW}`, color: "#fff" }}>Contact</span>
+            <span style={{ ...px(1056, 27.5, 90, 16), font: `700 13px ${HNW}`, color: "#fff" }}>{t("About Us")}</span>
+            <span style={{ ...px(1160, 27.5, 80, 16), font: `700 13px ${HNW}`, color: "#fff" }}>{t("Gallery")}</span>
+            <span style={{ ...px(1253.5, 27.5, 80, 16), font: `700 13px ${HNW}`, color: "#fff" }}>{t("Contact")}</span>
+            {/* ENG / GEO (owner 2026-09-07) */}
+            <button onClick={() => pickLang("en")} style={{ ...px(1338, 26, 34, 18), ...ghost, font: `${lang === "en" ? 700 : 300} 13px ${HNW}`, color: lang === "en" ? "#fff" : "#8a8a8a", textAlign: "left" }}>ENG</button>
+            <span style={{ ...px(1370, 27.5, 8, 16), font: `300 13px ${HNW}`, color: "#8a8a8a" }}>/</span>
+            <button onClick={() => pickLang("ge")} style={{ ...px(1380, 26, 36, 18), ...ghost, font: `${lang === "ge" ? 700 : 300} 13px ${HNW}`, color: lang === "ge" ? "#fff" : "#8a8a8a", textAlign: "left" }}>GEO</button>
           </div>
 
           {/* STATIC progress bar (hidden on welcome & checkout) */}
@@ -1262,8 +1283,8 @@ export default function NewUI() {
               {CIRCLE_X.map((cx0, i) => (
                 <span key={i} style={{ ...px(cx0 - 4.9, 685.59 - 4.9 - 660, 9.8, 9.8), borderRadius: 5, border: "1px solid #111", background: step >= i ? "#111" : "#fff", transition: `background 300ms ${EASE}`, boxSizing: "border-box" }} />
               ))}
-              {STEP_LABELS.map(([t, x0]) => (
-                <span key={t} style={{ ...px(x0, 708.5 - 660, 260, 18), font: `700 15px ${HNW}`, color: "#111", lineHeight: "15px" }}>{t}</span>
+              {STEP_LABELS.map(([lbl, x0]) => (
+                <span key={lbl} style={{ ...px(x0, 708.5 - 660, 260, 18), font: `700 15px ${HNW}`, color: "#111", lineHeight: "15px" }}>{t(lbl)}</span>
               ))}
               {/* back arrow */}
               {(
@@ -1279,12 +1300,12 @@ export default function NewUI() {
                   else if (page === "options") {
                     /* round 7 #12: warn instead of silently ignoring */
                     if (selected >= 0) go("backdetails");
-                    else { setWarn("Select a label design to continue"); setTimeout(() => setWarn(""), 3200); }
+                    else { setWarn(t("Select a label design to continue")); setTimeout(() => setWarn(""), 3200); }
                   }
                   else if (page === "backdetails") go("compliance");
                   else if (page === "compliance") {
                     if (markets.length) nextFromCompliance();
-                    else { setWarn("Select at least one market to continue"); setTimeout(() => setWarn(""), 3200); }
+                    else { setWarn(t("Select at least one market to continue")); setTimeout(() => setWarn(""), 3200); }
                   }
                   else if (page === "backdesign") go("bottle");
                   else if (page === "bottle") go("assets");
@@ -1305,8 +1326,8 @@ export default function NewUI() {
 
           {/* STATIC footer bar */}
           <div style={{ ...px(0, FOOTER_Y, W, H - FOOTER_Y), background: "#000" }}>
-            <span style={{ ...px(138.4, 779.4 - FOOTER_Y, 700, 16), font: `300 11px ${HNW}`, color: "#fff" }}>© 8K Labels — a demo interface built from your uploaded mockup</span>
-            <a href="/classic" style={{ ...px(1240, 779.4 - FOOTER_Y, 160, 16), font: `300 11px ${HNW}`, color: "#888", textDecoration: "none" }}>classic interface</a>
+            <span style={{ ...px(138.4, 779.4 - FOOTER_Y, 700, 16), font: `300 11px ${HNW}`, color: "#fff" }}>{t("© 8K Labels — a demo interface built from your uploaded mockup")}</span>
+            <a href="/classic" style={{ ...px(1240, 779.4 - FOOTER_Y, 160, 16), font: `300 11px ${HNW}`, color: "#888", textDecoration: "none" }}>{t("classic interface")}</a>
           </div>
 
           {busyMsg && <div style={{ ...px(1090, 78, 320, 20), font: `13px ${HNW}`, color: "#8a887e", textAlign: "right" }}>{busyMsg}</div>}
