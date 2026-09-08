@@ -89,11 +89,36 @@ function closureLine(closure: string, colourCSS: string, finish: string) {
     return "CLOSURE — NON-NEGOTIABLE: a natural cork sits flush in the bare bottle mouth — NO capsule, NO foil, the glass lip fully visible";
   switch (closure) {
     case "Screw Cap": return `CLOSURE — NON-NEGOTIABLE: a ${fin} ${col} aluminium SCREW CAP with a clean straight skirt over the bottle mouth and upper neck. There is NO cork and NO foil capsule — a screw cap only`;
-    case "Wax Seal": return `CLOSURE — NON-NEGOTIABLE: a smooth ${fin} ${col} wax cap over the bottle mouth with a CLEAN, EVEN lower edge just below the lip — absolutely NO drips or runs. No foil capsule`;
-    case "Crown Cap": return `CLOSURE — NON-NEGOTIABLE: a ${fin} ${col} CROWN CAP (beer-style) on the bottle mouth, bare glass neck below it. There is NO cork and NO capsule`;
+    /* round 29 #3: medium-height wax, 2-3mm thick, rounded over the tip */
+    case "Wax Seal": return `CLOSURE — NON-NEGOTIABLE: a ${fin} ${col} WAX SEAL of MEDIUM height — it coats the bottle mouth and the upper third of the neck (never just the tip, never the whole neck). The wax is a SUBSTANTIAL 2–3 mm thick coat that visibly ROUNDS and softens the glass tip's edges — it must never read as a thin skin tracing the sharp glass profile. Its lower edge is clean and only slightly uneven — absolutely NO drips or runs. No foil capsule`;
+    /* round 29 #4: the model kept missing what a crown cap is */
+    case "Crown Cap": return `CLOSURE — NON-NEGOTIABLE: a ${fin} ${col} metal CROWN CAP — the pressed-steel BEER-BOTTLE cap: a flat round top with a short crimped skirt of ~21 tiny flutes gripping the bottle lip, exactly like on a classic beer bottle. Bare glass neck below it. There is NO cork, NO capsule, NO screw threads — only this crimped beer-style cap`;
     case "Sparkling Cork": return `CLOSURE — NON-NEGOTIABLE: a mushroom sparkling cork under a wire cage, dressed in a ${fin} ${col} foil hood down the neck`;
     default: return `CLOSURE — NON-NEGOTIABLE: a natural cork under a ${fin} ${col} foil capsule covering the bottle lip and upper neck`;
   }
+}
+
+/* ---- label position (ROUND 29 #2) ----------------------------------
+   Measured from the owner's charts in WAIN/Bottle types/Label positioning
+   (black zone on each outline). Top-anchored bottles hang the label DOWN
+   from the black zone's TOP line; bottom-anchored build it UP from the
+   zone's BOTTOM line — the label's own real height decides the rest. */
+const LABEL_POS: Record<string, { anchor: "top" | "bottom"; pct: number }> = {
+  "Bordeaux": { anchor: "top", pct: 0.423 },
+  "Bordeaux Prestige": { anchor: "top", pct: 0.433 },
+  "Ice Wine": { anchor: "top", pct: 0.386 },
+  "Burgundy": { anchor: "bottom", pct: 0.093 },
+  "Sparkling": { anchor: "bottom", pct: 0.079 },
+  "Alsace / Rhine": { anchor: "bottom", pct: 0.066 },
+};
+
+function placementLine(b: MarketingBrief, spec: BottleSpec) {
+  const pos = LABEL_POS[b.bottleType] || LABEL_POS["Bordeaux"];
+  const labelH = (b.labelHmm / 10).toFixed(1);
+  const cm = (pos.pct * spec.heightCM).toFixed(1);
+  return pos.anchor === "top"
+    ? `LABEL PLACEMENT — EXACT: the label's TOP edge sits ${cm} cm below the very top of the bottle (${Math.round(pos.pct * 100)}% of its ${spec.heightCM} cm height) and the label runs DOWNWARD from that line by its real ${labelH} cm height. Anchor the TOP edge exactly there — never higher, never lower.`
+    : `LABEL PLACEMENT — EXACT: the label's BOTTOM edge sits ${cm} cm above the base of the bottle (${Math.round(pos.pct * 100)}% of its ${spec.heightCM} cm height) and the label runs UPWARD from that line by its real ${labelH} cm height. Anchor the BOTTOM edge exactly there — never higher, never lower.`;
 }
 
 /* ---- label scale --------------------------------------------------- */
@@ -129,7 +154,8 @@ function bottleDescription(b: MarketingBrief) {
     text:
       `${spec.shape}. ${liquidLine(b.wineColour, b.glassColor)}. ${punt} ` +
       `${closureLine(b.closure, b.closureColour, b.finish)}. ` +
-      scaleLine(b.labelWmm, b.labelHmm, spec),
+      `${scaleLine(b.labelWmm, b.labelHmm, spec)} ` +
+      placementLine(b, spec),
   };
 }
 
@@ -141,8 +167,11 @@ export function buildShotPrompt(b: MarketingBrief, side: "front" | "back", hasSh
     (charter ? `Art director's studio notes (follow their spirit): ${charter} ` : "") +
     `${d.text} ` +
     `The FIRST attached image is the wine's ${side} label — apply it to the bottle EXACTLY as given: identical layout, typography, artwork and colours, ` +
-    `perfectly legible, wrapped naturally onto the glass curvature with subtle realistic paper sheen. Do NOT redraw, reinterpret, crop or add any text. ` +
-    `LABEL PLACEMENT: the label sits LOW on the body — its centre clearly below the body's midpoint, its bottom edge a small distance above the base, as real wine labels sit. Never place it high near the shoulders. ` +
+    `perfectly legible, wrapped naturally onto the glass curvature. Do NOT redraw, reinterpret, crop or add any text. ` +
+    /* round 29 #6: never fake paper grain on the label */
+    `The label surface is SMOOTH flat print — NEVER invent paper grain, fibre or canvas texture on the label; only a subtle sheen where light grazes it. ` +
+    /* round 29 #5: bottle and label must be lit as one object */
+    `ONE LIGHT: the label is lit by exactly the same light as the glass — same direction, same colour temperature, same contrast and shadow fall — so bottle and label read as ONE object photographed together, never as a graphic pasted on afterwards. ` +
     (hasShape
       ? `The SECOND attached image is a technical outline drawing of this exact bottle model — match its GLASS silhouette, proportions, shoulder curve and neck length PRECISELY, but render a real photographed glass bottle, never a drawing. IGNORE the closure/top drawn in the outline — the closure is specified above and OVERRIDES the drawing. `
       : "") +
@@ -183,6 +212,7 @@ export function buildLifestylePrompt(b: MarketingBrief, scenario: string, charte
     `${STYLE_WORLD[b.style] || STYLE_WORLD.contemporary} ` +
     `The wine bottle: ${d.text} ` +
     `The FIRST attached image is the wine's front label — it appears on the bottle EXACTLY as given, legible and true to its colours; never redraw or replace it. ` +
+    `The label is lit by the same scene light as the bottle (one photographed object, never a pasted-on graphic), and its surface is smooth flat print — no invented paper grain or fibre texture. ` +
     (hasShape
       ? `The SECOND attached image is a technical outline of this exact bottle model — the bottle in the photo matches that GLASS silhouette and its proportions precisely (the closure drawn in the outline is irrelevant; the closure specified above overrides it). `
       : "") +

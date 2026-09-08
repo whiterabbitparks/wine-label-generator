@@ -1990,6 +1990,27 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 29 (owner 2026-09-08, 7 items): (1+7) GTIN checksum was
+  rejecting random test numbers → ANY 12/13-digit number is now
+  accepted and drawn; only the final check digit is auto-corrected so
+  the printed EAN scans. Hints: "✓ barcode will be drawn" / "needs 12
+  or 13 digits". (2) LABEL POSITIONING per owner's charts (WAIN/
+  Bottle types/Label positioning — black zone per outline, measured by
+  script): TOP-anchored (label hangs DOWN from the zone's top line):
+  Bordeaux 42.3%, Prestige 43.3%, Ice Wine 38.6% of bottle height;
+  BOTTOM-anchored (built UP from the zone's bottom line): Burgundy
+  9.3%, Sparkling 7.9%, Alsace/Rhine 6.6% above base. engine
+  LABEL_POS + placementLine() convert pct→cm with each spec's height
+  and ride in bottleDescription (shots AND lifestyle); the generic
+  "label sits LOW" line is gone. (3) WAX SEAL spec: MEDIUM height
+  (mouth + upper third of neck), substantial 2–3mm coat that ROUNDS
+  the glass tip's edges, clean slightly-uneven lower edge, no drips.
+  (4) CROWN CAP described as the pressed-steel beer-bottle cap
+  (crimped ~21-flute skirt, flat top) — model kept missing it.
+  (5) ONE LIGHT rule: label lit exactly as the glass — one object,
+  never a pasted graphic (shots + lifestyle). (6) NO PAPER TEXTURE on
+  labels in generated images — smooth flat print, subtle sheen only;
+  contextual scene textures stay fine. Items 3-6 are STANDING RULES.
 - ROUND 28b (owner: "landing page on final pack didn't load"): the
   publish WORKED (Mongo had the docs) — but productUrl lived only in
   React state, so any reload/server-restart made slot 5 forget the

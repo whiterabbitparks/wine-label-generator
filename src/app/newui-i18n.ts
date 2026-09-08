@@ -162,8 +162,8 @@ export const UI_GE: Record<string, string> = {
   "Ingredients uploaded ✓": "ინგრედიენტები ატვირთულია ✓",
   /* round 27: GTIN entry replaced the create/upload barcode buttons */
   "Barcode:": "შტრიხკოდი:",
-  "✓ valid GTIN": "✓ სწორი GTIN-ია",
-  "needs 12 or 13 digits (GS1 checksum)": "საჭიროა 12 ან 13 ციფრი (GS1 საკონტროლო)",
+  "✓ barcode will be drawn": "✓ შტრიხკოდი დაიხატება ეტიკეტზე",
+  "needs 12 or 13 digits": "საჭიროა 12 ან 13 ციფრი",
   "No GTIN yet? Register at gs1.org": "GTIN ჯერ არ გაქვს? დარეგისტრირდი gs1.org-ზე",
   "✓ QR uploaded": "✓ QR ატვირთულია",
   "✓ sketch attached": "✓ ესკიზი მიმაგრებულია",

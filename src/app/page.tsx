@@ -274,13 +274,17 @@ export default function NewUI() {
   const [agree, setAgree] = useState(false);
   const [gallery, setGallery] = useState<{ imgs: string[]; i: number } | null>(null);
   const [warn, setWarn] = useState("");
-  /* ROUND 27: honest barcode — we never invent digits. The winery types its
-     own GS1 GTIN (12 or 13 digits) and we draw it; no GTIN, no barcode. */
+  /* ROUND 27: honest barcode — we never invent digits; the winery types its
+     own number. ROUND 29 #1/#7: any 12- or 13-digit number is ACCEPTED and
+     drawn (testing with random digits must work) — we only auto-correct the
+     final check digit so the printed EAN actually scans. */
   const [gtin, setGtin] = useState("");
-  const gtinNorm = (() => { const d = gtin.replace(/\D/g, ""); return d.length === 12 ? "0" + d : d; })();
-  const gtinValid = gtinNorm.length === 13 && (() => {
-    let s = 0; for (let i = 0; i < 12; i++) s += +gtinNorm[i] * (i % 2 ? 3 : 1);
-    return (10 - (s % 10)) % 10 === +gtinNorm[12];
+  const gtinValid = (() => { const d = gtin.replace(/\D/g, ""); return d.length === 12 || d.length === 13; })();
+  const gtinNorm = (() => {
+    if (!gtinValid) return "";
+    const data = gtin.replace(/\D/g, "").slice(0, 12);
+    let s = 0; for (let i = 0; i < 12; i++) s += +data[i] * (i % 2 ? 3 : 1);
+    return data + ((10 - (s % 10)) % 10);
   })();
   const [qrMode, setQrMode] = useState<"" | "create" | "upload">("");
   /* live font metrics of 'italic 15px HNW' (per-browser; Safari ≠ Chrome) */
@@ -924,7 +928,7 @@ export default function NewUI() {
           {rowLine(252, 502.5, 243.3, "gtln")}
           {gtin.trim() && (
             <span style={{ ...px(252, 518, 320, 16), font: `11px ${HNW}`, lineHeight: "16px", color: gtinValid ? "#3f6d2a" : "#8e2b2b" }}>
-              {gtinValid ? t("✓ valid GTIN") : t("needs 12 or 13 digits (GS1 checksum)")}
+              {gtinValid ? t("✓ barcode will be drawn") : t("needs 12 or 13 digits")}
             </span>
           )}
           {(lang === "ge"
