@@ -1990,6 +1990,15 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 28b (owner: "landing page on final pack didn't load"): the
+  publish WORKED (Mongo had the docs) — but productUrl lived only in
+  React state, so any reload/server-restart made slot 5 forget the
+  page forever (productCode is random per session). FIX: on publish
+  the code is saved to localStorage 'nui-product-code'; on mount it
+  is restored, RE-VERIFIED via GET /api/product, and only then shown
+  — the same code is also reused for future publishes (one page per
+  browser until real accounts exist). &pp= dev-aid skips the restore.
+  Contributing cause (again): prod restarts while the owner tests.
 - ROUND 28 (owner 2026-09-08, 5 items): (1) "Barcode:" label (700 15px,
   matching the baked st3 form labels) before the GTIN input; input
   moved to x252 — the GEORGIAN label is ~40px wider and must never
