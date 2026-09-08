@@ -49,6 +49,15 @@ export async function POST(req: Request) {
   const charters = await loadMarketingCharters(brief.style);
   const sig = JSON.stringify({ ...brief, f: hash(front), b: back ? hash(back) : "", cl: hash(charters.life), cs: hash(charters.shots) });
 
+  /* diagnostic dry run (owner 2026-09-07): returns the exact lifestyle
+     prompt WITHOUT generating — proves whether charters reach the model */
+  if ((body as { dryRun?: boolean }).dryRun) {
+    const { buildLifestylePrompt, dealScenarios } = await import("@/lib/marketing/engine");
+    const sc = dealScenarios(brief.seed)[0];
+    const prompt = buildLifestylePrompt(brief, sc[1], charters.life, true);
+    return new Response(JSON.stringify({ charters: { life: charters.life.length, shots: charters.shots.length }, promptStart: prompt.slice(0, 700) }), { headers: { "Content-Type": "application/json" } });
+  }
+
   const enc = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {

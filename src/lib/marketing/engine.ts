@@ -269,6 +269,9 @@ export async function generateMarketingAssets(
 ): Promise<void> {
   const final = imageQuality() === "prod";
   const { life: charter, shots: shotCharter } = charters || await loadMarketingCharters(b.style);
+  /* ops visibility (owner escalation 2026-09-07: "references have no
+     influence") — every run states what steering it actually carries */
+  console.log(`[marketing] style=${b.style} lifeCharter=${charter.length}ch shotCharter=${shotCharter.length}ch seed=${b.seed}`);
 
   /* the owner's line-art drawing of the chosen bottle rides along as a
      silhouette spec (round 14 #4) */

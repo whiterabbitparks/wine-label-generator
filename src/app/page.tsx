@@ -188,6 +188,7 @@ export default function NewUI() {
   const [arrowFly, setArrowFly] = useState(false);
 
   const [vision, setVision] = useState("");
+  const [ideaN, setIdeaN] = useState(0);
   const [sketch, setSketch] = useState<string | null>(null);
   const [f, setF] = useState<Record<string, string>>({ width: "110", height: "80" });
   const [dreams, setDreams] = useState<Dream[]>([]);
@@ -363,7 +364,10 @@ export default function NewUI() {
     ORDER.forEach((p) => {
       fetch(`/newui/${p}.svg`).then((r) => r.text()).then((t) =>
         {
-          const processed = namespaceSvg(t, p).replace(/<\?xml[^>]*\?>/, "").replace(/<svg /, '<svg preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%" ');
+          const processed = namespaceSvg(t, p).replace(/<\?xml[^>]*\?>/, "").replace(/<svg /, '<svg preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%" ')
+            /* Mtavruli titles: HNW lacks Georgian capitals — Apple's own
+               Helvetica Neue supplies them seamlessly (round 24 #1) */
+            .replace(/'Helvetica Neue World'/g, "'Helvetica Neue World','Helvetica Neue'");
           setBoards((m) => ({ ...m, [p]: processed }));
           setBoardsGe((m) => ({ ...m, [p]: translateSvg(processed) }));
         }
@@ -583,7 +587,7 @@ export default function NewUI() {
   const miniGlass = (key: string, fill: number) => (
     /* 15% bigger downwards: top edge stays (marginTop compensates the
        flex-centring shift) — round 19 */
-    <svg key={key} viewBox="215 95 170 315" width="18" style={{ display: "block", marginTop: 3 }}>
+    <svg key={key} viewBox="215 95 170 315" width="22" style={{ display: "block", marginTop: 4 }}>
       <defs>
         <clipPath id={`mg-${key.replace(/[^a-z0-9]/gi, "")}`}>
           <rect x="230" y={266.6 - fill * 95} width="140" height={fill * 95 + 4}
@@ -661,8 +665,10 @@ export default function NewUI() {
           <span style={{ ...px(1178, 422, 110, 15), font: `11px ${HNW}`, color: "#111", textAlign: "right" }}>{vision.trim() ? vision.trim().split(/\s+/).length : 0} / 300 {t("words")}</span>
           <textarea value={vision} onChange={(e) => setVision(e.target.value)} maxLength={2200}
             style={{ ...px(148, 246, 1144, 168), ...inputStyle, fontStyle: "normal", textDecoration: "none", resize: "none", lineHeight: 1.5, overflow: "auto", background: "transparent" }} />
-          <button title="Give me an idea" onClick={() => setVision(IDEAS[Math.floor(Math.random() * IDEAS.length)])}
-            style={{ ...px(960, 480, 342.9, 34.3), ...ghost }} />
+          <button onClick={() => { setVision(IDEAS[Math.floor(Math.random() * IDEAS.length)]); setIdeaN((n) => n + 1); }}
+            style={{ ...px(960, 480, 342.9, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
+            {ideaN ? t("Next idea") : t("Give me an idea")}
+          </button>
           <label style={{ ...px(137.1, 480, 342.9, 34.3), cursor: "pointer" }}>
             <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
               const file = e.target.files?.[0]; if (!file) { setSketch(null); return; }
@@ -768,14 +774,17 @@ export default function NewUI() {
               </g>
             </svg>
           </div>
+          {/* round 24 #4: phrase centred on the glass axis, dots on their own
+              row below, note one more row down */}
           <span style={{ ...px(0, 492, W, 20), font: `15px ${HNW}`, textAlign: "center", display: "block" }}>
             {t("Designing your label")}
+          </span>
+          <span style={{ ...px(0, 520, W, 18), font: `16.5px ${HNW}`, letterSpacing: 2.2, textAlign: "center", display: "block", lineHeight: "12px" }}>
             {[0, 1, 2].map((d) => (
               <span key={d} style={{ animation: `nuiDot 1.2s ${d * 0.2}s infinite` }}>.</span>
             ))}
           </span>
-          {/* round 9 #2 */}
-          <span style={{ ...px(0, 520, W, 18), font: `italic 13px ${HNW}`, color: "#555", textAlign: "center", display: "block" }}>
+          <span style={{ ...px(0, 548, W, 18), font: `italic 13px ${HNW}`, color: "#555", textAlign: "center", display: "block" }}>
             {t("Please stay on this page — preparing your labels usually takes 15–35 seconds.")}
           </span>
         </>);
@@ -851,13 +860,16 @@ export default function NewUI() {
           {/* round 22 #6: price line — in GEO it lives inside the translated
               baked note; EN gets it as a 4th live line */}
           {lang === "en" && (
-            <span style={{ ...px(138.7, 611.8 - 12.9, 400, 16), font: `13px ${HNW}`, color: "#111", lineHeight: "16px" }}>GTIN Barcode price - $100.</span>
+            <span style={{ ...px(138.7, 611.8 - 12.9, 400, 16), font: `13px ${HNW}`, color: "#111", lineHeight: "16px" }}>GTIN Barcode price - $99.</span>
           )}
           {/* round 22 #7: the QR note is OUTLINED in the artboard — covered
               and rendered live so it translates, plus the price line */}
           {patch(748, 542, 400, 64, "qrnote")}
-          {["If you don't have a QR code, we'll generate", "one and link it to a dedicated page with your wine's", "ingredients, nutrition, and product information.", "Price of a QR Code & Product Web Page - $50."].map((ln, i) => (
-            <span key={i} style={{ ...px(752.4, 557.83 + i * 18 - 12.9, 400, 16), font: `13px ${HNW}`, color: "#111", lineHeight: "16px", whiteSpace: "nowrap" }}>{t(ln)}</span>
+          {(lang === "ge"
+            ? ["უნიკალური QR კოდი და პროდუქტის ვებ-გვერდი ინგრედიენტებით.", "ფასი - $29"]
+            : ["If you don't have a QR code, we'll generate", "one and link it to a dedicated page with your wine's", "ingredients, nutrition, and product information.", "Price of a QR Code & Product Web Page - $29."]
+          ).map((ln, i) => (
+            <span key={i} style={{ ...px(752.4, 557.83 + i * 18 - 12.9, 400, 16), font: `13px ${HNW}`, color: "#111", lineHeight: "16px", whiteSpace: "nowrap" }}>{ln}</span>
           ))}
           {/* round 8 #5: all four buttons start WHITE; the clicked mode
               (create, or upload once a file is picked) stays black */}

@@ -92,12 +92,17 @@ export async function POST(req: Request) {
                 "apply to ANY bottle. STRICTLY FORBIDDEN: describing any specific bottle shape, label, brand or " +
                 "text visible in the references, and any background/surface description (shots are cutouts)."
               : "You are an advertising photography analyst. You receive reference photographs for wine " +
-                "promotional imagery. Describe their SHARED WORLD as a compact art-direction guide (max 110 " +
-                "words) for future photo shoots: the kinds of settings and props, the light (time of day, " +
-                "hard/soft, warm/cool), colour grading and mood, framing and depth-of-field habits, how staged " +
-                "or candid the scenes feel, how people appear (if they do). Speak in general terms a " +
-                "photographer could apply to NEW scenes. STRICTLY FORBIDDEN: describing any specific bottle, " +
-                "label, brand or text visible in the references.",
+                "promotional imagery. Your ONLY job is to capture what makes THIS board DIFFERENT from " +
+                "generic wine photography (max 110 words, commanding art direction for NEW scenes). " +
+                "STOCK VOCABULARY IS BANNED unless truly and unusually dominant here: 'soft warm lighting', " +
+                "'earthy tones', 'natural minimalistic', 'shallow depth of field', 'rustic wood', 'organic " +
+                "elements', 'authentic', 'inviting atmosphere'. Instead be CONCRETE and SPECIFIC: name the " +
+                "actual palette (exact colours), the actual locations/settings shown, distinctive recurring " +
+                "props or surfaces, the light's true character (hard flash? neon? dusk? fog? overcast? " +
+                "colour casts?), composition habits (centred/cropped/tilted/chaotic/negative space), " +
+                "film/grain/texture qualities, era or subculture feeling, how people appear. If the board " +
+                "is eclectic, say which few directions it splits into. STRICTLY FORBIDDEN: describing any " +
+                "specific bottle, label, brand or text visible in the references.",
           },
           { role: "user", content: [{ type: "text", text: "The reference photographs:" }, ...images] },
         ],

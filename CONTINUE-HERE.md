@@ -1990,6 +1990,26 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 24 (owner 2026-09-07, 7 items): (1) GEO page titles in
+  MTAVRULI — HNW has ZERO Georgian capitals, but Apple's system
+  Helvetica Neue has all 43, so board CSS font stacks gain
+  ',Helvetica Neue' (board processing) and title dict values use
+  U+1C90 codepoints (deploy note: non-Mac servers need a Mtavruli
+  fallback). (2) idea button is a live styled button flipping to
+  "Next idea"/"შემდეგი იდეა" (ideaN state). (3) GEO QR note = owner's
+  2 lines, price $29 both languages. (7) barcode price $99 both
+  languages. (4) loader: phrase / dots row (y520) / stay-note (y548).
+  (5) mini glasses 22px. (6) REFERENCES-NO-INFLUENCE ROOT CAUSE
+  (third escalation): the pipeline was PROVEN fine via the new
+  dryRun mode (POST marketing-assets {dryRun:true} returns charter
+  sizes + prompt head; engine logs [marketing] charter lengths) — the
+  CHARTERS THEMSELVES were generic (the analyst distilled the boards
+  into stock wine-photo language ≈ the default output). Analyst
+  rewritten (stock vocabulary banned, concrete palettes/settings/
+  light/era demanded — the dream-charter medicine) and all three
+  boards re-derived (punk needed its editedAt lock cleared — a Save
+  click had frozen it). New charters are distinctive; sig change
+  busts old caches.
 - ROUND 22 (owner 2026-09-07, 13 GEO refinements): reworded vision
   intro/upload button/front intro/loader note (საშუალოდ 30 წამი);
   placeholders stay ENGLISH in GEO (entries dropped); Ice Wine →
