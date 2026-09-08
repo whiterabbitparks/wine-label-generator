@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:i="http://ns.adobe.com/AdobeIllustrator/10.0/" version="1.1" viewBox="0 0 1440 822.86">
+  <!-- Generator: Adobe Illustrator 30.3.0, SVG Export Plug-In . SVG Version: 2.1.3 Build 182)  -->
+  <defs>
+    <style>
+      .st0 {
+        letter-spacing: 0em;
+      }
+
+      .st0, .st1 {
+        font-family: HelveticaNeueWorld-55Roman, 'Helvetica Neue World';
+      }
+
+      .st2, .st3, .st4 {
+        font-family: HelveticaNeueWorld-75Bold, 'Helvetica Neue World';
+        font-weight: 700;
+      }
+
+      .st3, .st5 {
+        font-size: 24.27px;
+      }
+
+      .st6, .st7, .st8 {
+        stroke: #000;
+        stroke-miterlimit: 10;
+      }
+
+      .st6, .st8 {
+        fill: none;
+      }
+
+      .st5, .st4 {
+        isolation: isolate;
+      }
+
+      .st5, .st1 {
+        fill: #fff;
+      }
+
+      .st4 {
+        font-size: 15px;
+      }
+
+      .st1 {
+        font-size: 11px;
+      }
+
+      .st8 {
+        stroke-width: 3px;
+      }
+    </style>
+  </defs>
+  <rect x="0" width="1440" height="68.57"/>
+  
+  
+  <g>
+    <g>
+      <line class="st6" x1="137.14" y1="128.47" x2="137.14" y2="144.95"/>
+      <line class="st6" x1="145.38" y1="137.14" x2="128.9" y2="137.14"/>
+    </g>
+    <g>
+      <line class="st6" x1="1302.86" y1="677.05" x2="1302.86" y2="693.54"/>
+      <line class="st6" x1="1311.1" y1="685.73" x2="1294.62" y2="685.73"/>
+    </g>
+    <g>
+      <line class="st6" x1="1302.86" y1="128.47" x2="1302.86" y2="144.95"/>
+      <line class="st6" x1="1311.1" y1="137.14" x2="1294.62" y2="137.14"/>
+    </g>
+    <g>
+      <line class="st6" x1="137.14" y1="677.05" x2="137.14" y2="693.54"/>
+      <line class="st6" x1="145.38" y1="685.73" x2="128.9" y2="685.73"/>
+    </g>
+  </g>
+  
+  
+  
+  
+  <line class="st6" x1="137.14" y1="754.16" x2="1303.41" y2="754.16"/>
+  <circle class="st7" cx="142.06" cy="754.16" r="4.92"/>
+  <circle class="st7" cx="1297.94" cy="754.16" r="4.92"/>
+  <circle class="st7" cx="720.28" cy="754.16" r="4.92"/>
+  <g>
+    <line class="st8" x1="103.41" y1="754.29" x2="69.14" y2="754.29"/>
+    <polyline class="st8" points="79.66 743.77 69.14 754.29 79.66 764.81"/>
+  </g>
+  <line class="st8" x1="1297.94" y1="754.16" x2="142.06" y2="754.16"/>
+  
+  <g>
+    <g>
+      <line class="st6" x1="137.14" y1="128.47" x2="137.14" y2="144.95"/>
+      <line class="st6" x1="145.38" y1="137.14" x2="128.9" y2="137.14"/>
+    </g>
+    <g>
+      <line class="st6" x1="411.43" y1="677.05" x2="411.43" y2="693.54"/>
+      <line class="st6" x1="419.67" y1="685.73" x2="403.19" y2="685.73"/>
+    </g>
+    <g>
+      <line class="st6" x1="411.43" y1="128.47" x2="411.43" y2="144.95"/>
+      <line class="st6" x1="419.67" y1="137.14" x2="403.19" y2="137.14"/>
+    </g>
+    <g>
+      <line class="st6" x1="1302.86" y1="677.05" x2="1302.86" y2="693.54"/>
+      <line class="st6" x1="1311.1" y1="685.73" x2="1294.62" y2="685.73"/>
+    </g>
+    <g>
+      <line class="st6" x1="1302.86" y1="128.47" x2="1302.86" y2="144.95"/>
+      <line class="st6" x1="1311.1" y1="137.14" x2="1294.62" y2="137.14"/>
+    </g>
+    <g>
+      <line class="st6" x1="137.14" y1="677.05" x2="137.14" y2="693.54"/>
+      <line class="st6" x1="145.38" y1="685.73" x2="128.9" y2="685.73"/>
+    </g>
+  </g>
+  
+  
+  
+  
+  
+  
+</svg>

@@ -1990,6 +1990,37 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 26 (owner 2026-09-08, 4 items): (1)+(bis) barcode note was
+  baked larger than the QR note in BOTH languages — covered
+  (patch 136,542,440,66) and re-rendered live at the same 13px with
+  the $99 price line, EN 4 lines / GEO 3 lines. (2) assets loader
+  headline GEO: "თქვენი სამარკეტინგო მასალა მუშავდება". (3) PRODUCT
+  PAGE BUILT from WAIN/NEW UI/Product Page (3 artboards → chrome-only
+  boards in public/newui/product/{about,ingredients,gallery}.svg —
+  <text> AND all 170 outlined-glyph <path>s stripped; chrome is pure
+  line/circle/rect/polyline, each board bakes its own active dot +
+  arrow state). /p/[code] (force-dynamic, Mongo products collection)
+  renders the snapshot POSTed by the wizard to /api/product at the
+  moment the marketing assets finish when Create QR is on: 20 wine
+  fields, description, ingredients (placeholder nutrition rows until
+  the upload feeds it), front/back shots, 5 lifestyle images in the
+  artboard mosaic (409.6 big + 4× 204.8) with a lightbox. Sections
+  slide with the wizard's 3-band parallax. TRAPS FOUND: (a) NEVER use
+  a <main> tag on new pages — configurator.css styles main with
+  padding 44px 40px 100px and shifts every hit zone (use a div);
+  (b) HNW's font bounding box is ~1.66× the font size — an
+  overflow:hidden span tighter than that clips text AT THE BASELINE
+  and eats underlines (value rows use height 26 for 15px text).
+  (4) sections navigate by arrows AND clicks on the progress-bar
+  words (ghost buttons over the baked words at y788.56).
+  Checkout slot 5 (per the owner's reference screenshot): browser
+  frame at (1112,273,178×116) — traffic lights + URL pill — with the
+  LIVE product page in a 0.1236-scaled iframe, soft drop shadow, the
+  /api/qr PNG (margin 0) at (1112,399,36) and the italic underlined
+  link below. Dev aids: /?page=checkout&pp=<code> previews slot 5
+  without a paid run; POST /api/product seeds a test page (demotest1
+  exists). QR still encodes placeholder domain 8klabels.com — decide
+  the real domain BEFORE any customer prints.
 - ROUND 24 (owner 2026-09-07, 7 items): (1) GEO page titles in
   MTAVRULI — HNW has ZERO Georgian capitals, but Apple's system
   Helvetica Neue has all 43, so board CSS font stacks gain

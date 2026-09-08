@@ -173,8 +173,12 @@ export default function NewUI() {
   const [page, setPage] = useState<PageKey>("welcome");
   /* dev aid: /?page=bottle jumps straight to a page (no generation needed) */
   useEffect(() => {
-    const q = new URLSearchParams(window.location.search).get("page");
+    const sp = new URLSearchParams(window.location.search);
+    const q = sp.get("page");
     if (q && (ORDER as readonly string[]).includes(q)) setPage(q as PageKey);
+    /* dev aid: &pp=<code> previews the final-pack product-page slot */
+    const pp = sp.get("pp");
+    if (pp) setProductUrl(`/p/${pp.replace(/[^a-z0-9]/gi, "")}`);
   }, []);
   const [prev, setPrev] = useState<PageKey | null>(null);
   /* ENG/GEO (owner 2026-09-07): translates overlays AND baked board text */
@@ -201,6 +205,7 @@ export default function NewUI() {
   const [qrImg, setQrImg] = useState("");
   /* ingredients text file for the future QR landing page (owner 2026-09-07) */
   const [ingredients, setIngredients] = useState("");
+  const [productUrl, setProductUrl] = useState("");
   const [backPng, setBackPng] = useState("");
   const [backPayload, setBackPayload] = useState<Record<string, unknown> | null>(null);
   const [backSig, setBackSig] = useState("");
@@ -297,6 +302,7 @@ export default function NewUI() {
     const sig = JSON.stringify({ fs: frontSig, bs: backSig, bottle, rgb: wheel.rgb, shade, sel: sel.style });
     assetsRunning.current = true;
     (async () => {
+      const got = { front: "", back: "", life: [] as string[] };
       try {
         setAssets({ life: [] });
         assetT.current = { run: Date.now(), stage: Date.now() };
@@ -332,11 +338,37 @@ export default function NewUI() {
             if (!line) continue;
             const m = JSON.parse(line);
             if (m.type === "progress") { assetT.current.stage = Date.now(); setAssetsStage(m.stage || ""); }
-            else if (m.type === "shot") setAssets((a) => ({ ...a, [m.side]: { full: m.image, prev: m.preview || m.image } }));
-            else if (m.type === "life") setAssets((a) => { const life = [...a.life]; life[m.i] = { full: m.image, prev: m.preview || m.image }; return { ...a, life }; });
+            else if (m.type === "shot") { if (m.side === "front") got.front = m.preview || m.image; else got.back = m.preview || m.image; setAssets((a) => ({ ...a, [m.side]: { full: m.image, prev: m.preview || m.image } })); }
+            else if (m.type === "life") { got.life[m.i] = m.preview || m.image; setAssets((a) => { const life = [...a.life]; life[m.i] = { full: m.image, prev: m.preview || m.image }; return { ...a, life }; }); }
           }
         }
         setAssetsSig(sig);
+        /* PRODUCT PAGE snapshot (owner 2026-09-08): QR requested → publish
+           /p/<code> from everything known at this moment */
+        if (qrMode === "create") {
+          try {
+            const fx2 = (k: string) => f[k]?.trim() || DEMO_FRONT[k] || "";
+            const r2 = await fetch("/api/product", {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                code: productCode.current,
+                wine: {
+                  producer: fx2("producer"), wine: fx2("wine"), appellation: fx2("appellation"),
+                  classification: fx2("classification"), vintage: fx2("vintage"), grape: fx2("grape"),
+                  regionCountry: fx2("regionCountry"), special: fx2("special"), sweetness: fx2("sweetness"),
+                  colour: fx2("colour"), wineType: fx2("wineType"), alcohol: fx2("alcohol"), volume: fx2("volume"),
+                  producerCompany: b.producerCompany || "", producerAddress: b.producerAddress || "",
+                  importer: b.importer || "", importerAddress: b.importerAddress || "",
+                  bottlingDate: b.bottlingDate || "", lot: b.lot || "", web: b.web || "",
+                },
+                description: b.description || "",
+                ingredients,
+                images: { front: got.front, back: got.back, life: got.life.filter(Boolean) },
+              }),
+            });
+            if (r2.ok) setProductUrl(`/p/${productCode.current}`);
+          } catch { /* page can be published on a later pass */ }
+        }
       } catch { /* placeholders remain; revisiting the page retries */ }
       setAssetsStage("");
       assetsRunning.current = false;
@@ -857,11 +889,16 @@ export default function NewUI() {
               </span>
             );
           })}
-          {/* round 22 #6: price line — in GEO it lives inside the translated
-              baked note; EN gets it as a 4th live line */}
-          {lang === "en" && (
-            <span style={{ ...px(138.7, 611.8 - 12.9, 400, 16), font: `13px ${HNW}`, color: "#111", lineHeight: "16px" }}>GTIN Barcode price - $99.</span>
-          )}
+          {/* round 26 #1: the baked barcode note renders larger than the QR
+              note — covered and re-rendered live at the same 13px, both
+              languages (price line included) */}
+          {patch(136, 542, 440, 66, "bcnote")}
+          {(lang === "ge"
+            ? ["თუ შტრიხკოდი არ გაქვთ, ჩვენ მოგაწვდით", "ოფიციალურ GTIN შტრიხკოდს და დავიტანთ ეტიკეტზე.", "GTIN შტრიხკოდის ფასი - $99."]
+            : ["If you don't have a barcode, we'll provide", "an official GTIN barcode and integrate it", "into your back label.", "GTIN Barcode price - $99."]
+          ).map((ln, i) => (
+            <span key={"bc" + i} style={{ ...px(138.7, 557.83 + i * 18 - 12.9, 440, 16), font: `13px ${HNW}`, color: "#111", lineHeight: "16px", whiteSpace: "nowrap" }}>{ln}</span>
+          ))}
           {/* round 22 #7: the QR note is OUTLINED in the artboard — covered
               and rendered live so it translates, plus the price line */}
           {patch(748, 542, 400, 64, "qrnote")}
@@ -1170,7 +1207,23 @@ export default function NewUI() {
               {box(925.71, 273.84, 137.9, 137.9, assets.life[heroAsset], "Context", "cover", lifeG)}
               {[925.71, 963.75, 1001.89, 1040.03].map((tx, k) =>
                 box(tx, 422.44, 25.1, 25.1, assets.life[others[k]], "", "cover", lifeG))}
-              {box(1112, 284, 176, 150, undefined, "Landing Page", "cover")}
+              {productUrl ? (
+                <span key="pp">
+                  {/* browser-framed live page (owner's reference: soft shadow,
+                      traffic lights, URL bar), QR and the link below */}
+                  <div style={{ ...px(1112, 273, 178, 116), background: "#fff", borderRadius: 5, boxShadow: "0 10px 26px rgba(0,0,0,0.22)", overflow: "hidden" }}>
+                    <div style={{ height: 13, background: "#E8E8E6", display: "flex", alignItems: "center", gap: 3, padding: "0 6px" }}>
+                      {["#FF5F57", "#FEBC2E", "#28C840"].map((c) => <span key={c} style={{ width: 4.5, height: 4.5, borderRadius: 3, background: c }} />)}
+                      <span style={{ flex: 1, margin: "0 8px", height: 7, background: "#fff", borderRadius: 3, font: `5px ${HNW}`, color: "#999", paddingLeft: 4, lineHeight: "7px" }}>8klabels.com{productUrl}</span>
+                    </div>
+                    <iframe src={productUrl} title="product page" style={{ width: W, height: 823, transform: "scale(0.1236)", transformOrigin: "0 0", border: 0, pointerEvents: "none" }} />
+                  </div>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={`/api/qr?u=${encodeURIComponent(`https://8klabels.com${productUrl}`)}`} alt="QR"
+                    style={{ ...px(1112, 399, 36, 36) }} />
+                  <a href={productUrl} target="_blank" style={{ ...px(1112, 442, 190, 14), font: `italic 11px ${HNW}`, color: "#111", textDecoration: "underline" }}>8klabels.com{productUrl}</a>
+                </span>
+              ) : box(1112, 284, 176, 150, undefined, "Landing Page", "cover")}
             </>);
           })()}
           {/* round 8 #11/#15: the whole pricing block re-rendered 20.5px

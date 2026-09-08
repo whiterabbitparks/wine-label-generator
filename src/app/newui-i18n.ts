@@ -170,7 +170,7 @@ export const UI_GE: Record<string, string> = {
   "Two Product Shots": "ორი პროდუქტის ფოტო",
   "Five Marketing Images": "ხუთი სამარკეტინგო ფოტო",
   "please stay on the page.": "გთხოვთ, დარჩეთ გვერდზე.",
-  "Creating your marketing assets": "თქვენი სამარკეტინგო მასალა იქმნება",
+  "Creating your marketing assets": "თქვენი სამარკეტინგო მასალა მუშავდება",
   "Select a front label first — assets are built from it.": "ჯერ აირჩიეთ წინა ეტიკეტი — მასალა მისგან იქმნება.",
   "Shot: Face": "ფოტო: წინა",
   "Shot: Back": "ფოტო: უკანა",
