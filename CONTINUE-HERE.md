@@ -1990,6 +1990,28 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 31 (owner, 4th refs escalation: "images look NOTHING like the
+  references"): ROOT CAUSE was STRUCTURAL, not prompt wording — the
+  five lifestyle scenes always came from our own fixed generic
+  scenario list (sommelier/pour/grapes/cellar/…); the charter only
+  coloured them, so the boards' actual stories could never appear.
+  NOW: analyze also distills EACH board image into one concrete SCENE
+  (setting, story/action, props, light, framing — 25-45 words, brand/
+  label/faces banned) → settings marketing-scenes-<style> (re-derived
+  on every analyze, no edit-lock). dealScenarios(seed, boardScenes)
+  deals the 5 lifestyle images FROM THE BOARD when scenes exist
+  (cycling if fewer than 5); the generic list is only the no-board
+  fallback. Board-led prompts: scene leads ("RECREATE its setting,
+  story, action… with THIS bottle as the hero"), STYLE_WORLD is
+  DROPPED, charter stays as art direction. ORIENTATION conflict
+  resolved openly: board scenes may pose the bottle as the reference
+  shows (even lying) but the LABEL must always read correctly;
+  generic scenes keep the strict upright rule. Cache sig + dryRun
+  carry scenes (fromBoard flag). All three boards re-derived
+  (traditional 10 / contemporary 13 / punk 9 scenes); the
+  owner-disliked frozen traditional charter ("Command new scenes
+  capturing contrasts") was UNLOCKED (editedAt cleared) and
+  re-derived fresh.
 - ROUND 30 (owner 2026-09-08, 6 items): (1) BACK-LABEL INK RULE
   (standing): ground darker than 50% grey (luma<128) → ALL layout ink
   (texts, rules, By-brand row) flips WHITE via one <g fill> wrapper;

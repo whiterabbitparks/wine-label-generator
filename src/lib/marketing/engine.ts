@@ -205,20 +205,27 @@ const STYLE_WORLD: Record<string, string> = {
     "Setting and styling are RAW and natural: candid unpolished scenes, natural-wine bar energy, honest daylight, real textures — concrete, worn wood, skin, paper — nothing staged-looking, a free documentary feel.",
 };
 
-export function buildLifestylePrompt(b: MarketingBrief, scenario: string, charter: string, hasShape: boolean) {
+export function buildLifestylePrompt(b: MarketingBrief, scenario: string, charter: string, hasShape: boolean, fromBoard = false) {
   const d = bottleDescription(b);
   return (
-    `Photorealistic promotional lifestyle photograph for a wine brand: ${scenario}. ` +
+    /* round 31: a board-derived scene LEADS — recreate the reference's own
+       story with OUR bottle; the generic style world stays out of its way */
+    (fromBoard
+      ? `Photorealistic promotional lifestyle photograph for a wine brand. THE SCENE (taken from the brand's own reference imagery — RECREATE its setting, story, action and atmosphere faithfully, with THIS wine bottle as the hero; interpret small details freely but keep what the scene IS): ${scenario}. `
+      : `Photorealistic promotional lifestyle photograph for a wine brand: ${scenario}. `) +
     /* the owner's reference-derived charter LEADS the prompt (early tokens
        weigh most) and explicitly outranks the generic style world */
     (charter ? `ART DIRECTION — this brand's photographic world, follow it CLOSELY in setting, props, light, colour grading and styling (it overrides any generic defaults below): ${charter} ` : "") +
-    `${STYLE_WORLD[b.style] || STYLE_WORLD.contemporary} ` +
+    (fromBoard ? "" : `${STYLE_WORLD[b.style] || STYLE_WORLD.contemporary} `) +
     `The wine bottle: ${d.text} ` +
     `The FIRST attached image is the wine's front label — it appears on the bottle EXACTLY as given, legible and true to its colours; never redraw or replace it. ` +
     `The label is lit by the same scene light as the bottle (one photographed object, never a pasted-on graphic), and its surface is smooth flat print — no invented paper grain or fibre texture. ` +
-    /* round 30 #3: a lifestyle image came out with a horizontal bottle and
-       a sideways label — orientation is now explicit */
-    `ORIENTATION — NON-NEGOTIABLE: the bottle STANDS UPRIGHT (vertical) in the scene — never lying down, never horizontal; if wine is being poured the bottle tilts naturally in the hand but is never flat. The label always reads upright and horizontal — never sideways, never rotated, never upside down. ` +
+    /* round 30 #3 / round 31: in a board scene the bottle poses as the
+       owner's reference shows (even lying) — but the label must ALWAYS
+       read correctly; generic scenes keep the strict upright rule */
+    (fromBoard
+      ? `ORIENTATION: pose the bottle as the scene describes — standing, held, or lying if the scene says so — but the LABEL always faces the camera and reads correctly: never sideways, never rotated, never upside down, never mirrored. `
+      : `ORIENTATION — NON-NEGOTIABLE: the bottle STANDS UPRIGHT (vertical) in the scene — never lying down, never horizontal; if wine is being poured the bottle tilts naturally in the hand but is never flat. The label always reads upright and horizontal — never sideways, never rotated, never upside down. `) +
     (hasShape
       ? `The SECOND attached image is a technical outline of this exact bottle model — the bottle in the photo matches that GLASS silhouette and its proportions precisely (the closure drawn in the outline is irrelevant; the closure specified above overrides it). `
       : "") +
@@ -227,13 +234,20 @@ export function buildLifestylePrompt(b: MarketingBrief, scenario: string, charte
   );
 }
 
-/* seeded scenario deal — full coverage before repeats, stable per seed */
-export function dealScenarios(seed: number): [string, string][] {
-  const arr = [...SCENARIOS];
+/* seeded scenario deal — full coverage before repeats, stable per seed.
+   round 31: when the owner's board yielded scenes, deal from THOSE —
+   the generic list is only the no-board fallback. */
+export function dealScenarios(seed: number, boardScenes?: string[]): { text: string; fromBoard: boolean }[] {
   let s = seed >>> 0;
   const rnd = () => ((s = (Math.imul(s, 1664525) + 1013904223) >>> 0) / 2 ** 32);
-  for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
-  return arr.slice(0, 5);
+  const shuffle = <T,>(a: T[]) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  if (boardScenes && boardScenes.length) {
+    const arr = shuffle([...boardScenes]);
+    const out: { text: string; fromBoard: boolean }[] = [];
+    for (let i = 0; i < 5; i++) out.push({ text: arr[i % arr.length], fromBoard: true });
+    return out;
+  }
+  return shuffle([...SCENARIOS]).slice(0, 5).map(([, text]) => ({ text, fromBoard: false }));
 }
 
 /* ---- final sizing --------------------------------------------------- */
@@ -287,13 +301,17 @@ export interface AssetEvent {
 /* charters loaded ONCE per request — the route also hashes them into the
    cache signature, so editing a board busts stale cached sets (owner bug
    2026-09-07: new references changed nothing because the cache replayed) */
-export async function loadMarketingCharters(style: string): Promise<{ life: string; shots: string }> {
+export async function loadMarketingCharters(style: string): Promise<{ life: string; shots: string; scenes: string[] }> {
   try {
     const db = await getDb();
     const c = (await db.collection("settings").findOne({ _id: `marketing-charter-${style}` } as never)) as { text?: string } | null;
     const sc = (await db.collection("settings").findOne({ _id: "marketing-charter-shots" } as never)) as { text?: string } | null;
-    return { life: c?.text || "", shots: sc?.text || "" };
-  } catch { return { life: "", shots: "" }; }
+    /* round 31: per-image SCENES derived from the owner's board — when
+       present, the five lifestyle images are dealt from THESE, not from
+       the generic scenario list */
+    const sn = (await db.collection("settings").findOne({ _id: `marketing-scenes-${style}` } as never)) as { list?: string[] } | null;
+    return { life: c?.text || "", shots: sc?.text || "", scenes: Array.isArray(sn?.list) ? sn!.list!.filter(Boolean) : [] };
+  } catch { return { life: "", shots: "", scenes: [] }; }
 }
 
 export async function generateMarketingAssets(
@@ -301,13 +319,13 @@ export async function generateMarketingAssets(
   frontLabel: string,
   backLabel: string | null,
   send: (e: AssetEvent) => void,
-  charters?: { life: string; shots: string }
+  charters?: { life: string; shots: string; scenes: string[] }
 ): Promise<void> {
   const final = imageQuality() === "prod";
-  const { life: charter, shots: shotCharter } = charters || await loadMarketingCharters(b.style);
+  const { life: charter, shots: shotCharter, scenes } = charters || await loadMarketingCharters(b.style);
   /* ops visibility (owner escalation 2026-09-07: "references have no
      influence") — every run states what steering it actually carries */
-  console.log(`[marketing] style=${b.style} lifeCharter=${charter.length}ch shotCharter=${shotCharter.length}ch seed=${b.seed}`);
+  console.log(`[marketing] style=${b.style} lifeCharter=${charter.length}ch shotCharter=${shotCharter.length}ch boardScenes=${scenes.length} seed=${b.seed}`);
 
   /* the owner's line-art drawing of the chosen bottle rides along as a
      silhouette spec (round 14 #4) */
@@ -332,12 +350,12 @@ export async function generateMarketingAssets(
     send({ type: "shot", side: "back", image: await sizeShot(back, final), preview: await previewOf(back) });
   }
 
-  const scenarios = dealScenarios(b.seed);
+  const scenarios = dealScenarios(b.seed, scenes);
   for (let i = 0; i < scenarios.length; i++) {
     send({ type: "progress", stage: `lifestyle ${i + 1}/5` });
     try {
       const img = await generateImageRawWithRetry({
-        prompt: buildLifestylePrompt(b, scenarios[i][1], charter, !!shape),
+        prompt: buildLifestylePrompt(b, scenarios[i].text, charter, !!shape, scenarios[i].fromBoard),
         references: shape ? [frontLabel, shape] : [frontLabel], size: { w: 1024, h: 1024 },
       });
       send({ type: "life", i, image: await sizeLifestyle(img, final), preview: await previewOf(img) });

@@ -70,11 +70,53 @@ export async function POST(req: Request) {
       const buf = await sharp(fs.readFileSync(p)).resize(640, 640, { fit: "inside" }).png().toBuffer();
       images.push({ type: "image_url", image_url: { url: `data:image/png;base64,${buf.toString("base64")}`, detail: "high" } });
     }
+    const vmodel = process.env.OPENAI_VISION_MODEL || "gpt-4o";
+
+    /* ROUND 31 (owner, 4th escalation: "images look nothing like the
+       references"): the ROOT CAUSE was structural — lifestyle scenes came
+       from our own fixed generic scenario list; the charter only coloured
+       them. Now each board image is distilled into ONE concrete SCENE
+       (setting, story/action, props, light, framing) and generation deals
+       the five lifestyle images FROM THESE. Scenes are re-derived on every
+       analyze; the hand-editable charter still obeys steering-is-never-lost. */
+    let scenes: string[] = [];
+    if (style !== "shots") {
+      const sres = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: vmodel,
+          messages: [
+            {
+              role: "system",
+              content:
+                "You turn advertising reference photos into STAGING instructions. For EACH photo, write ONE dense sentence " +
+                "(25-45 words) describing the scene so it can be re-staged with a DIFFERENT wine bottle: the location/setting, " +
+                "what is HAPPENING (the story or action), who appears and how they're framed, the key props and surfaces, the " +
+                "light and time of day, and the composition/framing. Output numbered lines 1..N, one per photo, nothing else. " +
+                "STRICTLY FORBIDDEN: describing or naming the specific bottle, its label, brand, or any text visible in the photos; describing faces.",
+            },
+            { role: "user", content: [{ type: "text", text: "The reference photographs:" }, ...images] },
+          ],
+        }),
+      });
+      if (sres.ok) {
+        const sj = (await sres.json()) as { choices?: { message?: { content?: string } }[] };
+        scenes = String(sj.choices?.[0]?.message?.content || "")
+          .split(/\r?\n/).map((l) => l.replace(/^\s*\d+[.)]\s*/, "").trim())
+          .filter((l) => l.length > 30).slice(0, 16);
+        if (scenes.length)
+          await db.collection("settings").updateOne(
+            { _id: `marketing-scenes-${style}` } as never,
+            { $set: { list: scenes, analyzedAt: new Date().toISOString(), refCount: images.length } },
+            { upsert: true });
+      }
+    }
+
     /* an edited charter survives re-analysis (steering-is-never-lost law) */
     const prev = (await db.collection("settings").findOne({ _id: `marketing-charter-${style}` } as never)) as { text?: string; editedAt?: string; analyzedAt?: string } | null;
     if (prev?.text && prev.editedAt && (!prev.analyzedAt || prev.editedAt > prev.analyzedAt))
-      return NextResponse.json({ ok: true, charter: prev.text, kept: true });
-    const vmodel = process.env.OPENAI_VISION_MODEL || "gpt-4o";
+      return NextResponse.json({ ok: true, charter: prev.text, kept: true, scenes: scenes.length });
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
@@ -118,7 +160,7 @@ export async function POST(req: Request) {
       { $set: { text, analyzedAt: new Date().toISOString(), refCount: images.length } },
       { upsert: true }
     );
-    return NextResponse.json({ ok: true, charter: text });
+    return NextResponse.json({ ok: true, charter: text, scenes: scenes.length });
   }
 
   /* ---- upload (per style) ---- */
