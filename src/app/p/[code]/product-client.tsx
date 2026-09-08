@@ -20,6 +20,11 @@ const W = 1440, H = 822.86;
 const EASE = "cubic-bezier(0.33, 1, 0.68, 1)";
 const SLIDE_MS = 650;
 const DELAYS = [0, 55, 110];
+/* ROUND 28 #5: wizard logic — header and progress bar are STATIC live
+   chrome; only the zone between them slides, and the thick progress
+   segment animates its width */
+const HEADER_H = 68.57, BAR_TOP = 740;
+const BAR_Y = 754.16, DOT_X = [142.06, 720.28, 1297.94];
 const BOUNDS = [190, 640];   // strip cuts in the artboards' empty bands
 const HNW = "'HNW', 'Helvetica Neue', Helvetica, sans-serif";
 const SECTIONS = ["about", "ingredients", "gallery"] as const;
@@ -109,12 +114,6 @@ export default function ProductClient({ doc }: { doc: ProductDoc }) {
 
   const overlay = (p: Section) => (
     <>
-      {/* header: PRODUCER / Wine name · © */}
-      <span style={{ ...px(138.18, 42.37 - 14, 900, 20), font: `16px ${HNW}`, color: "#fff", lineHeight: "20px" }}>
-        <b>{(title[0] || "WINE").toUpperCase()}</b>{title[1] ? <span style={{ fontWeight: 400 }}> / {title[1]}</span> : null}
-      </span>
-      <span style={{ ...px(1242.09, 42.37 - 11, 90, 14), font: `11px ${HNW}`, color: "#fff" }}>© 8K Labels</span>
-
       {p === "about" && (<>
         <span style={{ ...px(478.91, 156.08 - 20, 500, 26), font: `700 24.27px ${HNW}` }}>WINE DETAILS</span>
         {bottle(doc.images.front)}
@@ -161,13 +160,6 @@ export default function ProductClient({ doc }: { doc: ProductDoc }) {
         ))}
       </>)}
 
-      {/* bar words — live + clickable (owner item 4) */}
-      <button onClick={() => go("about")} style={{ ...ghost, ...px(137.15, 788.56 - 15, 130, 22), font: `700 15px ${HNW}`, color: "#111", textAlign: "left" }}>About the wine</button>
-      <button onClick={() => go("ingredients")} style={{ ...ghost, ...px(679.83 - 40, 788.56 - 15, 160, 22), font: `700 15px ${HNW}`, color: "#111", textAlign: "center" }}>Ingredients</button>
-      <button onClick={() => go("gallery")} style={{ ...ghost, ...px(1251.61 - 20, 788.56 - 15, 90, 22), font: `700 15px ${HNW}`, color: "#111", textAlign: "right" }}>Gallery</button>
-      {/* arrow hit zones (the arrows themselves are baked chrome) */}
-      {p !== "about" && <button aria-label="back" onClick={() => step(-1)} style={{ ...ghost, ...px(40, 745, 80, 50) }} />}
-      {p !== "gallery" && <button aria-label="next" onClick={() => step(1)} style={{ ...ghost, ...px(1320, 745, 80, 50) }} />}
     </>
   );
 
@@ -177,14 +169,16 @@ export default function ProductClient({ doc }: { doc: ProductDoc }) {
       {overlay(p)}
     </div>
   );
+  /* strips live INSIDE the content zone (header→bar); chrome never moves */
   const strips = (p: Section, dirIn: boolean) => {
-    const cuts = [0, ...BOUNDS, H];
+    const cuts = [HEADER_H, ...BOUNDS, BAR_TOP];
     return cuts.slice(0, -1).map((y0, si) => (
-      <div key={`${p}-${si}`} style={{ position: "absolute", left: 0, top: y0, width: W, height: cuts[si + 1] - y0, overflow: "hidden", animation: `${dirIn ? "ppIn" : "ppOut"} ${SLIDE_MS}ms ${EASE} ${DELAYS[si]}ms both`, pointerEvents: "none" }}>
-        <div style={{ position: "absolute", left: 0, top: -y0, width: W, height: H }}>{pageSpace(p)}</div>
+      <div key={`${p}-${si}`} style={{ position: "absolute", left: 0, top: y0 - HEADER_H, width: W, height: cuts[si + 1] - y0, overflow: "hidden", animation: `${dirIn ? "ppIn" : "ppOut"} ${SLIDE_MS}ms ${EASE} ${DELAYS[si]}ms both`, pointerEvents: "none" }}>
+        <div style={{ position: "absolute", left: 0, top: -y0, width: W, height: H, background: "#fff" }}>{pageSpace(p)}</div>
       </div>
     ));
   };
+  const idx = SECTIONS.indexOf(sec);
 
   return (
     // not <main>: configurator.css pads the main tag 44/40px and would shift every hit zone
@@ -202,8 +196,41 @@ export default function ProductClient({ doc }: { doc: ProductDoc }) {
         @keyframes ppOut { from { transform: translateX(0) } to { transform: translateX(${dir > 0 ? -1440 : 1440}px) } }`}</style>
       <div style={{ width: W * scale, height: H * scale, position: "relative", margin: "0 auto" }}>
         <div style={{ width: W, height: H, transform: `scale(${scale})`, transformOrigin: "top left", position: "absolute", overflow: "hidden", background: "#fff" }}>
-          {prev && strips(prev, false)}
-          {prev ? strips(sec, true) : pageSpace(sec)}
+          {/* sliding CONTENT zone between the static header and bar */}
+          <div style={{ position: "absolute", left: 0, top: HEADER_H, width: W, height: BAR_TOP - HEADER_H, overflow: "hidden" }}>
+            {prev && strips(prev, false)}
+            {prev
+              ? strips(sec, true)
+              : <div style={{ position: "absolute", left: 0, top: -HEADER_H, width: W, height: H }}>{pageSpace(sec)}</div>}
+          </div>
+
+          {/* STATIC header */}
+          <div style={{ ...px(0, 0, W, HEADER_H), background: "#000" }}>
+            <span style={{ ...px(138.18, 42.37 - 14, 900, 20), font: `16px ${HNW}`, color: "#fff", lineHeight: "20px" }}>
+              <b>{(title[0] || "WINE").toUpperCase()}</b>{title[1] ? <span style={{ fontWeight: 400 }}> / {title[1]}</span> : null}
+            </span>
+            <span style={{ ...px(1242.09, 42.37 - 11, 90, 14), font: `11px ${HNW}`, color: "#fff" }}>© 8K Labels</span>
+          </div>
+
+          {/* STATIC progress bar — thick segment animates width, dots fill */}
+          <div style={{ ...px(0, BAR_TOP, W, H - BAR_TOP), background: "#fff" }}>
+            <div style={{ ...px(137.14, BAR_Y - BAR_TOP, 1303.41 - 137.14, 1), background: "#111" }} />
+            <div style={{ ...px(DOT_X[0], BAR_Y - 1 - BAR_TOP, DOT_X[idx] - DOT_X[0], 3), background: "#111", transition: `width ${SLIDE_MS}ms ${EASE}` }} />
+            {DOT_X.map((cx, i) => (
+              <span key={i} style={{ ...px(cx - 4.92, BAR_Y - 4.92 - BAR_TOP, 9.84, 9.84), borderRadius: 5, border: "1px solid #111", background: idx >= i ? "#111" : "#fff", transition: `background 300ms ${EASE}`, boxSizing: "border-box" }} />
+            ))}
+            <button onClick={() => go("about")} style={{ ...ghost, ...px(137.15, 788.56 - 15 - BAR_TOP, 130, 22), font: `700 15px ${HNW}`, color: "#111", textAlign: "left" }}>About the wine</button>
+            <button onClick={() => go("ingredients")} style={{ ...ghost, ...px(679.83 - 40, 788.56 - 15 - BAR_TOP, 160, 22), font: `700 15px ${HNW}`, color: "#111", textAlign: "center" }}>Ingredients</button>
+            <button onClick={() => go("gallery")} style={{ ...ghost, ...px(1251.61 - 20, 788.56 - 15 - BAR_TOP, 90, 22), font: `700 15px ${HNW}`, color: "#111", textAlign: "right" }}>Gallery</button>
+            {idx > 0 && (
+              <button aria-label="back" onClick={() => step(-1)} style={{ ...ghost, ...px(60, BAR_Y - 20 - BAR_TOP, 60, 40) }}>
+                <svg viewBox="0 0 60 40" width="60" height="40"><line x1="47" y1="20" x2="13" y2="20" stroke="#000" strokeWidth="1.6" /><polyline points="23.5,9.5 13,20 23.5,30.5" fill="none" stroke="#000" strokeWidth="1.6" /></svg>
+              </button>)}
+            {idx < SECTIONS.length - 1 && (
+              <button aria-label="next" onClick={() => step(1)} style={{ ...ghost, ...px(1325, BAR_Y - 20 - BAR_TOP, 60, 40) }}>
+                <svg viewBox="0 0 60 40" width="60" height="40"><line x1="13" y1="20" x2="47" y2="20" stroke="#000" strokeWidth="1.6" /><polyline points="36.5,9.5 47,20 36.5,30.5" fill="none" stroke="#000" strokeWidth="1.6" /></svg>
+              </button>)}
+          </div>
           {gallery && (
             <div style={{ position: "absolute", inset: 0, background: "rgba(17,17,17,0.92)", zIndex: 10, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setGallery(null)}>
               {/* eslint-disable-next-line @next/next/no-img-element */}

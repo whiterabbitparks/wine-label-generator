@@ -901,11 +901,16 @@ export default function NewUI() {
               disturb the design). Baked button rects are covered white. */}
           {patch(136, 476, 556, 44, "bcbtns")}
           {patch(136, 542, 440, 66, "bcnote")}
+          {/* round 28 #1: "Barcode:" label — same 700 15px as the baked
+              form labels ("Producer Company:" is class st3) */}
+          <span style={{ ...px(138.04, 500 - 12.9, 112, 16), font: `700 15px ${HNW}`, lineHeight: "16px" }}>{t("Barcode:")}</span>
+          {/* input starts at 252 — the Georgian label is ~40px wider than
+              the English one and must never touch the placeholder */}
           <input value={gtin} onChange={(e) => setGtin(e.target.value)} placeholder="E.g. 4860012345676"
-            style={{ ...px(138.04, 500 - IN_BASE, 240, 20), ...inputStyle }} />
-          {rowLine(138.04, 502.5, 243.3, "gtln")}
+            style={{ ...px(252, 500 - IN_BASE, 240, 20), ...inputStyle }} />
+          {rowLine(252, 502.5, 243.3, "gtln")}
           {gtin.trim() && (
-            <span style={{ ...px(398, 500 - 12.9, 280, 16), font: `11px ${HNW}`, lineHeight: "16px", color: gtinValid ? "#3f6d2a" : "#8e2b2b" }}>
+            <span style={{ ...px(252, 518, 320, 16), font: `11px ${HNW}`, lineHeight: "16px", color: gtinValid ? "#3f6d2a" : "#8e2b2b" }}>
               {gtinValid ? t("✓ valid GTIN") : t("needs 12 or 13 digits (GS1 checksum)")}
             </span>
           )}
@@ -939,10 +944,11 @@ export default function NewUI() {
             });
             return (<>
               <button onClick={() => { setQrImg(""); setQrMode(qrMode === "create" ? "" : "create"); }} style={{ ...px(754.29, 480, 240.1, 34.3), ...modeStyle(qrMode === "create") }}>{t("Create QR Code")}</button>
-              {/* owner 2026-09-07: with Create QR active, the ingredients
-                  for the future landing page can be uploaded as a text file */}
+              {/* owner 2026-09-07 / round 28 #2: with Create QR active, the
+                  ingredients upload is an underlined TEXT line one empty row
+                  under the QR paragraph — no button shape */}
               {qrMode === "create" && (
-                <label style={{ ...px(754.29, 604, 240.1, 34.3), ...modeStyle(false) }}>
+                <label style={{ ...px(752.4, 557.83 + ((lang === "ge" ? 3 : 4) + 1) * 18 - 12.9, 300, 16), font: `13px ${HNW}`, lineHeight: "16px", color: "#111", textDecoration: "underline", textTransform: "none", cursor: "pointer", whiteSpace: "nowrap" }}>
                   <input type="file" accept=".txt,.md,.csv,text/plain" style={{ display: "none" }} onChange={(e) => {
                     const file = e.target.files?.[0]; if (!file) return;
                     const rd = new FileReader(); rd.onload = () => setIngredients(String(rd.result).slice(0, 20000)); rd.readAsText(file);
@@ -1330,7 +1336,10 @@ export default function NewUI() {
                 : `${dirIn ? "nuiInPx" : "nuiOutPx"} ${SLIDE_MS}ms ${EASE} ${d0}ms both`;
               return (
                 <div key={`${p}-${si}`} style={{ position: "absolute", left: x0, top: zy0, width: x1 - x0, height: zy1 - zy0, overflow: "hidden", animation: anim, pointerEvents: "none" }}>
-                  <div style={{ position: "absolute", left: -x0, top: pageTop - zy0, width: W, height: H }}>{pageSpace(p, true)}</div>
+                  {/* round 28 #3: OPAQUE page behind each slice — an arriving
+                      slice covers the outgoing page's late-delay ghosts the
+                      moment it lands (no text-over-text mid-flight either) */}
+                  <div style={{ position: "absolute", left: -x0, top: pageTop - zy0, width: W, height: H, background: "#fff" }}>{pageSpace(p, true)}</div>
                 </div>
               );
             }).filter(Boolean);

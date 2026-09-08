@@ -1990,6 +1990,27 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 28 (owner 2026-09-08, 5 items): (1) "Barcode:" label (700 15px,
+  matching the baked st3 form labels) before the GTIN input; input
+  moved to x252 — the GEORGIAN label is ~40px wider and must never
+  touch the placeholder; the checksum hint moved BELOW the input line
+  (252, 518). (2) Upload Ingredients is no longer a button — an
+  underlined 13px text line one EMPTY row under the QR paragraph
+  (per-language y: 557.83 + (lines+1)*18). (3) TRANSITION GHOST FIX,
+  both wizard and product page: each slice's inner full-page div is
+  now OPAQUE WHITE — an arriving slice covers the outgoing page the
+  moment it lands. Root cause: compliance's late-delay exit rows
+  (delay 270 + 650ms) outlived the incoming slides and floated over
+  the settled page through the transparent background; opacity also
+  kills text-over-text mid-flight. (4) checkout.svg: the baked slot-5
+  mock (browser bar rect, PRODUCER/INGREDIENTS/GALLERY words, mock
+  codes-band texts PRODUCT OF GEORGIA / WWW.POPIASHVILI.COM /
+  BOTLLED/LOT/ALC line, mock QR square) DELETED from the board —
+  the live browser preview + QR + link render there now. (5) product
+  page rebuilt on wizard chrome logic: STATIC live header and STATIC
+  progress bar (thick segment width-animates DOT_X[0]→DOT_X[idx],
+  dots fill with transition, arrows are live svg buttons hidden at
+  the ends); only the 68.57→740 content zone slides in 3 strips.
 - ROUND 27 (owner 2026-09-08, HONEST BARCODE): the "Create Barcode"
   button invented random digits — a lie a scanner can't forgive, and
   GS1 GTINs must be registered to the BRAND owner (the winery), not
