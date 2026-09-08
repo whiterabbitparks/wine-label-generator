@@ -1990,6 +1990,24 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 30 (owner 2026-09-08, 6 items): (1) BACK-LABEL INK RULE
+  (standing): ground darker than 50% grey (luma<128) → ALL layout ink
+  (texts, rules, By-brand row) flips WHITE via one <g fill> wrapper;
+  the codes band below y61.5 is always white and its ink stays black.
+  (2) sparkling.jpg replaced with the owner's new image (same 800×1600
+  — feeds both the wizard bottle page AND bottleShapeRef). (3) prompts:
+  ORIENTATION — NON-NEGOTIABLE in lifestyle (bottle upright, label
+  reads horizontal; pour may tilt, never flat) + "PERFECTLY UPRIGHT"
+  in shots — a lifestyle came out horizontal with a sideways label.
+  (4) shots: label applied EDGE-TO-EDGE — never white slivers above/
+  below the label, never a border. (5) slot-5 thumb: while the iframe
+  loads, the mini wine glass (living-loader fill, 700ms ticks
+  0.14→0.9) sits centred in the browser frame on white; onLoad hides
+  it; resets when productUrl changes. (6) final-pack titles lost their
+  numbers ("Front label"…) — slot-1 heading is live, slots 2-5 edited
+  in checkout.svg tspans, SVG_GE keys renamed to match.
+  NOTE: NOT on Vercel — the app runs as a local `npm run start` on
+  :3000; hosting/domain decision still pending.
 - ROUND 29 (owner 2026-09-08, 7 items): (1+7) GTIN checksum was
   rejecting random test numbers → ANY 12/13-digit number is now
   accepted and drawn; only the final check digit is auto-corrected so

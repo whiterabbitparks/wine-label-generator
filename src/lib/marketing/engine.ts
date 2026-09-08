@@ -163,6 +163,7 @@ export function buildShotPrompt(b: MarketingBrief, side: "front" | "back", hasSh
   const d = bottleDescription(b);
   return (
     `Professional studio product photograph of a single wine bottle, photographed dead straight-on, ` +
+    `the bottle standing PERFECTLY UPRIGHT and vertical, ` +
     `${side === "front" ? "showing the FRONT of the bottle" : "showing the BACK of the bottle"}, the whole bottle in frame from base to closure with a small margin. ` +
     (charter ? `Art director's studio notes (follow their spirit): ${charter} ` : "") +
     `${d.text} ` +
@@ -170,6 +171,8 @@ export function buildShotPrompt(b: MarketingBrief, side: "front" | "back", hasSh
     `perfectly legible, wrapped naturally onto the glass curvature. Do NOT redraw, reinterpret, crop or add any text. ` +
     /* round 29 #6: never fake paper grain on the label */
     `The label surface is SMOOTH flat print — NEVER invent paper grain, fibre or canvas texture on the label; only a subtle sheen where light grazes it. ` +
+    /* round 30 #4: no white slivers above/below the applied label */
+    `The label is applied EDGE-TO-EDGE: its printed area ends exactly at its own edges — never leave white slivers, strips or margins along the label's top or bottom, and never add any border around it. ` +
     /* round 29 #5: bottle and label must be lit as one object */
     `ONE LIGHT: the label is lit by exactly the same light as the glass — same direction, same colour temperature, same contrast and shadow fall — so bottle and label read as ONE object photographed together, never as a graphic pasted on afterwards. ` +
     (hasShape
@@ -213,6 +216,9 @@ export function buildLifestylePrompt(b: MarketingBrief, scenario: string, charte
     `The wine bottle: ${d.text} ` +
     `The FIRST attached image is the wine's front label — it appears on the bottle EXACTLY as given, legible and true to its colours; never redraw or replace it. ` +
     `The label is lit by the same scene light as the bottle (one photographed object, never a pasted-on graphic), and its surface is smooth flat print — no invented paper grain or fibre texture. ` +
+    /* round 30 #3: a lifestyle image came out with a horizontal bottle and
+       a sideways label — orientation is now explicit */
+    `ORIENTATION — NON-NEGOTIABLE: the bottle STANDS UPRIGHT (vertical) in the scene — never lying down, never horizontal; if wine is being poured the bottle tilts naturally in the hand but is never flat. The label always reads upright and horizontal — never sideways, never rotated, never upside down. ` +
     (hasShape
       ? `The SECOND attached image is a technical outline of this exact bottle model — the bottle in the photo matches that GLASS silhouette and its proportions precisely (the closure drawn in the outline is irrelevant; the closure specified above overrides it). `
       : "") +

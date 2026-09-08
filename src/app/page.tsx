@@ -215,6 +215,16 @@ export default function NewUI() {
   /* ingredients text file for the future QR landing page (owner 2026-09-07) */
   const [ingredients, setIngredients] = useState("");
   const [productUrl, setProductUrl] = useState("");
+  /* round 30 #5: the slot-5 thumb takes a few seconds to build — the mini
+     glass fills (same living-loader behaviour) until the iframe loads */
+  const [ppLoaded, setPpLoaded] = useState(false);
+  const [ppFill, setPpFill] = useState(0.14);
+  useEffect(() => { setPpLoaded(false); setPpFill(0.14); }, [productUrl]);
+  useEffect(() => {
+    if (!productUrl || ppLoaded) return;
+    const iv = setInterval(() => setPpFill((v) => Math.min(0.9, v + 0.11)), 700);
+    return () => clearInterval(iv);
+  }, [productUrl, ppLoaded]);
   const [backPng, setBackPng] = useState("");
   const [backPayload, setBackPayload] = useState<Record<string, unknown> | null>(null);
   const [backSig, setBackSig] = useState("");
@@ -1210,7 +1220,7 @@ export default function NewUI() {
           {/* slot-1 heading is OUTLINED in the artboard (not live text) —
               covered and re-rendered so ENG/GEO both translate (2026-09-07) */}
           {patch(136, 168, 185, 38, "slot1h")}
-          <span style={{ ...px(137.14, 183.93 - (IN_BASE - 2), 200, 16), font: `700 15px ${HNW}`, lineHeight: "16px" }}>{t("1. Front label")}</span>
+          <span style={{ ...px(137.14, 183.93 - (IN_BASE - 2), 200, 16), font: `700 15px ${HNW}`, lineHeight: "16px" }}>{t("Front label")}</span>
           <span style={{ ...px(137.14, 198.33 - 12.4, 300, 16), font: `12px ${HNW}`, lineHeight: "16px", whiteSpace: "nowrap" }}>{t("Print ready high resolution file")}</span>
           {/* round 8 #14 / round 14 #9: real sizes instead of ???x???, in the
               design's own 12px subtitle size on its baseline 227.13 */}
@@ -1249,7 +1259,14 @@ export default function NewUI() {
                       {["#FF5F57", "#FEBC2E", "#28C840"].map((c) => <span key={c} style={{ width: 4.5, height: 4.5, borderRadius: 3, background: c }} />)}
                       <span style={{ flex: 1, margin: "0 8px", height: 7, background: "#fff", borderRadius: 3, font: `5px ${HNW}`, color: "#999", paddingLeft: 4, lineHeight: "7px" }}>8klabels.com{productUrl}</span>
                     </div>
-                    <iframe src={productUrl} title="product page" style={{ width: W, height: 823, transform: "scale(0.1236)", transformOrigin: "0 0", border: 0, pointerEvents: "none" }} />
+                    <iframe src={productUrl} title="product page" onLoad={() => setPpLoaded(true)} style={{ width: W, height: 823, transform: "scale(0.1236)", transformOrigin: "0 0", border: 0, pointerEvents: "none" }} />
+                    {/* round 30 #5: while the live page builds, the little
+                        wine glass fills in the thumb's centre */}
+                    {!ppLoaded && (
+                      <div style={{ position: "absolute", left: 0, top: 13, right: 0, bottom: 0, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        {miniGlass("ppload", ppFill)}
+                      </div>
+                    )}
                   </div>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={`/api/qr?u=${encodeURIComponent(`https://8klabels.com${productUrl}`)}`} alt="QR"

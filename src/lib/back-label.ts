@@ -278,11 +278,19 @@ export async function composeBackLabel(
     W = cand; lay = layoutAt(W);
   }
 
-  let body = "";
+  /* ROUND 30 #1: legibility on dark grounds — everything printed ON the
+     ground colour flips to white ink when the ground is darker than 50%
+     grey; the codes band below y61.5 is always white, its ink stays black */
+  const bg = /^#[0-9a-fA-F]{6}$/.test(opts.bgColor || "") ? (opts.bgColor as string) : "#FFFFFF";
+  const luma = (parseInt(bg.slice(1, 3), 16) * 299 + parseInt(bg.slice(3, 5), 16) * 587 + parseInt(bg.slice(5, 7), 16) * 114) / 1000;
+  const ink = luma < 128 ? "#FFFFFF" : "#000000";
+
+  let layout = "";
   for (const r2 of lay.rules)
-    body += `<rect x="${(4 * s).toFixed(2)}" y="${(r2 * s).toFixed(2)}" width="${((W - 8) * s).toFixed(2)}" height="${(0.2 * s).toFixed(2)}" fill="#000"/>`;
-  for (const pt2 of lay.parts) body += T(pt2.x, pt2.y, pt2.size, pt2.text, pt2.weight || 400, pt2.anchor || "start");
-  body += lay.rich.join("");
+    layout += `<rect x="${(4 * s).toFixed(2)}" y="${(r2 * s).toFixed(2)}" width="${((W - 8) * s).toFixed(2)}" height="${(0.2 * s).toFixed(2)}"/>`;
+  for (const pt2 of lay.parts) layout += T(pt2.x, pt2.y, pt2.size, pt2.text, pt2.weight || 400, pt2.anchor || "start");
+  layout += lay.rich.join("");
+  let body = `<g fill="${ink}">${layout}</g>`;
 
   /* — CODES BAND on clean white (template): QR 14.55mm at (4, 61.45);
      BOTTLED beside it @(21.3, 65.5) 7.7pt; See ingredients @(21.2, 76.0);
@@ -319,7 +327,6 @@ export async function composeBackLabel(
 
   const Wmm = W * s;
   const H = BASE * s;
-  const bg = /^#[0-9a-fA-F]{6}$/.test(opts.bgColor || "") ? opts.bgColor : "#FFFFFF";
   /* 2mm print bleed on every side for deliverables (round 18 #1, as in the
      owner's template: backgrounds extend into the bleed, the ground-stop
      line stays exactly where it is) */
