@@ -1990,6 +1990,15 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 31b (owner clarification, SUPERSEDES the round 30/31
+  orientation rule): the bottle may be in ANY pose — vertical was
+  never the point. THE REAL RULE: the label sits ON THE BOTTLE'S
+  AXIS — applied like a real glued label (label's vertical axis =
+  bottle's base→neck axis), moving WITH the bottle in every pose;
+  never rotated 90° on the glass, never sideways relative to the
+  bottle. One clause now serves both board and generic scenes;
+  the shot prompt carries a short version too (its "perfectly
+  upright" stays — studio cutouts are upright by nature).
 - ROUND 31 (owner, 4th refs escalation: "images look NOTHING like the
   references"): ROOT CAUSE was STRUCTURAL, not prompt wording — the
   five lifestyle scenes always came from our own fixed generic
