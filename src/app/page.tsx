@@ -178,7 +178,17 @@ export default function NewUI() {
     if (q && (ORDER as readonly string[]).includes(q)) setPage(q as PageKey);
     /* dev aid: &pp=<code> previews the final-pack product-page slot */
     const pp = sp.get("pp");
-    if (pp) setProductUrl(`/p/${pp.replace(/[^a-z0-9]/gi, "")}`);
+    if (pp) { setProductUrl(`/p/${pp.replace(/[^a-z0-9]/gi, "")}`); return; }
+    /* round 28b: the published page survives reloads and server restarts —
+       restore the order's code and re-verify the page actually exists, so
+       the final-pack preview never forgets it (owner: "didn't load") */
+    try {
+      const c = localStorage.getItem("nui-product-code");
+      if (c) {
+        productCode.current = c;
+        fetch(`/api/product?code=${c}`).then((r) => { if (r.ok) setProductUrl(`/p/${c}`); }).catch(() => { });
+      }
+    } catch { }
   }, []);
   const [prev, setPrev] = useState<PageKey | null>(null);
   /* ENG/GEO (owner 2026-09-07): translates overlays AND baked board text */
@@ -371,7 +381,10 @@ export default function NewUI() {
                 images: { front: got.front, back: got.back, life: got.life.filter(Boolean) },
               }),
             });
-            if (r2.ok) setProductUrl(`/p/${productCode.current}`);
+            if (r2.ok) {
+              setProductUrl(`/p/${productCode.current}`);
+              try { localStorage.setItem("nui-product-code", productCode.current); } catch { }
+            }
           } catch { /* page can be published on a later pass */ }
         }
       } catch { /* placeholders remain; revisiting the page retries */ }
