@@ -282,8 +282,11 @@ export default function NewUI() {
   useEffect(() => {
     if (page !== "assets" || selected < 0 || !dreams[selected] || assetsRunning.current) return;
     const sel = dreams[selected];
+    /* round 21 #7: NO client-side "same inputs" skip — it knew nothing
+       about admin charter changes and replayed stale sets. The server
+       cache (charter-aware since round 19) answers true duplicates
+       instantly, so refetching costs nothing. */
     const sig = JSON.stringify({ fs: frontSig, bs: backSig, bottle, rgb: wheel.rgb, shade, sel: sel.style });
-    if (sig === assetsSig) return;
     assetsRunning.current = true;
     (async () => {
       try {
@@ -377,9 +380,11 @@ export default function NewUI() {
   const go = useCallback((next: PageKey, d = 1) => {
     setPrev(page); setDir(d); setPage(next);
     /* into the loader the fade starts only after the slide-out (round 9 #1);
+       out of the loader the fade completes before the slide (round 21 #1);
        slice cascades extend the settle per page (round 16 #3) */
     const md = SLIDE_MS + Math.max(maxSliceDelay(page), maxSliceDelay(next));
-    setTimeout(() => setPrev(null), (next === "loader" ? md + FADE_MS : md) + 60);
+    const extra = next === "loader" || page === "loader" ? FADE_MS : 0;
+    setTimeout(() => setPrev(null), md + extra + 60);
   }, [page]);
 
   const goBack = useCallback(() => {
@@ -566,7 +571,7 @@ export default function NewUI() {
   const miniGlass = (key: string, fill: number) => (
     /* 15% bigger downwards: top edge stays (marginTop compensates the
        flex-centring shift) — round 19 */
-    <svg key={key} viewBox="215 95 170 315" width="15" style={{ display: "block", marginTop: 2 }}>
+    <svg key={key} viewBox="215 95 170 315" width="18" style={{ display: "block", marginTop: 3 }}>
       <defs>
         <clipPath id={`mg-${key.replace(/[^a-z0-9]/gi, "")}`}>
           <rect x="230" y={266.6 - fill * 95} width="140" height={fill * 95 + 4}
@@ -795,7 +800,8 @@ export default function NewUI() {
           {OPT_FRAMES.map((fr, i) => (
             <button key={"s" + i} onClick={() => { setSelected(i); setWarn(""); }}
               style={{
-                ...px(fr.x + 0.2, 548.6, OPT_W, 34.3), cursor: "pointer",
+                /* round 21 #2: one button-height lower (top = old bottom) */
+                ...px(fr.x + 0.2, 582.9, OPT_W, 34.3), cursor: "pointer",
                 /* round 7 #11: WHITE by default, inverts to black "Selected" */
                 font: `12px ${HNW}`, letterSpacing: 0.3, transition: `all 240ms ${EASE}`,
                 background: selected === i ? "#111" : "#fff",
@@ -806,7 +812,7 @@ export default function NewUI() {
           ))}
           {/* round 7 #12: gate message when proceeding without a selection */}
           {warn && (
-            <span style={{ ...px(0, 604, W, 18), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block" }}>{warn}</span>
+            <span style={{ ...px(0, 632, W, 18), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block" }}>{warn}</span>
           )}
         </>);
       }
@@ -1210,15 +1216,19 @@ export default function NewUI() {
               const zy0 = Math.max(0, Math.min(zoneH, py0 + pageTop));
               const zy1 = Math.max(0, Math.min(zoneH, py1 + pageTop));
               if (zy1 <= zy0 || x1 <= x0) return null;
+              const d0 = s.delay + (dirIn ? outBase : 0);
               const anim = s.mode === "fade"
-                ? `${dirIn ? "nuiFadeIn" : "nuiFadeOut"} ${FADE_MS}ms ${EASE} ${s.delay}ms both`
-                : `${dirIn ? "nuiInPx" : "nuiOutPx"} ${SLIDE_MS}ms ${EASE} ${s.delay}ms both`;
+                ? `${dirIn ? "nuiFadeIn" : "nuiFadeOut"} ${FADE_MS}ms ${EASE} ${d0}ms both`
+                : `${dirIn ? "nuiInPx" : "nuiOutPx"} ${SLIDE_MS}ms ${EASE} ${d0}ms both`;
               return (
                 <div key={`${p}-${si}`} style={{ position: "absolute", left: x0, top: zy0, width: x1 - x0, height: zy1 - zy0, overflow: "hidden", animation: anim, pointerEvents: "none" }}>
                   <div style={{ position: "absolute", left: -x0, top: pageTop - zy0, width: W, height: H }}>{pageSpace(p, true)}</div>
                 </div>
               );
             }).filter(Boolean);
+            /* round 21 #1: leaving the loader, the glass fades out FIRST on
+               clean white, THEN the labels slide in (baseDelay on slices) */
+            const outBase = prev === "loader" ? FADE_MS - 40 : 0;
             const faded = (p: PageKey, anim: string, delay = 0) => (
               <div key={p} style={{ position: "absolute", inset: 0, animation: `${anim} ${FADE_MS}ms ${EASE} ${delay}ms both`, pointerEvents: "none" }}>
                 <div style={{ position: "absolute", left: 0, top: pageTop, width: W, height: H }}>{pageSpace(p, true)}</div>

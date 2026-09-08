@@ -1990,6 +1990,20 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 21 (owner 2026-09-07, 8 items): (1) loader-exit glitch — the
+  fading loader showed through the staggered incoming slices; leaving
+  the loader now fades it out on clean white FIRST (outBase = FADE_MS
+  −40 added to incoming slice delays; go() timeout extended when
+  page==='loader'). (2) options Select buttons one height lower
+  (y582.9; warn to 632). (3) mini glasses 18px. (4) red wine hides the
+  punt (opaque base clause; light wines show it subtly). (5) product
+  shots: LABEL PLACEMENT clause — label low on the body, never at the
+  shoulders (marketing images untouched). (6) wax seal = smooth even
+  edge, NO drips. (7) references STILL replayed: the WIZARD's
+  client-side "same inputs" skip predates charters — removed; the
+  charter-aware server cache answers true duplicates instantly.
+  (8) Bordeaux Prestige spec = subtly TAPERED sides (never parallel);
+  standard Bordeaux = perfectly parallel sides.
 - DEMO FILL RESTORED (owner 2026-09-07, testing speed): empty fields
   fall back to sample content in GENERATED results again — DEMO_FRONT
   in page.tsx (front dreams, back payload, assets brief) and the

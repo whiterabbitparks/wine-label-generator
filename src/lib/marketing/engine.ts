@@ -20,8 +20,8 @@ export interface BottleSpec { heightCM: number; diamCM: number; shape: string }
 /* real-world 750 ml bottle proportions (Bordeaux is the owner's stated
    30 cm anchor; the rest follow standard glassware specs) */
 export const BOTTLE_SPECS: Record<string, BottleSpec> = {
-  "Bordeaux": { heightCM: 30, diamCM: 7.6, shape: "classic Bordeaux claret bottle — straight cylindrical body, tall pronounced shoulders, medium neck" },
-  "Bordeaux Prestige": { heightCM: 31.5, diamCM: 8.0, shape: "heavyweight prestige Bordeaux bottle — thick glass, broader body, high strong shoulders, deep punt" },
+  "Bordeaux": { heightCM: 30, diamCM: 7.6, shape: "classic Bordeaux claret bottle — straight cylindrical body with perfectly PARALLEL vertical sides, tall pronounced shoulders, medium neck" },
+  "Bordeaux Prestige": { heightCM: 31.5, diamCM: 8.0, shape: "heavyweight prestige Bordeaux bottle — thick glass, high strong shoulders, deep punt, and a subtly TAPERED body: the sides are NEVER parallel, they narrow slightly and continuously from the shoulders down to the base (this taper is the defining difference from a standard Bordeaux)" },
   "Burgundy": { heightCM: 29.5, diamCM: 8.0, shape: "classic Burgundy bottle — wider body with gently sloping shoulders that curve smoothly into the neck" },
   "Sparkling": { heightCM: 32, diamCM: 8.9, shape: "Champagne-style sparkling wine bottle — thick heavy glass, sloped shoulders, deep punt, wide body" },
   "Alsace / Rhine": { heightCM: 35, diamCM: 7.0, shape: "tall slender Alsace flute bottle — long elegant body, very gradual shoulder taper, long neck" },
@@ -89,7 +89,7 @@ function closureLine(closure: string, colourCSS: string, finish: string) {
     return "CLOSURE — NON-NEGOTIABLE: a natural cork sits flush in the bare bottle mouth — NO capsule, NO foil, the glass lip fully visible";
   switch (closure) {
     case "Screw Cap": return `CLOSURE — NON-NEGOTIABLE: a ${fin} ${col} aluminium SCREW CAP with a clean straight skirt over the bottle mouth and upper neck. There is NO cork and NO foil capsule — a screw cap only`;
-    case "Wax Seal": return `CLOSURE — NON-NEGOTIABLE: the neck is hand-dipped in ${fin} ${col} sealing wax with natural drips ending just below the lip. No foil capsule`;
+    case "Wax Seal": return `CLOSURE — NON-NEGOTIABLE: a smooth ${fin} ${col} wax cap over the bottle mouth with a CLEAN, EVEN lower edge just below the lip — absolutely NO drips or runs. No foil capsule`;
     case "Crown Cap": return `CLOSURE — NON-NEGOTIABLE: a ${fin} ${col} CROWN CAP (beer-style) on the bottle mouth, bare glass neck below it. There is NO cork and NO capsule`;
     case "Sparkling Cork": return `CLOSURE — NON-NEGOTIABLE: a mushroom sparkling cork under a wire cage, dressed in a ${fin} ${col} foil hood down the neck`;
     default: return `CLOSURE — NON-NEGOTIABLE: a natural cork under a ${fin} ${col} foil capsule covering the bottle lip and upper neck`;
@@ -119,10 +119,15 @@ export interface MarketingBrief {
 
 function bottleDescription(b: MarketingBrief) {
   const spec = BOTTLE_SPECS[b.bottleType] || BOTTLE_SPECS["Bordeaux"];
+  /* round 21 #4: through opaque dark red wine the punt is invisible — the
+     base reads as solid dark; through white/rosé/amber it shows subtly */
+  const punt = /red/i.test(b.wineColour)
+    ? "The punt (bottom indentation) is NOT visible through the opaque dark wine — the lower body and base read as solid dark glass with no inner base shape or glow."
+    : "The punt's inner curve is subtly visible through the pale liquid at the base, as it naturally is with light wines.";
   return {
     spec,
     text:
-      `${spec.shape}. ${liquidLine(b.wineColour, b.glassColor)}. ` +
+      `${spec.shape}. ${liquidLine(b.wineColour, b.glassColor)}. ${punt} ` +
       `${closureLine(b.closure, b.closureColour, b.finish)}. ` +
       scaleLine(b.labelWmm, b.labelHmm, spec),
   };
@@ -137,6 +142,7 @@ export function buildShotPrompt(b: MarketingBrief, side: "front" | "back", hasSh
     `${d.text} ` +
     `The FIRST attached image is the wine's ${side} label — apply it to the bottle EXACTLY as given: identical layout, typography, artwork and colours, ` +
     `perfectly legible, wrapped naturally onto the glass curvature with subtle realistic paper sheen. Do NOT redraw, reinterpret, crop or add any text. ` +
+    `LABEL PLACEMENT: the label sits LOW on the body — its centre clearly below the body's midpoint, its bottom edge a small distance above the base, as real wine labels sit. Never place it high near the shoulders. ` +
     (hasShape
       ? `The SECOND attached image is a technical outline drawing of this exact bottle model — match its GLASS silhouette, proportions, shoulder curve and neck length PRECISELY, but render a real photographed glass bottle, never a drawing. IGNORE the closure/top drawn in the outline — the closure is specified above and OVERRIDES the drawing. `
       : "") +
