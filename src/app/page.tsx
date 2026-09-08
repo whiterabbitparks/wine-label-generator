@@ -866,7 +866,7 @@ export default function NewUI() {
               and rendered live so it translates, plus the price line */}
           {patch(748, 542, 400, 64, "qrnote")}
           {(lang === "ge"
-            ? ["უნიკალური QR კოდი და პროდუქტის ვებ-გვერდი ინგრედიენტებით.", "ფასი - $29"]
+            ? ["უნიკალური QR კოდი და პროდუქტის", "ვებ-გვერდი ინგრედიენტებით.", "ფასი - $29"]
             : ["If you don't have a QR code, we'll generate", "one and link it to a dedicated page with your wine's", "ingredients, nutrition, and product information.", "Price of a QR Code & Product Web Page - $29."]
           ).map((ln, i) => (
             <span key={i} style={{ ...px(752.4, 557.83 + i * 18 - 12.9, 400, 16), font: `13px ${HNW}`, color: "#111", lineHeight: "16px", whiteSpace: "nowrap" }}>{ln}</span>
