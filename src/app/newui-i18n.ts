@@ -26,8 +26,8 @@ export const SVG_GE: Record<string, string> = {
   "© 8K Labels — a demo interface built from your uploaded mockup": "© 8K Labels — საჩვენებელი ინტერფეისი თქვენი მაკეტიდან",
   /* vision */
   "YOUR VISION": "თქვენი ხედვა",
-  "If you have a specific idea for the front label, describe it in simple words": "თუ ეტიკეტის იდეა უკვე გაქვთ, აღწერეთ მარტივი სიტყვებით",
-  "or upload a sketch or photo reference. Or, let us suggest ideas for you.": "ან ატვირთეთ ესკიზი ან ფოტო. ან ჩვენ შემოგთავაზებთ იდეებს.",
+  "If you have a specific idea for the front label, describe it in simple words": "თუ ეტიკეტის იდეა უკვე გაქვთ, აღწერეთ მარტივი სიტყვებით. შეგიძლიათ ატვირთოთ ესკიზი ან ფოტო ნიმუში.",
+  "or upload a sketch or photo reference. Or, let us suggest ideas for you.": "ან დააჭირეთ \"მომეცი იდეა\"-ს და ჩვენ შემოგთავაზებთ იდეებს.",
   "Upload a sketch or a reference photo": "ატვირთეთ ესკიზი ან ფოტო ნიმუში",
   "Give me an idea": "მომეცი იდეა",
   /* front */
