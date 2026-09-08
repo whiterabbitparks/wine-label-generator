@@ -1990,6 +1990,25 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 27 (owner 2026-09-08, HONEST BARCODE): the "Create Barcode"
+  button invented random digits — a lie a scanner can't forgive, and
+  GS1 GTINs must be registered to the BRAND owner (the winery), not
+  to 8K, or Amazon/chains/export validation rejects them. NEW RULE:
+  we never sell/invent barcodes. Back-details barcode side is now a
+  single underlined GTIN INPUT (baked button rects covered white):
+  the winery types its own GS1 number, live checksum validation
+  (12-digit UPC normalised with leading 0, 13-digit EAN checked;
+  green "✓ valid GTIN" / dark-red hint), plus a deliberately QUIET
+  grey 11px italic link "No GTIN yet? Register at gs1.org" under the
+  note (owner: don't disturb the design). composeBackLabel draws the
+  EAN-13 ONLY from real digits (barcodeDigits) — no GTIN, no barcode
+  (empty-fields-disappear law); random-digit fallback is dead at
+  render. Checkout: Barcode $99 row REMOVED — 4 rows, 3 dashes,
+  packSel is now boolean[4] (labels/QR/assets/designer), default
+  total $247. Placeholder E.g. 4860012345676 is a real valid
+  Georgian-prefix GTIN. i18n: dead barcode keys dropped, three new
+  GTIN strings added. Upload-barcode-image UI removed (lib still
+  accepts barcodeImage for legacy payloads).
 - ROUND 26 (owner 2026-09-08, 4 items): (1)+(bis) barcode note was
   baked larger than the QR note in BOTH languages — covered
   (patch 136,542,440,66) and re-rendered live at the same 13px with

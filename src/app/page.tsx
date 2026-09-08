@@ -201,7 +201,6 @@ export default function NewUI() {
   const [frontSig, setFrontSig] = useState("");
   const [b, setB] = useState<Record<string, string>>({});
   const [markets, setMarkets] = useState<string[]>([]);   /* round 8 #7: none preselected */
-  const [barcodeImg, setBarcodeImg] = useState("");
   const [qrImg, setQrImg] = useState("");
   /* ingredients text file for the future QR landing page (owner 2026-09-07) */
   const [ingredients, setIngredients] = useState("");
@@ -261,11 +260,18 @@ export default function NewUI() {
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
-  const [packSel, setPackSel] = useState<boolean[]>([true, true, true, true, false]);
+  const [packSel, setPackSel] = useState<boolean[]>([true, true, true, false]);
   const [agree, setAgree] = useState(false);
   const [gallery, setGallery] = useState<{ imgs: string[]; i: number } | null>(null);
   const [warn, setWarn] = useState("");
-  const [barcodeMode, setBarcodeMode] = useState<"" | "create" | "upload">("");
+  /* ROUND 27: honest barcode — we never invent digits. The winery types its
+     own GS1 GTIN (12 or 13 digits) and we draw it; no GTIN, no barcode. */
+  const [gtin, setGtin] = useState("");
+  const gtinNorm = (() => { const d = gtin.replace(/\D/g, ""); return d.length === 12 ? "0" + d : d; })();
+  const gtinValid = gtinNorm.length === 13 && (() => {
+    let s = 0; for (let i = 0; i < 12; i++) s += +gtinNorm[i] * (i % 2 ? 3 : 1);
+    return (10 - (s % 10)) % 10 === +gtinNorm[12];
+  })();
   const [qrMode, setQrMode] = useState<"" | "create" | "upload">("");
   /* live font metrics of 'italic 15px HNW' (per-browser; Safari ≠ Chrome) */
   const [fm, setFm] = useState({ a: 14.28, d: 3.19 });
@@ -282,12 +288,11 @@ export default function NewUI() {
     if (document.fonts?.load) document.fonts.load("italic 15px HNW").then(go, go);
     else go();
   }, []);
-  /* round 8 #13: entering checkout, Barcode/QR rows follow the back-details
-     choice (uploaded → unchecked, created/unset → checked); designer-edit
-     always starts unmarked */
+  /* round 8 #13 (round 27: barcode row gone): entering checkout, the QR row
+     follows the back-details choice; designer-edit always starts unmarked */
   useEffect(() => {
-    if (page === "checkout") setPackSel((ps) => [ps[0], barcodeMode !== "upload", qrMode !== "upload", ps[3], false]);
-  }, [page, barcodeMode, qrMode]);
+    if (page === "checkout") setPackSel((ps) => [ps[0], qrMode !== "upload", ps[2], false]);
+  }, [page, qrMode]);
 
   /* MARKETING ASSETS (round 13): entering the assets page kicks off the
      generation run (2 product shots + 5 lifestyle) unless the same brief
@@ -441,7 +446,7 @@ export default function NewUI() {
   }, [page, go]);
 
   const sigFront = () => JSON.stringify({ vision, sketch: !!sketch, f });
-  const sigBack = () => JSON.stringify({ b, markets, barcodeImg: !!barcodeImg, qrImg: !!qrImg, w: f.width, h: f.height, sel: dreams[selected]?.style });
+  const sigBack = () => JSON.stringify({ b, markets, gtin: gtinValid ? gtinNorm : "", qrImg: !!qrImg, w: f.width, h: f.height, sel: dreams[selected]?.style });
 
   async function nextFromFront() {
     /* owner #14: regenerate ONLY when inputs changed */
@@ -522,7 +527,7 @@ export default function NewUI() {
         bottlingDate: b.bottlingDate || "", lot: b.lot || "", web: b.web || "",
         alcohol: (f.alcohol || "12.5").replace("%", ""), volume: (f.volume || "750").replace(/\D/g, "") || "750",
         countryOfOrigin: (f.regionCountry || DEMO_FRONT.regionCountry).split(",")[1]?.trim() || "",
-        barcodeImage: barcodeImg, qrImage: qrImg,
+        barcodeDigits: gtinValid ? gtinNorm : "", qrImage: qrImg,
         qrUrl: `https://8klabels.com/p/${productCode.current}`,
       },
       markets, heightMM: Number(f.height) || 80, bgColor: bg,
@@ -541,9 +546,9 @@ export default function NewUI() {
     setBusyMsg("");
   }
 
+  /* round 27: Barcode row removed — GTIN entry is part of the back label */
   const PACK = [
     { name: "Front & Back Labels", price: 199, base: 536.5 },
-    { name: "Barcode", price: 99, base: 570.8 },
     { name: "QR & Product Page", price: 29, base: 605.1 },
     { name: "Marketing Assets", price: 19, base: 639.4 },
     { name: "Edit with human designer", price: 99, base: 673.7 },
@@ -889,16 +894,30 @@ export default function NewUI() {
               </span>
             );
           })}
-          {/* round 26 #1: the baked barcode note renders larger than the QR
-              note — covered and re-rendered live at the same 13px, both
-              languages (price line included) */}
+          {/* ROUND 27: honest barcode. "Create Barcode" invented random
+              digits — gone. The winery types its own GS1 GTIN; we validate
+              the checksum live and draw a print-perfect EAN-13 on the back
+              label. The GS1 link is deliberately quiet (owner: don't
+              disturb the design). Baked button rects are covered white. */}
+          {patch(136, 476, 556, 44, "bcbtns")}
           {patch(136, 542, 440, 66, "bcnote")}
+          <input value={gtin} onChange={(e) => setGtin(e.target.value)} placeholder="E.g. 4860012345676"
+            style={{ ...px(138.04, 500 - IN_BASE, 240, 20), ...inputStyle }} />
+          {rowLine(138.04, 502.5, 243.3, "gtln")}
+          {gtin.trim() && (
+            <span style={{ ...px(398, 500 - 12.9, 280, 16), font: `11px ${HNW}`, lineHeight: "16px", color: gtinValid ? "#3f6d2a" : "#8e2b2b" }}>
+              {gtinValid ? t("✓ valid GTIN") : t("needs 12 or 13 digits (GS1 checksum)")}
+            </span>
+          )}
           {(lang === "ge"
-            ? ["თუ შტრიხკოდი არ გაქვთ, ჩვენ მოგაწვდით", "ოფიციალურ GTIN შტრიხკოდს და დავიტანთ ეტიკეტზე.", "GTIN შტრიხკოდის ფასი - $99."]
-            : ["If you don't have a barcode, we'll provide", "an official GTIN barcode and integrate it", "into your back label.", "GTIN Barcode price - $99."]
+            ? ["ჩაწერე შენი GS1 GTIN ნომერი და ბეჭდვისთვის", "მზა შტრიხკოდს უკანა ეტიკეტზე ჩვენ დავიტანთ."]
+            : ["Enter your GS1 GTIN number and we'll draw", "a print-perfect barcode into your back label."]
           ).map((ln, i) => (
             <span key={"bc" + i} style={{ ...px(138.7, 557.83 + i * 18 - 12.9, 440, 16), font: `13px ${HNW}`, color: "#111", lineHeight: "16px", whiteSpace: "nowrap" }}>{ln}</span>
           ))}
+          <a href="https://www.gs1.org/standards/get-barcodes" target="_blank" rel="noreferrer"
+            style={{ ...px(138.7, 557.83 + 2 * 18 - 12.9, 320, 15), font: `italic 11px ${HNW}`, color: "#8a8a8a", textDecoration: "underline", lineHeight: "15px" }}>
+            {t("No GTIN yet? Register at gs1.org")}</a>
           {/* round 22 #7: the QR note is OUTLINED in the artboard — covered
               and rendered live so it translates, plus the price line */}
           {patch(748, 542, 400, 64, "qrnote")}
@@ -919,15 +938,6 @@ export default function NewUI() {
               display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4,
             });
             return (<>
-              <button onClick={() => { setBarcodeImg(""); setBarcodeMode(barcodeMode === "create" ? "" : "create"); }} style={{ ...px(138.04, 480, 239.1, 34.3), ...modeStyle(barcodeMode === "create") }}>{t("Create Barcode")}</button>
-              <label style={{ ...px(445.71, 480, 240, 34.3), ...modeStyle(barcodeMode === "upload") }}>
-                <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
-                  const file = e.target.files?.[0]; if (!file) return;
-                  const rd = new FileReader(); rd.onload = () => { setBarcodeImg(String(rd.result)); setBarcodeMode("upload"); }; rd.readAsDataURL(file);
-                }} />
-                {t("Upload Barcode")}
-                {barcodeImg && <span style={{ position: "absolute", left: 0, top: 38, width: 240, font: `11px ${HNW}`, color: "#3f6d2a", textAlign: "center" }}>{t("✓ barcode uploaded")}</span>}
-              </label>
               <button onClick={() => { setQrImg(""); setQrMode(qrMode === "create" ? "" : "create"); }} style={{ ...px(754.29, 480, 240.1, 34.3), ...modeStyle(qrMode === "create") }}>{t("Create QR Code")}</button>
               {/* owner 2026-09-07: with Create QR active, the ingredients
                   for the future landing page can be uploaded as a text file */}
@@ -1232,9 +1242,9 @@ export default function NewUI() {
           {patch(130, 503, 1180, 240, "pricing")}
           {(() => {
             const SH = 20.5, B = IN_BASE - 2;   /* baseline offset in a 16px line */
-            const rows = [536.49, 570.78, 604.93, 639.35, 673.77].map((y) => y - SH);
+            const rows = [536.49, 570.78, 604.93, 639.35].map((y) => y - SH);
             return (<>
-              {[548.84, 582.86, 617.14, 651.7].map((y, i) => (
+              {[548.84, 582.86, 617.14].map((y, i) => (
                 <div key={"dsh" + i} style={{ ...px(137.14, y - SH, 1302.47 - 137.14, 1), background: "repeating-linear-gradient(90deg, #000 0 5px, transparent 5px 10px)" }} />
               ))}
               {PACK.map((it, i) => (

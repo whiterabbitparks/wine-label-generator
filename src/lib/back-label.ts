@@ -299,11 +299,14 @@ export async function composeBackLabel(
   }
   if (d.bottlingDate) body += T(21.3, 65.5, 7.7 * PT, `BOTTLED: ${d.bottlingDate}`);
   body += T(21.2, 76.0, S7, "See ingredients");
-  const bc = ean13(d.barcodeDigits);
+  /* ROUND 27: no invented digits — the EAN renders ONLY from a real GTIN
+     the winery typed (or a legacy uploaded image); otherwise the right
+     side of the codes band stays clean (empty-fields-disappear law) */
+  const bc = d.barcodeDigits ? ean13(d.barcodeDigits) : null;
   const bcW = 31.6, bx = W - 4.2 - bcW, bcH = 13.9;
   if (d.barcodeImage) {
     body += `<image x="${(bx * s).toFixed(2)}" y="${(bandTop * s).toFixed(2)}" width="${(bcW * s).toFixed(2)}" height="${(bcH * s).toFixed(2)}" href="${d.barcodeImage}"/>`;
-  } else {
+  } else if (bc) {
     const mod = bcW / 95;
     const GUARD = new Set([0, 1, 2, 45, 46, 47, 48, 49, 92, 93, 94]);
     for (let i = 0; i < bc.modules.length; i++)
@@ -327,7 +330,7 @@ export async function composeBackLabel(
     `<rect x="${-B}" y="${-B}" width="${(Wmm + 2 * B).toFixed(1)}" height="${(H + 2 * B).toFixed(1)}" fill="#FFFFFF"/>` +
     `<rect x="${-B}" y="${-B}" width="${(Wmm + 2 * B).toFixed(1)}" height="${(BAND_TOP * s + B).toFixed(2)}" fill="${bg}"/>` +
     body + `</svg>`;
-  return { svg, widthMM: Wmm + 2 * B, heightMM: H + 2 * B, barcodeDigits: bc.digits };
+  return { svg, widthMM: Wmm + 2 * B, heightMM: H + 2 * B, barcodeDigits: bc?.digits || "" };
 }
 
 function esc(s2: string) {
