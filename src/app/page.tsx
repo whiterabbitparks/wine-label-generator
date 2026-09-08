@@ -848,6 +848,17 @@ export default function NewUI() {
               </span>
             );
           })}
+          {/* round 22 #6: price line — in GEO it lives inside the translated
+              baked note; EN gets it as a 4th live line */}
+          {lang === "en" && (
+            <span style={{ ...px(138.7, 611.8 - 12.9, 400, 16), font: `13px ${HNW}`, color: "#111", lineHeight: "16px" }}>GTIN Barcode price - $100.</span>
+          )}
+          {/* round 22 #7: the QR note is OUTLINED in the artboard — covered
+              and rendered live so it translates, plus the price line */}
+          {patch(748, 542, 400, 64, "qrnote")}
+          {["If you don't have a QR code, we'll generate", "one and link it to a dedicated page with your wine's", "ingredients, nutrition, and product information.", "Price of a QR Code & Product Web Page - $50."].map((ln, i) => (
+            <span key={i} style={{ ...px(752.4, 557.83 + i * 18 - 12.9, 400, 16), font: `13px ${HNW}`, color: "#111", lineHeight: "16px", whiteSpace: "nowrap" }}>{t(ln)}</span>
+          ))}
           {/* round 8 #5: all four buttons start WHITE; the clicked mode
               (create, or upload once a file is picked) stays black */}
           {(() => {
@@ -968,7 +979,9 @@ export default function NewUI() {
           { key: "color", cx: 625.64, items: [["Olive Green", 283.07], ["Transparent", 312.07], ["Amber", 341.07]] },
           { key: "closure", cx: 864.64, items: [["Cork", 283.07], ["Screw Cap", 312.07], ["Wax Seal", 341.07], ["Crown Cap", 371.07], ["Sparkling Cork", 400.07]] },
         ];
-        const finish: [string, number, number][] = [["Matte", 1104.64, 281.78], ["Glossy", 1173.21, 281.78], ["No cap", 1104.64, 312.58]];
+        /* round 22 #10: Glossy's ring+text sit a bit further right (the
+           baked pair is covered) so the ring clears the word before it */
+        const finish: [string, number, number][] = [["Matte", 1104.64, 281.78], ["Glossy", 1181, 281.78], ["No cap", 1104.64, 312.58]];
         return (<>
           {cols.map(({ key, cx, items }) => items
             /* round 17 #2: Sparkling Cork exists only for the Sparkling bottle */
@@ -984,8 +997,11 @@ export default function NewUI() {
             ))}
           {/* cover the baked Sparkling Cork row when hidden */}
           {bottle.type !== "Sparkling" && patch(854, 388, 132, 26, "spcork")}
+          <div style={{ ...px(1173.21 - 11, 281.78 - 11, 22, 22), background: "#fff", borderRadius: 11 }} />
+          {patch(1185, 271.5, 66, 20, "glossytxt")}
+          <span style={{ ...px(1196.5, 285.28 - 12.4, 70, 16), font: `12px ${HNW}`, color: "#111", lineHeight: "16px" }}>{t("Glossy")}</span>
           {finish.map(([opt, cx0, cy0]) =>
-            dotBtn(cx0, cy0, bottle.finish === opt, () => setBottle((m) => ({ ...m, finish: opt })), "f" + opt, { coverDot: opt === "Matte" })
+            dotBtn(cx0, cy0, bottle.finish === opt, () => setBottle((m) => ({ ...m, finish: opt })), "f" + opt, opt === "Matte" ? { coverDot: true } : opt === "Glossy" ? { ring: true, cover: 22 } : {})
           )}
           {/* round 8 #9: the baked cursor ring's stroke pokes 1px past the
               capsule on both sides — erase it fully, then repaint the capsule */}
@@ -1266,13 +1282,18 @@ export default function NewUI() {
           {/* STATIC header (real fonts, extracted geometry) */}
           <div style={{ ...px(0, 0, W, HEADER_H), background: "#000" }}>
             <span style={{ ...px(138.2, 25.5, 100, 20), font: `700 19px ${HNW}`, color: "#fff" }}>8K</span>
-            <span style={{ ...px(1056, 27.5, 90, 16), font: `700 13px ${HNW}`, color: "#fff" }}>{t("About Us")}</span>
-            <span style={{ ...px(1160, 27.5, 80, 16), font: `700 13px ${HNW}`, color: "#fff" }}>{t("Gallery")}</span>
-            <span style={{ ...px(1253.5, 27.5, 80, 16), font: `700 13px ${HNW}`, color: "#fff" }}>{t("Contact")}</span>
-            {/* ENG / GEO (owner 2026-09-07) */}
-            <button onClick={() => pickLang("en")} style={{ ...px(1338, 26, 34, 18), ...ghost, font: `${lang === "en" ? 700 : 300} 13px ${HNW}`, color: lang === "en" ? "#fff" : "#8a8a8a", textAlign: "left" }}>ENG</button>
-            <span style={{ ...px(1370, 27.5, 8, 16), font: `300 13px ${HNW}`, color: "#8a8a8a" }}>/</span>
-            <button onClick={() => pickLang("ge")} style={{ ...px(1380, 26, 36, 18), ...ghost, font: `${lang === "ge" ? 700 : 300} 13px ${HNW}`, color: lang === "ge" ? "#fff" : "#8a8a8a", textAlign: "left" }}>GEO</button>
+            {/* menu + ENG/GEO: one baseline, even gaps, right edge on the
+               progress line's right edge x1303 (round 22 #11) */}
+            <div style={{ position: "absolute", right: W - 1303, top: 27.5, display: "flex", alignItems: "baseline", columnGap: 44 }}>
+              <span style={{ font: `700 13px ${HNW}`, color: "#fff", whiteSpace: "nowrap" }}>{t("About Us")}</span>
+              <span style={{ font: `700 13px ${HNW}`, color: "#fff", whiteSpace: "nowrap" }}>{t("Gallery")}</span>
+              <span style={{ font: `700 13px ${HNW}`, color: "#fff", whiteSpace: "nowrap" }}>{t("Contact")}</span>
+              <span style={{ display: "flex", alignItems: "baseline", columnGap: 5, whiteSpace: "nowrap" }}>
+                <button onClick={() => pickLang("en")} style={{ ...ghost, font: `${lang === "en" ? 700 : 300} 13px ${HNW}`, color: lang === "en" ? "#fff" : "#8a8a8a" }}>ENG</button>
+                <span style={{ font: `300 13px ${HNW}`, color: "#8a8a8a" }}>/</span>
+                <button onClick={() => pickLang("ge")} style={{ ...ghost, font: `${lang === "ge" ? 700 : 300} 13px ${HNW}`, color: lang === "ge" ? "#fff" : "#8a8a8a" }}>GEO</button>
+              </span>
+            </div>
           </div>
 
           {/* STATIC progress bar (hidden on welcome & checkout) */}
@@ -1283,9 +1304,15 @@ export default function NewUI() {
               {CIRCLE_X.map((cx0, i) => (
                 <span key={i} style={{ ...px(cx0 - 4.9, 685.59 - 4.9 - 660, 9.8, 9.8), borderRadius: 5, border: "1px solid #111", background: step >= i ? "#111" : "#fff", transition: `background 300ms ${EASE}`, boxSizing: "border-box" }} />
               ))}
-              {STEP_LABELS.map(([lbl, x0]) => (
-                <span key={lbl} style={{ ...px(x0, 708.5 - 660, 260, 18), font: `700 15px ${HNW}`, color: "#111", lineHeight: "15px" }}>{t(lbl)}</span>
-              ))}
+              {STEP_LABELS.map(([lbl], i) => {
+                const pos: React.CSSProperties =
+                  i === 0 ? { left: 137.14, width: 300, textAlign: "left" }
+                  : i === 3 ? { left: 1303 - 300, width: 300, textAlign: "right" }
+                  : { left: CIRCLE_X[i] - 150, width: 300, textAlign: "center" };
+                return (
+                  <span key={lbl} style={{ position: "absolute", top: 708.5 - 660, height: 18, ...pos, font: `700 15px ${HNW}`, color: "#111", lineHeight: "15px" }}>{t(lbl)}</span>
+                );
+              })}
               {/* back arrow */}
               {(
                 <button aria-label="back" onClick={goBack} style={{ ...px(56, 666 - 660, 60, 40), ...ghost }}>

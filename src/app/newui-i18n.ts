@@ -26,9 +26,9 @@ export const SVG_GE: Record<string, string> = {
   "© 8K Labels — a demo interface built from your uploaded mockup": "© 8K Labels — საჩვენებელი ინტერფეისი თქვენი მაკეტიდან",
   /* vision */
   "YOUR VISION": "თქვენი ხედვა",
-  "If you have a specific idea for the front label, describe it in simple words": "თუ წინა ეტიკეტის კონკრეტული იდეა გაქვთ, აღწერეთ მარტივი სიტყვებით",
-  "or upload a sketch or photo reference. Or, let us suggest ideas for you.": "ან ატვირთეთ ესკიზი ან ფოტო. ან მოგვანდეთ და ჩვენ შემოგთავაზებთ იდეებს.",
-  "Upload a sketch or a reference photo": "ატვირთეთ ესკიზი ან რეფერენს ფოტო",
+  "If you have a specific idea for the front label, describe it in simple words": "თუ ეტიკეტის იდეა უკვე გაქვთ, აღწერეთ მარტივი სიტყვებით",
+  "or upload a sketch or photo reference. Or, let us suggest ideas for you.": "ან ატვირთეთ ესკიზი ან ფოტო. ან ჩვენ შემოგთავაზებთ იდეებს.",
+  "Upload a sketch or a reference photo": "ატვირთეთ ესკიზი ან ფოტო ნიმუში",
   "Give me an idea": "მომეცი იდეა",
   /* front */
   "FRONT LABEL": "წინა ეტიკეტი",
@@ -65,11 +65,8 @@ export const SVG_GE: Record<string, string> = {
   "Create QR Code": "QR კოდის შექმნა",
   "Upload QR Code": "QR კოდის ატვირთვა",
   "If you don&apos;t have a barcode, we&apos;ll provide": "თუ შტრიხკოდი არ გაქვთ, ჩვენ მოგაწვდით",
-  "an official GTIN barcode and integrate it": "ოფიციალურ GTIN შტრიხკოდს და ჩავსვამთ",
-  "into your back label.": "თქვენს უკანა ეტიკეტში.",
-  "If you don&apos;t have a QR code, we&apos;ll generate": "თუ QR კოდი არ გაქვთ, ჩვენ შევქმნით",
-  "one and link it to a dedicated page with your wine&apos;s": "და მივაბამთ სპეციალურ გვერდს თქვენი ღვინის",
-  "ingredients, nutrition, and product information.": "ინგრედიენტებით, კვებითი ღირებულებით და ინფორმაციით.",
+  "an official GTIN barcode and integrate it": "ოფიციალურ GTIN შტრიხკოდს და დავიტანთ ეტიკეტზე.",
+  "into your back label.": "GTIN შტრიხკოდის ფასი - $100.",
   /* compliance */
   "MARKET COMPLIANCE": "ბაზრების შესაბამისობა",
   "Select the market(s) where your wine will be sold,": "აირჩიეთ ბაზრები, სადაც თქვენი ღვინო გაიყიდება,",
@@ -100,7 +97,7 @@ export const SVG_GE: Record<string, string> = {
   "Burgundy": "ბურგუნდია",
   "Sparkling": "ცქრიალა",
   "Alsace / Rhine": "ელზასი / რაინი",
-  "Ice Wine": "ყინულის ღვინო",
+  "Ice Wine": "აისვაინი",
   "Olive Green": "ზეთისხილისფერი",
   "Transparent": "გამჭვირვალე",
   "Amber": "ქარვისფერი",
@@ -109,7 +106,7 @@ export const SVG_GE: Record<string, string> = {
   "Wax Seal": "ცვილის ლუქი",
   "Crown Cap": "კრონ-თავსახური",
   "Sparkling Cork": "ცქრიალას კორპი",
-  "Matte": "მქრქალი",
+  "Matte": "გლუვი",
   "Glossy": "პრიალა",
   "No cap": "თავსახურის გარეშე",
   /* assets */
@@ -132,6 +129,11 @@ export const SVG_GE: Record<string, string> = {
 };
 
 export const UI_GE: Record<string, string> = {
+  "If you don't have a QR code, we'll generate": "თუ QR კოდი არ გაქვთ, ჩვენ შევქმნით",
+  "one and link it to a dedicated page with your wine's": "და მივაბამთ სპეციალურ გვერდს თქვენი ღვინის",
+  "ingredients, nutrition, and product information.": "ინგრედიენტებით, კვებითი ღირებულებით და ინფორმაციით.",
+  "Price of a QR Code & Product Web Page - $50.": "QR კოდისა და პროდუქტის გვერდის ფასი - $50.",
+  "GTIN Barcode price - $100.": "GTIN შტრიხკოდის ფასი - $100.",
   "About Us": "ჩვენ შესახებ",
   "Gallery": "გალერეა",
   "Contact": "კონტაქტი",
@@ -141,13 +143,13 @@ export const UI_GE: Record<string, string> = {
   "Check out": "შეკვეთა",
   "© 8K Labels — a demo interface built from your uploaded mockup": "© 8K Labels — საჩვენებელი ინტერფეისი თქვენი მაკეტიდან",
   "classic interface": "კლასიკური ინტერფეისი",
-  "Feel free to leave out fields you don't want on your front label.": "თავისუფლად გამოტოვეთ ველები, რომლებიც წინა ეტიკეტზე არ გსურთ.",
+  "Feel free to leave out fields you don't want on your front label.": "გამოტოვეთ ველები, რომლებიც არ გსურთ, რომ გამოჩნდეს მთავარ ეტიკეტზე.",
   "Width:": "სიგანე:",
   "Height:": "სიმაღლე:",
   "mm": "მმ",
   "words": "სიტყვა",
   "Designing your label": "თქვენი ეტიკეტი მზადდება",
-  "Please stay on this page — preparing your labels usually takes 15–35 seconds.": "გთხოვთ, დარჩეთ ამ გვერდზე — ეტიკეტების მომზადებას ჩვეულებრივ 15–35 წამი სჭირდება.",
+  "Please stay on this page — preparing your labels usually takes 15–35 seconds.": "გთხოვთ, დარჩეთ ამ გვერდზე — ეტიკეტების მომზადებას საშუალოდ 30 წამი სჭირდება.",
   "Select": "არჩევა",
   "Selected": "არჩეულია",
   "Select a label design to continue": "გასაგრძელებლად აირჩიეთ ეტიკეტის დიზაინი",
@@ -189,25 +191,6 @@ export const UI_GE: Record<string, string> = {
   "TOTAL SUM:": "ჯამი:",
   "Proceed to payment": "გადახდაზე გადასვლა",
   /* placeholders */
-  "E.g. GRAND VIN": "მაგ. GRAND VIN",
-  "E.g. Château Margaux": "მაგ. Château Margaux",
-  "E.g. Margaux AOC": "მაგ. Margaux AOC",
-  "E.g. Grand Cru Classé": "მაგ. Grand Cru Classé",
-  "E.g. 2018": "მაგ. 2018",
-  "E.g. Cabernet Sauvignon": "მაგ. საფერავი",
-  "E.g. Bordeaux, France": "მაგ. კახეთი, საქართველო",
-  "E.g. Vieilles Vignes": "მაგ. ძველი ვაზები",
-  "Dry, etc.": "მშრალი და ა.შ.",
-  "E.g. Red, White etc.": "მაგ. წითელი, თეთრი და ა.შ.",
-  "E.g. Wine, Sparkling Wine, etc.": "მაგ. ღვინო, ცქრიალა ღვინო და ა.შ.",
-  "E.g. 12.5%": "მაგ. 12.5%",
-  "E.g. 750 mL": "მაგ. 750 მლ",
-  'E.g. "Popiashvili Cellar" LLC': 'მაგ. შპს "ფოფიაშვილის მარანი"',
-  "E.g. #36 S. Chikovani st. 0171 Tbilisi, Georgia": "მაგ. ს. ჩიქოვანის 36, 0171 თბილისი",
-  'E.g. "Teller Wines" LLC': 'მაგ. შპს "თელერ ვაინს"',
-  "E.g. 22/04/2019": "მაგ. 22/04/2019",
-  "E.g. L206026342": "მაგ. L206026342",
-  "E.g. www.popiashvili.com": "მაგ. www.popiashvili.com",
 };
 
 /* swap baked SVG strings in place, preserving surrounding whitespace */
@@ -215,7 +198,9 @@ export function translateSvg(svg: string): string {
   let out = svg;
   for (const [en, ge] of Object.entries(SVG_GE)) {
     const escaped = en.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    out = out.replace(new RegExp(`>(\\s*)${escaped}(\\s*)<`, "g"), `>$1${ge}$2<`);
+    /* function replacer: a "$" inside the translation (prices!) must never
+       be read as a backreference */
+    out = out.replace(new RegExp(`>(\\s*)${escaped}(\\s*)<`, "g"), (_m, a, b) => `>${a}${ge}${b}<`);
   }
   return out;
 }

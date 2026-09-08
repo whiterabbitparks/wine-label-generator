@@ -1990,6 +1990,20 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 22 (owner 2026-09-07, 13 GEO refinements): reworded vision
+  intro/upload button/front intro/loader note (საშუალოდ 30 წამი);
+  placeholders stay ENGLISH in GEO (entries dropped); Ice Wine →
+  აისვაინი, Matte → გლუვი; barcode note GE folds "GTIN შტრიხკოდის
+  ფასი - $100." into line 3 (EN gets a live 4th line); the QR NOTE IS
+  OUTLINED in the artboard — covered + rendered live in both langs
+  incl. "Price of a QR Code & Product Web Page - $50."; Glossy's
+  ring+text moved right (baked pair covered, live span) so the ring
+  clears გლუვი; header menu + ENG/GEO = ONE baseline-aligned flex row,
+  even 44px gaps, right edge on the progress line's right edge x1303;
+  step labels: first left at margin, middle two CENTRED on their
+  circles, შეკვეთა right-aligned to x1303. TRAP: translateSvg needed a
+  FUNCTION replacer — "$100" in a replacement string ate "$1" as a
+  backreference.
 - ENG/GEO (owner 2026-09-07): full Georgian translation. The switch
   sits after Contact in the static header (pickLang + localStorage
   'nui-lang'). TWO dictionaries in src/app/newui-i18n.ts: SVG_GE swaps
