@@ -1990,6 +1990,18 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 33 (owner: "at loader end the previous page's elements flash
+  and slide away"): STALE-CLOSURE BUG in go(). nextFromFront captures
+  go() while page==="front", generates for ~25s, then calls
+  go("options") — the stale closure still read page="front", so
+  setPrev("front") replayed the FRONT FORM as the exiting layer (and
+  skipped the loader's fade-out + the outBase delay). FIX: the
+  current page lives in pageNow (a ref go() reads at call time,
+  never from its birth render); go() also ignores same-page calls;
+  the ?page= dev-aid syncs the ref. Reproduced with IMAGE_PROVIDER=
+  mock frame-bursts before, verified clean after: loader fades on
+  white, THEN labels slide in. Trap for the future: any ASYNC flow
+  that navigates twice must not trust closure state.
 - ROUND 32 (owner: "reference analysis texts are mediocre → bad
   results"; GO on items 1-4, closed-loop #5 deferred): REFS-QUALITY
   REWORK. New shared analyst `src/lib/admin/vision.ts`: analystChat()

@@ -175,7 +175,7 @@ export default function NewUI() {
   useEffect(() => {
     const sp = new URLSearchParams(window.location.search);
     const q = sp.get("page");
-    if (q && (ORDER as readonly string[]).includes(q)) setPage(q as PageKey);
+    if (q && (ORDER as readonly string[]).includes(q)) { pageNow.current = q as PageKey; setPage(q as PageKey); }
     /* dev aid: &pp=<code> previews the final-pack product-page slot */
     const pp = sp.get("pp");
     if (pp) { setProductUrl(`/p/${pp.replace(/[^a-z0-9]/gi, "")}`); return; }
@@ -457,15 +457,25 @@ export default function NewUI() {
     img.src = "/newui/colorwheel.png";
   }, []);
 
+  /* ROUND 33 (owner: "at loader end the previous page's elements flash and
+     slide away"): go() used to read `page` from its render closure — an
+     async flow that navigated twice (front → loader … 25s … → options)
+     called a STALE go that still believed the page was "front", so the
+     front form replayed as the exiting layer instead of the loader fading.
+     The current page now lives in a ref that never goes stale. */
+  const pageNow = useRef<PageKey>("welcome");
   const go = useCallback((next: PageKey, d = 1) => {
-    setPrev(page); setDir(d); setPage(next);
+    const cur = pageNow.current;
+    if (next === cur) return;
+    pageNow.current = next;
+    setPrev(cur); setDir(d); setPage(next);
     /* into the loader the fade starts only after the slide-out (round 9 #1);
        out of the loader the fade completes before the slide (round 21 #1);
        slice cascades extend the settle per page (round 16 #3) */
-    const md = SLIDE_MS + Math.max(maxSliceDelay(page), maxSliceDelay(next));
-    const extra = next === "loader" || page === "loader" ? FADE_MS : 0;
+    const md = SLIDE_MS + Math.max(maxSliceDelay(cur), maxSliceDelay(next));
+    const extra = next === "loader" || cur === "loader" ? FADE_MS : 0;
     setTimeout(() => setPrev(null), md + extra + 60);
-  }, [page]);
+  }, []);
 
   const goBack = useCallback(() => {
     const i = ORDER.indexOf(page);
