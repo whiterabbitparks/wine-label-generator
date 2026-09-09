@@ -31,6 +31,7 @@ interface DreamCard {
   preview?: string;       // medium-res JPEG for display
   mood: string;
   verdict?: string;
+  verdictId?: string;     // feedback row id — lets a mis-click be undone
   comment: string;
   downloading?: boolean;
 }
@@ -173,11 +174,18 @@ export function StudioCore() {
 
   async function verdict(id: number, v: "approve" | "reject") {
     const c = cards.find((x) => x.id === id); if (!c) return;
-    await fetch("/api/admin/dream-feedback", {
+    const r = await fetch("/api/admin/dream-feedback", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ verdict: v, comment: c.comment, vision, style: styleMood, wine }),
     });
-    setCards((cs) => cs.map((x) => (x.id === id ? { ...x, verdict: v } : x)));
+    const b = await r.json().catch(() => ({}));
+    setCards((cs) => cs.map((x) => (x.id === id ? { ...x, verdict: v, verdictId: b.id } : x)));
+  }
+  /* a mis-clicked verdict can be taken back (owner 2026-09-09) */
+  async function undoVerdict(id: number) {
+    const c = cards.find((x) => x.id === id); if (!c?.verdictId) return;
+    await fetch(`/api/admin/dream-feedback?id=${c.verdictId}`, { method: "DELETE" });
+    setCards((cs) => cs.map((x) => (x.id === id ? { ...x, verdict: undefined, verdictId: undefined } : x)));
   }
 
   async function downloadTiff(id: number) {
@@ -277,6 +285,11 @@ export function StudioCore() {
                   {c.verdict ? (
                     <span style={{ fontSize: 12, color: c.verdict === "approve" ? "#3f6d2a" : "#a03030" }}>
                       {c.verdict === "approve" ? "✓ recorded" : "✗ recorded"}
+                      {c.verdictId && (
+                        <button onClick={() => undoVerdict(c.id)}
+                          style={{ background: "none", border: "none", cursor: "pointer", color: "#7a6a58", fontSize: 12, textDecoration: "underline", marginLeft: 8 }}>
+                          undo</button>
+                      )}
                     </span>
                   ) : (
                     <>

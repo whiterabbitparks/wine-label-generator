@@ -1990,6 +1990,22 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 37 (owner 2026-09-09, 4 items): (1) sparkling auto-select on
+  the bottle page detects GEORGIAN wording too (ცქრიალა/შამპან/
+  პროსეკო + GEO terms for ice wine/alsace/burgundy) — the round 17
+  mechanism existed but only spoke English. (2) SPARKLING CORK
+  anatomy fixed in the closure prompt: with a foil hood the wire cage
+  lives ENTIRELY UNDER the foil (soft embossed relief at most, no
+  wire ever pokes through); "No cap" finish → bare muselet with cap
+  plate, fully visible (the top-level no-cap guard now special-cases
+  sparkling). (3) dream verdicts are UNDOABLE: feedback POST returns
+  the row id, the studio card shows "undo" next to ✓/✗ recorded —
+  deletes the row and re-opens the verdict buttons. (4) DELETING A
+  REFERENCE KILLS ITS DERIVATIVES: style-refs deleteRef also removes
+  the ref's style card from styleProfiles AND its locked palette
+  (card-palettes map.<id>); dream-refs DELETE removes the ref's
+  composition card from dream-cards-<style>. Charters refresh on the
+  next Analyze (board-level, not per-ref).
 - ROUND 36 (owner GO: RULES UNIFICATION): the full map first — FIVE
   owner-editable stores existed: dream-rules (ACTIVE, dreams),
   image-rules aka settings image-hard-rules (ACTIVE: dreams' art +

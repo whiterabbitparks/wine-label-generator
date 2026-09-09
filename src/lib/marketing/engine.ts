@@ -86,14 +86,18 @@ function closureLine(closure: string, colourCSS: string, finish: string) {
      closures: round 15 #2 — a selected screw cap still rendered as cork
      (the silhouette outline shows a corked top and was winning) */
   if (/no cap/i.test(finish))
-    return "CLOSURE — NON-NEGOTIABLE: a natural cork sits flush in the bare bottle mouth — NO capsule, NO foil, the glass lip fully visible";
+    return closure === "Sparkling Cork"
+      ? "CLOSURE — NON-NEGOTIABLE: a mushroom sparkling cork held by its BARE wire cage (muselet) with its round metal cap plate — no foil hood; the cage and its neatly twisted wire sit fully visible against the glass"
+      : "CLOSURE — NON-NEGOTIABLE: a natural cork sits flush in the bare bottle mouth — NO capsule, NO foil, the glass lip fully visible";
   switch (closure) {
     case "Screw Cap": return `CLOSURE — NON-NEGOTIABLE: a ${fin} ${col} aluminium SCREW CAP with a clean straight skirt over the bottle mouth and upper neck. There is NO cork and NO foil capsule — a screw cap only`;
     /* round 29 #3: medium-height wax, 2-3mm thick, rounded over the tip */
     case "Wax Seal": return `CLOSURE — NON-NEGOTIABLE: a ${fin} ${col} WAX SEAL of MEDIUM height — it coats the bottle mouth and the upper third of the neck (never just the tip, never the whole neck). The wax is a SUBSTANTIAL 2–3 mm thick coat that visibly ROUNDS and softens the glass tip's edges — it must never read as a thin skin tracing the sharp glass profile. Its lower edge is clean and only slightly uneven — absolutely NO drips or runs. No foil capsule`;
     /* round 29 #4: the model kept missing what a crown cap is */
     case "Crown Cap": return `CLOSURE — NON-NEGOTIABLE: a ${fin} ${col} metal CROWN CAP — the pressed-steel BEER-BOTTLE cap: a flat round top with a short crimped skirt of ~21 tiny flutes gripping the bottle lip, exactly like on a classic beer bottle. Bare glass neck below it. There is NO cork, NO capsule, NO screw threads — only this crimped beer-style cap`;
-    case "Sparkling Cork": return `CLOSURE — NON-NEGOTIABLE: a mushroom sparkling cork under a wire cage, dressed in a ${fin} ${col} foil hood down the neck`;
+    /* round 37 #2: wires were rendered poking OUT of the foil — anatomy
+       spelled out: with a foil hood the cage lives entirely UNDER the foil */
+    case "Sparkling Cork": return `CLOSURE — NON-NEGOTIABLE: a ${fin} ${col} FOIL HOOD dressed smoothly over the sparkling cork AND its entire wire cage, running down the upper neck with a clean crimped lower edge. The foil COMPLETELY covers the cage — no wire ever pokes through, over or out of the foil; at most the cage's form reads as a soft embossed relief under the foil surface`;
     default: return `CLOSURE — NON-NEGOTIABLE: a natural cork under a ${fin} ${col} foil capsule covering the bottle lip and upper neck`;
   }
 }

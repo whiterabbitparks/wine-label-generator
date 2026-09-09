@@ -270,10 +270,12 @@ export default function NewUI() {
     if (page !== "bottle" || bottleTouched.current) return;
     const txt = [f.wineType, f.grape, f.wine, f.appellation, f.regionCountry, f.special, f.classification].filter(Boolean).join(" ").toLowerCase();
     let type = "";
-    if (/sparkling|champagne|prosecco|cava|cr[ée]mant|p[ée]t[\s-]?nat/.test(txt)) type = "Sparkling";
-    else if (/ice\s?wine|eiswein/.test(txt)) type = "Ice Wine";
-    else if (/riesling|gew[uü]rztraminer|alsace|rhine|mosel/.test(txt)) type = "Alsace / Rhine";
-    else if (/pinot noir|burgund|bourgogne|chardonnay/.test(txt)) type = "Burgundy";
+    /* round 37 #1: Georgian wording detects too — the owner types the wine
+       type in Georgian when the GEO interface is on */
+    if (/sparkling|champagne|prosecco|cava|cr[ée]mant|p[ée]t[\s-]?nat|ცქრიალა|შამპან|პროსეკო/.test(txt)) type = "Sparkling";
+    else if (/ice\s?wine|eiswein|აისვაინ|ყინულის ღვინო/.test(txt)) type = "Ice Wine";
+    else if (/riesling|gew[uü]rztraminer|alsace|rhine|mosel|რისლინგ|ელზას/.test(txt)) type = "Alsace / Rhine";
+    else if (/pinot noir|burgund|bourgogne|chardonnay|პინო|შარდონე|ბურგუნდ/.test(txt)) type = "Burgundy";
     if (type) setBottle((m) => ({
       ...m, type,
       closure: type === "Sparkling" ? "Sparkling Cork" : m.closure === "Sparkling Cork" ? "Cork" : m.closure,

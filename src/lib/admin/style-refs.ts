@@ -122,6 +122,19 @@ export async function deleteRef(id: string): Promise<boolean> {
   try {
     fs.unlinkSync(path.join(REFS_DIR, doc.file));
   } catch {}
+  /* ROUND 37 #4 (owner): everything DERIVED from a deleted reference dies
+     with it — its style card stops steering dreams, its locked palette is
+     forgotten. Charters refresh on the next Analyze. */
+  try {
+    const prof = (await db.collection("styleProfiles").findOne({ style: doc.style })) as { variants?: { key: string }[] } | null;
+    if (prof?.variants?.some((v) => v.key === id))
+      await db.collection("styleProfiles").updateOne(
+        { style: doc.style },
+        { $set: { variants: prof.variants!.filter((v) => v.key !== id) } });
+    await db.collection("settings").updateOne(
+      { _id: "card-palettes" } as never,
+      { $unset: { [`map.${id}`]: "" } });
+  } catch { /* derived cleanup must never block the deletion itself */ }
   return true;
 }
 

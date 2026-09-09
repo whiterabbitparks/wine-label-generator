@@ -42,7 +42,7 @@ export async function POST(req: Request) {
   if (body.verdict !== "approve" && body.verdict !== "reject")
     return NextResponse.json({ error: "verdict must be approve|reject" }, { status: 400 });
   const db = await getDb();
-  await db.collection("dream_feedback").insertOne({
+  const res = await db.collection("dream_feedback").insertOne({
     at: new Date().toISOString(),
     verdict: body.verdict,
     comment: String(body.comment || "").slice(0, 400),
@@ -50,5 +50,6 @@ export async function POST(req: Request) {
     style: String(body.style || "").slice(0, 30),
     wine: String(body.wine || "").slice(0, 120),
   } as never);
-  return NextResponse.json({ ok: true });
+  /* id returned so a mis-click can be UNDONE (owner 2026-09-09) */
+  return NextResponse.json({ ok: true, id: String(res.insertedId) });
 }

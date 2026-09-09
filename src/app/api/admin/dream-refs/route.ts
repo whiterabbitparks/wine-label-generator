@@ -209,6 +209,15 @@ export async function DELETE(req: Request) {
     const p = path.join(DREAM_REFS_DIR, path.basename(doc.file));
     if (fs.existsSync(p)) fs.unlinkSync(p);
     await db.collection("dreamRefs").deleteOne({ id });
+    /* ROUND 37 #4 (owner): the composition card derived from a deleted
+       reference dies with it — it must stop steering dreams immediately */
+    try {
+      const cd = (await db.collection("settings").findOne({ _id: `dream-cards-${doc.style}` } as never)) as { cards?: { key: string }[] } | null;
+      if (cd?.cards?.some((c) => c.key === id))
+        await db.collection("settings").updateOne(
+          { _id: `dream-cards-${doc.style}` } as never,
+          { $set: { cards: cd.cards!.filter((c) => c.key !== id) } });
+    } catch { /* cascade must never block deletion */ }
   }
   return NextResponse.json({ ok: true });
 }
