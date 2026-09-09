@@ -1990,6 +1990,24 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 38 (owner 2026-09-09, 3 items — bottle page): (1) CROWN-CAP
+  BOTTLES: burgundy-crown.jpg + alsace-rhine-crown.jpg in
+  public/newui/bottles (owner's drawings); the Crown Cap closure
+  option exists ONLY for Burgundy/Sparkling/Alsace (CROWN_TYPES) —
+  hidden + baked row patched otherwise, closure resets to Cork when
+  the type leaves the trio; the wizard shows the -crown drawing and
+  marketing bottleShapeRef sends it as the silhouette spec.
+  (2) LABEL-ON-SILHOUETTE PREVIEW: the selected front label renders
+  FLAT on the bottle drawing at its true position and scale —
+  LABEL_ANCHOR (same values as the engine's LABEL_POS, duplicated
+  client-side) + real mm sizes on a 30cm bottle (Alsace 35). The
+  drawing is pixel-scanned once per variant (bottleScans ref: bbox +
+  per-row silhouette spans). (3) COLOUR-WHEEL CAP OVERLAY: a canvas
+  over the drawing paints the closure zone in the picked colour
+  INSIDE the scanned silhouette, mix-blend multiply so the line art
+  reads through (exactly the owner's Cap_reference look). CAP_ZONES
+  fractions: capsule 0.5-14.5% + sparkling 0-50.5% measured from the
+  references; screw/wax/crown derived. "No cap" finish → no overlay.
 - ROUND 37 (owner 2026-09-09, 4 items): (1) sparkling auto-select on
   the bottle page detects GEORGIAN wording too (ცქრიალა/შამპან/
   პროსეკო + GEO terms for ice wine/alsace/burgundy) — the round 17

@@ -40,9 +40,11 @@ function bottleShapeRef(type: string, closure?: string): string | null {
   const slug = BOTTLE_SLUG[type];
   if (!slug) return null;
   /* Screw Cap uses the owner's -screw outline so the drawn closure matches
-     the selected one (round 17 #4; sparkling has no screw variant) */
+     the selected one (round 17 #4; sparkling has no screw variant);
+     Crown Cap uses the -crown outline where the owner drew one (round 38) */
   const screw = closure === "Screw Cap" && slug !== "sparkling";
-  for (const file of [screw ? `${slug}-screw.jpg` : "", `${slug}.jpg`]) {
+  const crown = closure === "Crown Cap" && (slug === "burgundy" || slug === "alsace-rhine");
+  for (const file of [screw ? `${slug}-screw.jpg` : crown ? `${slug}-crown.jpg` : "", `${slug}.jpg`]) {
     if (!file) continue;
     try {
       const p = path.join(process.cwd(), "public", "newui", "bottles", file);

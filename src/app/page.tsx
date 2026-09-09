@@ -27,6 +27,30 @@ const STRIP_DELAYS = [0, 55, 110];
 const HNW = "'HNW', 'Helvetica Neue', Helvetica, sans-serif";
 
 const ORDER = ["welcome", "vision", "front", "loader", "options", "backdetails", "compliance", "backdesign", "bottle", "assets", "checkout"] as const;
+/* round 38 #1: crown caps exist only on these bottles */
+const CROWN_TYPES = ["Burgundy", "Sparkling", "Alsace / Rhine"];
+/* round 38 #2: label anchors from the owner's positioning charts (same
+   values as the marketing engine's LABEL_POS — duplicated because the
+   engine module is server-only) */
+const LABEL_ANCHOR: Record<string, { anchor: "top" | "bottom"; pct: number }> = {
+  "Bordeaux": { anchor: "top", pct: 0.423 },
+  "Bordeaux Prestige": { anchor: "top", pct: 0.433 },
+  "Ice Wine": { anchor: "top", pct: 0.386 },
+  "Burgundy": { anchor: "bottom", pct: 0.093 },
+  "Sparkling": { anchor: "bottom", pct: 0.079 },
+  "Alsace / Rhine": { anchor: "bottom", pct: 0.066 },
+};
+/* round 38 #3: colour-wheel closure zones (fractions of the bottle's
+   drawn height, painted INSIDE the silhouette, multiply-blended so the
+   line art reads through) — capsule + sparkling measured from the owner's
+   Cap_reference images; the rest derived from the drawings */
+const CAP_ZONES: Record<string, [number, number][]> = {
+  "Cork": [[0.005, 0.145]],
+  "Screw Cap": [[0, 0.055]],
+  "Wax Seal": [[0, 0.1]],
+  "Crown Cap": [[0, 0.028]],
+  "Sparkling Cork": [[0, 0.505]],
+};
 type PageKey = (typeof ORDER)[number];
 
 /* progress thick-line endpoint per page (extracted; null = no bar) */
@@ -230,9 +254,69 @@ export default function NewUI() {
   const [backSig, setBackSig] = useState("");
   const [backDims, setBackDims] = useState({ w: 1, h: 1 });
   const [bottle, setBottle] = useState<Record<string, string>>({ type: "Bordeaux", color: "Olive Green", closure: "Cork", finish: "Matte" });
+  /* round 38: which drawing variant the bottle page shows */
+  const bottleSrc = () => {
+    const slug = ({ "Bordeaux": "bordeaux", "Bordeaux Prestige": "bordeaux-prestige", "Burgundy": "burgundy", "Sparkling": "sparkling", "Alsace / Rhine": "alsace-rhine", "Ice Wine": "ice-wine" } as Record<string, string>)[bottle.type] || "bordeaux";
+    const screw = bottle.closure === "Screw Cap" && slug !== "sparkling";
+    const crown = bottle.closure === "Crown Cap" && (slug === "burgundy" || slug === "alsace-rhine");
+    return `/newui/bottles/${slug}${screw ? "-screw" : crown ? "-crown" : ""}.jpg`;
+  };
+  /* round 38 #2/#3: the drawing is pixel-scanned ONCE per variant — the
+     per-row silhouette spans drive the cap-colour overlay, the bbox drives
+     the label-position preview */
+  const bottleScans = useRef<Record<string, { top: number; bottom: number; cx: number; spans: [number, number][] }>>({});
+  const [bottleScanKey, setBottleScanKey] = useState("");
+  const capCanvasRef = useRef<HTMLCanvasElement | null>(null);
   /* round 7 #20: marker starts centred; result box starts WHITE */
   const [wheel, setWheel] = useState({ x: 0.5, y: 0.5, rgb: [255, 255, 255] as number[] });
   const [shade, setShade] = useState(0.5);
+  /* round 38 #2/#3: scan the drawing once per variant; paint the cap zone
+     in the wheel colour; both run only on the bottle page */
+  useEffect(() => {
+    if (page !== "bottle") return;
+    const src = bottleSrc();
+    if (bottleScans.current[src]) { setBottleScanKey(src); return; }
+    const im = new Image();
+    im.onload = () => {
+      const cv = document.createElement("canvas");
+      cv.width = 800; cv.height = 1600;
+      const g = cv.getContext("2d"); if (!g) return;
+      g.drawImage(im, 0, 0, 800, 1600);
+      const d = g.getImageData(0, 0, 800, 1600).data;
+      const spans: [number, number][] = []; let top = 1600, bottom = -1;
+      for (let y = 0; y < 1600; y++) {
+        let l = -1, r = -1;
+        for (let x = 0; x < 800; x++) {
+          const i = (y * 800 + x) * 4;
+          if (Math.max(d[i], d[i + 1], d[i + 2]) < 130) { if (l < 0) l = x; r = x; }
+        }
+        spans[y] = l >= 0 ? [l, r] : [0, -1];
+        if (l >= 0) { if (y < top) top = y; if (y > bottom) bottom = y; }
+      }
+      let cx0 = 400, w0 = 0;
+      for (let y = top; y <= bottom; y++) { const [l, r] = spans[y]; if (r - l > w0) { w0 = r - l; cx0 = (l + r) / 2; } }
+      bottleScans.current[src] = { top, bottom, cx: cx0, spans };
+      setBottleScanKey(src);
+    };
+    im.src = src;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, bottle.type, bottle.closure]);
+  useEffect(() => {
+    const cv = capCanvasRef.current; if (!cv) return;
+    const scan = bottleScans.current[bottleScanKey]; if (!scan) return;
+    const g = cv.getContext("2d"); if (!g) return;
+    g.clearRect(0, 0, 800, 1600);
+    if (bottle.finish === "No cap") return;
+    const zones = CAP_ZONES[bottle.closure] || [];
+    const bh = scan.bottom - scan.top;
+    g.fillStyle = shadeRgb();
+    for (const [a, b2] of zones)
+      for (let y = Math.max(0, Math.round(scan.top + a * bh)); y <= Math.min(1599, Math.round(scan.top + b2 * bh)); y++) {
+        const [l, r] = scan.spans[y] || [0, -1];
+        if (r - l > 3) g.fillRect(l + 2, y, r - l - 3, 1);
+      }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bottleScanKey, wheel, shade, bottle.closure, bottle.finish, page]);
   const [heroAsset, setHeroAsset] = useState(0);
   /* marketing assets (round 13): 2 product shots + 5 lifestyle images */
   const [assets, setAssets] = useState<{ front?: { full: string; prev: string }; back?: { full: string; prev: string }; life: { full: string; prev: string }[] }>({ life: [] });
@@ -1088,19 +1172,23 @@ export default function NewUI() {
         const finish: [string, number, number][] = [["Matte", 1104.64, 281.78], ["Glossy", 1181, 281.78], ["No cap", 1104.64, 312.58]];
         return (<>
           {cols.map(({ key, cx, items }) => items
-            /* round 17 #2: Sparkling Cork exists only for the Sparkling bottle */
+            /* round 17 #2: Sparkling Cork exists only for the Sparkling bottle;
+               round 38 #1: Crown Cap only for Burgundy / Sparkling / Alsace */
             .filter(([opt]) => !(key === "closure" && opt === "Sparkling Cork" && bottle.type !== "Sparkling"))
+            .filter(([opt]) => !(key === "closure" && opt === "Crown Cap" && !CROWN_TYPES.includes(bottle.type)))
             .map(([opt, cy], i) =>
               dotBtn(cx, cy, bottle[key] === opt, () => {
                 if (key === "type") bottleTouched.current = true;
                 setBottle((m) => ({
                   ...m, [key]: opt,
                   ...(key === "type" && opt !== "Sparkling" && m.closure === "Sparkling Cork" ? { closure: "Cork" } : {}),
+                  ...(key === "type" && !CROWN_TYPES.includes(opt) && m.closure === "Crown Cap" ? { closure: "Cork" } : {}),
                 }));
               }, key + opt, { coverDot: i === 0 })
             ))}
-          {/* cover the baked Sparkling Cork row when hidden */}
+          {/* cover the baked Sparkling Cork / Crown Cap rows when hidden */}
           {bottle.type !== "Sparkling" && patch(854, 388, 132, 26, "spcork")}
+          {!CROWN_TYPES.includes(bottle.type) && patch(854, 359, 132, 26, "crowncap")}
           <div style={{ ...px(1173.21 - 11, 281.78 - 11, 22, 22), background: "#fff", borderRadius: 11 }} />
           {patch(1185, 271.5, 66, 20, "glossytxt")}
           <span style={{ ...px(1196.5, 285.28 - 12.4, 70, 16), font: `12px ${HNW}`, color: "#111", lineHeight: "16px" }}>{t("Glossy")}</span>
@@ -1138,17 +1226,40 @@ export default function NewUI() {
           <div style={{ ...px(1095.6, 531.1, 174.4, 21.3), background: shadeRgb(), border: "1px solid #111", boxSizing: "border-box" }} />
           {/* the owner's bottle-type photos (public/newui/bottles, 800×1600
               = the area's exact 1:2 ratio); Screw Cap shows the -screw
-              variant (round 17 #4; sparkling has none). Keyed so changes
-              re-fade softly */}
+              variant (round 17 #4), Crown Cap the -crown (round 38 #1).
+              On top: the colour-wheel CAP overlay (round 38 #3, painted
+              inside the scanned silhouette, multiply so line art reads
+              through) and the SELECTED LABEL at its true position and
+              scale (round 38 #2, owner's positioning charts, flat). */}
           {(() => {
-            const slug = ({ "Bordeaux": "bordeaux", "Bordeaux Prestige": "bordeaux-prestige", "Burgundy": "burgundy", "Sparkling": "sparkling", "Alsace / Rhine": "alsace-rhine", "Ice Wine": "ice-wine" } as Record<string, string>)[bottle.type] || "bordeaux";
-            const screw = bottle.closure === "Screw Cap" && slug !== "sparkling";
-            return (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img key={slug + (screw ? "-screw" : "")} alt={bottle.type}
-                src={`/newui/bottles/${slug}${screw ? "-screw" : ""}.jpg`}
+            const src = bottleSrc();
+            const s = 407.4 / 1600;                       // cover scale
+            const xoff = 139.2 - (800 * s - 201.6) / 2;
+            const scan = bottleScans.current[bottleScanKey === src ? src : ""];
+            const lab = selected >= 0 ? dreams[selected] : null;
+            let labelEl: React.ReactNode = null;
+            if (scan && lab) {
+              const bhD = (scan.bottom - scan.top) * s;
+              const topD = 174 + scan.top * s;
+              const pxPerCm = bhD / (bottle.type === "Alsace / Rhine" ? 35 : 30);
+              const lw = ((Number(f.width) || 110) / 10) * pxPerCm;
+              const lh = ((Number(f.height) || 80) / 10) * pxPerCm;
+              const anc = LABEL_ANCHOR[bottle.type] || LABEL_ANCHOR["Bordeaux"];
+              const ly = anc.anchor === "top" ? topD + anc.pct * bhD : topD + bhD - anc.pct * bhD - lh;
+              labelEl = (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={lab.preview || lab.dream} alt="label position"
+                  style={{ position: "absolute", left: xoff + scan.cx * s - lw / 2, top: ly, width: lw, height: lh, objectFit: "fill", pointerEvents: "none", boxShadow: "0 0 0 0.5px rgba(0,0,0,0.2)" }} />
+              );
+            }
+            return (<>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img key={src} alt={bottle.type} src={src}
                 style={{ ...px(139.2, 174, 201.6, 407.4), objectFit: "cover", animation: inSlide ? "none" : `nuiFadeIn 240ms ${EASE}`, pointerEvents: "none" }} />
-            );
+              <canvas ref={capCanvasRef} width={800} height={1600}
+                style={{ position: "absolute", left: xoff, top: 174, width: 800 * s, height: 407.4, mixBlendMode: "multiply", pointerEvents: "none" }} />
+              {labelEl}
+            </>);
           })()}
           {/* round 12 #3: corner pluses back ON TOP of the photo */}
           {cross(137.14, 172, "bt1")}{cross(342.84, 172, "bt2")}{cross(137.14, 583.41, "bt3")}{cross(342.84, 583.41, "bt4")}
