@@ -142,6 +142,12 @@ export const UI_GE: Record<string, string> = {
   "Back Label": "უკანა ეტიკეტი",
   "Marketing Assets": "სამარკეტინგო მასალა",
   "Check out": "შეკვეთა",
+  /* round 40: seven-stage progress bar */
+  "Details": "დეტალები",
+  "Market Compliance": "შესაბამისობა",
+  "Bottle": "ბოთლი",
+  "Download": "ჩამოტვირთვა",
+  "Not yet created": "ჯერ არ არის შექმნილი",
   "© 8K Labels — a demo interface built from your uploaded mockup": "© 8K Labels — საჩვენებელი ინტერფეისი თქვენი მაკეტიდან",
   "classic interface": "კლასიკური ინტერფეისი",
   "Feel free to leave out fields you don't want on your front label.": "გამოტოვეთ ველები, რომლებიც არ გსურთ, რომ გამოჩნდეს მთავარ ეტიკეტზე.",

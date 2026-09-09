@@ -253,10 +253,21 @@ export function dealScenarios(seed: number, boardScenes?: string[]): { text: str
   const rnd = () => ((s = (Math.imul(s, 1664525) + 1013904223) >>> 0) / 2 ** 32);
   const shuffle = <T,>(a: T[]) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   if (boardScenes && boardScenes.length) {
+    /* round 40 #9 (owner: two near-identical scenes in one set): greedy
+       DIVERSITY pick — a candidate too word-similar to an already-picked
+       scene is skipped while alternatives remain */
+    const toks = (s2: string) => new Set(s2.toLowerCase().split(/[^a-zà-ÿ]+/).filter((w) => w.length > 3));
+    const sim = (a: string, b: string) => {
+      const A = toks(a), B = toks(b);
+      let n = 0; for (const w of A) if (B.has(w)) n++;
+      return n / Math.max(1, Math.min(A.size, B.size));
+    };
     const arr = shuffle([...boardScenes]);
-    const out: { text: string; fromBoard: boolean }[] = [];
-    for (let i = 0; i < 5; i++) out.push({ text: arr[i % arr.length], fromBoard: true });
-    return out;
+    const picked: string[] = [];
+    for (const cand of arr) { if (picked.length >= 5) break; if (picked.every((p2) => sim(p2, cand) < 0.55)) picked.push(cand); }
+    for (const cand of arr) { if (picked.length >= 5) break; if (!picked.includes(cand)) picked.push(cand); }
+    while (picked.length < 5) picked.push(arr[picked.length % arr.length]);
+    return picked.map((text) => ({ text, fromBoard: true }));
   }
   return shuffle([...SCENARIOS]).slice(0, 5).map(([, text]) => ({ text, fromBoard: false }));
 }

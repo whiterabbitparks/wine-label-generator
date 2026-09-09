@@ -53,17 +53,29 @@ const CAP_ZONES: Record<string, [number, number][]> = {
 };
 type PageKey = (typeof ORDER)[number];
 
-/* progress thick-line endpoint per page (extracted; null = no bar) */
+/* ROUND 40 (owner's ProgressBarModifications mock): SEVEN stages, flow
+   unchanged — big dots + bold labels for the four main stations, small
+   dots + regular labels for the added sub-stations. Every stage is
+   CLICKABLE and navigates to its page. */
+const CIRCLE_X = [142.06, 334.71, 527.36, 720.01, 912.66, 1105.31, 1297.96];
+const STEPS: { label: string; big: boolean; page: PageKey }[] = [
+  { label: "Front Label", big: true, page: "vision" },
+  { label: "Details", big: false, page: "front" },
+  { label: "Back Label", big: true, page: "backdetails" },
+  { label: "Market Compliance", big: false, page: "compliance" },
+  { label: "Bottle", big: true, page: "bottle" },
+  { label: "Marketing Assets", big: false, page: "assets" },
+  { label: "Download", big: true, page: "checkout" },
+];
+/* progress thick-line endpoint per page (null = no bar) */
 const THICK: Record<PageKey, number | null> = {
   /* vision: bar visible but thick line not yet started (round 8 #1) —
      it slides in on the transition to front */
-  welcome: null, vision: 142.06, front: 334.48, loader: 522.43, options: 522.43,
-  backdetails: 527.35, compliance: 720.28, backdesign: 907.72, bottle: 912.65,
-  assets: 1106.38, checkout: null,
+  welcome: null, vision: 142.06, front: 334.71, loader: 430, options: 430,
+  backdetails: 527.36, compliance: 720.01, backdesign: 815, bottle: 912.66,
+  assets: 1105.31, checkout: null,
 };
-const STEP_OF: Record<PageKey, number> = { welcome: -1, vision: 0, front: 0, loader: 0, options: 0, backdetails: 1, compliance: 1, backdesign: 1, bottle: 2, assets: 2, checkout: 3 };
-const CIRCLE_X = [142.06, 527.4, 912.6, 1297.9];
-const STEP_LABELS: [string, number][] = [["Front Label", 137.2], ["Back Label", 487.5], ["Marketing Assets", 850.2], ["Check out", 1228.2]];
+const STEP_OF: Record<PageKey, number> = { welcome: -1, vision: 0, front: 1, loader: 1, options: 1, backdetails: 2, compliance: 3, backdesign: 3, bottle: 4, assets: 5, checkout: 6 };
 
 /* content band bottom per page (checkout content reaches the footer) */
 const BAND_BOTTOM: Record<PageKey, number> = Object.fromEntries(ORDER.map((p) => [p, p === "checkout" || p === "welcome" ? FOOTER_Y : 660])) as Record<PageKey, number>;
@@ -175,17 +187,26 @@ async function groundOf(url: string): Promise<string> {
         const cx = c.getContext("2d")!;
         cx.drawImage(img, 0, 0, S, S);
         const d = cx.getImageData(0, 0, S, S).data;
-        const inset = 4, rs: number[] = [], gs: number[] = [], bs: number[] = [];
+        /* round 40 #5 (owner: "back label colour didn't match the front"):
+           per-channel medians could BLEND mixed edges into a colour that
+           exists nowhere on the label. Now: quantised DOMINANT edge colour
+           — always a colour actually present on the label's border. */
+        const inset = 4;
+        const bins = new Map<string, { n: number; r: number; g: number; b: number }>();
         for (let i = 0; i < 28; i++) {
           const t = inset + Math.round((i / 27) * (S - 2 * inset - 1));
           for (const [x, y] of [[t, inset], [t, S - 1 - inset], [inset, t], [S - 1 - inset, t]]) {
             const o = (y * S + x) * 4;
-            rs.push(d[o]); gs.push(d[o + 1]); bs.push(d[o + 2]);
+            const r = d[o], g = d[o + 1], b = d[o + 2];
+            const k = `${r >> 4}-${g >> 4}-${b >> 4}`;
+            const e = bins.get(k) || { n: 0, r: 0, g: 0, b: 0 };
+            e.n++; e.r += r; e.g += g; e.b += b;
+            bins.set(k, e);
           }
         }
-        const med = (a: number[]) => a.sort((p, q) => p - q)[Math.floor(a.length / 2)];
-        const hx = (v: number) => v.toString(16).padStart(2, "0");
-        res("#" + hx(med(rs)) + hx(med(gs)) + hx(med(bs)));
+        const top = [...bins.values()].sort((a, b) => b.n - a.n)[0];
+        const hx = (v: number) => Math.round(v).toString(16).padStart(2, "0");
+        res("#" + hx(top.r / top.n) + hx(top.g / top.n) + hx(top.b / top.n));
       } catch { res("#FFFFFF"); }
     };
     img.onerror = () => res("#FFFFFF");
@@ -328,6 +349,9 @@ export default function NewUI() {
   const assetT = useRef({ run: 0, stage: 0 });
   const dreamT = useRef(Date.now());
   const bottleTouched = useRef(false);
+  /* round 40 #3: true while the last navigation came from a progress-bar
+     click — jump-ahead pages show placeholders instead of generating */
+  const barJumped = useRef(false);
   useEffect(() => {
     if (!(assetsStage || page === "loader")) return;
     const iv = setInterval(() => setTick((t) => t + 1), 700);
@@ -408,6 +432,10 @@ export default function NewUI() {
      is already generated. Sequential on the server (~5 imgs/min cap). */
   useEffect(() => {
     if (page !== "assets" || selected < 0 || !dreams[selected] || assetsRunning.current) return;
+    /* round 40 #3: a progress-bar JUMP never starts a paid generation —
+       placeholders show "Not yet created"; the run starts only when the
+       page is reached through the normal flow (bottle → next) */
+    if (barJumped.current && !assets.front && !assets.back) return;
     const sel = dreams[selected];
     /* round 21 #7: NO client-side "same inputs" skip — it knew nothing
        about admin charter changes and replayed stale sets. The server
@@ -526,7 +554,9 @@ export default function NewUI() {
   const wheelCanvas = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
-    const fit = () => setScale(Math.max(1, window.innerWidth / W));
+    /* round 40 (owner): the whole active area at 80% — a single uniform
+       transform, so internal alignment cannot shift */
+    const fit = () => setScale(Math.max(1, window.innerWidth / W) * 0.8);
     fit(); window.addEventListener("resize", fit);
     return () => window.removeEventListener("resize", fit);
   }, []);
@@ -706,6 +736,10 @@ export default function NewUI() {
   const px = (x: number, y: number, w?: number, h?: number): React.CSSProperties => ({ position: "absolute", left: x, top: y, width: w, height: h });
   const ghost: React.CSSProperties = { background: "transparent", border: "none", cursor: "pointer", padding: 0 };
   const patch = (x: number, y: number, w: number, h: number, key?: string) => <div key={key} style={{ ...px(x, y, w, h), background: "#fff" }} />;
+  /* round 40 #3: grey "Not yet created" thumb — darker diagonal across */
+  const notMade = (x: number, y: number, w: number, h: number, key?: string) => (
+    <div key={key} style={{ ...px(x, y, w, h), background: "#ECECEA linear-gradient(to top right, transparent calc(50% - 0.8px), #C9C9C4 calc(50% - 0.8px), #C9C9C4 calc(50% + 0.8px), transparent calc(50% + 0.8px))", display: "flex", alignItems: "center", justifyContent: "center", font: `12px ${HNW}`, color: "#8a887e", textAlign: "center" }}>{t("Not yet created")}</div>
+  );
   /* owner #15 / round 7 #2: input text italic (design st16); the underline is
      a SEPARATE fixed-length row line, not text-decoration */
   const inputStyle: React.CSSProperties = { font: `italic 15px ${HNW}`, border: "none", outline: "none", background: "transparent", padding: "0 0 0 5px", color: "#111", lineHeight: "20px" };
@@ -921,9 +955,9 @@ export default function NewUI() {
         const fill = Math.max(fillMax.current, Math.min(0.97, Math.max(0.06, genProgress + creep)));
         fillMax.current = fill;
         return (<>
-          {patch(400, 120, 640, 480, "lcover")}
+          {patch(400, 90, 640, 500, "lcover")}
           {/* glass optically centred in the window (round 7 #10) */}
-          <div style={{ ...px(601, 309.5, 238, 320) }}>
+          <div style={{ ...px(601, 283.5, 238, 320) }}>
             <svg viewBox="0 0 595.276 609.089" width="238" aria-label="Designing your label">
               <clipPath id="nuiWineClip"><rect x="230" y={266.6 - fill * 95} width="140" height={fill * 95 + 4} style={{ transition: `all 650ms ${EASE}` }} /></clipPath>
               <path fill="#BA141A" clipPath="url(#nuiWineClip)" d="M352.397 185.696 C353.872 199.478 353.325 211.872 350.76 222.63 C346.838 239.075 336.88 251.431 321.163 259.355 C311.285 264.336 301.979 266.038 298.571 266.527 C296.674 266.308 286.165 264.888 274.916 259.216 C259.199 251.292 249.241 238.936 245.319 222.491 C242.762 211.769 242.21 199.422 243.667 185.696 Z" />
@@ -935,15 +969,15 @@ export default function NewUI() {
           </div>
           {/* round 24 #4: phrase centred on the glass axis, dots on their own
               row below, note one more row down */}
-          <span style={{ ...px(0, 492, W, 20), font: `15px ${HNW}`, textAlign: "center", display: "block" }}>
+          <span style={{ ...px(0, 466, W, 20), font: `15px ${HNW}`, textAlign: "center", display: "block" }}>
             {t("Designing your label")}
           </span>
-          <span style={{ ...px(0, 520, W, 18), font: `16.5px ${HNW}`, letterSpacing: 2.2, textAlign: "center", display: "block", lineHeight: "12px" }}>
+          <span style={{ ...px(0, 494, W, 18), font: `16.5px ${HNW}`, letterSpacing: 2.2, textAlign: "center", display: "block", lineHeight: "12px" }}>
             {[0, 1, 2].map((d) => (
               <span key={d} style={{ animation: `nuiDot 1.2s ${d * 0.2}s infinite` }}>.</span>
             ))}
           </span>
-          <span style={{ ...px(0, 548, W, 18), font: `italic 13px ${HNW}`, color: "#555", textAlign: "center", display: "block" }}>
+          <span style={{ ...px(0, 522, W, 18), font: `italic 13px ${HNW}`, color: "#555", textAlign: "center", display: "block" }}>
             {t("Please stay on this page — preparing your labels usually takes 15–35 seconds.")}
           </span>
         </>);
@@ -971,7 +1005,7 @@ export default function NewUI() {
               <div key={i}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={d.preview || d.dream} alt={d.style} onClick={() => { setSelected(i); setWarn(""); }}
-                  style={{ ...px(lx, ly, lw, lh), cursor: "pointer", objectFit: "fill" }} />
+                  style={{ ...px(lx, ly, lw, lh), cursor: "pointer", objectFit: "fill", outline: selected === i ? "1.5px dashed #111" : "none", outlineOffset: 6 }} />
                 {cross(lx, ly, `tl${i}`)}{cross(lx + lw, ly, `tr${i}`)}
                 {cross(lx, ly + lh, `bl${i}`)}{cross(lx + lw, ly + lh, `br${i}`)}
               </div>
@@ -1154,8 +1188,9 @@ export default function NewUI() {
             <img src={backPng} alt="back label"
               style={{ ...px(lx, ly, fit.w, fit.h), objectFit: "fill" }} />
             {cross(lx, ly, "b1")}{cross(lx + fit.w, ly, "b2")}{cross(lx, ly + fit.h, "b3")}{cross(lx + fit.w, ly + fit.h, "b4")}
+            <div style={{ ...px(lx - 10, ly - 10, fit.w + 20, fit.h + 20), border: "1px dashed #111", boxSizing: "border-box", pointerEvents: "none" }} />
             <button onClick={() => go("backdetails", -1)}
-              style={{ ...px(lx, 548.6, fit.w, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>{t("Edit")}</button>
+              style={{ ...px(548.6, 589, 341.4, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>{t("Edit")}</button>
           </>)}
         </>);
       }
@@ -1275,14 +1310,14 @@ export default function NewUI() {
             <img src={it.prev} alt={label}
               style={{ width: w2, height: h2, objectFit: fit, display: "block", animation: `nuiFadeIn ${FADE_MS}ms ${EASE}` }} />
           ) : (
-            <div style={{ width: w2, height: h2, background: "#F4F3EE", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", font: `${fs}px ${HNW}`, color: "#999", textAlign: "center" }}>
+            <div style={{ width: w2, height: h2, background: assetsStage ? "#F4F3EE" : "#ECECEA linear-gradient(to top right, transparent calc(50% - 0.8px), #C9C9C4 calc(50% - 0.8px), #C9C9C4 calc(50% + 0.8px), transparent calc(50% + 0.8px))", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", font: `${fs}px ${HNW}`, color: assetsStage ? "#999" : "#8a887e", textAlign: "center" }}>
               {/* round 17 #1: rising glass + three-dot indicator below it */}
               {assetsStage && loadKey ? (<>
                 {miniGlass(loadKey, assetFill(loadKey))}
                 <span style={{ marginTop: 10, font: `16.5px ${HNW}`, color: "#111", letterSpacing: 2.2, lineHeight: "11px" }}>
                   {[0, 1, 2].map((dd) => <span key={dd} style={{ animation: `nuiDot 1.2s ${dd * 0.2}s infinite` }}>.</span>)}
                 </span>
-              </>) : <>[ {t(label)} ]</>}
+              </>) : <>{t("Not yet created")}</>}
             </div>
           );
         return (<>
@@ -1320,11 +1355,15 @@ export default function NewUI() {
       }
       case "checkout":
         return (<>
-          {selected >= 0 && dreams[selected] && (
+          {selected >= 0 && dreams[selected] ? (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img src={dreams[selected].preview || dreams[selected].dream} alt="front"
               style={{ ...px(171, 279.3, 245.8, 163.8), objectFit: "contain" }} />
-          )}
+          ) : notMade(171, 279.3, 245.8, 163.8, "nmFront")}
+          {!backPng && (<>
+            {patch(452, 268, 230, 180, "bmock2e")}
+            {notMade(452, 280, 227, 160, "nmBack")}
+          </>)}
           {backPng && (<>
             {/* slot 2 — cover the baked mock WITHOUT touching the dashed
                 divider at x685.7 (round 8 #12), centre the real back label
@@ -1361,7 +1400,7 @@ export default function NewUI() {
                 <img key={`${label}@${x}`} src={it.prev} alt={label}
                   style={{ ...px(x, y, w2, h2), objectFit: fit }} />
               ) : (
-                <div key={`${label}@${x}`} style={{ ...px(x, y, w2, h2), background: "#F4F3EE", display: "flex", alignItems: "center", justifyContent: "center", font: `${fs}px ${HNW}`, color: "#999", textAlign: "center" }}>{label ? `[ ${t(label)} ]` : ""}</div>
+                <div key={`${label}@${x}`} style={{ ...px(x, y, w2, h2), background: "#ECECEA linear-gradient(to top right, transparent calc(50% - 0.8px), #C9C9C4 calc(50% - 0.8px), #C9C9C4 calc(50% + 0.8px), transparent calc(50% + 0.8px))", display: "flex", alignItems: "center", justifyContent: "center", font: `${fs}px ${HNW}`, color: "#8a887e", textAlign: "center" }}>{t("Not yet created")}</div>
               );
             const lifeG = assets.life.filter(Boolean).map((l) => l.full);
             const shotG = [assets.front, assets.back].filter(Boolean).map((s) => s!.full);
@@ -1437,7 +1476,7 @@ export default function NewUI() {
   const fullSlide = (page === "vision" && prev === "welcome") || page === "welcome";
 
   return (
-    <main style={{ background: "#000", minHeight: "100vh", margin: 0, padding: 0 }}>
+    <main style={{ background: "#000", minHeight: "100vh", margin: 0, padding: 0, maxWidth: "none", width: "100%" }}>
       <style>{`html, body { margin: 0; padding: 0; background: #000; font-synthesis: none; }
         @font-face { font-family: 'HNW'; src: url('/newui/fonts/HNW-55Roman.woff2') format('woff2'), url('/newui/fonts/HNW-55Roman.ttf'); font-weight: 400; font-style: normal; font-display: block; }
         @font-face { font-family: 'HNW'; src: url('/newui/fonts/HNW-56It.woff2') format('woff2'), url('/newui/fonts/HNW-56It.ttf'); font-weight: 400; font-style: italic; font-display: block; }
@@ -1462,6 +1501,11 @@ export default function NewUI() {
         @keyframes nuiFadeIn { from { opacity: 0 } to { opacity: 1 } }
         @keyframes nuiFadeOut { from { opacity: 1 } to { opacity: 0 } }
         @keyframes szGrow { from { transform: scale(0) } to { transform: scale(1) } }`}</style>
+      {/* round 40: the page bands extend to the window edges so the 80%
+          artboard doesn't float like a card — black header stripe, white
+          content stripe, black below (the main background) */}
+      <div style={{ position: "absolute", left: 0, top: 0, width: "100%", height: HEADER_H * scale, background: "#000" }} />
+      <div style={{ position: "absolute", left: 0, top: HEADER_H * scale, width: "100%", height: (FOOTER_Y - HEADER_H) * scale, background: "#fff" }} />
       <div style={{ width: W * scale, height: H * scale, position: "relative", margin: "0 auto" }}>
         <div style={{ width: W, height: H, transform: `scale(${scale})`, transformOrigin: "top left", position: "absolute", overflow: "hidden", background: "#fff" }}>
 
@@ -1541,27 +1585,35 @@ export default function NewUI() {
             <div style={{ ...px(0, 660, W, FOOTER_Y - 660), background: "#fff" }}>
               <div style={{ ...px(137.14, 685.09 - 660, 1297.9 - 137.14, 1), background: "#111" }} />
               <div style={{ ...px(142.06, 684.09 - 660, thick - 142.06, 3), background: "#111", transition: `width ${SLIDE_MS}ms ${EASE}` }} />
-              {CIRCLE_X.map((cx0, i) => (
-                <span key={i} style={{ ...px(cx0 - 4.9, 685.59 - 4.9 - 660, 9.8, 9.8), borderRadius: 5, border: "1px solid #111", background: step >= i ? "#111" : "#fff", transition: `background 300ms ${EASE}`, boxSizing: "border-box" }} />
-              ))}
-              {STEP_LABELS.map(([lbl], i) => {
-                const pos: React.CSSProperties =
-                  i === 0 ? { left: 137.14, width: 300, textAlign: "left" }
-                  : i === 3 ? { left: 1303 - 300, width: 300, textAlign: "right" }
-                  : { left: CIRCLE_X[i] - 150, width: 300, textAlign: "center" };
+              {STEPS.map((st, i) => {
+                const r = st.big ? 4.9 : 3.1;
                 return (
-                  <span key={lbl} style={{ position: "absolute", top: 708.5 - 660, height: 18, ...pos, font: `700 15px ${HNW}`, color: "#111", lineHeight: "15px" }}>{t(lbl)}</span>
+                  <span key={"d" + i} style={{ ...px(CIRCLE_X[i] - r, 685.59 - r - 660, r * 2, r * 2), borderRadius: r + 1, border: "1px solid #111", background: step >= i ? "#111" : "#fff", transition: `background 300ms ${EASE}`, boxSizing: "border-box" }} />
+                );
+              })}
+              {STEPS.map((st, i) => {
+                /* hit zones must never overlap a neighbour (dot pitch 192.65) */
+                const pos: React.CSSProperties =
+                  i === 0 ? { left: 137.14, width: 120, textAlign: "left" }
+                  : i === STEPS.length - 1 ? { left: 1303 - 120, width: 120, textAlign: "right" }
+                  : { left: CIRCLE_X[i] - 85, width: 170, textAlign: "center" };
+                return (
+                  /* round 40 #3: every stage navigates to its page; jumping
+                     ahead never auto-generates (Not-yet-created placeholders) */
+                  <button key={st.label} onClick={() => { if (st.page !== page) { barJumped.current = true; go(st.page, ORDER.indexOf(st.page) > ORDER.indexOf(page) ? 1 : -1); } }}
+                    style={{ position: "absolute", top: 708.5 - 660, height: 18, ...pos, ...ghost, font: `${st.big ? 700 : 400} 15px ${HNW}`, color: "#111", lineHeight: "15px", textTransform: "none" }}>{t(st.label)}</button>
                 );
               })}
               {/* back arrow */}
               {(
-                <button aria-label="back" onClick={goBack} style={{ ...px(56, 666 - 660, 60, 40), ...ghost }}>
+                <button aria-label="back" onClick={() => { barJumped.current = false; goBack(); }} style={{ ...px(56, 666 - 660, 60, 40), ...ghost }}>
                   <svg viewBox="0 0 60 40" width="60" height="40"><line x1="47" y1="20" x2="13" y2="20" stroke="#000" strokeWidth="3" /><polyline points="23,9.5 12.5,20 23,30.5" fill="none" stroke="#000" strokeWidth="3" /></svg>
                 </button>
               )}
               {/* forward arrow */}
               <button aria-label="next"
                 onClick={() => {
+                  barJumped.current = false;
                   if (page === "vision") go("front");
                   else if (page === "front") nextFromFront();
                   else if (page === "options") {

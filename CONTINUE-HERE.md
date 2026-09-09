@@ -1990,6 +1990,37 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 40 (owner 2026-09-09, mega-round; ProgressBarModifications
+  mock + 9 items + 20% scale): (1) SEVEN-STAGE progress bar — Front
+  Label(vision) · Details(front) · Back Label(backdetails) · Market
+  Compliance(compliance) · Bottle(bottle) · Marketing Assets(assets)
+  · Download(checkout); flow UNCHANGED (owner: "nothing in the flow
+  changes!!!"); big dots+bold labels for main stations, small+regular
+  for sub-stations; CIRCLE_X evenly spaced 142.06→1297.96; hit zones
+  120/170px so neighbours never overlap (260px overlapped and
+  Download stole Marketing Assets' clicks). (2) Edit button on
+  backdesign pulled DOWN to (548.6,589,341.4) per mock; dashed
+  outline (1px dashed, 10px offset) around the back-label preview.
+  (3) ALL stages CLICKABLE → go(page); barJumped ref: a bar jump
+  NEVER auto-generates — assets effect returns early, thumbs show
+  grey "Not yet created" + darker diagonal (notMade helper; also
+  checkout's empty slots + assets-page idle placeholders). Arrows
+  clear the flag; the run starts only via bottle→next. (4) dashed
+  outline round selected label (options, outlineOffset 6). (5)
+  groundOf: per-channel medians could blend mixed edges into a
+  nowhere-colour — now quantised DOMINANT edge colour (16-level bins,
+  averaged within the winning bin). (6) SUBJECT-FIDELITY dream rule
+  (vision-aware, built in assembleDreamRules): abstract stories stay
+  fully non-figurative; concrete stories never gain unrequested
+  landmarks (a château appeared inside "abstract splashes"). (7)
+  loader block (glass/phrase/dots/note + cover patch) 26px up —
+  centred between header and footer. (8) covered by (4). (9) scene
+  DIVERSITY deal — greedy pick skips candidates >0.55 token-overlap
+  with already-picked scenes (two grape-pile scenes in one set).
+  SCALE: whole wizard at 80% — one uniform transform (scale*0.8),
+  full-width band stripes (black header/white content) behind the
+  centred artboard; TRAP: classic css caps main at max-width 1180 —
+  the wizard main now carries maxWidth:none/width:100% inline.
 - ROUND 39 (owner 2026-09-09): MAGNIFICATION REMOVED wizard-wide —
   the lightbox gallery (state + overlay) is deleted from page.tsx.
   Options page: clicking a LABEL IMAGE now SELECTS it (same as its

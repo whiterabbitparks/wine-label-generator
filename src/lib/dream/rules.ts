@@ -108,7 +108,20 @@ export async function getOwnerDreamRules(): Promise<string[]> {
 }
 
 export async function assembleDreamRules(vision: string, style?: string): Promise<{ clauses: string; checks: { src: string; check: string }[] }> {
-  const active = DREAM_BUILTINS.filter((r) => !r.skipIf?.(vision));
+  const active = [...DREAM_BUILTINS.filter((r) => !r.skipIf?.(vision))];
+  /* ROUND 40 #6 (owner: "abstract splashes" got a château painted inside):
+     SUBJECT FIDELITY — the illustration may contain only what the story
+     asks for; abstract stories stay fully non-figurative. Vision-aware,
+     so it is built here rather than in the static list. */
+  const abstract = /\babstract|splash|texture|pattern|non.?figurative|geometric|gradient|brush\s?stroke/i.test(vision);
+  active.push({
+    clause: abstract
+      ? "The story is ABSTRACT — the illustration stays completely non-figurative: no buildings, no château, no landscape, no bottles, no figures, no recognisable objects of any kind; only the abstract forms the story asks for."
+      : "The illustration depicts ONLY what the story asks for and its natural surroundings — never insert unrequested landmark subjects such as buildings, châteaux, monuments or vehicles.",
+    check:
+      `The story is: "${vision.slice(0, 160)}". Does the illustration contain a concrete subject the story never asked for — a building, château, monument, landscape, vehicle, bottle or figure?` +
+      (abstract ? " This story is abstract: ANY recognisable object is a violation." : ""),
+  });
   let owner = await getOwnerDreamRules();
   /* branch POPIKA_No_Vector (owner 2026-09-03): the owner's IMAGE rules
      apply to dreams directly — the dream's illustration IS the final art.
