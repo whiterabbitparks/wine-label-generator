@@ -173,8 +173,10 @@ export function buildShotPrompt(b: MarketingBrief, side: "front" | "back", hasSh
     `The label surface is SMOOTH flat print — NEVER invent paper grain, fibre or canvas texture on the label; only a subtle sheen where light grazes it. ` +
     /* round 30 #4: no white slivers above/below the applied label */
     `The label is applied EDGE-TO-EDGE: its printed area ends exactly at its own edges — never leave white slivers, strips or margins along the label's top or bottom, and never add any border around it. ` +
-    /* round 31b: label axis = bottle axis, always */
-    `The label's vertical axis runs along the bottle's own axis (base to neck) — never rotated on the glass, never sideways relative to the bottle. ` +
+    /* round 31b / round 34 (owner's screenshot): label axis = bottle axis */
+    `The label's vertical axis runs along the bottle's own axis — its TOP edge always faces the bottle's NECK and its BOTTOM edge faces the base; never rotated on the glass, never sideways relative to the bottle. ` +
+    /* round 34 (owner's curvature reference): real straight-on wrap */
+    `CURVATURE: at this straight-on angle the label's top and bottom edges bow only VERY slightly with the cylinder — a barely visible curve, as in a real photograph. Never strongly arched, bulging or fisheye-bent label edges. ` +
     /* round 29 #5: bottle and label must be lit as one object */
     `ONE LIGHT: the label is lit by exactly the same light as the glass — same direction, same colour temperature, same contrast and shadow fall — so bottle and label read as ONE object photographed together, never as a graphic pasted on afterwards. ` +
     (hasShape
@@ -226,7 +228,7 @@ export function buildLifestylePrompt(b: MarketingBrief, scenario: string, charte
        the real rule is that the label sits ON THE BOTTLE'S AXIS, glued
        the normal way, and moves WITH the bottle. The bug being killed:
        a label once rendered rotated 90° relative to the bottle. */
-    `LABEL-TO-BOTTLE ALIGNMENT — NON-NEGOTIABLE: the label is applied to the bottle the normal way — its vertical axis runs along the bottle's own axis (base to neck), its text baselines perpendicular to that axis, exactly as a real glued-on wine label. The bottle may stand, tilt, be held or lie down — the label always moves WITH the bottle, never rotated 90° on the glass, never sideways relative to the bottle, never upside down, never mirrored. ` +
+    `LABEL-TO-BOTTLE ALIGNMENT — NON-NEGOTIABLE: the label is applied to the bottle the normal way — its vertical axis runs along the bottle's own axis, its TOP edge always facing the bottle's NECK and its BOTTOM edge facing the base, text baselines perpendicular to that axis, exactly as a real glued-on wine label. The bottle may stand, tilt, be held or lie down — the label always moves WITH the bottle: when the bottle lies horizontally the label lies with it (its text then reads along the bottle). Never rotated 90° on the glass, never upright text on a lying bottle, never upside down, never mirrored. ` +
     (hasShape
       ? `The SECOND attached image is a technical outline of this exact bottle model — the bottle in the photo matches that GLASS silhouette and its proportions precisely (the closure drawn in the outline is irrelevant; the closure specified above overrides it). `
       : "") +

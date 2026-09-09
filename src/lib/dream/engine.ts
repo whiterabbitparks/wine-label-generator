@@ -134,12 +134,20 @@ export async function runDreamPhase(p: DreamParams): Promise<{ dream: string; pr
         const cd = (await db.collection("settings").findOne({ _id: `dream-cards-${style}` } as never)) as { cards?: { key: string; arrangement: string }[] } | null;
         const card = dealCompositionCard(style, cd?.cards || []);
         if (card) {
-          const contained = !/bleed/i.test(card.arrangement);
+          /* ROUND 34 (owner: "punk still tends to beige — some illustration
+             backgrounds could beautifully grow around the whole label"):
+             the CONTAINED hard clause + its regeneration check forced a
+             "clean flat ground" that the model reads as cream/beige. PUNK
+             is now free: the card's scheme still guides, but the artwork
+             MAY grow across the whole label as its own background. */
+          const contained = style !== "punk" && !/bleed/i.test(card.arrangement);
           composition =
             ` COMPOSITION — NON-NEGOTIABLE, follow this scheme exactly: ${card.arrangement}` +
             (contained
               ? " The illustration is CONTAINED: a discrete image surrounded by clean, flat label ground on every side — it must NOT fill the label, must NOT become a full scene, and must NOT touch any edge."
-              : "");
+              : style === "punk"
+                ? " The illustration's own colours and background MAY grow across the entire label — full-bleed artwork grounds are welcome when they serve the design."
+                : "");
           if (contained) compositionCheck =
             "Does the illustration spread to fill most of the label or reach the label edges, instead of sitting contained with clear label ground around it?";
         }
