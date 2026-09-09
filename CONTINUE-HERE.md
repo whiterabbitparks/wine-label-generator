@@ -1990,6 +1990,24 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 36 (owner GO: RULES UNIFICATION): the full map first — FIVE
+  owner-editable stores existed: dream-rules (ACTIVE, dreams),
+  image-rules aka settings image-hard-rules (ACTIVE: dreams' art +
+  playground — but editable ONLY from the frozen legacy admin!),
+  config-store (classic engine + playground art direction — yet its
+  editor sat in the ACTIVE Rules tab), layout-rules + hard-rules
+  (classic, frozen). THE FIX, no semantic changes: the active Rules
+  tab now holds THREE clearly-scoped editors — (1) Dream rules
+  (label design laws, as before); (2) NEW IllustrationRulesCard
+  editing image-rules (global + per-style) with an honest note that
+  text/white-bg lines are filtered out of labels; (3) NEW Marketing
+  rules (settings marketing-rules, one line each) — appended to BOTH
+  shot and lifestyle prompts as "HOUSE RULES", hashed into the assets
+  cache sig (charters loader now returns {life,shots,scenes,rules}).
+  ArtDirectionTab (config editor) MOVED into the Image Play tab where
+  its rules actually apply; the hard-rules info card is labelled
+  "classic engine (frozen)". Scope purity guaranteed: each store
+  kept its exact consumers — nothing crosses over.
 - ROUND 35 (owner GO on cleanup items 1-3+5; rules-unification #4
   APPROVED but deferred to its own careful round): (1) illustration
   cards FORCE re-derived with the round-32 analyst (owner confirmed

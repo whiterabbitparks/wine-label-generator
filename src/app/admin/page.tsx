@@ -59,14 +59,76 @@ function DreamRulesCard() {
   );
 }
 
+/* RULES UNIFICATION (owner GO 2026-09-09): ONE tab, three clearly-scoped
+   editors — Label rules (whole-label design), Illustration rules (the
+   artwork inside labels + Image Play), Marketing rules (photo prompts).
+   The old ArtDirectionTab edited the CLASSIC config store and now lives
+   inside the Image Play tab, where its rules actually apply. */
+
+function LinesRulesCard({ title, note, api }: { title: string; note: string; api: string }) {
+  const [text, setText] = useState("");
+  const [saved, setSaved] = useState(false);
+  useEffect(() => { fetch(api).then((r) => r.json()).then((b) => setText(b.global || "")); }, [api]);
+  async function save() {
+    const r = await fetch(api, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ global: text }) });
+    if (r.ok) { setSaved(true); setTimeout(() => setSaved(false), 2500); }
+  }
+  return (
+    <div style={S.card}>
+      <label style={{ ...S.label, margin: 0 }}>{title}</label>
+      <p style={{ fontSize: 12, color: "#6b6a60", margin: "6px 0 10px" }}>{note}</p>
+      <textarea style={{ ...S.input, minHeight: 70 }} value={text} onChange={(e) => setText(e.target.value)} />
+      <button style={{ ...S.btn, marginTop: 8 }} onClick={save}>{saved ? "Saved ✓" : "Save"}</button>
+    </div>
+  );
+}
+
+function IllustrationRulesCard() {
+  const [rules, setRules] = useState<{ global: string; perStyle: Record<string, string> } | null>(null);
+  const [saved, setSaved] = useState(false);
+  useEffect(() => { fetch("/api/admin/image-rules").then((r) => r.json()).then((b) => setRules({ global: b.rules?.global || "", perStyle: b.rules?.perStyle || {} })); }, []);
+  async function save() {
+    if (!rules) return;
+    const r = await fetch("/api/admin/image-rules", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(rules) });
+    if (r.ok) { setSaved(true); setTimeout(() => setSaved(false), 2500); }
+  }
+  if (!rules) return <div style={S.card}>Loading illustration rules…</div>;
+  return (
+    <div style={S.card}>
+      <label style={{ ...S.label, margin: 0 }}>Illustration rules</label>
+      <p style={{ fontSize: 12, color: "#6b6a60", margin: "6px 0 10px" }}>
+        One rule per line — steers the <b>artwork inside every label</b> (dreams) and Image Play.
+        Lines about text or white backgrounds are automatically left out of labels (a label is a
+        complete design). Global first, then per style.
+      </p>
+      <label style={S.label}>Global — every style</label>
+      <textarea style={{ ...S.input, minHeight: 60 }} value={rules.global} onChange={(e) => setRules({ ...rules, global: e.target.value })} />
+      {["traditional", "contemporary", "punk"].map((st) => (
+        <div key={st}>
+          <label style={S.label}>{st}</label>
+          <textarea style={{ ...S.input, minHeight: 40 }} value={rules.perStyle[st] || ""}
+            onChange={(e) => setRules({ ...rules, perStyle: { ...rules.perStyle, [st]: e.target.value } })} />
+        </div>
+      ))}
+      <button style={{ ...S.btn, marginTop: 8 }} onClick={save}>{saved ? "Saved ✓" : "Save"}</button>
+    </div>
+  );
+}
+
 function RulesTab() {
   const row = { display: "flex", gap: 12, alignItems: "center", padding: "10px 0", borderBottom: "1px solid #e5e4dc", fontSize: 13 } as const;
   return (
     <>
       <DreamRulesCard />
+      <IllustrationRulesCard />
+      <LinesRulesCard
+        title="Marketing rules"
+        note="One rule per line, plain English — rides EVERY marketing prompt (studio shots and lifestyle scenes) as the art director's standing orders. Example: 'never show drinking glasses half-empty' or 'always natural daylight'."
+        api="/api/admin/marketing-rules"
+      />
       <div style={S.card}>
         <p style={{ fontSize: 13, color: "#4a4a42", marginTop: 0 }}>
-          Hard rules — <b>enforced in the rendering engine</b>, not wishes:
+          Hard rules — <b>classic engine (frozen)</b>, enforced mechanically, kept for reference:
         </p>
         <div style={row}>
           <b style={{ width: 240 }}>Safe margin</b>
@@ -92,7 +154,6 @@ function RulesTab() {
           retired for the new engine (the dream&rsquo;s geometry decides): minimum gap between texts · artwork fill of its free area
         </p>
       </div>
-      <ArtDirectionTab />
     </>
   );
 }
@@ -445,7 +506,7 @@ export default function DreamAdmin() {
         )}
         {tab === "Image Refs" && <><IllustrationTextsCard /><StylesTab /></>}
         {tab === "Marketing" && <MarketingRefsCard />}
-        {tab === "Image Play" && <PlaygroundTab />}
+        {tab === "Image Play" && <><PlaygroundTab /><ArtDirectionTab /></>}
         {tab === "Rules" && <RulesTab />}
         {tab === "Generations" && <GenerationsTab />}
         {tab === "Users" && <UsersTab onSessionLost={() => setAuthed(false)} />}

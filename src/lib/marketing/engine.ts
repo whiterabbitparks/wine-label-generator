@@ -159,7 +159,7 @@ function bottleDescription(b: MarketingBrief) {
   };
 }
 
-export function buildShotPrompt(b: MarketingBrief, side: "front" | "back", hasShape: boolean, charter = "") {
+export function buildShotPrompt(b: MarketingBrief, side: "front" | "back", hasShape: boolean, charter = "", rules?: string[]) {
   const d = bottleDescription(b);
   return (
     `Professional studio product photograph of a single wine bottle, photographed dead straight-on, ` +
@@ -183,7 +183,8 @@ export function buildShotPrompt(b: MarketingBrief, side: "front" | "back", hasSh
       ? `The SECOND attached image is a technical outline drawing of this exact bottle model — match its GLASS silhouette, proportions, shoulder curve and neck length PRECISELY, but render a real photographed glass bottle, never a drawing. IGNORE the closure/top drawn in the outline — the closure is specified above and OVERRIDES the drawing. `
       : "") +
     `Lighting: crisp premium studio softbox lighting, elegant vertical highlights along the glass, true colours, razor-sharp focus. ` +
-    `CUTOUT: pure transparent background, no surface, no table, no cast shadow, no glow or halo around the silhouette — a clean isolated product cutout.`
+    `CUTOUT: pure transparent background, no surface, no table, no cast shadow, no glow or halo around the silhouette — a clean isolated product cutout.` +
+    houseRules(rules)
   );
 }
 
@@ -209,7 +210,7 @@ const STYLE_WORLD: Record<string, string> = {
     "Setting and styling are RAW and natural: candid unpolished scenes, natural-wine bar energy, honest daylight, real textures — concrete, worn wood, skin, paper — nothing staged-looking, a free documentary feel.",
 };
 
-export function buildLifestylePrompt(b: MarketingBrief, scenario: string, charter: string, hasShape: boolean, fromBoard = false) {
+export function buildLifestylePrompt(b: MarketingBrief, scenario: string, charter: string, hasShape: boolean, fromBoard = false, rules?: string[]) {
   const d = bottleDescription(b);
   return (
     /* round 31: a board-derived scene LEADS — recreate the reference's own
@@ -233,7 +234,8 @@ export function buildLifestylePrompt(b: MarketingBrief, scenario: string, charte
       ? `The SECOND attached image is a technical outline of this exact bottle model — the bottle in the photo matches that GLASS silhouette and its proportions precisely (the closure drawn in the outline is irrelevant; the closure specified above overrides it). `
       : "") +
     `PEOPLE (house rule): never show a human face — any person appears from behind, framed below the shoulders, or as hands only. ` +
-    `Shot on professional camera, beautiful natural light for the scene, crisp focus on the bottle and label. Square composition. No added text, no watermarks, no logos other than the label itself.`
+    `Shot on professional camera, beautiful natural light for the scene, crisp focus on the bottle and label. Square composition. No added text, no watermarks, no logos other than the label itself.` +
+    houseRules(rules)
   );
 }
 
@@ -304,7 +306,7 @@ export interface AssetEvent {
 /* charters loaded ONCE per request — the route also hashes them into the
    cache signature, so editing a board busts stale cached sets (owner bug
    2026-09-07: new references changed nothing because the cache replayed) */
-export async function loadMarketingCharters(style: string): Promise<{ life: string; shots: string; scenes: string[] }> {
+export async function loadMarketingCharters(style: string): Promise<{ life: string; shots: string; scenes: string[]; rules: string[] }> {
   try {
     const db = await getDb();
     const c = (await db.collection("settings").findOne({ _id: `marketing-charter-${style}` } as never)) as { text?: string } | null;
@@ -313,8 +315,16 @@ export async function loadMarketingCharters(style: string): Promise<{ life: stri
        present, the five lifestyle images are dealt from THESE, not from
        the generic scenario list */
     const sn = (await db.collection("settings").findOne({ _id: `marketing-scenes-${style}` } as never)) as { list?: string[] } | null;
-    return { life: c?.text || "", shots: sc?.text || "", scenes: Array.isArray(sn?.list) ? sn!.list!.filter(Boolean) : [] };
-  } catch { return { life: "", shots: "", scenes: [] }; }
+    /* rules unification (owner 2026-09-09): the owner's plain-English
+       marketing rules ride every shot AND lifestyle prompt */
+    const rl = (await db.collection("settings").findOne({ _id: "marketing-rules" } as never)) as { global?: string } | null;
+    const rules = String(rl?.global || "").split("\n").map((l) => l.trim()).filter(Boolean).slice(0, 30);
+    return { life: c?.text || "", shots: sc?.text || "", scenes: Array.isArray(sn?.list) ? sn!.list!.filter(Boolean) : [], rules };
+  } catch { return { life: "", shots: "", scenes: [], rules: [] }; }
+}
+
+function houseRules(rules?: string[]) {
+  return rules && rules.length ? ` HOUSE RULES (the art director's standing orders — never break them): ${rules.map((r) => `${r}.`).join(" ")} ` : "";
 }
 
 export async function generateMarketingAssets(
@@ -322,10 +332,10 @@ export async function generateMarketingAssets(
   frontLabel: string,
   backLabel: string | null,
   send: (e: AssetEvent) => void,
-  charters?: { life: string; shots: string; scenes: string[] }
+  charters?: { life: string; shots: string; scenes: string[]; rules: string[] }
 ): Promise<void> {
   const final = imageQuality() === "prod";
-  const { life: charter, shots: shotCharter, scenes } = charters || await loadMarketingCharters(b.style);
+  const { life: charter, shots: shotCharter, scenes, rules } = charters || await loadMarketingCharters(b.style);
   /* ops visibility (owner escalation 2026-09-07: "references have no
      influence") — every run states what steering it actually carries */
   console.log(`[marketing] style=${b.style} lifeCharter=${charter.length}ch shotCharter=${shotCharter.length}ch boardScenes=${scenes.length} seed=${b.seed}`);
@@ -338,7 +348,7 @@ export async function generateMarketingAssets(
      the occasional 429, and the stream keeps the page honest meanwhile */
   send({ type: "progress", stage: "front shot" });
   const front = await generateImageRawWithRetry({
-    prompt: buildShotPrompt(b, "front", !!shape, shotCharter),
+    prompt: buildShotPrompt(b, "front", !!shape, shotCharter, rules),
     references: shape ? [frontLabel, shape] : [frontLabel], transparent: true, size: { w: 1024, h: 1536 },
   });
   const frontSized = await sizeShot(front, final);
@@ -347,7 +357,7 @@ export async function generateMarketingAssets(
   if (backLabel) {
     send({ type: "progress", stage: "back shot" });
     const back = await generateImageRawWithRetry({
-      prompt: buildShotPrompt(b, "back", !!shape, shotCharter),
+      prompt: buildShotPrompt(b, "back", !!shape, shotCharter, rules),
       references: shape ? [backLabel, shape] : [backLabel], transparent: true, size: { w: 1024, h: 1536 },
     });
     send({ type: "shot", side: "back", image: await sizeShot(back, final), preview: await previewOf(back) });
@@ -358,7 +368,7 @@ export async function generateMarketingAssets(
     send({ type: "progress", stage: `lifestyle ${i + 1}/5` });
     try {
       const img = await generateImageRawWithRetry({
-        prompt: buildLifestylePrompt(b, scenarios[i].text, charter, !!shape, scenarios[i].fromBoard),
+        prompt: buildLifestylePrompt(b, scenarios[i].text, charter, !!shape, scenarios[i].fromBoard, rules),
         references: shape ? [frontLabel, shape] : [frontLabel], size: { w: 1024, h: 1024 },
       });
       send({ type: "life", i, image: await sizeLifestyle(img, final), preview: await previewOf(img) });

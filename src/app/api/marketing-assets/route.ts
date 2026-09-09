@@ -47,7 +47,7 @@ export async function POST(req: Request) {
      current charters (an edited/analyzed board must bust the cache) */
   const hash = (s: string) => { let h = 5381; for (let i = 0; i < s.length; i += 97) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0; return h.toString(36); };
   const charters = await loadMarketingCharters(brief.style);
-  const sig = JSON.stringify({ ...brief, f: hash(front), b: back ? hash(back) : "", cl: hash(charters.life), cs: hash(charters.shots), sn: hash(charters.scenes.join("|")) });
+  const sig = JSON.stringify({ ...brief, f: hash(front), b: back ? hash(back) : "", cl: hash(charters.life), cs: hash(charters.shots), sn: hash(charters.scenes.join("|")), rl: hash(charters.rules.join("|")) });
 
   /* diagnostic dry run (owner 2026-09-07): returns the exact lifestyle
      prompt WITHOUT generating — proves whether charters+scenes reach the model */
