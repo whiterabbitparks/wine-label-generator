@@ -1990,6 +1990,13 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 39 (owner 2026-09-09): MAGNIFICATION REMOVED wizard-wide —
+  the lightbox gallery (state + overlay) is deleted from page.tsx.
+  Options page: clicking a LABEL IMAGE now SELECTS it (same as its
+  Select button). Assets page: images are static; the small-thumb →
+  hero SWAP ghost buttons stay. Backdesign + final pack: all images
+  static, no zoom cursors. The PUBLIC product page (/p) keeps its
+  gallery lightbox — that one is the owner's spec for customers.
 - ROUND 38 (owner 2026-09-09, 3 items — bottle page): (1) CROWN-CAP
   BOTTLES: burgundy-crown.jpg + alsace-rhine-crown.jpg in
   public/newui/bottles (owner's drawings); the Crown Cap closure
