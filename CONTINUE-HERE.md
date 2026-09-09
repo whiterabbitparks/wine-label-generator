@@ -1990,6 +1990,28 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 32 (owner: "reference analysis texts are mediocre → bad
+  results"; GO on items 1-4, closed-loop #5 deferred): REFS-QUALITY
+  REWORK. New shared analyst `src/lib/admin/vision.ts`: analystChat()
+  (default model gpt-5.1 via OPENAI_VISION_MODEL, AUTO-FALLBACK to
+  gpt-4o on 400/404; optional Claude analyst via ANALYST_PROVIDER=
+  claude + ANTHROPIC_API_KEY), parseAnalystJSON(), pool(). The old
+  sixteen-images-into-one-call-110-words compression is DEAD in both
+  batched analyzers: (a) marketing-refs — per-image structured
+  questionnaire (scene/setting/action/people/props/light/palette/
+  composition/texture/era; shots variant: lighting/highlights/glass/
+  grading/sharpness/camera) → synthesis charter (names distinct
+  directions) + scenes come straight from per-image scene fields +
+  "Exact board palette (measured): #…" appended from CODE pixel
+  clustering (card-palette extractor, never hallucinated);
+  (b) dream-refs — per-image layout questionnaire → synthesis
+  doctrine with a REAL per-image Grounds line; composition cards now
+  ride analystChat too. (c) style-refs cards (already per-image +
+  code palettes) just switched brains — visionJSON delegates to
+  analystChat; hand-edited cards still kept (no force). All six
+  boards re-derived; charters now name concrete worlds ("Floor-Level
+  Hi-Fi Lounge", "Monastic Object Altar") instead of stock prose.
+  Deferred by owner: #5 closed-loop probe-compare-refine.
 - ROUND 31b (owner clarification, SUPERSEDES the round 30/31
   orientation rule): the bottle may be in ANY pose — vertical was
   never the point. THE REAL RULE: the label sits ON THE BOTTLE'S

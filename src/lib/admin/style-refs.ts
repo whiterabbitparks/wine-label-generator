@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { getDb } from "@/lib/db";
+import { analystChat, parseAnalystJSON } from "@/lib/admin/vision";
 
 /* Per-style reference images — the owner's artistic language, uploaded in
    /admin. Files live on disk (data/style-refs/, gitignored); metadata in the
@@ -233,22 +234,12 @@ const GENERIC_BAN =
   "dry-brush gouache on cold-press paper, chinagraph pencil, linocut with " +
   "gouge chatter, rapidograph contour, screenprint with 45lpi halftone.";
 
-async function visionJSON(key: string, model: string, system: string, user: unknown[]): Promise<Record<string, unknown>> {
-  const res = await visionFetch({
-    method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: user },
-      ],
-    }),
-  });
-  if (!res.ok) throw new Error(`vision call failed: ${res.status} ${(await res.text()).slice(0, 300)}`);
-  const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-  return JSON.parse(json.choices?.[0]?.message?.content || "{}");
+/* refs-quality round (owner 2026-09-08): style cards now go through the
+   shared analyst brain (newer model + fallback + optional Claude) — the
+   per-image structure and code palettes here were already right */
+async function visionJSON(_key: string, _model: string, system: string, user: unknown[]): Promise<Record<string, unknown>> {
+  const text = await analystChat(system, user as Parameters<typeof analystChat>[1], true);
+  return (parseAnalystJSON<Record<string, unknown>>(text)) || {};
 }
 
 async function analyzeOneRef(key: string, model: string, style: string, url: string): Promise<Omit<StyleVariant, "key"> | null> {

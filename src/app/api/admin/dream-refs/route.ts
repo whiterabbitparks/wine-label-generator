@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import sharp from "sharp";
 import { requestIsAuthenticated } from "@/lib/admin/session";
 import { getDb } from "@/lib/db";
+import { analystChat, parseAnalystJSON, pool } from "@/lib/admin/vision";
 
 /* DREAM REFERENCES (owner 2026-08-25): whole-label designs the art director
    admires — the dream generator's taste school. Files live on disk; a small
@@ -80,43 +81,48 @@ export async function POST(req: Request) {
       const buf = await sharp(fs.readFileSync(p)).resize(640, 640, { fit: "inside" }).png().toBuffer();
       images.push({ type: "image_url", image_url: { url: `data:image/png;base64,${buf.toString("base64")}`, detail: "high" } });
     }
-    const vmodel = process.env.OPENAI_VISION_MODEL || "gpt-4o";
     /* STEERING IS NEVER LOST (owner 2026-09-03): a charter the art
        director edited after the last analysis is theirs — keep it. */
     const prevCh = (await db.collection("settings").findOne({ _id: `dream-charter-${style}` } as never)) as { text?: string; editedAt?: string; analyzedAt?: string } | null;
     const keepCharter = !!(prevCh?.text && prevCh.editedAt && (!prevCh.analyzedAt || prevCh.editedAt > prevCh.analyzedAt));
-    // 1) the style charter — shared typographic/colour spirit
+    // 1) the style charter — shared typographic/colour spirit.
+    // REFS-QUALITY REWORK (owner 2026-09-08): per-image structured
+    // questionnaires first (a lone image yields far more specificity than
+    // one image among sixteen), then a synthesis pass builds the doctrine.
     let text = prevCh?.text || "";
     if (!keepCharter) {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: vmodel,
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a graphic design analyst. You receive examples of packaging label design. " +
-              "Describe their SHARED LAYOUT DOCTRINE as a compact guide (max 120 words): information " +
-              "hierarchy habits, alignment doctrines (centred stacks / left columns / asymmetry), " +
-              "type-SCALE contrasts (name huge vs details small — scale only, never typeface style), " +
-              "density and whitespace philosophy, where illustrations tend to sit and how much room they get. " +
-              "ALWAYS include one line 'Grounds:' listing the actual background colours seen across these " +
-              "references, stated plainly (e.g. 'Grounds: chalk white, vivid tomato red, deep bottle green') — " +
-              "never assume cream or beige unless the references truly show it. " +
-              "STRICTLY FORBIDDEN: the illustration's artistic technique, medium, rendering style, mood or " +
-              "imagery — illustration style is captured separately from the image reference boards; " +
-              "also no depicted subjects, and no per-example layout schemes (those are captured per card). " +
-              "Do not reference the specific products, names or texts shown.",
-          },
-          { role: "user", content: [{ type: "text", text: "The design examples:" }, ...images] },
-        ],
-      }),
-    });
-    if (!res.ok) return NextResponse.json({ error: `analysis failed (${res.status})` }, { status: 502 });
-    const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-    text = String(json.choices?.[0]?.message?.content || "").slice(0, 2000);
+    const perImageSystem =
+      "You are a graphic design analyst studying ONE packaging label design. Answer a fixed questionnaire about its LAYOUT only. " +
+      "Return strict JSON: " +
+      '{"hierarchy": the information hierarchy in 5-15 words (what dominates, what recedes), ' +
+      '"alignment": centred stack / left column / asymmetric — plus any grid habit, ' +
+      '"scale_contrast": the type SCALE relationship (name vs details) — scale only, never typeface style, ' +
+      '"density": dense or airy, and where the whitespace lives, ' +
+      '"illustration_zone": where the illustration sits and roughly what share of the label it gets, ' +
+      '"ground": the label\'s actual background colour, named plainly and precisely}. ' +
+      "STRICTLY FORBIDDEN: the illustration's technique, medium, style, mood or subject; the product names or texts.";
+    type Form = Record<string, unknown>;
+    const forms = (await pool(images.map((im) => im.image_url.url), 4, async (img) => {
+      try {
+        const t = await analystChat(perImageSystem, [
+          { type: "text", text: "The label design:" },
+          { type: "image_url", image_url: { url: img, detail: "high" } },
+        ], true);
+        return parseAnalystJSON<Form>(t);
+      } catch { return null; }
+    })).filter(Boolean) as Form[];
+    if (!forms.length) return NextResponse.json({ error: "per-image analysis failed — try again" }, { status: 502 });
+    try {
+      text = (await analystChat(
+        "You are a graphic design director. You receive per-label layout questionnaires from ONE style's reference board. Merge them into a " +
+        "SHARED LAYOUT DOCTRINE (max 130 words): information hierarchy habits, alignment doctrines, type-SCALE contrasts (scale only, never " +
+        "typeface style), density and whitespace philosophy, where illustrations sit and how much room they get. ALWAYS include one line " +
+        "'Grounds:' listing the actual background colours reported across the questionnaires, plainly (e.g. 'Grounds: chalk white, vivid " +
+        "tomato red, deep bottle green') — never assume cream or beige unless reported. Where labels disagree, state the dominant habit and " +
+        "the strongest minority. No illustration technique/medium/mood, no depicted subjects, no per-example schemes.",
+        [{ type: "text", text: "The per-label questionnaires (JSON):\n" + JSON.stringify(forms).slice(0, 24000) }],
+      )).slice(0, 2000);
+    } catch { text = ""; }
     // a refusal or an empty answer must never become the charter
     if (text.length < 60 || /\b(i'?m sorry|i can'?t|cannot assist|unable to)\b/i.test(text.slice(0, 120)))
       return NextResponse.json({ error: "the analyst refused this board — try again (or different references)" }, { status: 502 });
@@ -143,33 +149,22 @@ export async function POST(req: Request) {
       const p2 = path.join(DREAM_REFS_DIR, path.basename(r.file));
       if (!fs.existsSync(p2)) continue;
       const buf2 = await sharp(fs.readFileSync(p2)).resize(640, 640, { fit: "inside" }).png().toBuffer();
-      const cres = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: vmodel,
-          messages: [
-            {
-              role: "system",
-              content:
-                "You are a graphic design analyst. Describe ONLY the LAYOUT GEOMETRY of this label design, " +
-                "in max 60 words, as instructions for arranging a NEW design the same way. " +
-                "START with the illustration: give its area as a fraction of the label (e.g. 'about one quarter') " +
-                "and its position. Say it BLEEDS off an edge ONLY if its ink truly touches that edge — " +
-                "when in doubt, it is CONTAINED (surrounded by label ground). Most classic labels are contained. " +
-                "Then: zones (thirds/halves), alignment axes, scale contrasts (name huge vs small), stacking order, arcs. " +
-                "Always call the picture simply 'the illustration'. " +
-                "STRICTLY FORBIDDEN: naming anything depicted — no objects, people, animals, body parts, scenery; " +
-                "no style or technique words; NEVER mention borders or frames (a separate house law governs those). " +
-                "Make the scheme SPECIFIC and distinctive to THIS example.",
-            },
-            { role: "user", content: [{ type: "image_url", image_url: { url: `data:image/png;base64,${buf2.toString("base64")}`, detail: "high" } }] },
-          ],
-        }),
-      });
-      if (!cres.ok) continue;
-      const cj = (await cres.json()) as { choices?: { message?: { content?: string } }[] };
-      const arr = String(cj.choices?.[0]?.message?.content || "").slice(0, 600);
+      let arr = "";
+      try {
+        arr = (await analystChat(
+          "You are a graphic design analyst. Describe ONLY the LAYOUT GEOMETRY of this label design, " +
+          "in max 60 words, as instructions for arranging a NEW design the same way. " +
+          "START with the illustration: give its area as a fraction of the label (e.g. 'about one quarter') " +
+          "and its position. Say it BLEEDS off an edge ONLY if its ink truly touches that edge — " +
+          "when in doubt, it is CONTAINED (surrounded by label ground). Most classic labels are contained. " +
+          "Then: zones (thirds/halves), alignment axes, scale contrasts (name huge vs small), stacking order, arcs. " +
+          "Always call the picture simply 'the illustration'. " +
+          "STRICTLY FORBIDDEN: naming anything depicted — no objects, people, animals, body parts, scenery; " +
+          "no style or technique words; NEVER mention borders or frames (a separate house law governs those). " +
+          "Make the scheme SPECIFIC and distinctive to THIS example.",
+          [{ type: "image_url", image_url: { url: `data:image/png;base64,${buf2.toString("base64")}`, detail: "high" } }],
+        )).slice(0, 600);
+      } catch { continue; }
       /* sanitize: quoted words and year tokens from the reference must never
          reach a dream prompt — a card once said "House Party" and the dream
          could typeset it (owner 2026-08-28) */
