@@ -368,7 +368,6 @@ export default function NewUI() {
   }, [page]);
   const [packSel, setPackSel] = useState<boolean[]>([true, true, true, false]);
   const [agree, setAgree] = useState(false);
-  const [gallery, setGallery] = useState<{ imgs: string[]; i: number } | null>(null);
   const [warn, setWarn] = useState("");
   /* ROUND 27: honest barcode — we never invent digits; the winery types its
      own number. ROUND 29 #1/#7: any 12- or 13-digit number is ACCEPTED and
@@ -971,8 +970,8 @@ export default function NewUI() {
             return (
               <div key={i}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={d.preview || d.dream} alt={d.style} onClick={() => setGallery({ imgs: dreams.map((dd) => dd.preview || dd.dream), i })}
-                  style={{ ...px(lx, ly, lw, lh), cursor: "zoom-in", objectFit: "fill" }} />
+                <img src={d.preview || d.dream} alt={d.style} onClick={() => { setSelected(i); setWarn(""); }}
+                  style={{ ...px(lx, ly, lw, lh), cursor: "pointer", objectFit: "fill" }} />
                 {cross(lx, ly, `tl${i}`)}{cross(lx + lw, ly, `tr${i}`)}
                 {cross(lx, ly + lh, `bl${i}`)}{cross(lx + lw, ly + lh, `br${i}`)}
               </div>
@@ -1152,8 +1151,8 @@ export default function NewUI() {
           {patch(546, 546, 350, 40, "bdrow")}
           {backPng && (<>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={backPng} alt="back label" onClick={() => setGallery({ imgs: [backPng], i: 0 })}
-              style={{ ...px(lx, ly, fit.w, fit.h), cursor: "zoom-in", objectFit: "fill" }} />
+            <img src={backPng} alt="back label"
+              style={{ ...px(lx, ly, fit.w, fit.h), objectFit: "fill" }} />
             {cross(lx, ly, "b1")}{cross(lx + fit.w, ly, "b2")}{cross(lx, ly + fit.h, "b3")}{cross(lx + fit.w, ly + fit.h, "b4")}
             <button onClick={() => go("backdetails", -1)}
               style={{ ...px(lx, 548.6, fit.w, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>{t("Edit")}</button>
@@ -1273,8 +1272,8 @@ export default function NewUI() {
         const pic = (it: { full: string; prev: string } | undefined, w2: number, h2: number, label: string, fs = 12, fit: "cover" | "contain" = "cover", gal?: string[], loadKey?: string) =>
           it ? (
             /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={it.prev} alt={label} onClick={() => { const g = gal?.length ? gal : [it.full]; setGallery({ imgs: g, i: Math.max(0, g.indexOf(it.full)) }); }}
-              style={{ width: w2, height: h2, objectFit: fit, display: "block", cursor: "zoom-in", animation: `nuiFadeIn ${FADE_MS}ms ${EASE}` }} />
+            <img src={it.prev} alt={label}
+              style={{ width: w2, height: h2, objectFit: fit, display: "block", animation: `nuiFadeIn ${FADE_MS}ms ${EASE}` }} />
           ) : (
             <div style={{ width: w2, height: h2, background: "#F4F3EE", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", font: `${fs}px ${HNW}`, color: "#999", textAlign: "center" }}>
               {/* round 17 #1: rising glass + three-dot indicator below it */}
@@ -1323,8 +1322,8 @@ export default function NewUI() {
         return (<>
           {selected >= 0 && dreams[selected] && (
             /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={dreams[selected].preview || dreams[selected].dream} alt="front" onClick={() => setGallery({ imgs: [dreams[selected].preview || dreams[selected].dream], i: 0 })}
-              style={{ ...px(171, 279.3, 245.8, 163.8), objectFit: "contain", cursor: "zoom-in" }} />
+            <img src={dreams[selected].preview || dreams[selected].dream} alt="front"
+              style={{ ...px(171, 279.3, 245.8, 163.8), objectFit: "contain" }} />
           )}
           {backPng && (<>
             {/* slot 2 — cover the baked mock WITHOUT touching the dashed
@@ -1335,8 +1334,8 @@ export default function NewUI() {
               const fit2 = fitIn(227, 160, backDims.w, backDims.h);
               return (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={backPng} alt="back" onClick={() => setGallery({ imgs: [backPng], i: 0 })}
-                  style={{ ...px(452 + fit2.dx, 280 + fit2.dy, fit2.w, fit2.h), objectFit: "fill", cursor: "zoom-in" }} />
+                <img src={backPng} alt="back"
+                  style={{ ...px(452 + fit2.dx, 280 + fit2.dy, fit2.w, fit2.h), objectFit: "fill" }} />
               );
             })()}
           </>)}
@@ -1359,8 +1358,8 @@ export default function NewUI() {
             const box = (x: number, y: number, w2: number, h2: number, it: { full: string; prev: string } | undefined, label: string, fit: "cover" | "contain", gal?: string[], fs = 10) =>
               it ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img key={`${label}@${x}`} src={it.prev} alt={label} onClick={() => { const g = gal?.length ? gal : [it.full]; setGallery({ imgs: g, i: Math.max(0, g.indexOf(it.full)) }); }}
-                  style={{ ...px(x, y, w2, h2), objectFit: fit, cursor: "zoom-in" }} />
+                <img key={`${label}@${x}`} src={it.prev} alt={label}
+                  style={{ ...px(x, y, w2, h2), objectFit: fit }} />
               ) : (
                 <div key={`${label}@${x}`} style={{ ...px(x, y, w2, h2), background: "#F4F3EE", display: "flex", alignItems: "center", justifyContent: "center", font: `${fs}px ${HNW}`, color: "#999", textAlign: "center" }}>{label ? `[ ${t(label)} ]` : ""}</div>
               );
@@ -1600,22 +1599,6 @@ export default function NewUI() {
 
           {busyMsg && <div style={{ ...px(1090, 78, 320, 20), font: `13px ${HNW}`, color: "#8a887e", textAlign: "right" }}>{busyMsg}</div>}
 
-          {/* gallery mode (owner #21) */}
-          {gallery && (
-            <div style={{ position: "absolute", inset: 0, background: "rgba(17,17,17,0.92)", zIndex: 10, display: "flex", alignItems: "center", justifyContent: "center" }}
-              onClick={() => setGallery(null)}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={gallery.imgs[gallery.i]} alt="" onClick={(e) => e.stopPropagation()}
-                style={{ maxWidth: W * 0.82, maxHeight: H * 0.82, background: "#fff", boxShadow: "0 8px 60px rgba(0,0,0,0.5)" }} />
-              {gallery.imgs.length > 1 && (<>
-                <button onClick={(e) => { e.stopPropagation(); setGallery((g) => g && { ...g, i: (g.i + g.imgs.length - 1) % g.imgs.length }); }}
-                  style={{ ...px(40, H / 2 - 30, 60, 60), ...ghost, color: "#fff", font: `300 46px ${HNW}` }}>‹</button>
-                <button onClick={(e) => { e.stopPropagation(); setGallery((g) => g && { ...g, i: (g.i + 1) % g.imgs.length }); }}
-                  style={{ ...px(W - 100, H / 2 - 30, 60, 60), ...ghost, color: "#fff", font: `300 46px ${HNW}` }}>›</button>
-              </>)}
-              <button onClick={() => setGallery(null)} style={{ ...px(W - 80, 30, 50, 50), ...ghost, color: "#fff", font: `300 34px ${HNW}` }}>×</button>
-            </div>
-          )}
         </div>
       </div>
     </main>
