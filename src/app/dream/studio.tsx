@@ -126,6 +126,23 @@ export function StudioCore() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [cards, setCards] = useState<DreamCard[]>([]);
+  /* saved comments panel (owner 2026-09-08): comments never expire, but the
+     accumulated ones must be visible and deletable — quietly, in place */
+  const [cmts, setCmts] = useState<{ id: string; at: string; verdict: string; comment: string; style: string }[] | null>(null);
+  const [showCmts, setShowCmts] = useState(false);
+  async function toggleCmts() {
+    if (!showCmts) {
+      const r = await fetch("/api/admin/dream-feedback");
+      const b = await r.json().catch(() => ({}));
+      const rows = (b.rows || []) as { id: string; at: string; verdict: string; comment: string; style: string }[];
+      setCmts(rows.filter((x) => x.comment));
+    }
+    setShowCmts((v) => !v);
+  }
+  async function deleteCmt(id: string) {
+    await fetch(`/api/admin/dream-feedback?id=${id}`, { method: "DELETE" });
+    setCmts((cs) => (cs || []).filter((c) => c.id !== id));
+  }
 
   const briefData = useCallback(() => {
     const [reg, country] = region.split(",").map((x) => x.trim());
@@ -220,6 +237,26 @@ export function StudioCore() {
             <span style={S.sub}>each dream ≈ a few cents · comment + verdict teaches the next dreams · the dream IS the label</span>
           </div>
           {err && <p style={{ color: "#a03030", fontSize: 13 }}>{err}</p>}
+          {/* quiet comments manager — one line closed, a compact list open */}
+          <div style={{ marginTop: 8 }}>
+            <button onClick={toggleCmts} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 12, color: "#7a6a58", textDecoration: "underline" }}>
+              {showCmts ? "hide saved comments" : `saved comments${cmts ? ` (${cmts.length})` : ""}`}
+            </button>
+            {showCmts && (
+              <div style={{ marginTop: 6, maxHeight: 180, overflowY: "auto", border: "1px solid #e2ddd4", borderRadius: 6, padding: "4px 8px" }}>
+                {(cmts || []).length === 0 && <div style={{ fontSize: 12, color: "#999", padding: 4 }}>no saved comments</div>}
+                {(cmts || []).map((c) => (
+                  <div key={c.id} style={{ display: "flex", alignItems: "baseline", gap: 8, fontSize: 12, padding: "3px 0", borderBottom: "1px dotted #eee" }}>
+                    <span style={{ color: c.verdict === "approve" ? "#3f6d2a" : "#a03030", width: 12 }}>{c.verdict === "approve" ? "✓" : "✗"}</span>
+                    <span style={{ color: "#999", width: 88, flex: "0 0 auto" }}>{(c.at || "").slice(0, 10)} · {c.style}</span>
+                    <span style={{ flex: 1 }}>{c.comment}</span>
+                    <button onClick={() => deleteCmt(c.id)} title="delete — stops steering future dreams"
+                      style={{ background: "none", border: "none", cursor: "pointer", color: "#b66", fontSize: 13, padding: "0 2px" }}>✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         <BackLabelCard />

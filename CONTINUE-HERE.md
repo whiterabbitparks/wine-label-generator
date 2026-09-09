@@ -1990,6 +1990,26 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 35 (owner GO on cleanup items 1-3+5; rules-unification #4
+  APPROVED but deferred to its own careful round): (1) illustration
+  cards FORCE re-derived with the round-32 analyst (owner confirmed
+  no meaningful hand edits): traditional 5 / contemporary 12 / punk
+  14 — concrete technique language now ("burin-style strokes",
+  "stochastic halftone", "1-4mm contour"). (2) dream studio got a
+  QUIET saved-comments manager: "saved comments (N)" underline link
+  under the dream controls → compact list (date · style · ✓/✗ ·
+  text · ✕ delete); GET now ships row ids, DELETE /api/admin/
+  dream-feedback?id= removes one. Comments do NOT expire — owner
+  curates by hand. (3) dead branches deleted: migrate-3-styles,
+  proof-feedback, font-case routes; "minimalist" removed from the
+  ACTIVE dream lists + STYLE_MOOD (classic catalog untouched).
+  IMPORTANT NON-DELETION: flux/fal turned out ALIVE — FAL_KEY is
+  set, trained LoRAs exist in settings (fal-loras), and the dream
+  REBUILD's craft pass calls restyleWithFlux with the style's LoRA
+  preset (silent fallback when absent). Do NOT delete without a
+  separate owner decision. (5) CLASSIC INTERFACE IS FROZEN (owner:
+  "we won't return to it") — no new work, parity gates only matter
+  if classic files are touched.
 - ROUND 33 (owner: "at loader end the previous page's elements flash
   and slide away"): STALE-CLOSURE BUG in go(). nextFromFront captures
   go() while page==="front", generates for ~25s, then calls

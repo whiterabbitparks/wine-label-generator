@@ -10,8 +10,25 @@ export async function GET() {
   if (!(await requestIsAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const db = await getDb();
   const rows = await db.collection("dream_feedback")
-    .find({}, { projection: { _id: 0 } }).sort({ at: -1 }).limit(100).toArray();
-  return NextResponse.json({ rows });
+    .find({}).sort({ at: -1 }).limit(100).toArray();
+  /* id rides along so the studio's comments panel can delete a row
+     (owner 2026-09-08: "I want to see accumulated comments and delete
+     the ones I no longer like") */
+  return NextResponse.json({ rows: rows.map((r) => ({ ...r, _id: undefined, id: String(r._id) })) });
+}
+
+export async function DELETE(req: Request) {
+  if (!(await requestIsAuthenticated())) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const id = new URL(req.url).searchParams.get("id") || "";
+  if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
+  const db = await getDb();
+  const { ObjectId } = await import("mongodb");
+  try {
+    await db.collection("dream_feedback").deleteOne({ _id: new ObjectId(id) } as never);
+  } catch {
+    return NextResponse.json({ error: "bad id" }, { status: 400 });
+  }
+  return NextResponse.json({ ok: true });
 }
 
 export async function POST(req: Request) {

@@ -38,8 +38,6 @@ const STYLE_MOOD: Record<string, string> = {
     /* owner 2026-09-06: NO background/colour directives for punk — the
        image alone dictates its ground (supersedes "one painted world") */
     "loud natural-wine label — raw expressive artwork, punchy type, poster energy",
-  minimalist:
-    "minimalist wine label — restraint above all: generous empty ground, very few elements, one quiet motif or subtle abstraction, precise understated typography, calm confident whitespace",
   free: "whatever serves the story best — full artistic freedom",
 };
 
@@ -109,7 +107,7 @@ export async function runDreamPhase(p: DreamParams): Promise<{ dream: string; pr
   const body = { style: p.style, sketch: p.sketch };
   const vision = p.vision;
   const texts = labelTexts(p.data);
-    const style = ["traditional", "contemporary", "punk", "minimalist"].includes(String(body.style)) ? String(body.style) : "traditional";
+    const style = ["traditional", "contemporary", "punk"].includes(String(body.style)) ? String(body.style) : "traditional";
     // the owner's dream-refinement corpus steers future dreams
     let guidance = "";
     let composition = "";
@@ -1070,7 +1068,7 @@ export async function runRebuildPhase(p: RebuildParams): Promise<RebuildResult> 
   }
   let artworkMode: "contained" | "full" | "canvas" = "contained";
   const art = (spec as { artwork?: { subject?: string; palette?: string[]; box?: { w: number; h: number }; coverage?: string } }).artwork;
-  const styleKey = ["traditional", "contemporary", "punk", "minimalist"].includes(String(body.style)) ? String(body.style) : "contemporary";
+  const styleKey = ["traditional", "contemporary", "punk"].includes(String(body.style)) ? String(body.style) : "contemporary";
 
   /* DREAM-AS-CANVAS (owner GO 2026-08-31): when the pixel erase produced a
      clean canvas, the dream IS the artwork — art fidelity by construction,
