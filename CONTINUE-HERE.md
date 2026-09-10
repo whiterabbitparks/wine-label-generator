@@ -1990,6 +1990,18 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 42 (owner, 8th circles escalation — FINAL LAW): selection
+  circles are NEVER a mix of baked art + covers + live dots again.
+  On the bottle page (all four columns + Matte/Glossy) and the
+  No-compliance row, dotBtn now COVERS the baked ring with white
+  (cover:26/22) and draws OUR OWN ring (2px #111, r 9) + the 7.5px
+  dot — both centred by the same 50%/50% transform, concentric BY
+  CONSTRUCTION. The compliance flag rows keep their baked vector
+  rings (those were always right). "No cap" keeps its baked ⊘ icon.
+  No-compliance now TOGGLES OFF on a second click. Also fixed:
+  round 41 #6 had made the whole assets small-thumb node conditional
+  on the image — placeholder + loader glass had vanished; the thumb
+  is always rendered, only the hero-swap CLICK needs the image.
 - ROUND 41 (owner 2026-09-09, 19 items): (1) lifestyle prompt: WINE
   COLOUR NON-NEGOTIABLE — wine in glasses/pours matches the label's
   wine (glassWineShade). (2) bar semantics: on intermediate pages
