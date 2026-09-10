@@ -1169,8 +1169,8 @@ export default function NewUI() {
         return (<>
           {/* Arabic Markets removed — cover the SVG name text + its baked ring */}
           {patch(598, 500, 170, 20, "arab")}
-          {dotBtn(536.4, 509.89, noComp, () => { setMarkets([]); setNoComp(true); }, "nocomp", { ring: true })}
-          <button onClick={() => { setMarkets([]); setNoComp(true); }}
+          {dotBtn(536.4, 509.89, noComp, () => { if (noComp) setNoComp(false); else { setMarkets([]); setNoComp(true); } }, "nocomp", { cover: 26, ring: true, r: 9 })}
+          <button onClick={() => { if (noComp) setNoComp(false); else { setMarkets([]); setNoComp(true); } }}
             style={{ ...px(601.76, 509.89 - 12, 190, 24), ...ghost, font: `15px ${HNW}`, color: "#111", textAlign: "left", textTransform: "none", lineHeight: "24px" }}>
             {t("No compliance needed")}</button>
           {RC.map(({ code, col, row }) => {
@@ -1253,7 +1253,7 @@ export default function NewUI() {
               };
               return (
                 <span key={key + opt}>
-                  {dotBtn(cx, cy, bottle[key] === opt, pick, key + opt + "d", { coverDot: i === 0 })}
+                  {dotBtn(cx, cy, bottle[key] === opt, pick, key + opt + "d", { cover: 26, ring: true, r: 9 })}
                   {/* round 41 #3: the word beside the circle selects too */}
                   <button onClick={pick} style={{ ...px(cx + 14, cy - 12, 168, 24), ...ghost }} />
                 </span>
@@ -1267,7 +1267,7 @@ export default function NewUI() {
           <span style={{ ...px(1196.5, 285.28 - 12.4, 70, 16), font: `12px ${HNW}`, color: "#111", lineHeight: "16px" }}>{t("Glossy")}</span>
           {finish.map(([opt, cx0, cy0]) => (
             <span key={"f" + opt}>
-              {dotBtn(cx0, cy0, bottle.finish === opt, () => setBottle((m) => ({ ...m, finish: opt })), "f" + opt + "d", opt === "Matte" ? { coverDot: true } : opt === "Glossy" ? { ring: true, cover: 22 } : {})}
+              {dotBtn(cx0, cy0, bottle.finish === opt, () => setBottle((m) => ({ ...m, finish: opt })), "f" + opt + "d", opt === "No cap" ? {} : { cover: opt === "Glossy" ? 22 : 26, ring: true, r: 9 })}
               <button onClick={() => setBottle((m) => ({ ...m, finish: opt }))} style={{ ...px(cx0 + 14, cy0 - 12, 78, 24), ...ghost }} />
             </span>
           ))}
@@ -1396,11 +1396,17 @@ export default function NewUI() {
           <div style={{ ...px(548.6, 171.9, 338.6, 338.6) }}>{pic(assets.life[order[0]], 338.6, 338.6, `Context ${order[0] + 1}`, 14, "cover", lifeGallery, `lifestyle ${order[0] + 1}/5`)}</div>
           {cross(548.6, 171.9, "ah1")}{cross(887.2, 171.9, "ah2")}{cross(548.6, 510.5, "ah3")}{cross(887.2, 510.5, "ah4")}
           {cross(994.3, 171.5, "at1")}{cross(1303.7, 171.5, "at2")}{cross(994.3, 515.3, "at3")}{cross(1303.7, 515.3, "at4")}
-          {thumbs.map((t, k) => assets.life[order[k + 1]] && (
-            <button key={k} onClick={() => setHeroAsset(order[k + 1])} style={{ ...px(t.x, t.y, 137.9, 137.9), ...ghost }}>
-              {pic(assets.life[order[k + 1]], 137.9, 137.9, `Context ${order[k + 1] + 1}`, 12, "cover", lifeGallery, `lifestyle ${order[k + 1] + 1}/5`)}
-            </button>
-          ))}
+          {thumbs.map((t, k) => {
+            const img = assets.life[order[k + 1]];
+            const inner = pic(img, 137.9, 137.9, `Context ${order[k + 1] + 1}`, 12, "cover", lifeGallery, `lifestyle ${order[k + 1] + 1}/5`);
+            /* round 42: the thumb (placeholder + glass) is ALWAYS there —
+               only the hero-swap click needs the image to exist */
+            return img ? (
+              <button key={k} onClick={() => setHeroAsset(order[k + 1])} style={{ ...px(t.x, t.y, 137.9, 137.9), ...ghost }}>{inner}</button>
+            ) : (
+              <div key={k} style={{ ...px(t.x, t.y, 137.9, 137.9) }}>{inner}</div>
+            );
+          })}
           {/* product shots in the CROSS-MARKED area (137.1–411.4 × 171.9–514.8) */}
           <div style={{ ...px(139, 174, 133, 339) }}>{pic(assets.front, 133, 339, "Shot: Face", 12, "contain", shotGallery, "front shot")}</div>
           <div style={{ ...px(276.3, 174, 133, 339) }}>{pic(assets.back, 133, 339, "Shot: Back", 12, "contain", shotGallery, "back shot")}</div>
