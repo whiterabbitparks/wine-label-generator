@@ -1990,6 +1990,22 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 43 (owner, 3 items + mid-turn): (1) CAP_ZONES Screw Cap
+  length was 0-0.055 (far shorter than Cork's 0.005-0.145) — matched
+  to Cork's span. (2) No-compliance ring used r:9 (the bottle page's
+  size) instead of matching the flag rows' own r:7.5 — fixed,
+  verified pixel-identical to the EU/Japan rings. (3) ROOT CAUSE of
+  the recurring "shows the previous bottle" bug: the round-28b
+  restore-from-localStorage effect ran unconditionally at mount, so
+  a brand-new session inherited the LAST session's published
+  productUrl — and nothing ever cleared it until a fresh publish
+  happened. Now setDreams(ok) (a genuinely NEW generation) resets
+  productUrl, mints a fresh productCode, and clears the localStorage
+  key — an old link can no longer leak into a new wine's checkout.
+  Mid-turn: "Copy the link" used a bare try/catch around the ASYNC
+  clipboard promise (never actually caught a rejection) and gave no
+  feedback either way — now .then/.catch with a textarea/execCommand
+  fallback and a visible "Copied ✓" (2s) confirmation.
 - ROUND 42 (owner, 8th circles escalation — FINAL LAW): selection
   circles are NEVER a mix of baked art + covers + live dots again.
   On the bottle page (all four columns + Matte/Glossy) and the

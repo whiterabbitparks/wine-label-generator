@@ -153,6 +153,7 @@ export const UI_GE: Record<string, string> = {
   "Create a back label first": "ჯერ შექმენით უკანა ეტიკეტი",
   "No compliance needed": "შესაბამისობა არ მჭირდება",
   "Copy the link": "ბმულის კოპირება",
+  "Copied ✓": "დაკოპირდა ✓",
   "© 8K Labels — a demo interface built from your uploaded mockup": "© 8K Labels — საჩვენებელი ინტერფეისი თქვენი მაკეტიდან",
   "classic interface": "კლასიკური ინტერფეისი",
   "Feel free to leave out fields you don't want on your front label.": "გამოტოვეთ ველები, რომლებიც არ გსურთ, რომ გამოჩნდეს მთავარ ეტიკეტზე.",

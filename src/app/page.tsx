@@ -46,7 +46,8 @@ const LABEL_ANCHOR: Record<string, { anchor: "top" | "bottom"; pct: number }> = 
    Cap_reference images; the rest derived from the drawings */
 const CAP_ZONES: Record<string, [number, number][]> = {
   "Cork": [[0.005, 0.145]],
-  "Screw Cap": [[0, 0.055]],
+  /* round 43 #1: was far shorter than the capsule — match Cork's span */
+  "Screw Cap": [[0, 0.145]],
   "Wax Seal": [[0, 0.1]],
   "Crown Cap": [[0, 0.028]],
   "Sparkling Cork": [[0, 0.505]],
@@ -268,6 +269,7 @@ export default function NewUI() {
   /* round 30 #5: the slot-5 thumb takes a few seconds to build — the mini
      glass fills (same living-loader behaviour) until the iframe loads */
   const [ppLoaded, setPpLoaded] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [ppFill, setPpFill] = useState(0.14);
   useEffect(() => { setPpLoaded(false); setPpFill(0.14); }, [productUrl]);
   useEffect(() => {
@@ -664,6 +666,13 @@ export default function NewUI() {
       if (!ok.length) throw new Error("all generations failed — try again");
       ok.sort((a, b2) => styles3.indexOf(a.style) - styles3.indexOf(b2.style));
       setDreams(ok); setSelected(-1); setFrontSig(sigFront()); setBackSig("");
+      /* round 43 #3 (owner: "landing page thumb shows the previous bottle"):
+         a freshly generated wine invalidates any earlier published page —
+         the restored productUrl (round 28b, meant to survive a reload of
+         the SAME in-progress order) must not leak into a NEW wine. Mint a
+         fresh order code too, so a later publish never reuses the old one. */
+      setProductUrl(""); productCode.current = Math.random().toString(36).slice(2, 10);
+      try { localStorage.removeItem("nui-product-code"); } catch { }
       go("options");
     } catch (e) {
       alert(e instanceof Error ? e.message : String(e));
@@ -1169,7 +1178,9 @@ export default function NewUI() {
         return (<>
           {/* Arabic Markets removed — cover the SVG name text + its baked ring */}
           {patch(598, 500, 170, 20, "arab")}
-          {dotBtn(536.4, 509.89, noComp, () => { if (noComp) setNoComp(false); else { setMarkets([]); setNoComp(true); } }, "nocomp", { cover: 26, ring: true, r: 9 })}
+          {/* round 43 #2: match the flag rows' own ring size (r 7.5), not
+             the bottle page's r 9 */}
+          {dotBtn(536.4, 509.89, noComp, () => { if (noComp) setNoComp(false); else { setMarkets([]); setNoComp(true); } }, "nocomp", { cover: 26, ring: true, r: 7.5 })}
           <button onClick={() => { if (noComp) setNoComp(false); else { setMarkets([]); setNoComp(true); } }}
             style={{ ...px(601.76, 509.89 - 12, 190, 24), ...ghost, font: `15px ${HNW}`, color: "#111", textAlign: "left", textTransform: "none", lineHeight: "24px" }}>
             {t("No compliance needed")}</button>
@@ -1496,9 +1507,24 @@ export default function NewUI() {
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={`/api/qr?u=${encodeURIComponent(`https://8klabels.com${productUrl}`)}`} alt="QR"
                     style={{ ...px(1112, 422.44, 25.1, 25.1) }} />
-                  <button onClick={() => { try { navigator.clipboard.writeText(`https://8klabels.com${productUrl}`); } catch { } }}
+                  {/* round 43: writeText is async — a bare try/catch never
+                      caught its rejection, so a blocked clipboard failed
+                      silently with no sign anything happened; now confirmed
+                      visually and with a textarea fallback */}
+                  <button onClick={() => {
+                    const link = `https://8klabels.com${productUrl}`;
+                    const done = () => { setLinkCopied(true); setTimeout(() => setLinkCopied(false), 1800); };
+                    navigator.clipboard?.writeText(link).then(done).catch(() => {
+                      try {
+                        const ta = document.createElement("textarea");
+                        ta.value = link; ta.style.position = "fixed"; ta.style.opacity = "0";
+                        document.body.appendChild(ta); ta.select(); document.execCommand("copy"); document.body.removeChild(ta);
+                        done();
+                      } catch { }
+                    });
+                  }}
                     style={{ ...px(1150, 422.44 + 25.1 - 14, 140, 14), ...ghost, font: `italic 11px ${HNW}`, color: "#111", textDecoration: "underline", textAlign: "right", textTransform: "none" }}>
-                    {t("Copy the link")}</button>
+                    {linkCopied ? t("Copied ✓") : t("Copy the link")}</button>
                 </span>
               ) : notMade(1112, 284, 176, 150, "front", "nmLanding")}
             </>);
