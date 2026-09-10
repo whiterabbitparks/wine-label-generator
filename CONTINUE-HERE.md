@@ -1990,6 +1990,37 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 41 (owner 2026-09-09, 19 items): (1) lifestyle prompt: WINE
+  COLOUR NON-NEGOTIABLE — wine in glasses/pours matches the label's
+  wine (glassWineShade). (2) bar semantics: on intermediate pages
+  (loader/options/backdesign) the THICK line already reaches the
+  NEXT station's dot, the dot fills only on arrival; dashed outlines
+  sit EXACTLY on label edges. (3) bottle option WORDS select too
+  (ghost buttons beside every circle incl finish). (4) placeholders
+  lost the diagonal. (5/11/18) grey placeholders are CLICKABLE and
+  routed: "Create a front label first"→vision (options empty, assets
+  idle thumbs, checkout front/shots/context/landing), "Create a back
+  label first"→backdetails (backdesign empty, checkout back slot);
+  12px subtitle size. (6) assets small thumbs clickable only when
+  the image exists. (7) assets status messages italic. (8) bottle
+  silhouette shows a grey label placeholder at true position/default
+  size when nothing selected. (9) compliance gained "No compliance
+  needed" (ring at the old Arabic-Markets slot 536.4/509.89, ON by
+  default; picking a market clears it, clearing all markets restores
+  it; next allowed with empty markets). (10) bar DOTS clickable.
+  (12) 8K logo → welcome. (13) old-bar flash on Download fixed: the
+  white bar zone stays while sliding INTO checkout, covering the
+  outgoing board's baked old bar. (14) small checkout thumbs carry
+  no message. (15) QR-note price lines removed (EN+GE). (16) bottle
+  dots nudged +0.42/+0.5px to the MEASURED baked ring centres.
+  (17) loader glasses rise in visible STEPS (active +4.5%/2.5s,
+  waiting +3%/4s) — never look stuck. (18) checkout landing slot
+  shows the product preview ONLY when this session has a label
+  (stale restored page hidden); QR now 25.1px on the small-thumb
+  line; "Copy the link" (clipboard) bottom-right aligned. (19) ONE
+  dash style everywhere — 4.12/4.12 px 1px #000 (the final-pack slot
+  dashes are the sample): DASH const + dashedBox helper + pricing
+  rows converted.
 - ROUND 40 (owner 2026-09-09, mega-round; ProgressBarModifications
   mock + 9 items + 20% scale): (1) SEVEN-STAGE progress bar — Front
   Label(vision) · Details(front) · Back Label(backdetails) · Market

@@ -79,6 +79,14 @@ function liquidLine(wineColour: string, glass: string): string {
   return M[`${wc}-${g}`] || M["red-clear"];
 }
 
+/* the wine's colour as it reads in a GLASS (round 41 #1) */
+function glassWineShade(wineColour: string) {
+  return /red/i.test(wineColour) ? "deep ruby-red, near-opaque in the glass"
+    : /ros/i.test(wineColour) ? "pale salmon-pink rosé"
+    : /amber|orange/i.test(wineColour) ? "rich amber-orange"
+    : "pale straw-gold white wine";
+}
+
 /* ---- closure ------------------------------------------------------- */
 
 function closureLine(closure: string, colourCSS: string, finish: string) {
@@ -229,6 +237,9 @@ export function buildLifestylePrompt(b: MarketingBrief, scenario: string, charte
     (charter ? `ART DIRECTION — this brand's photographic world, follow it CLOSELY in setting, props, light, colour grading and styling (it overrides any generic defaults below): ${charter} ` : "") +
     (fromBoard ? "" : `${STYLE_WORLD[b.style] || STYLE_WORLD.contemporary} `) +
     `The wine bottle: ${d.text} ` +
+    /* round 41 #1: a red wine once poured ROSÉ in a glass — every visible
+       drop must match the label's wine */
+    `WINE COLOUR — NON-NEGOTIABLE: any wine visible anywhere in the scene (in glasses, mid-pour, in decanters) is THE SAME wine as in the bottle: ${glassWineShade(b.wineColour)}. Never a different colour, never a different wine. ` +
     `The FIRST attached image is the wine's front label — it appears on the bottle EXACTLY as given, legible and true to its colours; never redraw or replace it. ` +
     `The label is lit by the same scene light as the bottle (one photographed object, never a pasted-on graphic), and its surface is smooth flat print — no invented paper grain or fibre texture. ` +
     /* round 31b (owner clarification): the bottle may be in ANY pose —

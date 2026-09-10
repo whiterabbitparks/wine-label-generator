@@ -71,8 +71,10 @@ const STEPS: { label: string; big: boolean; page: PageKey }[] = [
 const THICK: Record<PageKey, number | null> = {
   /* vision: bar visible but thick line not yet started (round 8 #1) —
      it slides in on the transition to front */
-  welcome: null, vision: 142.06, front: 334.71, loader: 430, options: 430,
-  backdetails: 527.36, compliance: 720.01, backdesign: 815, bottle: 912.66,
+  /* round 41 #2: on intermediate pages the thick line already REACHES the
+     next station's dot — the dot itself fills only when its page arrives */
+  welcome: null, vision: 142.06, front: 334.71, loader: 527.36, options: 527.36,
+  backdetails: 527.36, compliance: 720.01, backdesign: 912.66, bottle: 912.66,
   assets: 1105.31, checkout: null,
 };
 const STEP_OF: Record<PageKey, number> = { welcome: -1, vision: 0, front: 1, loader: 1, options: 1, backdetails: 2, compliance: 3, backdesign: 3, bottle: 4, assets: 5, checkout: 6 };
@@ -256,6 +258,9 @@ export default function NewUI() {
   const [frontSig, setFrontSig] = useState("");
   const [b, setB] = useState<Record<string, string>>({});
   const [markets, setMarkets] = useState<string[]>([]);   /* round 8 #7: none preselected */
+  /* round 41 #9: "No compliance needed" — ON by default; picking any
+     market turns it off, clearing all markets turns it back on */
+  const [noComp, setNoComp] = useState(true);
   const [qrImg, setQrImg] = useState("");
   /* ingredients text file for the future QR landing page (owner 2026-09-07) */
   const [ingredients, setIngredients] = useState("");
@@ -369,8 +374,10 @@ export default function NewUI() {
     const idx = ASSET_STAGES.indexOf(key);
     if (cur < 0 || idx < 0) return 0.08;
     if (idx < cur) return 0.93;                                                 // done, image imminent
-    if (idx === cur) return Math.min(0.9, 0.14 + ((now - assetT.current.stage) / 45000) * 0.75);
-    return Math.min(0.5, 0.08 + ((now - assetT.current.run) / 1000) * 0.006);   // waiting: visible crawl
+    /* round 41 #17: STEPPED rises — a clear nudge every few seconds, so a
+       glass never looks stuck even when the render is slow */
+    if (idx === cur) return Math.min(0.9, 0.14 + Math.floor((now - assetT.current.stage) / 2500) * 0.045);
+    return Math.min(0.5, 0.08 + Math.floor((now - assetT.current.run) / 4000) * 0.03);   // waiting: 4s nudges
   };
 
   /* round 17 #2: the front label's wording suggests the bottle type */
@@ -736,9 +743,21 @@ export default function NewUI() {
   const px = (x: number, y: number, w?: number, h?: number): React.CSSProperties => ({ position: "absolute", left: x, top: y, width: w, height: h });
   const ghost: React.CSSProperties = { background: "transparent", border: "none", cursor: "pointer", padding: 0 };
   const patch = (x: number, y: number, w: number, h: number, key?: string) => <div key={key} style={{ ...px(x, y, w, h), background: "#fff" }} />;
-  /* round 40 #3: grey "Not yet created" thumb — darker diagonal across */
-  const notMade = (x: number, y: number, w: number, h: number, key?: string) => (
-    <div key={key} style={{ ...px(x, y, w, h), background: "#ECECEA linear-gradient(to top right, transparent calc(50% - 0.8px), #C9C9C4 calc(50% - 0.8px), #C9C9C4 calc(50% + 0.8px), transparent calc(50% + 0.8px))", display: "flex", alignItems: "center", justifyContent: "center", font: `12px ${HNW}`, color: "#8a887e", textAlign: "center" }}>{t("Not yet created")}</div>
+  /* round 41 #4/#5/#11: grey placeholder — clickable, takes you where the
+     missing thing is created; message in the 12px subtitle size */
+  const notMade = (x: number, y: number, w: number, h: number, kind: "front" | "back" = "front", key?: string, msg = true) => (
+    <button key={key} onClick={() => go(kind === "front" ? "vision" : "backdetails", -1)}
+      style={{ ...px(x, y, w, h), background: "#ECECEA", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", font: `12px ${HNW}`, color: "#8a887e", textAlign: "center", textTransform: "none", padding: 4 }}>
+      {msg ? t(kind === "front" ? "Create a front label first" : "Create a back label first") : ""}
+    </button>
+  );
+  /* round 41 #19: ONE dash style everywhere — the final-pack slot dashes
+     (baked stroke-dasharray 4.12) are the sample */
+  const DASH = "#000 0 4.12px, transparent 4.12px 8.24px";
+  const dashedBox = (x: number, y: number, w: number, h: number, key?: string) => (
+    <div key={key} style={{ ...px(x, y, w, h), pointerEvents: "none",
+      backgroundImage: `repeating-linear-gradient(90deg,${DASH}),repeating-linear-gradient(90deg,${DASH}),repeating-linear-gradient(180deg,${DASH}),repeating-linear-gradient(180deg,${DASH})`,
+      backgroundPosition: "0 0, 0 100%, 0 0, 100% 0", backgroundSize: "100% 1px, 100% 1px, 1px 100%, 1px 100%", backgroundRepeat: "no-repeat" }} />
   );
   /* owner #15 / round 7 #2: input text italic (design st16); the underline is
      a SEPARATE fixed-length row line, not text-decoration */
@@ -1005,12 +1024,15 @@ export default function NewUI() {
               <div key={i}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={d.preview || d.dream} alt={d.style} onClick={() => { setSelected(i); setWarn(""); }}
-                  style={{ ...px(lx, ly, lw, lh), cursor: "pointer", objectFit: "fill", outline: selected === i ? "1.5px dashed #111" : "none", outlineOffset: 6 }} />
+                  style={{ ...px(lx, ly, lw, lh), cursor: "pointer", objectFit: "fill" }} />
+                {selected === i && dashedBox(lx, ly, lw, lh, "selD" + i)}
                 {cross(lx, ly, `tl${i}`)}{cross(lx + lw, ly, `tr${i}`)}
                 {cross(lx, ly + lh, `bl${i}`)}{cross(lx + lw, ly + lh, `br${i}`)}
               </div>
             );
           })}
+          {dreams.length === 0 && OPT_FRAMES.map((fr, i) =>
+            notMade(fr.x, OPT_TOP, OPT_W, OPT_BOT - OPT_TOP, "front", "nmopt" + i))}
           {OPT_FRAMES.map((fr, i) => (
             <button key={"s" + i} onClick={() => { setSelected(i); setWarn(""); }}
               style={{
@@ -1083,8 +1105,8 @@ export default function NewUI() {
               and rendered live so it translates, plus the price line */}
           {patch(748, 542, 400, 64, "qrnote")}
           {(lang === "ge"
-            ? ["უნიკალური QR კოდი და პროდუქტის", "ვებ-გვერდი ინგრედიენტებით.", "ფასი - $29"]
-            : ["If you don't have a QR code, we'll generate", "one and link it to a dedicated page with your wine's", "ingredients, nutrition, and product information.", "Price of a QR Code & Product Web Page - $29."]
+            ? ["უნიკალური QR კოდი და პროდუქტის", "ვებ-გვერდი ინგრედიენტებით."]
+            : ["If you don't have a QR code, we'll generate", "one and link it to a dedicated page with your wine's", "ingredients, nutrition, and product information."]
           ).map((ln, i) => (
             <span key={i} style={{ ...px(752.4, 557.83 + i * 18 - 12.9, 400, 16), font: `13px ${HNW}`, color: "#111", lineHeight: "16px", whiteSpace: "nowrap" }}>{ln}</span>
           ))}
@@ -1146,13 +1168,20 @@ export default function NewUI() {
         ];
         return (<>
           {/* Arabic Markets removed — cover the SVG name text + its baked ring */}
-          {patch(598, 500, 138, 20, "arab")}
-          <div style={{ ...px(536.4 - 13, 509.89 - 13, 26, 27), background: "#fff" }} />
+          {patch(598, 500, 170, 20, "arab")}
+          {dotBtn(536.4, 509.89, noComp, () => { setMarkets([]); setNoComp(true); }, "nocomp", { ring: true })}
+          <button onClick={() => { setMarkets([]); setNoComp(true); }}
+            style={{ ...px(601.76, 509.89 - 12, 190, 24), ...ghost, font: `15px ${HNW}`, color: "#111", textAlign: "left", textTransform: "none", lineHeight: "24px" }}>
+            {t("No compliance needed")}</button>
           {RC.map(({ code, col, row }) => {
             const on = markets.includes(code);
             const cx0 = RING_X[col], cy0 = ROW_C[row];
             const NAME_X = [347.05, 601.76, 851.43, 1107.64];
-            const toggle = () => setMarkets((ms) => on ? ms.filter((m) => m !== code) : [...ms, code]);
+            const toggle = () => setMarkets((ms) => {
+              const nxt = on ? ms.filter((m) => m !== code) : [...ms, code];
+              setNoComp(nxt.length === 0);
+              return nxt;
+            });
             return (
               <span key={code}>
                 {/* round 14 #1: the whole row (ring→flag→name) is clickable */}
@@ -1183,12 +1212,13 @@ export default function NewUI() {
           {/* cover baked mock + its corner crosses + Edit/magnifier row */}
           {patch(BD_AREA.x - 12, BD_AREA.y - 12, BD_AREA.w + 24, BD_AREA.h + 24, "bdmock")}
           {patch(546, 546, 350, 40, "bdrow")}
+          {!backPng && notMade(BD_AREA.x, BD_AREA.y, BD_AREA.w, BD_AREA.h, "back", "nmbd")}
           {backPng && (<>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={backPng} alt="back label"
               style={{ ...px(lx, ly, fit.w, fit.h), objectFit: "fill" }} />
             {cross(lx, ly, "b1")}{cross(lx + fit.w, ly, "b2")}{cross(lx, ly + fit.h, "b3")}{cross(lx + fit.w, ly + fit.h, "b4")}
-            <div style={{ ...px(lx - 10, ly - 10, fit.w + 20, fit.h + 20), border: "1px dashed #111", boxSizing: "border-box", pointerEvents: "none" }} />
+            {dashedBox(lx, ly, fit.w, fit.h, "bdD")}
             <button onClick={() => go("backdetails", -1)}
               style={{ ...px(548.6, 589, 341.4, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>{t("Edit")}</button>
           </>)}
@@ -1197,38 +1227,50 @@ export default function NewUI() {
       case "bottle": {
         /* ring centres extracted from bottle.svg circle paths (round 7 #19) */
         const cols: { key: string; cx: number; items: [string, number][] }[] = [
-          { key: "type", cx: 385.64, items: [["Bordeaux", 283.07], ["Bordeaux Prestige", 312.07], ["Burgundy", 341.07], ["Sparkling", 371.07], ["Alsace / Rhine", 400.07], ["Ice Wine", 429.07]] },
-          { key: "color", cx: 625.64, items: [["Olive Green", 283.07], ["Transparent", 312.07], ["Amber", 341.07]] },
-          { key: "closure", cx: 864.64, items: [["Cork", 283.07], ["Screw Cap", 312.07], ["Wax Seal", 341.07], ["Crown Cap", 371.07], ["Sparkling Cork", 400.07]] },
+          /* round 41 #16: baked rings measured +0.42/+0.5px off the old
+             coords — dots now sit dead-centre (like compliance) */
+          { key: "type", cx: 386.06, items: [["Bordeaux", 283.57], ["Bordeaux Prestige", 312.57], ["Burgundy", 341.57], ["Sparkling", 371.57], ["Alsace / Rhine", 400.57], ["Ice Wine", 429.57]] },
+          { key: "color", cx: 626.06, items: [["Olive Green", 283.57], ["Transparent", 312.57], ["Amber", 341.57]] },
+          { key: "closure", cx: 865.06, items: [["Cork", 283.57], ["Screw Cap", 312.57], ["Wax Seal", 341.57], ["Crown Cap", 371.57], ["Sparkling Cork", 400.57]] },
         ];
         /* round 22 #10: Glossy's ring+text sit a bit further right (the
            baked pair is covered) so the ring clears the word before it */
-        const finish: [string, number, number][] = [["Matte", 1104.64, 281.78], ["Glossy", 1181, 281.78], ["No cap", 1104.64, 312.58]];
+        const finish: [string, number, number][] = [["Matte", 1105.06, 282.28], ["Glossy", 1181.42, 282.28], ["No cap", 1105.06, 313.08]];
         return (<>
           {cols.map(({ key, cx, items }) => items
             /* round 17 #2: Sparkling Cork exists only for the Sparkling bottle;
                round 38 #1: Crown Cap only for Burgundy / Sparkling / Alsace */
             .filter(([opt]) => !(key === "closure" && opt === "Sparkling Cork" && bottle.type !== "Sparkling"))
             .filter(([opt]) => !(key === "closure" && opt === "Crown Cap" && !CROWN_TYPES.includes(bottle.type)))
-            .map(([opt, cy], i) =>
-              dotBtn(cx, cy, bottle[key] === opt, () => {
+            .map(([opt, cy], i) => {
+              const pick = () => {
                 if (key === "type") bottleTouched.current = true;
                 setBottle((m) => ({
                   ...m, [key]: opt,
                   ...(key === "type" && opt !== "Sparkling" && m.closure === "Sparkling Cork" ? { closure: "Cork" } : {}),
                   ...(key === "type" && !CROWN_TYPES.includes(opt) && m.closure === "Crown Cap" ? { closure: "Cork" } : {}),
                 }));
-              }, key + opt, { coverDot: i === 0 })
-            ))}
+              };
+              return (
+                <span key={key + opt}>
+                  {dotBtn(cx, cy, bottle[key] === opt, pick, key + opt + "d", { coverDot: i === 0 })}
+                  {/* round 41 #3: the word beside the circle selects too */}
+                  <button onClick={pick} style={{ ...px(cx + 14, cy - 12, 168, 24), ...ghost }} />
+                </span>
+              );
+            }))}
           {/* cover the baked Sparkling Cork / Crown Cap rows when hidden */}
           {bottle.type !== "Sparkling" && patch(854, 388, 132, 26, "spcork")}
           {!CROWN_TYPES.includes(bottle.type) && patch(854, 359, 132, 26, "crowncap")}
           <div style={{ ...px(1173.21 - 11, 281.78 - 11, 22, 22), background: "#fff", borderRadius: 11 }} />
           {patch(1185, 271.5, 66, 20, "glossytxt")}
           <span style={{ ...px(1196.5, 285.28 - 12.4, 70, 16), font: `12px ${HNW}`, color: "#111", lineHeight: "16px" }}>{t("Glossy")}</span>
-          {finish.map(([opt, cx0, cy0]) =>
-            dotBtn(cx0, cy0, bottle.finish === opt, () => setBottle((m) => ({ ...m, finish: opt })), "f" + opt, opt === "Matte" ? { coverDot: true } : opt === "Glossy" ? { ring: true, cover: 22 } : {})
-          )}
+          {finish.map(([opt, cx0, cy0]) => (
+            <span key={"f" + opt}>
+              {dotBtn(cx0, cy0, bottle.finish === opt, () => setBottle((m) => ({ ...m, finish: opt })), "f" + opt + "d", opt === "Matte" ? { coverDot: true } : opt === "Glossy" ? { ring: true, cover: 22 } : {})}
+              <button onClick={() => setBottle((m) => ({ ...m, finish: opt }))} style={{ ...px(cx0 + 14, cy0 - 12, 78, 24), ...ghost }} />
+            </span>
+          ))}
           {/* round 8 #9: the baked cursor ring's stroke pokes 1px past the
               capsule on both sides — erase it fully, then repaint the capsule */}
           <div style={{ ...px(1261.07 - 11, 417.77 - 11, 22, 22), background: "#fff", borderRadius: 11 }} />
@@ -1272,6 +1314,18 @@ export default function NewUI() {
             const scan = bottleScans.current[bottleScanKey === src ? src : ""];
             const lab = selected >= 0 ? dreams[selected] : null;
             let labelEl: React.ReactNode = null;
+            /* round 41 #8: no label yet → grey placeholder at the true
+               position and default size from the front-details page */
+            if (scan && !lab) {
+              const bhD = (scan.bottom - scan.top) * s;
+              const topD = 174 + scan.top * s;
+              const pxPerCm = bhD / (bottle.type === "Alsace / Rhine" ? 35 : 30);
+              const lw = ((Number(f.width) || 110) / 10) * pxPerCm;
+              const lh = ((Number(f.height) || 80) / 10) * pxPerCm;
+              const anc = LABEL_ANCHOR[bottle.type] || LABEL_ANCHOR["Bordeaux"];
+              const ly = anc.anchor === "top" ? topD + anc.pct * bhD : topD + bhD - anc.pct * bhD - lh;
+              labelEl = <div style={{ position: "absolute", left: xoff + scan.cx * s - lw / 2, top: ly, width: lw, height: lh, background: "#ECECEA", pointerEvents: "none" }} />;
+            }
             if (scan && lab) {
               const bhD = (scan.bottom - scan.top) * s;
               const topD = 174 + scan.top * s;
@@ -1310,15 +1364,16 @@ export default function NewUI() {
             <img src={it.prev} alt={label}
               style={{ width: w2, height: h2, objectFit: fit, display: "block", animation: `nuiFadeIn ${FADE_MS}ms ${EASE}` }} />
           ) : (
-            <div style={{ width: w2, height: h2, background: assetsStage ? "#F4F3EE" : "#ECECEA linear-gradient(to top right, transparent calc(50% - 0.8px), #C9C9C4 calc(50% - 0.8px), #C9C9C4 calc(50% + 0.8px), transparent calc(50% + 0.8px))", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", font: `${fs}px ${HNW}`, color: assetsStage ? "#999" : "#8a887e", textAlign: "center" }}>
+            <button onClick={() => { if (!assetsStage) go("vision", -1); }}
+              style={{ width: w2, height: h2, background: assetsStage ? "#F4F3EE" : "#ECECEA", border: "none", cursor: assetsStage ? "default" : "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", font: `12px ${HNW}`, color: assetsStage ? "#999" : "#8a887e", textAlign: "center", textTransform: "none", padding: 4 }}>
               {/* round 17 #1: rising glass + three-dot indicator below it */}
               {assetsStage && loadKey ? (<>
                 {miniGlass(loadKey, assetFill(loadKey))}
                 <span style={{ marginTop: 10, font: `16.5px ${HNW}`, color: "#111", letterSpacing: 2.2, lineHeight: "11px" }}>
                   {[0, 1, 2].map((dd) => <span key={dd} style={{ animation: `nuiDot 1.2s ${dd * 0.2}s infinite` }}>.</span>)}
                 </span>
-              </>) : <>{t("Not yet created")}</>}
-            </div>
+              </>) : <>{t("Create a front label first")}</>}
+            </button>
           );
         return (<>
           {/* round 14 #3: number words in the titles */}
@@ -1329,19 +1384,19 @@ export default function NewUI() {
           {/* round 14 #6: status message in the 12px subtitle style, on the
               titles' line, left-aligned with the small-thumb block */}
           {assetsStage && (
-            <span style={{ ...px(994.3, 556.39 - 12.4, 310, 32), font: `12px ${HNW}`, color: "#BA141A", lineHeight: "16px" }}>
+            <span style={{ ...px(994.3, 556.39 - 12.4, 310, 32), font: `italic 12px ${HNW}`, color: "#BA141A", lineHeight: "16px" }}>
               {t("Creating your marketing assets")} — {tStage(assetsStage)}… {t("please stay on the page.")}
             </span>
           )}
           {!assetsStage && selected < 0 && (
-            <span style={{ ...px(994.3, 556.39 - 12.4, 310, 32), font: `12px ${HNW}`, color: "#BA141A", lineHeight: "16px" }}>
+            <span style={{ ...px(994.3, 556.39 - 12.4, 310, 32), font: `italic 12px ${HNW}`, color: "#BA141A", lineHeight: "16px" }}>
               {t("Select a front label first — assets are built from it.")}
             </span>
           )}
           <div style={{ ...px(548.6, 171.9, 338.6, 338.6) }}>{pic(assets.life[order[0]], 338.6, 338.6, `Context ${order[0] + 1}`, 14, "cover", lifeGallery, `lifestyle ${order[0] + 1}/5`)}</div>
           {cross(548.6, 171.9, "ah1")}{cross(887.2, 171.9, "ah2")}{cross(548.6, 510.5, "ah3")}{cross(887.2, 510.5, "ah4")}
           {cross(994.3, 171.5, "at1")}{cross(1303.7, 171.5, "at2")}{cross(994.3, 515.3, "at3")}{cross(1303.7, 515.3, "at4")}
-          {thumbs.map((t, k) => (
+          {thumbs.map((t, k) => assets.life[order[k + 1]] && (
             <button key={k} onClick={() => setHeroAsset(order[k + 1])} style={{ ...px(t.x, t.y, 137.9, 137.9), ...ghost }}>
               {pic(assets.life[order[k + 1]], 137.9, 137.9, `Context ${order[k + 1] + 1}`, 12, "cover", lifeGallery, `lifestyle ${order[k + 1] + 1}/5`)}
             </button>
@@ -1359,10 +1414,10 @@ export default function NewUI() {
             /* eslint-disable-next-line @next/next/no-img-element */
             <img src={dreams[selected].preview || dreams[selected].dream} alt="front"
               style={{ ...px(171, 279.3, 245.8, 163.8), objectFit: "contain" }} />
-          ) : notMade(171, 279.3, 245.8, 163.8, "nmFront")}
+          ) : notMade(171, 279.3, 245.8, 163.8, "front", "nmFront")}
           {!backPng && (<>
             {patch(452, 268, 230, 180, "bmock2e")}
-            {notMade(452, 280, 227, 160, "nmBack")}
+            {notMade(452, 280, 227, 160, "back", "nmBack")}
           </>)}
           {backPng && (<>
             {/* slot 2 — cover the baked mock WITHOUT touching the dashed
@@ -1400,7 +1455,7 @@ export default function NewUI() {
                 <img key={`${label}@${x}`} src={it.prev} alt={label}
                   style={{ ...px(x, y, w2, h2), objectFit: fit }} />
               ) : (
-                <div key={`${label}@${x}`} style={{ ...px(x, y, w2, h2), background: "#ECECEA linear-gradient(to top right, transparent calc(50% - 0.8px), #C9C9C4 calc(50% - 0.8px), #C9C9C4 calc(50% + 0.8px), transparent calc(50% + 0.8px))", display: "flex", alignItems: "center", justifyContent: "center", font: `${fs}px ${HNW}`, color: "#8a887e", textAlign: "center" }}>{t("Not yet created")}</div>
+                <button key={`${label}@${x}`} onClick={() => go("vision", -1)} style={{ ...px(x, y, w2, h2), background: "#ECECEA", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", font: `12px ${HNW}`, color: "#8a887e", textAlign: "center", textTransform: "none", padding: 3 }}>{label ? t("Create a front label first") : ""}</button>
               );
             const lifeG = assets.life.filter(Boolean).map((l) => l.full);
             const shotG = [assets.front, assets.back].filter(Boolean).map((s) => s!.full);
@@ -1411,7 +1466,7 @@ export default function NewUI() {
               {box(925.71, 273.84, 137.9, 137.9, assets.life[heroAsset], "Context", "cover", lifeG)}
               {[925.71, 963.75, 1001.89, 1040.03].map((tx, k) =>
                 box(tx, 422.44, 25.1, 25.1, assets.life[others[k]], "", "cover", lifeG))}
-              {productUrl ? (
+              {productUrl && selected >= 0 ? (
                 <span key="pp">
                   {/* browser-framed live page (owner's reference: soft shadow,
                       traffic lights, URL bar), QR and the link below */}
@@ -1429,12 +1484,17 @@ export default function NewUI() {
                       </div>
                     )}
                   </div>
+                  {/* round 41 #18: QR at small-thumb size on the thumbs' line;
+                      "Copy the link" bottom-aligned to the QR, right-aligned
+                      to the browser frame's edge */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={`/api/qr?u=${encodeURIComponent(`https://8klabels.com${productUrl}`)}`} alt="QR"
-                    style={{ ...px(1112, 399, 36, 36) }} />
-                  <a href={productUrl} target="_blank" style={{ ...px(1112, 442, 190, 14), font: `italic 11px ${HNW}`, color: "#111", textDecoration: "underline" }}>8klabels.com{productUrl}</a>
+                    style={{ ...px(1112, 422.44, 25.1, 25.1) }} />
+                  <button onClick={() => { try { navigator.clipboard.writeText(`https://8klabels.com${productUrl}`); } catch { } }}
+                    style={{ ...px(1150, 422.44 + 25.1 - 14, 140, 14), ...ghost, font: `italic 11px ${HNW}`, color: "#111", textDecoration: "underline", textAlign: "right", textTransform: "none" }}>
+                    {t("Copy the link")}</button>
                 </span>
-              ) : box(1112, 284, 176, 150, undefined, "Landing Page", "cover")}
+              ) : notMade(1112, 284, 176, 150, "front", "nmLanding")}
             </>);
           })()}
           {/* round 8 #11/#15: the whole pricing block re-rendered 20.5px
@@ -1446,7 +1506,7 @@ export default function NewUI() {
             const rows = [536.49, 570.78, 604.93, 639.35].map((y) => y - SH);
             return (<>
               {[548.84, 582.86, 617.14].map((y, i) => (
-                <div key={"dsh" + i} style={{ ...px(137.14, y - SH, 1302.47 - 137.14, 1), background: "repeating-linear-gradient(90deg, #000 0 5px, transparent 5px 10px)" }} />
+                <div key={"dsh" + i} style={{ ...px(137.14, y - SH, 1302.47 - 137.14, 1), background: `repeating-linear-gradient(90deg,${DASH})` }} />
               ))}
               {PACK.map((it, i) => (
                 <span key={it.name}>
@@ -1565,7 +1625,7 @@ export default function NewUI() {
 
           {/* STATIC header (real fonts, extracted geometry) */}
           <div style={{ ...px(0, 0, W, HEADER_H), background: "#000" }}>
-            <span style={{ ...px(138.2, 25.5, 100, 20), font: `700 19px ${HNW}`, color: "#fff" }}>8K</span>
+            <button onClick={() => go("welcome", -1)} style={{ ...px(138.2, 25.5, 100, 20), ...ghost, font: `700 19px ${HNW}`, color: "#fff", textAlign: "left", textTransform: "none" }}>8K</button>
             {/* menu + ENG/GEO: one baseline, even gaps, right edge on the
                progress line's right edge x1303 (round 22 #11) */}
             <div style={{ position: "absolute", right: W - 1303, top: 27.5, display: "flex", alignItems: "baseline", columnGap: 44 }}>
@@ -1580,15 +1640,22 @@ export default function NewUI() {
             </div>
           </div>
 
-          {/* STATIC progress bar (hidden on welcome & checkout) */}
-          {thick !== null && (
+          {/* STATIC progress bar (hidden on welcome & checkout); round 41
+              #13: while sliding INTO checkout the white zone stays, so the
+              outgoing board's baked OLD bar can never flash through */}
+          {(thick !== null || (page === "checkout" && prev !== null)) && (
             <div style={{ ...px(0, 660, W, FOOTER_Y - 660), background: "#fff" }}>
+              {thick === null ? null : (<>
               <div style={{ ...px(137.14, 685.09 - 660, 1297.9 - 137.14, 1), background: "#111" }} />
               <div style={{ ...px(142.06, 684.09 - 660, thick - 142.06, 3), background: "#111", transition: `width ${SLIDE_MS}ms ${EASE}` }} />
               {STEPS.map((st, i) => {
                 const r = st.big ? 4.9 : 3.1;
                 return (
-                  <span key={"d" + i} style={{ ...px(CIRCLE_X[i] - r, 685.59 - r - 660, r * 2, r * 2), borderRadius: r + 1, border: "1px solid #111", background: step >= i ? "#111" : "#fff", transition: `background 300ms ${EASE}`, boxSizing: "border-box" }} />
+                  /* round 41 #10: the dots navigate too */
+                  <button key={"d" + i} onClick={() => { if (st.page !== page) { barJumped.current = true; go(st.page, ORDER.indexOf(st.page) > ORDER.indexOf(page) ? 1 : -1); } }}
+                    style={{ ...px(CIRCLE_X[i] - 12, 685.59 - 12 - 660, 24, 24), ...ghost }}>
+                    <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: r * 2, height: r * 2, borderRadius: r + 1, border: "1px solid #111", background: step >= i ? "#111" : "#fff", transition: `background 300ms ${EASE}`, boxSizing: "border-box" }} />
+                  </button>
                 );
               })}
               {STEPS.map((st, i) => {
@@ -1623,7 +1690,7 @@ export default function NewUI() {
                   }
                   else if (page === "backdetails") go("compliance");
                   else if (page === "compliance") {
-                    if (markets.length) nextFromCompliance();
+                    if (markets.length || noComp) nextFromCompliance();
                     else { setWarn(t("Select at least one market to continue")); setTimeout(() => setWarn(""), 3200); }
                   }
                   else if (page === "backdesign") go("bottle");
@@ -1633,6 +1700,7 @@ export default function NewUI() {
                 style={{ ...px(1324, 666 - 660, 60, 40), ...ghost }}>
                 <svg viewBox="0 0 60 40" width="60" height="40"><line x1="13" y1="20" x2="47" y2="20" stroke="#000" strokeWidth="3" /><polyline points="37,9.5 47.5,20 37,30.5" fill="none" stroke="#000" strokeWidth="3" /></svg>
               </button>
+              </>)}
             </div>
           )}
 
