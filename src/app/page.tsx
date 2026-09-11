@@ -344,7 +344,7 @@ export default function NewUI() {
         if (r - l > 3) g.fillRect(l + 2, y, r - l - 3, 1);
       }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bottleScanKey, wheel, shade, bottle.closure, bottle.finish, page]);
+  }, [bottleScanKey, wheel, shade, bottle.closure, bottle.finish, page, prev]);
   const [heroAsset, setHeroAsset] = useState(0);
   /* marketing assets (round 13): 2 product shots + 5 lifestyle images */
   const [assets, setAssets] = useState<{ front?: { full: string; prev: string }; back?: { full: string; prev: string }; life: { full: string; prev: string }[] }>({ life: [] });
@@ -1182,7 +1182,7 @@ export default function NewUI() {
              the bottle page's r 9 */}
           {dotBtn(536.4, 509.89, noComp, () => { if (noComp) setNoComp(false); else { setMarkets([]); setNoComp(true); } }, "nocomp", { cover: 26, ring: true, r: 7.5 })}
           <button onClick={() => { if (noComp) setNoComp(false); else { setMarkets([]); setNoComp(true); } }}
-            style={{ ...px(601.76, 509.89 - 12, 190, 24), ...ghost, font: `15px ${HNW}`, color: "#111", textAlign: "left", textTransform: "none", lineHeight: "24px" }}>
+            style={{ ...px(557.2, 509.89 - 12, 200, 24), ...ghost, font: `700 15px ${HNW}`, color: "#111", textAlign: "left", textTransform: "none", lineHeight: "24px" }}>
             {t("No compliance needed")}</button>
           {RC.map(({ code, col, row }) => {
             const on = markets.includes(code);
@@ -1523,7 +1523,7 @@ export default function NewUI() {
                       } catch { }
                     });
                   }}
-                    style={{ ...px(1150, 422.44 + 25.1 - 14, 140, 14), ...ghost, font: `italic 11px ${HNW}`, color: "#111", textDecoration: "underline", textAlign: "right", textTransform: "none" }}>
+                    style={{ ...px(1150, 422.44 + 25.1 - 14, 140, 14), ...ghost, font: `italic 11px ${HNW}`, color: linkCopied ? "#3f6d2a" : "#111", textDecoration: "underline", textAlign: "right", textTransform: "none" }}>
                     {linkCopied ? t("Copied ✓") : t("Copy the link")}</button>
                 </span>
               ) : notMade(1112, 284, 176, 150, "front", "nmLanding")}
