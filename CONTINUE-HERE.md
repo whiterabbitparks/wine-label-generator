@@ -1990,6 +1990,15 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 44 (owner, 3 items): (1) "No compliance needed" starts at the
+  flag column (x 557.2, where the China flag above begins) and is
+  BOLD like the country names. (2) cap-colour overlay vanished after
+  leaving/returning to the bottle page — during a slide the canvas
+  ref binds to a transient strip copy, and the SETTLED canvas (a new
+  element) was never repainted; `prev` added to the paint effect's
+  deps so settling triggers a repaint (verified: identical saturated
+  pixel count before/after a bar round-trip). (3) "Copied ✓" renders
+  in the confirmation green (#3f6d2a).
 - ROUND 43 (owner, 3 items + mid-turn): (1) CAP_ZONES Screw Cap
   length was 0-0.055 (far shorter than Cork's 0.005-0.145) — matched
   to Cork's span. (2) No-compliance ring used r:9 (the bottle page's
