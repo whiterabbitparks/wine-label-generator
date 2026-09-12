@@ -1990,6 +1990,31 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 48 (owner, 7 items, 2026-09-12): (1) GEO declension:
+  "თანამედროვეს ვარიაციები". (2) select radios say ONLY
+  "Select"/"აირჩიე" — no style names, no variation numbers (UI_GE
+  "Select" retranslated). (3) BOTTLE PAGE REBUILT as FIVE live
+  columns: the baked 4-column chrome is stripped at fetch (regex
+  removes the 3 dividers + 6 corner crosses by coordinate; content
+  white-patched) and redrawn at a 191.9px rhythm with the baked
+  proportions (header baseline 217.7 = col+35.2, ring cx col+43.2,
+  text col+62.2, pitch 29.8; COLS_X 342.86/534.78/726.7/918.62/
+  1110.54; parallax slices follow). NEW "Wine Color" column first
+  (Red/White/Amber/Rosé) — generated flow preselects it from the
+  front label's Colour field (EN+GEO wording matched, default Red),
+  feeds the assets brief (wine.colour) and the run signature.
+  "No cap" left the finish row and became closure type "No Capsule"
+  (always last in the list); selecting it GREYS AND FREEZES the
+  wheel+capsule+result bar (opacity .3, grayscale, inert) and the
+  finish pick is no longer required. (4) own-label upload
+  confirmation is GREEN (#3f6d2a) like every other ✓. (5) uploading
+  an own label UNSELECTS every section (bottleTouched blocks the
+  auto-suggest refill); the bottle next-arrow gates until every
+  section has a pick ("Pick an option in every section to continue",
+  red, y630); a fresh generation restores defaults. (6) own-label
+  assets: the 4 thumbs ride 2×2 beside the hero (top flush with the
+  hero top, every gap = 10, group centered in the right two-thirds).
+  (7) Marketing Assets $19 → $9 (own-label pack totals $9).
 - ROUND 47 (owner's New_Progressbar folder, 6 annotated screenshots
   2026-09-12): (1) NEW FUNCTION — "Upload Another Label" on the
   bottle page (underlined text under the bottle drawing): a customer

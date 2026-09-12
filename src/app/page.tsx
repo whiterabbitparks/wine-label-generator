@@ -114,12 +114,14 @@ const PAGE_SLICES: Partial<Record<PageKey, Slice[]>> = {
     { y0: 483.6, y1: 536, delay: 270 },
     { y0: 536, delay: 270 },
   ],
+  /* round 48: FIVE option columns — cuts ride the new dividers */
   bottle: [
-    { x1: 344.1, delay: 0 },
-    { x0: 344.1, x1: 584.1, delay: 60 },
-    { x0: 584.1, x1: 824.1, delay: 120 },
-    { x0: 824.1, x1: 1064.1, delay: 180 },
-    { x0: 1064.1, delay: 240 },
+    { x1: 342.9, delay: 0 },
+    { x0: 342.9, x1: 534.8, delay: 60 },
+    { x0: 534.8, x1: 726.7, delay: 120 },
+    { x0: 726.7, x1: 918.6, delay: 180 },
+    { x0: 918.6, x1: 1110.5, delay: 240 },
+    { x0: 1110.5, delay: 300 },
   ],
 };
 const sliceDefs = (p: PageKey): Slice[] => {
@@ -342,7 +344,8 @@ export default function NewUI() {
     const scan = bottleScans.current[bottleScanKey]; if (!scan) return;
     const g = cv.getContext("2d"); if (!g) return;
     g.clearRect(0, 0, 800, 1600);
-    if (bottle.finish === "No cap") return;
+    /* round 48: "No Capsule" is a CLOSURE TYPE now (was the finish "No cap") */
+    if (bottle.closure === "No Capsule") return;
     const zones = CAP_ZONES[bottle.closure] || [];
     const bh = scan.bottom - scan.top;
     g.fillStyle = shadeRgb();
@@ -361,6 +364,17 @@ export default function NewUI() {
      anywhere changes. A fresh label generation clears it. */
   const [customLabel, setCustomLabel] = useState<string | null>(null);
   const [customDims, setCustomDims] = useState({ w: 110, h: 80 });
+  /* ROUND 48 (owner): Wine Color section on the bottle page. Generated
+     flow preselects it from the front label's Colour field; an own-label
+     upload clears EVERY section and the next arrow gates until each one
+     has a pick. */
+  const [wineColor, setWineColor] = useState("");
+  useEffect(() => {
+    if (page !== "bottle" || customLabel || wineColor) return;
+    const src = (f.colour || DEMO_FRONT.colour).toLowerCase();
+    setWineColor(/white|თეთრ/.test(src) ? "White" : /amber|orange|ქარვ/.test(src) ? "Amber" : /ros|pink|ვარდ/.test(src) ? "Rosé" : "Red");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page]);
   /* marketing assets (round 13): 2 product shots + 5 lifestyle images */
   const [assets, setAssets] = useState<{ front?: { full: string; prev: string }; back?: { full: string; prev: string }; life: { full: string; prev: string }[] }>({ life: [] });
   const [assetsSig, setAssetsSig] = useState("");
@@ -471,7 +485,7 @@ export default function NewUI() {
        about admin charter changes and replayed stale sets. The server
        cache (charter-aware since round 19) answers true duplicates
        instantly, so refetching costs nothing. */
-    const sig = JSON.stringify({ fs: frontSig, bs: backSig, bottle, rgb: wheel.rgb, shade, sel: sel.style, cl: customLabel ? customLabel.length + customLabel.slice(-64) : "" });
+    const sig = JSON.stringify({ fs: frontSig, bs: backSig, bottle, wc: wineColor, rgb: wheel.rgb, shade, sel: sel.style, cl: customLabel ? customLabel.length + customLabel.slice(-64) : "" });
     assetsRunning.current = true;
     (async () => {
       const got = { front: "", back: "", life: [] as string[] };
@@ -493,7 +507,7 @@ export default function NewUI() {
           body: JSON.stringify({
             front: sel.dream, back: backData,
             bottle: { type: bottle.type, color: bottle.color, closure: bottle.closure, finish: bottle.finish, closureColour: shadeRgb() },
-            wine: { colour: f.colour || DEMO_FRONT.colour, name: f.wine || DEMO_FRONT.wine },
+            wine: { colour: wineColor || f.colour || DEMO_FRONT.colour, name: f.wine || DEMO_FRONT.wine },
             labelMM: customLabel ? customDims : { w: Number(f.width) || 110, h: Number(f.height) || 80 },
             style: sel.style, seed,
           }),
@@ -579,7 +593,12 @@ export default function NewUI() {
                Helvetica Neue supplies them seamlessly (round 24 #1) */
             .replace(/'Helvetica Neue World'/g, "'Helvetica Neue World','Helvetica Neue'")
             /* ROUND 47 (owner): the details page is titled like the back one */
-            .replace(/>FRONT LABEL</, ">FRONT LABEL DETAILS<");
+            .replace(/>FRONT LABEL</, ">FRONT LABEL DETAILS<")
+            /* ROUND 48 (owner: Wine Color column + No Capsule): the bottle
+               board's THREE baked column dividers and their six corner
+               crosses are stripped — the options zone is redrawn live as
+               FIVE columns (the content itself is white-patched) */
+            .replace(p === "bottle" ? /<line[^>]*x1="(?:582\.8[56]|822\.8[56]|1062\.8[56]|591\.1|574\.62|831\.1|814\.62|1071\.09|1054\.61)"[^>]*\/>/g : /$^/g, "");
           setBoards((m) => ({ ...m, [p]: processed }));
           setBoardsGe((m) => ({ ...m, [p]: translateSvg(processed) }));
         }
@@ -757,8 +776,11 @@ export default function NewUI() {
          fresh order code too, so a later publish never reuses the old one. */
       setProductUrl(""); productCode.current = Math.random().toString(36).slice(2, 10);
       try { localStorage.removeItem("nui-product-code"); } catch { }
-      /* ROUND 47: generating a fresh label ends own-label (assets-only) mode */
-      setCustomLabel(null);
+      /* ROUND 47: generating a fresh label ends own-label (assets-only)
+         mode. ROUND 48: wine colour re-derives from the new label's field
+         and any custom-cleared bottle sections get their defaults back. */
+      setCustomLabel(null); setWineColor("");
+      setBottle((m) => ({ type: m.type || "Bordeaux", color: m.color || "Olive Green", closure: m.closure || "Cork", finish: m.finish || "Matte" }));
       /* round 46 (owner: "calculate real average"): remember how long the
          full set really took — the loader note averages the last 10 runs */
       try {
@@ -811,7 +833,7 @@ export default function NewUI() {
   const PACK = [
     { name: "Print ready Front & Back Labels", price: 199 },
     { name: "QR Code & Published Product Page", price: 29 },
-    { name: "Marketing Assets", price: 19 },
+    { name: "Marketing Assets", price: 9 },   /* round 48 #7: was $19 */
     { name: "1 Hour session with human designer", price: 49 },
   ];
   const total = PACK.reduce((s, it, i) => s + (packSel[i] ? it.price : 0), 0);
@@ -1215,9 +1237,8 @@ export default function NewUI() {
               line (owner: "push a bit up", "center"). */}
           {dreams.length > 0 && OPT_FRAMES.map((fr, fi) => {
             const on = selected === base + fi;
-            const lbl = optPage === 1
-              ? t("Select " + varStyle.charAt(0).toUpperCase() + varStyle.slice(1)) + " " + (fi + 1)
-              : t("Select " + STYLE_NAMES[fi]);
+            /* ROUND 48 #2 (owner): just "Select" — no style name, no number */
+            const lbl = t("Select");
             return (
               <button key={"sr" + optPage + fi} onClick={() => { if (!dreams[base + fi]) return; setSelected(base + fi); setWarn(""); }}
                 style={{ ...px(fr.x, 634 - 13, OPT_W, 26), ...ghost, display: "flex", alignItems: "center", justifyContent: "center", columnGap: 10, textTransform: "none", cursor: "pointer" }}>
@@ -1419,81 +1440,104 @@ export default function NewUI() {
         </>);
       }
       case "bottle": {
-        /* ring centres extracted from bottle.svg circle paths (round 7 #19) */
-        const cols: { key: string; cx: number; items: [string, number][] }[] = [
-          /* round 41 #16: baked rings measured +0.42/+0.5px off the old
-             coords — dots now sit dead-centre (like compliance) */
-          { key: "type", cx: 386.06, items: [["Bordeaux", 283.57], ["Bordeaux Prestige", 312.57], ["Burgundy", 341.57], ["Sparkling", 371.57], ["Alsace / Rhine", 400.57], ["Ice Wine", 429.57]] },
-          { key: "color", cx: 626.06, items: [["Olive Green", 283.57], ["Transparent", 312.57], ["Amber", 341.57]] },
-          { key: "closure", cx: 865.06, items: [["Cork", 283.57], ["Screw Cap", 312.57], ["Wax Seal", 341.57], ["Crown Cap", 371.57], ["Sparkling Cork", 400.57]] },
-        ];
-        /* round 22 #10: Glossy's ring+text sit a bit further right (the
-           baked pair is covered) so the ring clears the word before it */
-        const finish: [string, number, number][] = [["Matte", 1105.06, 282.28], ["Glossy", 1181.42, 282.28], ["No cap", 1105.06, 313.08]];
+        /* ROUND 48 (owner): the options zone is FIVE live columns — Wine
+           Color joins before Bottle Type and "No Capsule" becomes a
+           CLOSURE TYPE (the finish row lost "No cap"). The baked 4-column
+           chrome is stripped at fetch (dividers+crosses) and the content
+           is white-patched; everything inside the frame is redrawn at the
+           new 191.9px column rhythm with the baked proportions (header
+           baseline 217.7 = col+35.2, ring cx = col+43.2, text = col+62.2,
+           row pitch 29.8). */
+        const COLS_X = [342.86, 534.78, 726.7, 918.62, 1110.54];
+        const ROWY = (i: number) => 283.57 + i * 29.8;
+        const wheelOff = bottle.closure === "No Capsule";
+        const colHead = (ci: number, title: string) => (
+          <span key={"bh" + ci} style={{ ...px(COLS_X[ci] + 35.2, 217.7 - 13, 160, 16), font: `700 15px ${HNW}`, lineHeight: "16px" }}>{t(title)}</span>
+        );
+        const optRow = (ci: number, row: number, name: string, on: boolean, pick: () => void) => {
+          const cx = COLS_X[ci] + 43.2, cy = ROWY(row);
+          return (
+            <span key={ci + name}>
+              {dotBtn(cx, cy, on, pick, ci + name + "d", { ring: true, r: 9 })}
+              <span style={{ ...px(COLS_X[ci] + 62.2, cy - 9.4, 122, 16), font: `12px ${HNW}`, color: "#111", lineHeight: "16px", pointerEvents: "none" }}>{t(name)}</span>
+              {/* round 41 #3: the word beside the circle selects too */}
+              <button onClick={pick} style={{ ...px(cx + 12, cy - 12, 150, 24), ...ghost }} />
+            </span>
+          );
+        };
+        const pickOf = (key: string, opt: string) => () => {
+          if (key === "type") bottleTouched.current = true;
+          setBottle((m) => ({
+            ...m, [key]: opt,
+            ...(key === "type" && opt !== "Sparkling" && m.closure === "Sparkling Cork" ? { closure: "Cork" } : {}),
+            ...(key === "type" && !CROWN_TYPES.includes(opt) && m.closure === "Crown Cap" ? { closure: "Cork" } : {}),
+          }));
+        };
+        /* round 17 #2 / round 38 #1 filters, then No Capsule always last */
+        const closures = ["Cork", "Screw Cap", "Wax Seal"]
+          .concat(CROWN_TYPES.includes(bottle.type) ? ["Crown Cap"] : [])
+          .concat(bottle.type === "Sparkling" ? ["Sparkling Cork"] : [])
+          .concat(["No Capsule"]);
+        const WHEEL_X = COLS_X[4] + 10.2;         // wheel left (137.2 wide)
+        const CAPS_X = WHEEL_X + 156.5;           // capsule left (15 wide)
         return (<>
-          {cols.map(({ key, cx, items }) => items
-            /* round 17 #2: Sparkling Cork exists only for the Sparkling bottle;
-               round 38 #1: Crown Cap only for Burgundy / Sparkling / Alsace */
-            .filter(([opt]) => !(key === "closure" && opt === "Sparkling Cork" && bottle.type !== "Sparkling"))
-            .filter(([opt]) => !(key === "closure" && opt === "Crown Cap" && !CROWN_TYPES.includes(bottle.type)))
-            .map(([opt, cy], i) => {
-              const pick = () => {
-                if (key === "type") bottleTouched.current = true;
-                setBottle((m) => ({
-                  ...m, [key]: opt,
-                  ...(key === "type" && opt !== "Sparkling" && m.closure === "Sparkling Cork" ? { closure: "Cork" } : {}),
-                  ...(key === "type" && !CROWN_TYPES.includes(opt) && m.closure === "Crown Cap" ? { closure: "Cork" } : {}),
-                }));
-              };
-              return (
-                <span key={key + opt}>
-                  {dotBtn(cx, cy, bottle[key] === opt, pick, key + opt + "d", { cover: 26, ring: true, r: 9 })}
-                  {/* round 41 #3: the word beside the circle selects too */}
-                  <button onClick={pick} style={{ ...px(cx + 14, cy - 12, 168, 24), ...ghost }} />
-                </span>
-              );
-            }))}
-          {/* cover the baked Sparkling Cork / Crown Cap rows when hidden */}
-          {bottle.type !== "Sparkling" && patch(854, 388, 132, 26, "spcork")}
-          {!CROWN_TYPES.includes(bottle.type) && patch(854, 359, 132, 26, "crowncap")}
-          <div style={{ ...px(1173.21 - 11, 281.78 - 11, 22, 22), background: "#fff", borderRadius: 11 }} />
-          {patch(1185, 271.5, 66, 20, "glossytxt")}
-          <span style={{ ...px(1196.5, 285.28 - 12.4, 70, 16), font: `12px ${HNW}`, color: "#111", lineHeight: "16px" }}>{t("Glossy")}</span>
-          {finish.map(([opt, cx0, cy0]) => (
-            <span key={"f" + opt}>
-              {dotBtn(cx0, cy0, bottle.finish === opt, () => setBottle((m) => ({ ...m, finish: opt })), "f" + opt + "d", opt === "No cap" ? {} : { cover: opt === "Glossy" ? 22 : 26, ring: true, r: 9 })}
-              <button onClick={() => setBottle((m) => ({ ...m, finish: opt }))} style={{ ...px(cx0 + 14, cy0 - 12, 78, 24), ...ghost }} />
+          {/* wipe the baked column content (frame lines stay) */}
+          {patch(344.4, 173.3, 956.5, 408.5, "bzone")}
+          {/* live dividers + thin crosses at the new column boundaries */}
+          {COLS_X.slice(1).map((dx, i) => (
+            <span key={"dv" + i}>
+              <div style={{ ...px(dx, 171.71, 1, 411.43), background: `repeating-linear-gradient(180deg,${DASH})`, pointerEvents: "none" }} />
+              {cross(dx, 171.77, "dvt" + i)}{cross(dx, 583.41, "dvb" + i)}
             </span>
           ))}
-          {/* round 8 #9: the baked cursor ring's stroke pokes 1px past the
-              capsule on both sides — erase it fully, then repaint the capsule */}
-          <div style={{ ...px(1261.07 - 11, 417.77 - 11, 22, 22), background: "#fff", borderRadius: 11 }} />
-          {/* round 7 #21: the design's gradient capsule rebuilt 1:1 in CSS —
-              covers the frozen baked cursor without erasing the gradient */}
-          <div style={{ ...px(1253.57, 359.19, 15, 136.64), borderRadius: 7.5, background: "linear-gradient(#fff, #000)", pointerEvents: "none" }} />
-          {/* colour wheel (restored artwork) + picker dot */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/newui/colorwheel.png" alt="" style={{ ...px(1097.1, 359.2, 137.2, 137.2), pointerEvents: "none" }} />
-          <div style={{ ...px(1097.1, 359.2, 137.2, 137.2), cursor: "crosshair" }}
-            onPointerDown={(e) => { dragRef.current = "wheel"; e.currentTarget.setPointerCapture(e.pointerId); wheelPick(e.clientX, e.clientY, e.currentTarget); }}
-            onPointerMove={(e) => { if (dragRef.current === "wheel") wheelPick(e.clientX, e.clientY, e.currentTarget); }}
-            onPointerUp={() => { dragRef.current = ""; }}>
-            <span style={{ position: "absolute", left: `${wheel.x * 100}%`, top: `${wheel.y * 100}%`, transform: "translate(-50%,-50%)", width: 15.2, height: 15.2, borderRadius: 8, background: "transparent", border: "1.5px solid #111", pointerEvents: "none", boxSizing: "border-box" }} />
+          {colHead(0, "Wine Color")}
+          {["Red", "White", "Amber", "Rosé"].map((c, i) => optRow(0, i, c, wineColor === c, () => setWineColor(c)))}
+          {colHead(1, "Bottle Type")}
+          {["Bordeaux", "Bordeaux Prestige", "Burgundy", "Sparkling", "Alsace / Rhine", "Ice Wine"].map((o, i) => optRow(1, i, o, bottle.type === o, pickOf("type", o)))}
+          {colHead(2, "Bottle Color")}
+          {["Olive Green", "Transparent", "Amber"].map((o, i) => optRow(2, i, o, bottle.color === o, pickOf("color", o)))}
+          {colHead(3, "Closure Type")}
+          {closures.map((o, i) => optRow(3, i, o, bottle.closure === o, pickOf("closure", o)))}
+          {colHead(4, "Closure Color")}
+          {optRow(4, 0, "Matte", bottle.finish === "Matte", () => setBottle((m) => ({ ...m, finish: "Matte" })))}
+          {(() => {
+            const cx = COLS_X[4] + 119.6, cy = ROWY(0);
+            return (
+              <span key="glossy">
+                {dotBtn(cx, cy, bottle.finish === "Glossy", () => setBottle((m) => ({ ...m, finish: "Glossy" })), "glossyd", { ring: true, r: 9 })}
+                <span style={{ ...px(cx + 15, cy - 9.4, 60, 16), font: `12px ${HNW}`, color: "#111", lineHeight: "16px", pointerEvents: "none" }}>{t("Glossy")}</span>
+                <button onClick={() => setBottle((m) => ({ ...m, finish: "Glossy" }))} style={{ ...px(cx + 12, cy - 12, 62, 24), ...ghost }} />
+              </span>
+            );
+          })()}
+          {/* wheel + capsule + result bar — DEACTIVATED under No Capsule
+              (round 48 #3: greyed and inert) */}
+          <div style={{ ...px(COLS_X[4], 350, 191.9, 205), opacity: wheelOff ? 0.3 : 1, filter: wheelOff ? "grayscale(1)" : "none", pointerEvents: wheelOff ? "none" : "auto", transition: `opacity 240ms ${EASE}` }}>
+            {/* round 7 #21: the design's gradient capsule rebuilt in CSS */}
+            <div style={{ ...px(CAPS_X - COLS_X[4], 9.19, 15, 136.64), borderRadius: 7.5, background: "linear-gradient(#fff, #000)", pointerEvents: "none" }} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/newui/colorwheel.png" alt="" style={{ ...px(WHEEL_X - COLS_X[4], 9.2, 137.2, 137.2), pointerEvents: "none" }} />
+            <div style={{ ...px(WHEEL_X - COLS_X[4], 9.2, 137.2, 137.2), cursor: "crosshair" }}
+              onPointerDown={(e) => { dragRef.current = "wheel"; e.currentTarget.setPointerCapture(e.pointerId); wheelPick(e.clientX, e.clientY, e.currentTarget); }}
+              onPointerMove={(e) => { if (dragRef.current === "wheel") wheelPick(e.clientX, e.clientY, e.currentTarget); }}
+              onPointerUp={() => { dragRef.current = ""; }}>
+              <span style={{ position: "absolute", left: `${wheel.x * 100}%`, top: `${wheel.y * 100}%`, transform: "translate(-50%,-50%)", width: 15.2, height: 15.2, borderRadius: 8, background: "transparent", border: "1.5px solid #111", pointerEvents: "none", boxSizing: "border-box" }} />
+            </div>
+            {/* lightness drag: cursor travels between the capsule's cap centres */}
+            <div style={{ ...px(CAPS_X - COLS_X[4] - 8.5, 2, 32, 152), cursor: "grab" }}
+              onPointerDown={(e) => { dragRef.current = "shade"; e.currentTarget.setPointerCapture(e.pointerId); }}
+              onPointerMove={(e) => {
+                if (dragRef.current !== "shade") return;
+                const r = e.currentTarget.getBoundingClientRect();
+                const yy = (e.clientY - r.top) / r.height * 152;
+                setShade(Math.min(1, Math.max(0, (yy - 14.69) / 121.64)));
+              }}
+              onPointerUp={() => { dragRef.current = ""; }}>
+              <span style={{ position: "absolute", left: 8.4, top: 14.69 + shade * 121.64 - 7.6, width: 15.2, height: 15.2, borderRadius: 8, background: "transparent", border: "1.5px solid #111", boxSizing: "border-box" }} />
+            </div>
+            {/* result colour bar */}
+            <div style={{ ...px(WHEEL_X - COLS_X[4] - 1.5, 181.1, 174.4, 21.3), background: shadeRgb(), border: "1px solid #111", boxSizing: "border-box" }} />
           </div>
-          {/* lightness drag: cursor travels between the capsule's cap centres */}
-          <div style={{ ...px(1245, 352, 32, 152), cursor: "grab" }}
-            onPointerDown={(e) => { dragRef.current = "shade"; e.currentTarget.setPointerCapture(e.pointerId); }}
-            onPointerMove={(e) => {
-              if (dragRef.current !== "shade") return;
-              const r = e.currentTarget.getBoundingClientRect();
-              const yy = (e.clientY - r.top) / r.height * 152;
-              setShade(Math.min(1, Math.max(0, (yy - 14.69) / 121.64)));
-            }}
-            onPointerUp={() => { dragRef.current = ""; }}>
-            <span style={{ position: "absolute", left: 1261.07 - 1245 - 7.6, top: 14.69 + shade * 121.64 - 7.6, width: 15.2, height: 15.2, borderRadius: 8, background: "transparent", border: "1.5px solid #111", boxSizing: "border-box" }} />
-          </div>
-          {/* result colour bar (baked rect 1097.1,532.6,171.4×18.3) */}
-          <div style={{ ...px(1095.6, 531.1, 174.4, 21.3), background: shadeRgb(), border: "1px solid #111", boxSizing: "border-box" }} />
           {/* the owner's bottle-type photos (public/newui/bottles, 800×1600
               = the area's exact 1:2 ratio); Screw Cap shows the -screw
               variant (round 17 #4), Crown Cap the -crown (round 38 #1).
@@ -1549,8 +1593,11 @@ export default function NewUI() {
           {/* round 12 #3: corner pluses back ON TOP of the photo */}
           {cross(137.14, 172, "bt1")}{cross(342.84, 172, "bt2")}{cross(137.14, 583.41, "bt3")}{cross(342.84, 583.41, "bt4")}
           {/* ROUND 47 (owner): customers who already have their labels
-              upload one here and go straight to marketing assets */}
-          <label style={{ ...px(137.14, 596, 205.7, 18), font: `13px ${HNW}`, color: "#111", textDecoration: "underline", textTransform: "none", textAlign: "center", cursor: "pointer", display: "block", lineHeight: "18px" }}>
+              upload one here and go straight to marketing assets.
+              ROUND 48: the confirmation is GREEN like every other ✓, and
+              a fresh upload UNSELECTS every section — the customer picks
+              each one before the next arrow lets them through. */}
+          <label style={{ ...px(137.14, 596, 205.7, 18), font: `13px ${HNW}`, color: customLabel ? "#3f6d2a" : "#111", textDecoration: "underline", textTransform: "none", textAlign: "center", cursor: "pointer", display: "block", lineHeight: "18px" }}>
             <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
               const file = e.target.files?.[0]; if (!file) return;
               const rd = new FileReader();
@@ -1561,6 +1608,9 @@ export default function NewUI() {
                   setCustomDims({ w: 110, h: Math.max(20, Math.round((110 * im.height) / im.width)) });
                   setCustomLabel(url);
                   setAssets({ life: [] }); setAssetsSig("");
+                  setBottle({ type: "", color: "", closure: "", finish: "" });
+                  setWineColor("");
+                  bottleTouched.current = true;
                 };
                 im.src = url;
               };
@@ -1568,6 +1618,10 @@ export default function NewUI() {
             }} />
             {customLabel ? t("Your label ✓ — upload another") : t("Upload Another Label")}
           </label>
+          {/* round 48 #5: section gate message */}
+          {warn && (
+            <span style={{ ...px(0, 630, W, 18), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block" }}>{warn}</span>
+          )}
         </>);
       }
       case "assets": {
@@ -1585,7 +1639,9 @@ export default function NewUI() {
         const order = [heroAsset, ...[0, 1, 2, 3, 4].filter((i) => i !== heroAsset)];
         const BOX = { x: 137.5, y: 272, w: 1165.5, h: 344 };
         const SQ = 300, GAP = 10, TH = (SQ - 3 * GAP) / 4;
-        const groupW = SQ + GAP + TH;
+        /* ROUND 48 #6: own-label mode lays the 4 thumbs 2×2 beside the
+           hero — block top flush with the hero top, every gap = GAP */
+        const groupW = custom ? SQ + GAP + 2 * TH + GAP : SQ + GAP + TH;
         const third = BOX.w / 3;                                   // 388.5
         const splitX = BOX.x + third;                              // 526
         const gx = custom ? splitX + (2 * third - groupW) / 2 : 410 + (436 - groupW) / 2;
@@ -1656,11 +1712,12 @@ export default function NewUI() {
           {[0, 1, 2, 3].map((k) => {
             const idx = order[k + 1];
             const it = assets.life[idx];
-            const y = gy + k * (TH + GAP);
+            const x = gx + SQ + GAP + (custom ? (k % 2) * (TH + GAP) : 0);
+            const y = gy + (custom ? Math.floor(k / 2) : k) * (TH + GAP);
             return (
               <span key={"sm" + k}>
-                {slot(gx + SQ + GAP, y, TH, TH, it, `lifestyle ${idx + 1}/5`, "cover")}
-                {it && <button onClick={() => setHeroAsset(idx)} style={{ ...px(gx + SQ + GAP, y, TH, TH), ...ghost }} />}
+                {slot(x, y, TH, TH, it, `lifestyle ${idx + 1}/5`, "cover")}
+                {it && <button onClick={() => setHeroAsset(idx)} style={{ ...px(x, y, TH, TH), ...ghost }} />}
               </span>
             );
           })}
@@ -1925,7 +1982,13 @@ export default function NewUI() {
                     else { setWarn(t("Select at least one market to continue")); setTimeout(() => setWarn(""), 3200); }
                   }
                   else if (page === "backdesign") go("bottle");
-                  else if (page === "bottle") go("assets");
+                  else if (page === "bottle") {
+                    /* round 48 #5: every section needs a pick (finish is
+                       moot under No Capsule — the wheel is deactivated) */
+                    const full = wineColor && bottle.type && bottle.color && bottle.closure && (bottle.closure === "No Capsule" || bottle.finish);
+                    if (full) go("assets");
+                    else { setWarn(t("Pick an option in every section to continue")); setTimeout(() => setWarn(""), 3200); }
+                  }
                   else if (page === "assets") go("checkout");
                 }}
                 style={{ ...px(1324, 666 - 660, 60, 40), ...ghost }}>

@@ -161,7 +161,8 @@ export const UI_GE: Record<string, string> = {
   "Upload a sketch or a photo (Optional)": "ატვირთე ესკიზი ან ფოტო (არასავალდებულო)",
   "Variations are limited, so choose wisely.": "ვარიაციები შეზღუდულია — აირჩიე გონივრულად.",
   "Create Traditional Variations": "ტრადიციულის ვარიაციები",
-  "Create Contemporary Variations": "თანამედროვის ვარიაციები",
+  /* round 48 #1: correct declension */
+  "Create Contemporary Variations": "თანამედროვეს ვარიაციები",
   "Create Punk Variations": "პანკის ვარიაციები",
   "Select Traditional": "აირჩიე ტრადიციული",
   "Select Contemporary": "აირჩიე თანამედროვე",
@@ -185,7 +186,8 @@ export const UI_GE: Record<string, string> = {
   "Designing your label": "თქვენი ეტიკეტი მზადდება",
   "Please stay on this page — preparing your labels usually takes 15–35 seconds.": "გთხოვთ, დარჩეთ ამ გვერდზე — ეტიკეტების მომზადებას საშუალოდ 30 წამი სჭირდება.",
   "Please stay on this page — preparing your labels usually takes about {N} seconds.": "გთხოვთ, დარჩეთ ამ გვერდზე — ეტიკეტების მომზადებას საშუალოდ {N} წამი სჭირდება.",
-  "Select": "არჩევა",
+  /* round 48 #2: the radio label is just "Select" everywhere */
+  "Select": "აირჩიე",
   "Selected": "არჩეულია",
   "Select a label design to continue": "გასაგრძელებლად აირჩიეთ ეტიკეტის დიზაინი",
   "Select at least one market to continue": "გასაგრძელებლად აირჩიეთ ერთი ბაზარი მაინც",
@@ -210,6 +212,13 @@ export const UI_GE: Record<string, string> = {
   "Your label ✓ — upload another": "შენი ეტიკეტი ✓ — ატვირთე სხვა",
   "Product Shot": "პროდუქტის ფოტო",
   "Face": "წინა",
+  /* round 48: Wine Color section + No Capsule closure + section gate */
+  "Wine Color": "ღვინის ფერი",
+  "Red": "წითელი",
+  "White": "თეთრი",
+  "Rosé": "ვარდისფერი",
+  "No Capsule": "კაფსულის გარეშე",
+  "Pick an option in every section to continue": "გასაგრძელებლად აირჩიე თითო ვარიანტი ყველა სექციაში",
   "please stay on the page.": "გთხოვთ, დარჩეთ გვერდზე.",
   "Creating your marketing assets": "თქვენი სამარკეტინგო მასალა მუშავდება",
   "Select a front label first — assets are built from it.": "ჯერ აირჩიეთ წინა ეტიკეტი — მასალა მისგან იქმნება.",
