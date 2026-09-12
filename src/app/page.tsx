@@ -538,6 +538,11 @@ export default function NewUI() {
             bottle: { type: bottle.type, color: bottle.color, closure: bottle.closure, finish: bottle.finish, closureColour: shadeRgb() },
             wine: { colour: wineColor || f.colour || DEMO_FRONT.colour, name: f.wine || DEMO_FRONT.wine },
             labelMM: customLabel ? customDims : { w: Number(f.width) || 110, h: Number(f.height) || 80 },
+            /* ROUND 51 #9 (owner: back-shot label height STILL drifts):
+               the back shot used to claim the FRONT label's width — the
+               model rescaled to honour it and the height drifted. Send
+               the back label's true mm (same height, its own width). */
+            backLabelMM: backData ? { w: Math.round((((Number(f.height) || 80)) * (backDims.w / Math.max(1, backDims.h))) / 5) * 5, h: Number(f.height) || 80 } : undefined,
             style: sel.style, seed,
           }),
         });
@@ -750,8 +755,9 @@ export default function NewUI() {
     const runIdx = varRuns.length;
     if (runIdx === 0) { createVariations(style); return; }
     if (runIdx === 1) {
-      if (varEmail) createVariations(style);
-      else { setEmailInput(""); setEmailErr(false); setEmailModal(style); }
+      /* ROUND 51 #3 (owner): the second run ALWAYS asks — a known email
+         only prefills the field */
+      setEmailInput(varEmail); setEmailErr(false); setEmailModal(style);
       return;
     }
     if (genCredits >= 3) { saveCredits(genCredits - 3); createVariations(style); }
@@ -760,12 +766,13 @@ export default function NewUI() {
   /* TEMP (owner, "before IP reset"): Pay just adds the credits; if a
      style click brought us here, that run fires right away (minus its 3) */
   const payForGenerations = () => {
-    const bought = GENS[gensSel].gens;
-    const st = pendingGen.current; pendingGen.current = "";
-    saveCredits(genCredits + bought - (st ? 3 : 0));
+    /* ROUND 51 #4 (owner): buying does NOT auto-generate — back to the
+       first-labels page; they press the style button themselves */
+    saveCredits(genCredits + GENS[gensSel].gens);
+    pendingGen.current = "";
     setGensMode(false);
+    setOptPage(0);
     go("options", -1);
-    if (st) createVariations(st);
   };
   const submitVarEmail = () => {
     const e = emailInput.trim();
@@ -1097,9 +1104,11 @@ export default function NewUI() {
         const k = Math.min(area.w / wmm, area.h / hmm);
         const bw = wmm * k, bh = hmm * k;
         return (<>
-          {/* ROUND 47 (owner: "this text should not be here"): the intro
-              paragraph is gone — the patch keeps covering the baked one */}
+          {/* round 47 removed the vision intro; ROUND 51 #1 (owner): the
+              fields-are-optional note returns under the title */}
           {patch(134, 166, 700, 46, "intro")}
+          <span style={{ ...px(136.97, 183.62 - 15.5, 660, 20), font: `15px ${HNW}`, color: "#111", lineHeight: "20px" }}>
+            {t("Feel free to leave out fields you don't want on your front label.")}</span>
           {/* cover baked E.g. column incl. its underlines */}
           {patch(263, 234, 572, 390, "phcol")}
           {FRONT_ROWS.map((k2, i) => {
@@ -1236,11 +1245,11 @@ export default function NewUI() {
           {/* ROUND 50 #2: generation-credit balance (placement = my
               proposal, owner to comment) */}
           {optPage === 0 && varRuns.length > 0 && (
-            <span style={{ ...px(903, 183.62 - 15.5, 400, 20), font: `italic 12px ${HNW}`, color: "#8a8a8a", lineHeight: "20px", textAlign: "right", display: "block" }}>
+            <span style={{ ...px(903, 149.08 - 15.5, 400, 20), font: `italic 12px ${HNW}`, color: "#8a8a8a", lineHeight: "20px", textAlign: "right", display: "block" }}>
               {t("Generations available:")} {genCredits}</span>
           )}
           {optPage >= 1 && (() => { const st = varRuns[optPage - 1] || ""; return (
-            <span style={{ ...px(703.41, 183.62 - 15.5, 600, 20), font: `700 15px ${HNW}`, lineHeight: "20px", textAlign: "right", display: "block" }}>
+            <span style={{ ...px(703.41, 149.08 - 15.5, 600, 20), font: `700 15px ${HNW}`, lineHeight: "20px", textAlign: "right", display: "block" }}>
               {t(st.charAt(0).toUpperCase() + st.slice(1))} — {t("Variations")}</span>
           ); })()}
           {OPT_FRAMES.map((fr, fi) => {
@@ -1288,7 +1297,8 @@ export default function NewUI() {
           {/* ROUND 49 #2 (owner): the "Create {Style} Variations" buttons
               STAY after a run — the first run is free, later runs go
               through the email gate (requestVariations) */}
-          {dreams.length > 0 && optPage === 0 && OPT_FRAMES.map((fr, fi) => (
+          {/* round 51 #4: the buttons live on EVERY page, variations too */}
+          {dreams.length > 0 && OPT_FRAMES.map((fr, fi) => (
             <button key={"cv" + fi} onClick={() => requestVariations(STYLE_NAMES[fi].toLowerCase())}
               style={{ ...px(fr.x + 0.2, 565, OPT_W, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
               {t("Create " + STYLE_NAMES[fi] + " Variations")}</button>
@@ -1333,7 +1343,7 @@ export default function NewUI() {
             /* ROUND 48 #2 (owner): just "Select" — no style name, no number */
             const lbl = t("Select");
             return (
-              <button key={"sr" + optPage + fi} onClick={() => { if (!dreams[base + fi]) return; setSelected(base + fi); setWarn(""); }}
+              <button key={"sr" + optPage + fi} onClick={() => { if (!dreams[base + fi]) return; setSelected(selected === base + fi ? -1 : base + fi); setWarn(""); }}
                 style={{ ...px(fr.x, 634 - 13, OPT_W, 26), ...ghost, display: "flex", alignItems: "center", justifyContent: "center", columnGap: 10, textTransform: "none", cursor: "pointer" }}>
                 <span style={{ position: "relative", width: 15, height: 15, borderRadius: "50%", border: "2px solid #111", background: "#fff", boxSizing: "border-box", flex: "0 0 auto" }}>
                   {on && <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 7.5, height: 7.5, borderRadius: "50%", background: "#111" }} />}
@@ -1522,6 +1532,26 @@ export default function NewUI() {
             {dashedBox(lx, ly, fit.w, fit.h, "bdD")}
             <button onClick={() => go("backdetails", -1)}
               style={{ ...px(548.6, 589, 341.4, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>{t("Edit")}</button>
+            {/* ROUND 51 #7/#8 (owner): informational size caption — same
+                type as the front page's Width/Height, no input, no
+                underline, centered between the label and Edit. The width
+                falls out of the composed PNG's aspect and rounds to 5mm;
+                the height is the customer's own front-label height. */}
+            {(() => {
+              const hmm = Number(f.height) || 80;
+              const wmm = Math.round((hmm * (backDims.w / backDims.h)) / 5) * 5;
+              const yMid = (ly + fit.h + 589) / 2;
+              return (
+                <div style={{ position: "absolute", left: BD_AREA.x, top: yMid - 7.5, width: BD_AREA.w, display: "flex", justifyContent: "center", alignItems: "baseline", columnGap: 24, pointerEvents: "none" }}>
+                  {([["Width:", wmm], ["Height:", hmm]] as const).map(([cap, v]) => (
+                    <span key={cap} style={{ display: "flex", alignItems: "baseline" }}>
+                      <span style={{ font: `700 14px ${HNW}`, lineHeight: "15px" }}>{t(cap)}</span>
+                      <span style={{ font: `italic 14px ${HNW}`, lineHeight: "15px", marginLeft: 4 }}>{v} {t("mm")}</span>
+                    </span>
+                  ))}
+                </div>
+              );
+            })()}
           </>)}
         </>);
       }
@@ -1841,12 +1871,12 @@ export default function NewUI() {
         type Slide = { name: string; img?: string; landing?: boolean; kind?: "front" | "back" };
         /* ROUND 47: own-label orders deliver ONLY the marketing assets */
         const slides: Slide[] = customLabel ? [
-          { name: "Product_Shot_Face.png", img: assets.front?.prev, kind: "front" },
+          { name: "Product_Shot_Front.png", img: assets.front?.prev, kind: "front" },
           ...[0, 1, 2, 3, 4].map((i) => ({ name: `Marketing_Image_${i + 1}.jpg`, img: assets.life[i]?.prev, kind: "front" as const })),
         ] : [
           { name: "Front_Label.svg", img: selected >= 0 ? (dreams[selected]?.preview || dreams[selected]?.dream) : undefined, kind: "front" },
           { name: "Back_Label.svg", img: backPng || undefined, kind: "back" },
-          { name: "Product_Shot_Face.png", img: assets.front?.prev, kind: "front" },
+          { name: "Product_Shot_Front.png", img: assets.front?.prev, kind: "front" },
           { name: "Product_Shot_Back.png", img: assets.back?.prev, kind: "front" },
           ...[0, 1, 2, 3, 4].map((i) => ({ name: `Marketing_Image_${i + 1}.jpg`, img: assets.life[i]?.prev, kind: "front" as const })),
           { name: "Product_Page", landing: true, kind: "front" },

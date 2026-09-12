@@ -175,6 +175,9 @@ export interface MarketingBrief {
   bottleType: string; glassColor: string; closure: string; finish: string; closureColour: string;
   wineColour: string; wine: string;
   labelWmm: number; labelHmm: number;
+  /* round 51 #9: the back label's own mm (same height, its real width) —
+     the back shot's scale line uses these so the model never rescales */
+  backWmm?: number; backHmm?: number;
   style: string;
   seed: number;
 }
@@ -197,7 +200,8 @@ function bottleDescription(b: MarketingBrief) {
 }
 
 export function buildShotPrompt(b: MarketingBrief, side: "front" | "back", hasShape: boolean, charter = "", rules?: string[]) {
-  const d = bottleDescription(b);
+  /* round 51 #9: the back shot describes the BACK label's true size */
+  const d = bottleDescription(side === "back" && b.backWmm && b.backHmm ? { ...b, labelWmm: b.backWmm, labelHmm: b.backHmm } : b);
   return (
     `Professional studio product photograph of a single wine bottle, photographed dead straight-on, ` +
     `the bottle standing PERFECTLY UPRIGHT and vertical, ` +

@@ -18,6 +18,7 @@ export async function POST(req: Request) {
     bottle?: { type?: string; color?: string; closure?: string; finish?: string; closureColour?: string };
     wine?: { colour?: string; name?: string };
     labelMM?: { w?: number; h?: number };
+    backLabelMM?: { w?: number; h?: number };
     style?: string; seed?: number;
   };
   try {
@@ -39,6 +40,9 @@ export async function POST(req: Request) {
     wine: String(body.wine?.name || "Wine").slice(0, 120),
     labelWmm: Math.min(300, Math.max(30, Number(body.labelMM?.w) || 110)),
     labelHmm: Math.min(300, Math.max(30, Number(body.labelMM?.h) || 80)),
+    /* round 51 #9: the back shot states the BACK label's true size */
+    backWmm: body.backLabelMM?.w ? Math.min(300, Math.max(30, Number(body.backLabelMM.w))) : undefined,
+    backHmm: body.backLabelMM?.h ? Math.min(300, Math.max(30, Number(body.backLabelMM.h))) : undefined,
     style: ["traditional", "contemporary", "punk"].includes(String(body.style)) ? String(body.style) : "contemporary",
     seed: (Number(body.seed) || 0) >>> 0,
   };

@@ -1990,6 +1990,25 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 51 (owner, 10 items, 2026-09-12): (1) the fields-are-optional
+  note returns under FRONT LABEL DETAILS ("Feel free to leave out…").
+  (2+5) the credits indicator AND the "{Style} — Variations" header
+  ride the page-title baseline (149.08). (3) the SECOND variations
+  run ALWAYS asks for the email — a stored one only prefills the
+  modal. (4) buying generations does NOT auto-run — back to the
+  first-labels page (optPage 0); the Create-Variations buttons render
+  on EVERY page including variations pages. (6) pressing Select on a
+  selected label deselects it. (7/8) backdesign shows an
+  informational "Width: N mm  Height: N mm" caption (front page's
+  exact type, no input/underline) centered between the label and
+  Edit; width = composed PNG aspect × height, ROUNDED TO 5 mm;
+  height = the customer's front-label height verbatim. (9) BACK-SHOT
+  LABEL HEIGHT ROOT CAUSE: the back shot's scale line claimed the
+  FRONT label's width, so the model rescaled and height drifted —
+  the client now sends backLabelMM (true rounded width, same height)
+  and buildShotPrompt swaps it in for the back side. (10) carousel
+  caption Product_Shot_Face.png → Product_Shot_Front.png (the ZIP
+  already said Front).
 - ROUND 50 (owner, 13 items, 2026-09-12): (1) VARIATIONS ARE
   MULTI-PAGE — varRuns: string[] (style per run), run k's dreams at
   3+3k..5+3k, base = optPage*3, N = runs+1 pager dots centered on the
