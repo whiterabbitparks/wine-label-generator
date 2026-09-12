@@ -1990,6 +1990,36 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 49 (owner, 14 items, 2026-09-12): (1) vision GEO intro names
+  the real button — "გამაკვირვე". (2) VARIATIONS EMAIL GATE: the
+  Create-Variations buttons never disappear; first run free, any
+  later run opens a modal (white scrim + 460×188 bordered box) asking
+  for an email — format-validated, kept in localStorage
+  (nui-var-email) and never re-asked; a re-run replaces slots 3..5
+  and resets a selection pointing there; pager dots moved to y541 so
+  buttons+pager coexist. REAL send-a-code verification needs an email
+  provider (Resend etc.) — requestVariations/submitVarEmail is the
+  plug-in point. (3) compliance subtitle loses "all"/"ყველა" in both
+  languages (EN swapped at fetch, SVG_GE key renamed to match).
+  (4) NO closure picked (own-label reset) also freezes the wheel
+  block. (5) GEO "ხრახნიანი" (was ხრახნიანი თავსახური). (6) result
+  rect DELETED; the lightness capsule is HORIZONTAL under the wheel
+  (white left → black right, 136.64×15 at rel y157), wheel+bar share
+  the column centre axis 1206.5. (7) Glossy is row 2 under Matte via
+  the standard optRow. (8) own-label 2×2 thumbs are 145px — the
+  block is EXACTLY hero-height (2·145+10=300), all gaps 10, group
+  (610) centered. (9) engine grapeLine(): grapes in any lifestyle
+  scene must match the wine colour family (red wine never with
+  green/white grapes). (10) scene-repeat control: diversity
+  threshold 0.55→0.35 AND each lifestyle prompt now lists what the
+  other 4 images show ("SERIES — NON-NEGOTIABLE … must read clearly
+  different"). (11) miniGlass 22→18 everywhere. (12) dashed divider
+  between the two product shots (x273, hero-height y294..594, never
+  touches the frame). (13) GEO Crown Cap = "გვირგვინი". (14) wax
+  seal prompt: 5–7 mm chunky hand-dipped bulk, explicitly never
+  foil/aluminium/metal. BONUS FIX: closure "No Capsule" fell into
+  closureLine's default (cork+capsule!) — now takes the bare-mouth
+  branch.
 - ROUND 48 (owner, 7 items, 2026-09-12): (1) GEO declension:
   "თანამედროვეს ვარიაციები". (2) select radios say ONLY
   "Select"/"აირჩიე" — no style names, no variation numbers (UI_GE

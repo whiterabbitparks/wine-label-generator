@@ -263,6 +263,15 @@ export default function NewUI() {
   const [varBusy, setVarBusy] = useState(false);
   const [optPage, setOptPage] = useState<0 | 1>(0);
   const varT = useRef(0);
+  /* ROUND 49 #2 (owner): the variations buttons never disappear — the
+     FIRST run is free, every later run asks for an email once (kept in
+     localStorage; real send-a-code verification needs an email provider
+     and plugs in here later). emailModal holds the pending style. */
+  const [varEmail, setVarEmail] = useState("");
+  const [emailModal, setEmailModal] = useState("");
+  const [emailInput, setEmailInput] = useState("");
+  const [emailErr, setEmailErr] = useState(false);
+  useEffect(() => { try { const e = localStorage.getItem("nui-var-email"); if (e) setVarEmail(e); } catch { } }, []);
   const [selected, setSelected] = useState(-1);
   const [genProgress, setGenProgress] = useState(0);
   const [frontSig, setFrontSig] = useState("");
@@ -598,7 +607,10 @@ export default function NewUI() {
                board's THREE baked column dividers and their six corner
                crosses are stripped — the options zone is redrawn live as
                FIVE columns (the content itself is white-patched) */
-            .replace(p === "bottle" ? /<line[^>]*x1="(?:582\.8[56]|822\.8[56]|1062\.8[56]|591\.1|574\.62|831\.1|814\.62|1071\.09|1054\.61)"[^>]*\/>/g : /$^/g, "");
+            .replace(p === "bottle" ? /<line[^>]*x1="(?:582\.8[56]|822\.8[56]|1062\.8[56]|591\.1|574\.62|831\.1|814\.62|1071\.09|1054\.61)"[^>]*\/>/g : /$^/g, "")
+            /* ROUND 49 #3 (owner): "all" leaves the compliance subtitle in
+               both languages (the GEO key in SVG_GE matches this new text) */
+            .replace("incorporate all required regulatory information", "incorporate required regulatory information");
           setBoards((m) => ({ ...m, [p]: processed }));
           setBoardsGe((m) => ({ ...m, [p]: translateSvg(processed) }));
         }
@@ -698,7 +710,9 @@ export default function NewUI() {
     return { style, dream: res.dream, preview: res.preview || null };
   }
   async function createVariations(style: string) {
-    if (varStyle || varBusy) return;
+    if (varBusy) return;
+    /* a re-run replaces slots 3..5 — a selection pointing there resets */
+    setSelected((s) => (s >= 3 ? -1 : s));
     setVarStyle(style); setVarBusy(true); setOptPage(1); varT.current = Date.now();
     setDreams((prev) => prev.slice(0, 3));
     await Promise.allSettled([0, 1, 2].map(async (i) => {
@@ -709,6 +723,19 @@ export default function NewUI() {
     }));
     setVarBusy(false);
   }
+  /* round 49 #2: button → free first run, email-gated afterwards */
+  const requestVariations = (style: string) => {
+    if (varBusy) return;
+    if (!varStyle || varEmail) { createVariations(style); return; }
+    setEmailInput(""); setEmailErr(false); setEmailModal(style);
+  };
+  const submitVarEmail = () => {
+    const e = emailInput.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e)) { setEmailErr(true); return; }
+    setVarEmail(e); try { localStorage.setItem("nui-var-email", e); } catch { }
+    const st = emailModal; setEmailModal("");
+    createVariations(st);
+  };
 
   async function nextFromFront() {
     /* owner #14: regenerate ONLY when inputs changed */
@@ -922,9 +949,9 @@ export default function NewUI() {
      level is FILL-driven from the tick — the active image's glass rises
      with its render, waiting glasses crawl slowly, nothing ever freezes */
   const miniGlass = (key: string, fill: number) => (
-    /* 15% bigger downwards: top edge stays (marginTop compensates the
-       flex-centring shift) — round 19 */
-    <svg key={key} viewBox="215 95 170 315" width="22" style={{ display: "block", marginTop: 4 }}>
+    /* round 49 #11 (owner: cramped in the small thumbs): 22 → 18, the
+       SAME size everywhere so no box gets a different glass */
+    <svg key={key} viewBox="215 95 170 315" width="18" style={{ display: "block", marginTop: 4 }}>
       <defs>
         <clipPath id={`mg-${key.replace(/[^a-z0-9]/gi, "")}`}>
           <rect x="230" y={266.6 - fill * 95} width="140" height={fill * 95 + 4}
@@ -1211,22 +1238,44 @@ export default function NewUI() {
           })()}
           {dreams.length === 0 && OPT_FRAMES.map((fr, i) =>
             notMade(fr.x, OPT_TOP, OPT_W, OPT_BOT - OPT_TOP, "front", "nmopt" + i))}
-          {/* round 45: one-shot "Create {Style} Variations" buttons — after
-              the run they disappear and the two pager dots appear */}
-          {!varStyle && dreams.length > 0 && OPT_FRAMES.map((fr, fi) => (
-            <button key={"cv" + fi} onClick={() => createVariations(STYLE_NAMES[fi].toLowerCase())}
+          {/* ROUND 49 #2 (owner): the "Create {Style} Variations" buttons
+              STAY after a run — the first run is free, later runs go
+              through the email gate (requestVariations) */}
+          {dreams.length > 0 && optPage === 0 && OPT_FRAMES.map((fr, fi) => (
+            <button key={"cv" + fi} onClick={() => requestVariations(STYLE_NAMES[fi].toLowerCase())}
               style={{ ...px(fr.x + 0.2, 565, OPT_W, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
               {t("Create " + STYLE_NAMES[fi] + " Variations")}</button>
           ))}
+          {/* pager rides above the buttons (round 49: both are visible now) */}
           {varStyle && (<>
             <button onClick={() => setOptPage(0)} aria-label="first labels"
-              style={{ ...px(W / 2 - 22, 558, 20, 20), ...ghost }}>
+              style={{ ...px(W / 2 - 22, 541, 20, 20), ...ghost }}>
               <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 9, height: 9, borderRadius: 5, border: "1px solid #111", background: optPage === 0 ? "#111" : "#fff", boxSizing: "border-box" }} />
             </button>
             <button onClick={() => setOptPage(1)} aria-label="variations"
-              style={{ ...px(W / 2 + 2, 558, 20, 20), ...ghost }}>
+              style={{ ...px(W / 2 + 2, 541, 20, 20), ...ghost }}>
               <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 9, height: 9, borderRadius: 5, border: "1px solid #111", background: optPage === 1 ? "#111" : "#fff", boxSizing: "border-box" }} />
             </button>
+          </>)}
+          {/* round 49 #2: email gate for repeat variation runs */}
+          {emailModal && (<>
+            <div style={{ ...px(0, HEADER_H, W, 660 - HEADER_H), background: "rgba(255,255,255,0.88)", zIndex: 20 }} onClick={() => setEmailModal("")} />
+            <div style={{ ...px(W / 2 - 230, 258, 460, 188), background: "#fff", border: "1px solid #111", zIndex: 21, boxSizing: "border-box" }}>
+              <button aria-label="close" onClick={() => setEmailModal("")}
+                style={{ position: "absolute", right: 6, top: 4, ...ghost, font: `15px ${HNW}`, color: "#111", width: 24, height: 24 }}>✕</button>
+              <span style={{ position: "absolute", left: 32, top: 30, font: `700 15px ${HNW}` }}>{t("3 more variations?")}</span>
+              <span style={{ position: "absolute", left: 32, top: 56, width: 396, font: `13px ${HNW}`, lineHeight: "18px" }}>
+                {t("Leave your email and we'll generate three more variations of the chosen style.")}</span>
+              <input value={emailInput} placeholder="your@email.com" autoFocus
+                onChange={(e) => { setEmailInput(e.target.value); setEmailErr(false); }}
+                onKeyDown={(e) => { if (e.key === "Enter") submitVarEmail(); }}
+                style={{ position: "absolute", left: 32, top: 104, width: 250, font: `italic 15px ${HNW}`, border: "none", outline: "none", background: "transparent", padding: "0 0 2px 2px", color: "#111" }} />
+              <div style={{ position: "absolute", left: 32, top: 126, width: 254, height: 1, background: "#111" }} />
+              {emailErr && <span style={{ position: "absolute", left: 32, top: 132, font: `11px ${HNW}`, color: "#8e2b2b" }}>{t("Enter a valid email")}</span>}
+              <button onClick={submitVarEmail}
+                style={{ position: "absolute", left: 306, top: 96, width: 122, height: 34.3, cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", paddingBottom: 4 }}>
+                {t("Generate")}</button>
+            </div>
           </>)}
           {/* Select radios. ROUND 46 (owner: "middle label is selected and
               wrong circle is selected"): the filled circle follows the
@@ -1450,7 +1499,9 @@ export default function NewUI() {
            row pitch 29.8). */
         const COLS_X = [342.86, 534.78, 726.7, 918.62, 1110.54];
         const ROWY = (i: number) => 283.57 + i * 29.8;
-        const wheelOff = bottle.closure === "No Capsule";
+        /* round 49 #4: no closure picked (own-label reset) ALSO freezes
+           the wheel — it only lives while a real capsule is chosen */
+        const wheelOff = bottle.closure === "No Capsule" || !bottle.closure;
         const colHead = (ci: number, title: string) => (
           <span key={"bh" + ci} style={{ ...px(COLS_X[ci] + 35.2, 217.7 - 13, 160, 16), font: `700 15px ${HNW}`, lineHeight: "16px" }}>{t(title)}</span>
         );
@@ -1478,8 +1529,6 @@ export default function NewUI() {
           .concat(CROWN_TYPES.includes(bottle.type) ? ["Crown Cap"] : [])
           .concat(bottle.type === "Sparkling" ? ["Sparkling Cork"] : [])
           .concat(["No Capsule"]);
-        const WHEEL_X = COLS_X[4] + 10.2;         // wheel left (137.2 wide)
-        const CAPS_X = WHEEL_X + 156.5;           // capsule left (15 wide)
         return (<>
           {/* wipe the baked column content (frame lines stay) */}
           {patch(344.4, 173.3, 956.5, 408.5, "bzone")}
@@ -1499,44 +1548,36 @@ export default function NewUI() {
           {colHead(3, "Closure Type")}
           {closures.map((o, i) => optRow(3, i, o, bottle.closure === o, pickOf("closure", o)))}
           {colHead(4, "Closure Color")}
+          {/* round 49 #7: Glossy rides the SECOND row under Matte, like
+              every other list */}
           {optRow(4, 0, "Matte", bottle.finish === "Matte", () => setBottle((m) => ({ ...m, finish: "Matte" })))}
-          {(() => {
-            const cx = COLS_X[4] + 119.6, cy = ROWY(0);
-            return (
-              <span key="glossy">
-                {dotBtn(cx, cy, bottle.finish === "Glossy", () => setBottle((m) => ({ ...m, finish: "Glossy" })), "glossyd", { ring: true, r: 9 })}
-                <span style={{ ...px(cx + 15, cy - 9.4, 60, 16), font: `12px ${HNW}`, color: "#111", lineHeight: "16px", pointerEvents: "none" }}>{t("Glossy")}</span>
-                <button onClick={() => setBottle((m) => ({ ...m, finish: "Glossy" }))} style={{ ...px(cx + 12, cy - 12, 62, 24), ...ghost }} />
-              </span>
-            );
-          })()}
-          {/* wheel + capsule + result bar — DEACTIVATED under No Capsule
-              (round 48 #3: greyed and inert) */}
-          <div style={{ ...px(COLS_X[4], 350, 191.9, 205), opacity: wheelOff ? 0.3 : 1, filter: wheelOff ? "grayscale(1)" : "none", pointerEvents: wheelOff ? "none" : "auto", transition: `opacity 240ms ${EASE}` }}>
-            {/* round 7 #21: the design's gradient capsule rebuilt in CSS */}
-            <div style={{ ...px(CAPS_X - COLS_X[4], 9.19, 15, 136.64), borderRadius: 7.5, background: "linear-gradient(#fff, #000)", pointerEvents: "none" }} />
+          {optRow(4, 1, "Glossy", bottle.finish === "Glossy", () => setBottle((m) => ({ ...m, finish: "Glossy" })))}
+          {/* round 49 #6: result rect GONE; the lightness bar lies
+              HORIZONTAL below the wheel (white left → black right), bar
+              and wheel share the column's centre axis. Round 48 #3 /
+              49 #4: greyed and inert without a real capsule. */}
+          <div style={{ ...px(COLS_X[4], 380, 191.9, 175), opacity: wheelOff ? 0.3 : 1, filter: wheelOff ? "grayscale(1)" : "none", pointerEvents: wheelOff ? "none" : "auto", transition: `opacity 240ms ${EASE}` }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/newui/colorwheel.png" alt="" style={{ ...px(WHEEL_X - COLS_X[4], 9.2, 137.2, 137.2), pointerEvents: "none" }} />
-            <div style={{ ...px(WHEEL_X - COLS_X[4], 9.2, 137.2, 137.2), cursor: "crosshair" }}
+            <img src="/newui/colorwheel.png" alt="" style={{ ...px(27.35, 0, 137.2, 137.2), pointerEvents: "none" }} />
+            <div style={{ ...px(27.35, 0, 137.2, 137.2), cursor: "crosshair" }}
               onPointerDown={(e) => { dragRef.current = "wheel"; e.currentTarget.setPointerCapture(e.pointerId); wheelPick(e.clientX, e.clientY, e.currentTarget); }}
               onPointerMove={(e) => { if (dragRef.current === "wheel") wheelPick(e.clientX, e.clientY, e.currentTarget); }}
               onPointerUp={() => { dragRef.current = ""; }}>
               <span style={{ position: "absolute", left: `${wheel.x * 100}%`, top: `${wheel.y * 100}%`, transform: "translate(-50%,-50%)", width: 15.2, height: 15.2, borderRadius: 8, background: "transparent", border: "1.5px solid #111", pointerEvents: "none", boxSizing: "border-box" }} />
             </div>
-            {/* lightness drag: cursor travels between the capsule's cap centres */}
-            <div style={{ ...px(CAPS_X - COLS_X[4] - 8.5, 2, 32, 152), cursor: "grab" }}
+            {/* horizontal capsule: white LEFT → black RIGHT */}
+            <div style={{ ...px(27.63, 157, 136.64, 15), borderRadius: 7.5, background: "linear-gradient(90deg, #fff, #000)", pointerEvents: "none" }} />
+            <div style={{ ...px(19.6, 148.5, 152, 32), cursor: "grab" }}
               onPointerDown={(e) => { dragRef.current = "shade"; e.currentTarget.setPointerCapture(e.pointerId); }}
               onPointerMove={(e) => {
                 if (dragRef.current !== "shade") return;
                 const r = e.currentTarget.getBoundingClientRect();
-                const yy = (e.clientY - r.top) / r.height * 152;
-                setShade(Math.min(1, Math.max(0, (yy - 14.69) / 121.64)));
+                const xx = (e.clientX - r.left) / r.width * 152;
+                setShade(Math.min(1, Math.max(0, (xx - 14.69) / 121.64)));
               }}
               onPointerUp={() => { dragRef.current = ""; }}>
-              <span style={{ position: "absolute", left: 8.4, top: 14.69 + shade * 121.64 - 7.6, width: 15.2, height: 15.2, borderRadius: 8, background: "transparent", border: "1.5px solid #111", boxSizing: "border-box" }} />
+              <span style={{ position: "absolute", left: 14.69 + shade * 121.64 - 7.6, top: 8.4, width: 15.2, height: 15.2, borderRadius: 8, background: "transparent", border: "1.5px solid #111", boxSizing: "border-box" }} />
             </div>
-            {/* result colour bar */}
-            <div style={{ ...px(WHEEL_X - COLS_X[4] - 1.5, 181.1, 174.4, 21.3), background: shadeRgb(), border: "1px solid #111", boxSizing: "border-box" }} />
           </div>
           {/* the owner's bottle-type photos (public/newui/bottles, 800×1600
               = the area's exact 1:2 ratio); Screw Cap shows the -screw
@@ -1638,9 +1679,11 @@ export default function NewUI() {
         const custom = !!customLabel;
         const order = [heroAsset, ...[0, 1, 2, 3, 4].filter((i) => i !== heroAsset)];
         const BOX = { x: 137.5, y: 272, w: 1165.5, h: 344 };
-        const SQ = 300, GAP = 10, TH = (SQ - 3 * GAP) / 4;
-        /* ROUND 48 #6: own-label mode lays the 4 thumbs 2×2 beside the
-           hero — block top flush with the hero top, every gap = GAP */
+        /* ROUND 48 #6 / ROUND 49 #8: own-label mode lays the 4 thumbs 2×2
+           beside the hero, and the 2×2 block is EXACTLY the hero's height
+           (thumbs 145, so 2·145+10 = 300); the block↔hero gap equals the
+           thumb gap; the whole group centers in the dashed zone. */
+        const SQ = 300, GAP = 10, TH = custom ? (SQ - GAP) / 2 : (SQ - 3 * GAP) / 4;
         const groupW = custom ? SQ + GAP + 2 * TH + GAP : SQ + GAP + TH;
         const third = BOX.w / 3;                                   // 388.5
         const splitX = BOX.x + third;                              // 526
@@ -1705,6 +1748,9 @@ export default function NewUI() {
           ) : (<>
             {slot(148, 285, 120, 318, assets.front, "front shot", "contain")}
             {slot(278, 285, 120, 318, assets.back, "back shot", "contain")}
+            {/* ROUND 49 #12: dashed divider between the two shots — never
+                touches the outer lines, same height as the big preview */}
+            <div style={{ ...px(273, gy, 1, SQ), background: `repeating-linear-gradient(180deg,${DASH})`, pointerEvents: "none" }} />
           </>)}
           {/* marketing images: square uncropped hero + equal-gap strip,
               one centered group (round 47); small thumbs swap into the hero */}

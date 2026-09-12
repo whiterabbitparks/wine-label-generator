@@ -27,7 +27,7 @@ export const SVG_GE: Record<string, string> = {
   /* vision */
   "YOUR VISION": "ᲗᲥᲕᲔᲜᲘ ᲮᲔᲓᲕᲐ",
   "If you have a specific idea for the front label, describe it in simple words": "თუ ეტიკეტის იდეა უკვე გაქვთ, აღწერეთ მარტივი სიტყვებით. შეგიძლიათ ატვირთოთ ესკიზი ან ფოტო ნიმუში.",
-  "or upload a sketch or photo reference. Or, let us suggest ideas for you.": "ან დააჭირეთ \"მომეცი იდეა\"-ს და ჩვენ შემოგთავაზებთ იდეებს.",
+  "or upload a sketch or photo reference. Or, let us suggest ideas for you.": "ან დააჭირეთ \"გამაკვირვე\"-ს და ჩვენ შემოგთავაზებთ იდეებს.",
   "Upload a sketch or a reference photo": "ატვირთეთ ესკიზი ან ფოტო ნიმუში",
   "Give me an idea": "მომეცი იდეა",
   "Next idea": "შემდეგი იდეა",
@@ -73,7 +73,7 @@ export const SVG_GE: Record<string, string> = {
   /* compliance */
   "MARKET COMPLIANCE": "ᲑᲐᲖᲠᲔᲑᲘᲡ ᲨᲔᲡᲐᲑᲐᲛᲘᲡᲝᲑᲐ",
   "Select the market(s) where your wine will be sold,": "აირჩიეთ ბაზრები, სადაც თქვენი ღვინო გაიყიდება,",
-  "and we’ll incorporate all required regulatory information.": "და ჩვენ დავამატებთ ყველა საჭირო მარეგულირებელ ინფორმაციას.",
+  "and we’ll incorporate required regulatory information.": "და ჩვენ დავამატებთ საჭირო მარეგულირებელ ინფორმაციას.",
   "European Union": "ევროკავშირი",
   "United States": "აშშ",
   "United Kingdom": "დიდი ბრიტანეთი",
@@ -105,9 +105,9 @@ export const SVG_GE: Record<string, string> = {
   "Transparent": "გამჭვირვალე",
   "Amber": "ქარვისფერი",
   "Cork": "კორპი",
-  "Screw Cap": "ხრახნიანი თავსახური",
+  "Screw Cap": "ხრახნიანი",
   "Wax Seal": "ცვილის ლუქი",
-  "Crown Cap": "კრონ-თავსახური",
+  "Crown Cap": "გვირგვინი",
   "Sparkling Cork": "ცქრიალას კორპი",
   "Matte": "გლუვი",
   "Glossy": "პრიალა",
@@ -212,6 +212,11 @@ export const UI_GE: Record<string, string> = {
   "Your label ✓ — upload another": "შენი ეტიკეტი ✓ — ატვირთე სხვა",
   "Product Shot": "პროდუქტის ფოტო",
   "Face": "წინა",
+  /* round 49 #2: email-gated repeat variations */
+  "3 more variations?": "კიდევ 3 ვარიაცია?",
+  "Leave your email and we'll generate three more variations of the chosen style.": "დატოვე იმეილი და დაგიგენერირებთ არჩეული სტილის კიდევ სამ ვარიაციას.",
+  "Generate": "გენერირება",
+  "Enter a valid email": "ჩაწერე სწორი იმეილი",
   /* round 48: Wine Color section + No Capsule closure + section gate */
   "Wine Color": "ღვინის ფერი",
   "Red": "წითელი",

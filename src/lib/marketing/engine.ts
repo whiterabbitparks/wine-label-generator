@@ -87,6 +87,19 @@ function glassWineShade(wineColour: string) {
     : "pale straw-gold white wine";
 }
 
+/* round 49 #9 (owner: red wine kept appearing with WHITE grapes): any
+   grapes in a scene must match the wine's colour family */
+function grapeLine(wineColour: string) {
+  const g = /red/i.test(wineColour)
+    ? "DARK red-wine grapes — deep purple-black / blue-black clusters with dusty bloom"
+    : /ros/i.test(wineColour)
+      ? "red-pink grapes — light-red to pink-skinned clusters"
+      : /amber|orange/i.test(wineColour)
+        ? "ripe amber-golden grapes — deep yellow-gold clusters"
+        : "GREEN-GOLD white-wine grapes — pale green to golden clusters";
+  return `GRAPES — NON-NEGOTIABLE: if grapes, grape clusters or vines appear ANYWHERE in the scene, they are ${g}, matching this wine. A red wine NEVER appears with green/white grapes and a white wine NEVER with dark grapes. `;
+}
+
 /* ---- closure ------------------------------------------------------- */
 
 function closureLine(closure: string, colourCSS: string, finish: string) {
@@ -95,14 +108,18 @@ function closureLine(closure: string, colourCSS: string, finish: string) {
   /* "CLOSURE — NON-NEGOTIABLE" + an explicit no-cork clause for non-cork
      closures: round 15 #2 — a selected screw cap still rendered as cork
      (the silhouette outline shows a corked top and was winning) */
-  if (/no cap/i.test(finish))
+  /* round 48/49: "No Capsule" is a closure TYPE now (the old finish
+     "No cap" spelling stays accepted for back-compat) */
+  if (/no cap/i.test(finish) || /no capsule/i.test(closure))
     return closure === "Sparkling Cork"
       ? "CLOSURE — NON-NEGOTIABLE: a mushroom sparkling cork held by its BARE wire cage (muselet) with its round metal cap plate — no foil hood; the cage and its neatly twisted wire sit fully visible against the glass"
       : "CLOSURE — NON-NEGOTIABLE: a natural cork sits flush in the bare bottle mouth — NO capsule, NO foil, the glass lip fully visible";
   switch (closure) {
     case "Screw Cap": return `CLOSURE — NON-NEGOTIABLE: a ${fin} ${col} aluminium SCREW CAP with a clean straight skirt over the bottle mouth and upper neck. There is NO cork and NO foil capsule — a screw cap only`;
-    /* round 29 #3: medium-height wax, 2-3mm thick, rounded over the tip */
-    case "Wax Seal": return `CLOSURE — NON-NEGOTIABLE: a ${fin} ${col} WAX SEAL of MEDIUM height — it coats the bottle mouth and the upper third of the neck (never just the tip, never the whole neck). The wax is a SUBSTANTIAL 2–3 mm thick coat that visibly ROUNDS and softens the glass tip's edges — it must never read as a thin skin tracing the sharp glass profile. Its lower edge is clean and only slightly uneven — absolutely NO drips or runs. No foil capsule`;
+    /* round 29 #3: medium-height wax; round 49 #14 (owner: "reads like a
+       thin aluminium cap") — the coat got visibly THICKER and explicitly
+       never-metal */
+    case "Wax Seal": return `CLOSURE — NON-NEGOTIABLE: a ${fin} ${col} WAX SEAL of MEDIUM height — it coats the bottle mouth and the upper third of the neck (never just the tip, never the whole neck). The wax is a THICK chunky hand-dipped coat, a good 5–7 mm of visible wax BULK that clearly swells OUTWARD beyond the glass profile and fully ROUNDS the tip into a soft dome — it must never read as a thin skin or film tracing the sharp glass shape. The surface is unmistakably WAX — soft, slightly uneven, with a waxy sheen — NEVER foil, NEVER aluminium, NEVER a metal cap. Its lower edge is clean and only slightly uneven — absolutely NO drips or runs. No foil capsule`;
     /* round 29 #4: the model kept missing what a crown cap is */
     case "Crown Cap": return `CLOSURE — NON-NEGOTIABLE: a ${fin} ${col} metal CROWN CAP — the pressed-steel BEER-BOTTLE cap: a flat round top with a short crimped skirt of ~21 tiny flutes gripping the bottle lip, exactly like on a classic beer bottle. Bare glass neck below it. There is NO cork, NO capsule, NO screw threads — only this crimped beer-style cap`;
     /* round 37 #2: wires were rendered poking OUT of the foil — anatomy
@@ -224,7 +241,7 @@ const STYLE_WORLD: Record<string, string> = {
     "Setting and styling are RAW and natural: candid unpolished scenes, natural-wine bar energy, honest daylight, real textures — concrete, worn wood, skin, paper — nothing staged-looking, a free documentary feel.",
 };
 
-export function buildLifestylePrompt(b: MarketingBrief, scenario: string, charter: string, hasShape: boolean, fromBoard = false, rules?: string[]) {
+export function buildLifestylePrompt(b: MarketingBrief, scenario: string, charter: string, hasShape: boolean, fromBoard = false, rules?: string[], others?: string[]) {
   const d = bottleDescription(b);
   return (
     /* round 31: a board-derived scene LEADS — recreate the reference's own
@@ -240,6 +257,12 @@ export function buildLifestylePrompt(b: MarketingBrief, scenario: string, charte
     /* round 41 #1: a red wine once poured ROSÉ in a glass — every visible
        drop must match the label's wine */
     `WINE COLOUR — NON-NEGOTIABLE: any wine visible anywhere in the scene (in glasses, mid-pour, in decanters) is THE SAME wine as in the bottle: ${glassWineShade(b.wineColour)}. Never a different colour, never a different wine. ` +
+    grapeLine(b.wineColour) +
+    /* round 49 #10 (owner: two bottle-in-grapes shots in one set): each
+       image knows what the REST of the series shows and must differ */
+    (others && others.length
+      ? `SERIES — NON-NEGOTIABLE: this photo is one of a ${others.length + 1}-image campaign series. The OTHER images in the series already show: ${others.map((o) => o.slice(0, 80)).join("; ")}. THIS scene must read clearly DIFFERENT from every one of them — a different setting, different props, a different story. Never a second variation of a motif the series already has. `
+      : "") +
     `The FIRST attached image is the wine's front label — it appears on the bottle EXACTLY as given, legible and true to its colours; never redraw or replace it. ` +
     `The label is lit by the same scene light as the bottle (one photographed object, never a pasted-on graphic), and its surface is smooth flat print — no invented paper grain or fibre texture. ` +
     /* round 31b (owner clarification): the bottle may be in ANY pose —
@@ -275,7 +298,8 @@ export function dealScenarios(seed: number, boardScenes?: string[]): { text: str
     };
     const arr = shuffle([...boardScenes]);
     const picked: string[] = [];
-    for (const cand of arr) { if (picked.length >= 5) break; if (picked.every((p2) => sim(p2, cand) < 0.55)) picked.push(cand); }
+    /* round 49 #10: 0.55 still let near-twin scenes through — stricter */
+    for (const cand of arr) { if (picked.length >= 5) break; if (picked.every((p2) => sim(p2, cand) < 0.35)) picked.push(cand); }
     for (const cand of arr) { if (picked.length >= 5) break; if (!picked.includes(cand)) picked.push(cand); }
     while (picked.length < 5) picked.push(arr[picked.length % arr.length]);
     return picked.map((text) => ({ text, fromBoard: true }));
@@ -396,7 +420,8 @@ export async function generateMarketingAssets(
     send({ type: "progress", stage: `lifestyle ${i + 1}/5` });
     try {
       const img = await generateImageRawWithRetry({
-        prompt: buildLifestylePrompt(b, scenarios[i].text, charter, !!shape, scenarios[i].fromBoard, rules),
+        prompt: buildLifestylePrompt(b, scenarios[i].text, charter, !!shape, scenarios[i].fromBoard, rules,
+          scenarios.filter((_, j) => j !== i).map((x) => x.text)),
         references: shape ? [frontLabel, shape] : [frontLabel], size: { w: 1024, h: 1024 },
       });
       send({ type: "life", i, image: await sizeLifestyle(img, final), preview: await previewOf(img) });
