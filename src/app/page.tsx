@@ -178,6 +178,11 @@ const DEMO_FRONT: Record<string, string> = {
   colour: "Red", wineType: "Still Wine", alcohol: "12.5", volume: "750",
 };
 
+/* round 52 #3: placeholder terms text — long enough to need the scroll */
+const TERMS_TEXT = Array.from({ length: 9 }, (_, i) => (
+  `${i + 1}. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.`
+));
+
 interface Dream { style: string; dream: string; preview: string | null }
 
 /* ground colour of a label image — MEDIAN of many border samples
@@ -283,6 +288,10 @@ export default function NewUI() {
     { name: "20X Generation", price: 5, gens: 20 },
   ];
   const [gensMode, setGensMode] = useState(false);
+  /* round 52 #3: Terms & Conditions modal with the house-style scroll */
+  const [termsOpen, setTermsOpen] = useState(false);
+  const [termsPos, setTermsPos] = useState(0);
+  const termsRef = useRef<HTMLDivElement | null>(null);
   const [gensSel, setGensSel] = useState(0);
   const [genCredits, setGenCredits] = useState(0);
   const pendingGen = useRef("");
@@ -610,7 +619,7 @@ export default function NewUI() {
     });
   }, [dreams]);
   const [busyMsg, setBusyMsg] = useState("");
-  const dragRef = useRef<"" | "wheel" | "shade">("");
+  const dragRef = useRef<"" | "wheel" | "shade" | "terms">("");
   /* round 18 #5: every order gets a product code — the QR points to its
      future landing page (domain configurable when it exists) */
   const productCode = useRef(Math.random().toString(36).slice(2, 10));
@@ -762,6 +771,14 @@ export default function NewUI() {
     }
     if (genCredits >= 3) { saveCredits(genCredits - 3); createVariations(style); }
     else { pendingGen.current = style; setGensMode(true); setGensSel(0); go("checkout"); }
+  };
+  /* round 52 #1 (owner: "it let me download without agreeing!"):
+     every pay path checks the T&C ring first */
+  const requireAgree = () => {
+    if (agree) return true;
+    setWarn(t("Agree to the Terms & Conditions to continue"));
+    setTimeout(() => setWarn(""), 3200);
+    return false;
   };
   /* TEMP (owner, "before IP reset"): Pay just adds the credits; if a
      style click brought us here, that run fires right away (minus its 3) */
@@ -1883,6 +1900,9 @@ export default function NewUI() {
         ];
         const sl = slides[carIdx % slides.length];
         const ROWC = [497.28, 531.29, 565.71, 600.14];   // baked ring centres
+        const priceAtX = (right: number, baseline: number, v: string, bold = false) => (
+          <span key={"prx" + right + baseline} style={{ ...px(right - 140, baseline - (bold ? 14 : 13.5), 140, 16), font: `${bold ? 700 : 400} ${bold ? 16 : 15}px ${HNW}`, lineHeight: "16px", textAlign: "right", display: "block" }}>{v}</span>
+        );
         const priceAt = (baseline: number, v: string, bold = false) => (
           /* the span's own baseline lands exactly on the baked row's */
           <span key={"pr" + baseline} style={{ ...px(1234 - 140, baseline - (bold ? 14 : 13.5), 140, 16), font: `${bold ? 700 : 400} ${bold ? 16 : 15}px ${HNW}`, lineHeight: "16px", textAlign: "right", display: "block" }}>{v}</span>
@@ -1891,9 +1911,10 @@ export default function NewUI() {
           {/* ROUND 50 (owner follow-up): the folder tree + paragraph
               describe the FULL pack — an own-label (assets-only) order
               hides that whole left block */}
-          {customLabel && patch(126, 158, 706, 470, "notree")}
-          {/* live slide inside the baked dashed frame */}
-          {sl.landing ? (
+          {customLabel && !gensMode && patch(126, 158, 706, 470, "notree")}
+          {/* live slide inside the baked dashed frame (hidden entirely on
+              the round-52 centered top-up card) */}
+          {gensMode ? null : sl.landing ? (
             productUrl && selected >= 0 ? (
               <div style={{ ...px(FR.x + (FR.w - 340) / 2, FR.y + 16, 340, 340 / W * 823 + 13), background: "#fff", borderRadius: 5, boxShadow: "0 8px 22px rgba(0,0,0,0.2)", overflow: "hidden" }}>
                 <div style={{ height: 13, background: "#E8E8E6", display: "flex", alignItems: "center", gap: 3, padding: "0 6px" }}>
@@ -1907,34 +1928,48 @@ export default function NewUI() {
             /* eslint-disable-next-line @next/next/no-img-element */
             <img src={sl.img} alt={sl.name} style={{ ...px(FR.x + 20, FR.y + 15, FR.w - 40, 226), objectFit: "contain" }} />
           ) : notMade(FR.x + 20, FR.y + 16, FR.w - 40, FR.h - 66, sl.kind || "front", "nmCar")}
-          {/* caption (stripped from the board, drawn live at its spot) */}
-          <span style={{ ...px(FR.x, 396.04 - 12, FR.w, 16), font: `12px ${HNW}`, color: "#111", textAlign: "center", display: "block" }}>{sl.name}</span>
-          {/* baked thin chevrons get ghost click zones */}
-          <button aria-label="prev slide" onClick={() => setCarIdx((c) => (c + slides.length - 1) % slides.length)}
-            style={{ ...px(834, 252, 36, 44), ...ghost }} />
-          <button aria-label="next slide" onClick={() => setCarIdx((c) => (c + 1) % slides.length)}
-            style={{ ...px(1256, 252, 36, 44), ...ghost }} />
-          {/* T&C — baked ring + underlined text; the dot and click are live */}
-          {dotBtn(859.38, 445.71, agree, () => setAgree((a) => !a), "agree")}
-          <button onClick={() => setAgree((a) => !a)} style={{ ...px(880, 436, 250, 20), ...ghost }} />
+          {!gensMode && (<>
+            {/* caption (stripped from the board, drawn live at its spot) */}
+            <span style={{ ...px(FR.x, 396.04 - 12, FR.w, 16), font: `12px ${HNW}`, color: "#111", textAlign: "center", display: "block" }}>{sl.name}</span>
+            {/* baked thin chevrons get ghost click zones */}
+            <button aria-label="prev slide" onClick={() => setCarIdx((c) => (c + slides.length - 1) % slides.length)}
+              style={{ ...px(834, 252, 36, 44), ...ghost }} />
+            <button aria-label="next slide" onClick={() => setCarIdx((c) => (c + 1) % slides.length)}
+              style={{ ...px(1256, 252, 36, 44), ...ghost }} />
+          </>)}
+          {/* T&C — baked ring + underlined text; the dot and toggle are
+              live, the underlined words open the terms modal (round 52) */}
+          {!gensMode && (<>
+            {dotBtn(859.38, 445.71, agree, () => setAgree((a) => !a), "agree")}
+            <button onClick={() => setAgree((a) => !a)} style={{ ...px(880, 436, 96, 20), ...ghost }} />
+            <button aria-label="terms" onClick={() => { setTermsOpen(true); setTermsPos(0); }} style={{ ...px(977, 436, 122, 20), ...ghost, cursor: "pointer" }} />
+          </>)}
           {gensMode ? (<>
-            {/* ROUND 50 #2: generation top-up — the baked 4-row list is
-                covered; THREE single-select rows in the same style */}
-            {patch(822.5, 469, 481, 150, "genrows")}
-            {[480, 514.56, 548.57, 582.86].map((ly) => (
-              <div key={"gl" + ly} style={{ ...px(822.86, ly, 480, 1), backgroundImage: `repeating-linear-gradient(90deg,${DASH})`, backgroundSize: "100% 1px", backgroundRepeat: "no-repeat" }} />
+            {/* ROUND 52 #2 (owner): the top-up page hides the tree AND the
+                carousel — ONE purchase card centered on the page. Same
+                rhythm as the baked card, shifted to x480 / total baseline
+                489.48 (dy -150). */}
+            {patch(126, 158, 706, 470, "notreeg")}
+            {patch(818, 128, 494, 565, "nocarg")}
+            {dotBtn(516.52, 295.71, agree, () => setAgree((a) => !a), "agreeg", { ring: true, r: 7.5 })}
+            <span style={{ ...px(542.9, 301.28 - 13.5, 340, 16), font: `15px ${HNW}`, lineHeight: "16px" }}>
+              <span onClick={() => setAgree((a) => !a)} style={{ cursor: "pointer" }}>{t("I agree to the")} </span>
+              <span onClick={() => { setTermsOpen(true); setTermsPos(0); }} style={{ textDecoration: "underline", cursor: "pointer" }}>{t("Terms & Conditions").replace("&amp;", "&")}</span>
+            </span>
+            {[330, 364.56, 398.57, 432.86].map((ly) => (
+              <div key={"gl" + ly} style={{ ...px(480, ly, 480, 1), backgroundImage: `repeating-linear-gradient(90deg,${DASH})`, backgroundSize: "100% 1px", backgroundRepeat: "no-repeat" }} />
             ))}
             {GENS.map((g, i) => (
               <span key={g.name}>
-                {dotBtn(857.14, ROWC[i], gensSel === i, () => setGensSel(i), "gen" + i, { ring: true, r: 7.5 })}
-                <button onClick={() => setGensSel(i)} style={{ ...px(880, ROWC[i] - 12, 340, 24), ...ghost, textAlign: "left", textTransform: "none", font: `15px ${HNW}`, color: "#111" }}>{t(g.name)}</button>
-                {priceAt(ROWC[i] + 4.9, "$" + g.price)}
+                {dotBtn(514.28, ROWC[i] - 150, gensSel === i, () => setGensSel(i), "gen" + i, { ring: true, r: 7.5 })}
+                <button onClick={() => setGensSel(i)} style={{ ...px(537, ROWC[i] - 162, 340, 24), ...ghost, textAlign: "left", textTransform: "none", font: `15px ${HNW}`, color: "#111" }}>{t(g.name)}</button>
+                {priceAtX(891.14, ROWC[i] - 145.1, "$" + g.price)}
               </span>
             ))}
-            {priceAt(639.48, "$" + GENS[gensSel].price, true)}
-            {/* the baked button says Pay & Download — top-ups just Pay */}
-            <div style={{ ...px(822.86, 651.43, 480, 34.29), background: "#111", display: "flex", alignItems: "center", justifyContent: "center", font: `12px ${HNW}`, letterSpacing: 0.3, color: "#fff", paddingBottom: 4 }}>{t("Pay")}</div>
-            <button aria-label="pay" onClick={payForGenerations} style={{ ...px(822.86, 651.43, 480, 34.29), ...ghost }} />
+            <span style={{ ...px(548.54, 489.48 - 14, 200, 18), font: `700 16px ${HNW}`, lineHeight: "18px" }}>{t("Total:")}</span>
+            {priceAtX(891.14, 489.48, "$" + GENS[gensSel].price, true)}
+            <div style={{ ...px(480, 501.43, 480, 34.29), background: "#111", display: "flex", alignItems: "center", justifyContent: "center", font: `12px ${HNW}`, letterSpacing: 0.3, color: "#fff", paddingBottom: 4 }}>{t("Pay")}</div>
+            <button aria-label="pay" onClick={() => { if (requireAgree()) payForGenerations(); }} style={{ ...px(480, 501.43, 480, 34.29), ...ghost }} />
           </>) : customLabel ? (<>
             {/* own-label order: only Marketing Assets and its price */}
             {patch(822.5, 469, 481, 150, "custrows")}
@@ -1946,7 +1981,7 @@ export default function NewUI() {
               style={{ ...px(880, ROWC[0] - 12, 340, 24), ...ghost, textAlign: "left", textTransform: "none", font: `15px ${HNW}`, color: "#111" }}>{t("Marketing Assets")}</button>
             {priceAt(ROWC[0] + 4.9, "$" + PACK[2].price)}
             {priceAt(639.48, "$" + total, true)}
-            <button aria-label="pay" onClick={proceedToPayment} style={{ ...px(822.86, 651.43, 480, 34.29), ...ghost }} />
+            <button aria-label="pay" onClick={() => { if (requireAgree()) proceedToPayment(); }} style={{ ...px(822.86, 651.43, 480, 34.29), ...ghost }} />
           </>) : (<>
             {/* live dots on the baked rings + row click zones */}
             {PACK.map((it, i) => (
@@ -1958,12 +1993,57 @@ export default function NewUI() {
               </span>
             ))}
             {priceAt(639.48, "$" + total, true)}
-            <button aria-label="pay" onClick={proceedToPayment} style={{ ...px(822.86, 651.43, 480, 34.29), ...ghost }} />
+            <button aria-label="pay" onClick={() => { if (requireAgree()) proceedToPayment(); }} style={{ ...px(822.86, 651.43, 480, 34.29), ...ghost }} />
           </>)}
+          {/* round 52 #1: the agree gate message under the Pay bar */}
+          {warn && (
+            <span style={{ ...px(0, gensMode ? 545 : 694, W, 16), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block" }}>{warn}</span>
+          )}
           {/* back arrow is baked — ghost zone; a gens visit returns to the
               options page it came from */}
           <button aria-label="back" onClick={() => { if (gensMode) { setGensMode(false); go("options", -1); } else goBack(); }}
             style={{ ...px(72, 666, 52, 40), ...ghost }} />
+          {/* ROUND 52 #3: Terms & Conditions modal — lorem body behind the
+              house-style scroll (1px track + black dot, draggable), black
+              Agree / Disagree bar and a ✕ */}
+          {termsOpen && (() => {
+            const TRACK = { x: 508, y: 66, h: 250 };
+            const syncFromClientY = (clientY: number, el: HTMLElement) => {
+              const r = el.getBoundingClientRect();
+              const ratio = Math.min(1, Math.max(0, (clientY - r.top) / r.height));
+              const sc = termsRef.current;
+              if (sc) sc.scrollTop = ratio * (sc.scrollHeight - sc.clientHeight);
+            };
+            return (<>
+              <div style={{ ...px(0, HEADER_H, W, FOOTER_Y - HEADER_H), background: "rgba(255,255,255,0.88)", zIndex: 30 }} onClick={() => setTermsOpen(false)} />
+              <div style={{ ...px(W / 2 - 280, 180, 560, 420), background: "#fff", border: "1px solid #111", zIndex: 31, boxSizing: "border-box" }}>
+                <button aria-label="close terms" onClick={() => setTermsOpen(false)}
+                  style={{ position: "absolute", right: 6, top: 4, ...ghost, font: `15px ${HNW}`, color: "#111", width: 24, height: 24 }}>✕</button>
+                <span style={{ position: "absolute", left: 32, top: 28, font: `700 15px ${HNW}` }}>{t("Terms & Conditions")}</span>
+                <div ref={termsRef} className="nui-noscroll"
+                  onScroll={(e) => { const el = e.currentTarget; setTermsPos(el.scrollTop / Math.max(1, el.scrollHeight - el.clientHeight)); }}
+                  style={{ position: "absolute", left: 32, top: TRACK.y, width: 456, height: TRACK.h, overflowY: "scroll" }}>
+                  {TERMS_TEXT.map((par, i) => (
+                    <p key={i} style={{ font: `13px ${HNW}`, lineHeight: "19px", color: "#111", margin: "0 0 14px" }}>{par}</p>
+                  ))}
+                </div>
+                {/* the scroll: a hairline with a black dot riding it */}
+                <div style={{ position: "absolute", left: TRACK.x + 11.5, top: TRACK.y, width: 1, height: TRACK.h, background: "#111" }} />
+                <div style={{ position: "absolute", left: TRACK.x, top: TRACK.y, width: 24, height: TRACK.h, cursor: "grab" }}
+                  onPointerDown={(e) => { dragRef.current = "terms"; e.currentTarget.setPointerCapture(e.pointerId); syncFromClientY(e.clientY, e.currentTarget); }}
+                  onPointerMove={(e) => { if (dragRef.current === "terms") syncFromClientY(e.clientY, e.currentTarget); }}
+                  onPointerUp={() => { dragRef.current = ""; }}>
+                  <span style={{ position: "absolute", left: 6.5, top: termsPos * (TRACK.h - 11), width: 11, height: 11, borderRadius: 6, background: "#111" }} />
+                </div>
+                <button onClick={() => { setAgree(true); setTermsOpen(false); }}
+                  style={{ position: "absolute", left: 32, top: 352, width: 232, height: 34.3, cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", paddingBottom: 4 }}>
+                  {t("Agree")}</button>
+                <button onClick={() => { setAgree(false); setTermsOpen(false); }}
+                  style={{ position: "absolute", left: 296, top: 352, width: 232, height: 34.3, cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#fff", color: "#111", border: "1px solid #111", boxSizing: "border-box", paddingBottom: 4 }}>
+                  {t("Disagree")}</button>
+              </div>
+            </>);
+          })()}
         </>);
       }
 
@@ -1993,6 +2073,8 @@ export default function NewUI() {
         @font-face { font-family: 'Helvetica Neue World'; src: url('/newui/fonts/HNW-75Bold.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: block; }
         @font-face { font-family: 'Helvetica Neue World'; src: url('/newui/fonts/HNW-45Lt.woff2') format('woff2'); font-weight: 300; font-style: normal; font-display: block; }
         input::placeholder, textarea::placeholder { color: #B3B3B3; opacity: 1; font-style: italic; }
+        .nui-noscroll { scrollbar-width: none; -ms-overflow-style: none; }
+        .nui-noscroll::-webkit-scrollbar { display: none; }
         @keyframes nuiDot { 0% { opacity: 0.15 } 30% { opacity: 1 } 60%, 100% { opacity: 0.15 } }
         @keyframes nuiWineRise { from { transform: translateY(92px) } to { transform: translateY(4px) } }
         @keyframes nuiIn { from { transform: translateX(${dir > 0 ? "100%" : "-100%"}) } to { transform: translateX(0) } }

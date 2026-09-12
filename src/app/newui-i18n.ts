@@ -120,10 +120,9 @@ export const SVG_GE: Record<string, string> = {
      T&C + baked rows; file names stay untranslated on purpose) */
   "FINAL PACK": "ᲡᲐᲑᲝᲚᲝᲝ ᲞᲐᲙᲔᲢᲘ",
   "After payment, you’ll be able to download": "გადახდის შემდეგ შეძლებთ ჩამოტვირთოთ",
-  "your Final Pack with high-resolution,": "თქვენი საბოლოო პაკეტი — მაღალი გარჩევადობის,",
-  "print-ready files, instructions, and a": "საბეჭდად მზა ფაილები, ინსტრუქცია და",
-  "Read Me containing the link to your": "Read Me ფაილი, სადაც იქნება თქვენი",
-  "published product page.": "პროდუქტის გვერდის ბმული.",
+  "your Final Pack, including high-resolution,": "თქვენი საბოლოო პაკეტი — მაღალი გარჩევადობის,",
+  "print-ready files and all necessary": "საბეჭდად მზა ფაილები და ყველა საჭირო",
+  "information and details.": "ინფორმაცია და დეტალები.",
   "LABELS": "ეტიკეტები",
   "MARKETING": "სამარკეტინგო",
   "ASSETS": "მასალა",
@@ -228,6 +227,10 @@ export const UI_GE: Record<string, string> = {
   "Your label ✓ — upload another": "შენი ეტიკეტი ✓ — ატვირთე სხვა",
   "Product Shot": "პროდუქტის ფოტო",
   "Face": "წინა",
+  /* round 52: terms gate + T&C modal */
+  "Agree": "ვეთანხმები",
+  "Disagree": "არ ვეთანხმები",
+  "Agree to the Terms & Conditions to continue": "გასაგრძელებლად დაეთანხმეთ წესებსა და პირობებს",
   /* round 50 #2: generation credits + top-up checkout */
   "3X Generation": "3X გენერაცია",
   "9X Generation": "9X გენერაცია",

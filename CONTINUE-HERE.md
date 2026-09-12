@@ -1990,6 +1990,22 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 52 (owner, 4 items, 2026-09-12): (1) EVERY pay path
+  (standard, own-label, gens top-up) gates on the T&C ring —
+  requireAgree() shows "Agree to the Terms & Conditions to continue"
+  under the Pay bar. (2) the gens top-up page hides the tree AND the
+  carousel — ONE purchase card centered on the page (card x480,
+  baked rhythm shifted dy -150; cover patches 126,158,706x470 +
+  818,128,494x565 — the right one must reach 1312 or the baked
+  corner-cross arms peek out). (3) clicking the underlined
+  "Terms & Conditions" opens a modal: lorem body (TERMS_TEXT, 9
+  paragraphs) behind a hidden-scrollbar div (.nui-noscroll), the
+  house scroll = 1px hairline + draggable black dot (dragRef
+  "terms"), black Agree / outlined Disagree buttons setting the
+  ring, ✕ close. (4) the board paragraph text swapped IN THE SVG
+  (public/newui/checkout.svg): "…including high-resolution,
+  print-ready files and all necessary information and details."
+  (4 lines now; SVG_GE keys renamed to match).
 - ROUND 51 (owner, 10 items, 2026-09-12): (1) the fields-are-optional
   note returns under FRONT LABEL DETAILS ("Feel free to leave out…").
   (2+5) the credits indicator AND the "{Style} — Variations" header
