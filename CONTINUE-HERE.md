@@ -1990,6 +1990,36 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 45 (owner's New_Progressbar mock folder — MAJOR redesign,
+  4 answers confirmed): (1) PAGE ORDER CHANGED: front (details)
+  FIRST, Your Vision second — generation fires from vision's next;
+  welcome→front is the full slide; goBack skips loader to vision.
+  (2) NEW BAR: 4 dots (unlabeled RED start + Front Label/Back Label/
+  Marketing Assets at the old big-dot positions, labels bold under
+  dots, MA right-aligned); red (#BA141A) continuous line grows page
+  by page (THICK per page), station dots fill red per STEP_OF;
+  forward arrow RED and HIDDEN on the loader; welcome's baked arrow
+  covered and redrawn red (flying copy too); checkout has no bar.
+  (3) vision: black buttons "Upload a sketch or a photo (Optional)"
+  + "Surprise me" (always cycles ideas); baked idea button covered.
+  (4) VARIATIONS (one-shot per label set): under each option a black
+  "Create {Style} Variations" button — clicking generates 3 MORE
+  dreams of that style (dream-label API, style LOWERCASE — capital
+  fell through to "free"!), stored at dreams[3..5]; buttons vanish
+  forever, two pager dots appear (First Labels ⟷ Variations page,
+  header "{Style} — Variations" right-aligned); mini glasses fill
+  slots while rendering; click-to-select works on both pages; Select
+  {Style} radios select the style's first label; imgDims effect now
+  skips holes (variation slots fill one by one). (5) backdetails:
+  "Wine Description" is the textarea PLACEHOLDER, baked heading
+  covered. (6) ASSETS "New layout": three headed columns — two tall
+  shots · hero + vertical 4-thumb strip (thumbs swap into hero) ·
+  BIG landing browser (416px, moved from checkout) with glass
+  loader. (7) CHECKOUT "New layout": ‹ › CAROUSEL of all 10
+  deliverables (filename captions, missing → routed grey
+  placeholders), 4 pricing rows ("1 Hour session with human designer
+  $49" replaces designer-$99), Total, black "Pay & Download" (agree
+  checkbox dropped per mock). PACK renamed accordingly.
 - ROUND 44 (owner, 3 items): (1) "No compliance needed" starts at the
   flag column (x 557.2, where the China flag above begins) and is
   BOLD like the country names. (2) cap-colour overlay vanished after

@@ -26,7 +26,9 @@ const FADE_MS = 420;
 const STRIP_DELAYS = [0, 55, 110];
 const HNW = "'HNW', 'Helvetica Neue', Helvetica, sans-serif";
 
-const ORDER = ["welcome", "vision", "front", "loader", "options", "backdetails", "compliance", "backdesign", "bottle", "assets", "checkout"] as const;
+/* ROUND 45 (owner's New_Progressbar mocks): the DETAILS page comes first,
+   Your Vision second — generation fires from the vision page now */
+const ORDER = ["welcome", "front", "vision", "loader", "options", "backdetails", "compliance", "backdesign", "bottle", "assets", "checkout"] as const;
 /* round 38 #1: crown caps exist only on these bottles */
 const CROWN_TYPES = ["Burgundy", "Sparkling", "Alsace / Rhine"];
 /* round 38 #2: label anchors from the owner's positioning charts (same
@@ -54,31 +56,25 @@ const CAP_ZONES: Record<string, [number, number][]> = {
 };
 type PageKey = (typeof ORDER)[number];
 
-/* ROUND 40 (owner's ProgressBarModifications mock): SEVEN stages, flow
-   unchanged — big dots + bold labels for the four main stations, small
-   dots + regular labels for the added sub-stations. Every stage is
-   CLICKABLE and navigates to its page. */
-const CIRCLE_X = [142.06, 334.71, 527.36, 720.01, 912.66, 1105.31, 1297.96];
-const STEPS: { label: string; big: boolean; page: PageKey }[] = [
-  { label: "Front Label", big: true, page: "vision" },
-  { label: "Details", big: false, page: "front" },
-  { label: "Back Label", big: true, page: "backdetails" },
-  { label: "Market Compliance", big: false, page: "compliance" },
-  { label: "Bottle", big: true, page: "bottle" },
-  { label: "Marketing Assets", big: false, page: "assets" },
-  { label: "Download", big: true, page: "checkout" },
+/* ROUND 45 (owner's New_Progressbar mocks): FOUR dots — an unlabeled RED
+   start dot + three labeled stations. The red line grows continuously
+   page by page; a station's dot turns red when its group is reached. */
+const BAR_RED = "#BA141A";
+const CIRCLE_X = [142.06, 527.36, 912.66, 1297.96];
+const STEPS: { label: string; page: PageKey }[] = [
+  { label: "", page: "front" },
+  { label: "Front Label", page: "front" },
+  { label: "Back Label", page: "backdetails" },
+  { label: "Marketing Assets", page: "assets" },
 ];
-/* progress thick-line endpoint per page (null = no bar) */
+/* red-line endpoint per page (null = no bar) */
 const THICK: Record<PageKey, number | null> = {
-  /* vision: bar visible but thick line not yet started (round 8 #1) —
-     it slides in on the transition to front */
-  /* round 41 #2: on intermediate pages the thick line already REACHES the
-     next station's dot — the dot itself fills only when its page arrives */
-  welcome: null, vision: 142.06, front: 334.71, loader: 527.36, options: 527.36,
-  backdetails: 527.36, compliance: 720.01, backdesign: 912.66, bottle: 912.66,
-  assets: 1105.31, checkout: null,
+  welcome: null, front: 200, vision: 330, loader: 527.36, options: 527.36,
+  backdetails: 660, compliance: 810, backdesign: 912.66, bottle: 1105,
+  assets: 1303.41, checkout: null,
 };
-const STEP_OF: Record<PageKey, number> = { welcome: -1, vision: 0, front: 1, loader: 1, options: 1, backdetails: 2, compliance: 3, backdesign: 3, bottle: 4, assets: 5, checkout: 6 };
+/* highest station index REACHED — that dot (and earlier ones) turn red */
+const STEP_OF: Record<PageKey, number> = { welcome: 0, front: 0, vision: 0, loader: 0, options: 1, backdetails: 1, compliance: 1, backdesign: 2, bottle: 2, assets: 3, checkout: 3 };
 
 /* content band bottom per page (checkout content reaches the footer) */
 const BAND_BOTTOM: Record<PageKey, number> = Object.fromEntries(ORDER.map((p) => [p, p === "checkout" || p === "welcome" ? FOOTER_Y : 660])) as Record<PageKey, number>;
@@ -254,6 +250,13 @@ export default function NewUI() {
   const [sketch, setSketch] = useState<string | null>(null);
   const [f, setF] = useState<Record<string, string>>({ width: "110", height: "80" });
   const [dreams, setDreams] = useState<Dream[]>([]);
+  /* ROUND 45 variations (owner's mock): ONE variations run per label set —
+     3 extra dreams of the clicked style live at indices 3..5 of `dreams`;
+     optPage flips between "First Labels" (0..2) and "Variations" (3..5) */
+  const [varStyle, setVarStyle] = useState("");
+  const [varBusy, setVarBusy] = useState(false);
+  const [optPage, setOptPage] = useState<0 | 1>(0);
+  const varT = useRef(0);
   const [selected, setSelected] = useState(-1);
   const [genProgress, setGenProgress] = useState(0);
   const [frontSig, setFrontSig] = useState("");
@@ -270,6 +273,7 @@ export default function NewUI() {
      glass fills (same living-loader behaviour) until the iframe loads */
   const [ppLoaded, setPpLoaded] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [carIdx, setCarIdx] = useState(0);
   const [ppFill, setPpFill] = useState(0.14);
   useEffect(() => { setPpLoaded(false); setPpFill(0.14); }, [productUrl]);
   useEffect(() => {
@@ -532,6 +536,7 @@ export default function NewUI() {
   const [imgDims, setImgDims] = useState<Record<number, { w: number; h: number }>>({});
   useEffect(() => {
     dreams.forEach((d, i) => {
+      if (!d) return;   /* round 45: variation slots fill in one by one */
       const im = new Image();
       im.onload = () => setImgDims((m) => ({ ...m, [i]: { w: im.width, h: im.height } }));
       im.src = d.preview || d.dream;
@@ -603,11 +608,67 @@ export default function NewUI() {
 
   const goBack = useCallback(() => {
     const i = ORDER.indexOf(page);
-    if (i > 0) go(ORDER[i - 1] === "loader" ? "front" : ORDER[i - 1], -1);
+    if (i > 0) go(ORDER[i - 1] === "loader" ? "vision" : ORDER[i - 1], -1);
   }, [page, go]);
 
   const sigFront = () => JSON.stringify({ vision, sketch: !!sketch, f });
   const sigBack = () => JSON.stringify({ b, markets, gtin: gtinValid ? gtinNorm : "", qrImg: !!qrImg, w: f.width, h: f.height, sel: dreams[selected]?.style });
+
+  const buildDreamPayload = () => {
+    const aspect = (Number(f.width) || 110) / (Number(f.height) || 80);
+    const aspectKey = aspect > 1.15 ? "landscape" : aspect < 0.87 ? "portrait" : "square";
+    const fx = (k: string) => f[k]?.trim() || DEMO_FRONT[k] || "";
+    return {
+      aspectKey,
+      data: {
+        producer: fx("producer"), wine: fx("wine"), appellation: fx("appellation"),
+        classification: fx("classification"), grape: fx("grape"),
+        region: fx("regionCountry").split(",")[0]?.trim() || "",
+        country: fx("regionCountry").split(",")[1]?.trim() || "",
+        special: fx("special"), vintage: fx("vintage"),
+        wineColorName: fx("colour"), wineType: fx("wineType"),
+        sweetness: fx("sweetness"), alcohol: fx("alcohol").replace("%", ""),
+        volume: fx("volume").replace(/\D/g, "") || "750",
+      },
+    };
+  };
+  /* one variation dream — same endpoint, no page-level progress */
+  async function genVariation(style: string): Promise<Dream> {
+    const { data, aspectKey } = buildDreamPayload();
+    const r = await fetch("/api/dream-label", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ vision, style, data, sketch, aspect: aspectKey }),
+    });
+    if (!r.ok || !r.body) throw new Error(`generation failed (${r.status})`);
+    const reader = r.body.getReader(); const dec = new TextDecoder();
+    let buf = ""; let res: { dream?: string; preview?: string | null } = {};
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let nl;
+      while ((nl = buf.indexOf("\n")) >= 0) {
+        const line = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1);
+        if (!line) continue;
+        const m = JSON.parse(line);
+        if (m.dream) res = m;
+      }
+    }
+    if (!res.dream) throw new Error("empty variation");
+    return { style, dream: res.dream, preview: res.preview || null };
+  }
+  async function createVariations(style: string) {
+    if (varStyle || varBusy) return;
+    setVarStyle(style); setVarBusy(true); setOptPage(1); varT.current = Date.now();
+    setDreams((prev) => prev.slice(0, 3));
+    await Promise.allSettled([0, 1, 2].map(async (i) => {
+      try {
+        const d = await genVariation(style);
+        setDreams((prev) => { const nd = [...prev]; nd[3 + i] = d; return nd; });
+      } catch { /* an empty slot stays grey */ }
+    }));
+    setVarBusy(false);
+  }
 
   async function nextFromFront() {
     /* owner #14: regenerate ONLY when inputs changed */
@@ -666,6 +727,7 @@ export default function NewUI() {
       if (!ok.length) throw new Error("all generations failed — try again");
       ok.sort((a, b2) => styles3.indexOf(a.style) - styles3.indexOf(b2.style));
       setDreams(ok); setSelected(-1); setFrontSig(sigFront()); setBackSig("");
+      setVarStyle(""); setVarBusy(false); setOptPage(0);
       /* round 43 #3 (owner: "landing page thumb shows the previous bottle"):
          a freshly generated wine invalidates any earlier published page —
          the restored productUrl (round 28b, meant to survive a reload of
@@ -714,19 +776,18 @@ export default function NewUI() {
     setBusyMsg("");
   }
 
-  /* round 27: Barcode row removed — GTIN entry is part of the back label */
+  /* round 45 (mock): renamed rows, designer session $49/1h */
   const PACK = [
-    { name: "Front & Back Labels", price: 199, base: 536.5 },
-    { name: "QR & Product Page", price: 29, base: 605.1 },
-    { name: "Marketing Assets", price: 19, base: 639.4 },
-    { name: "Edit with human designer", price: 99, base: 673.7 },
+    { name: "Print ready Front & Back Labels", price: 199 },
+    { name: "QR Code & Published Product Page", price: 29 },
+    { name: "Marketing Assets", price: 19 },
+    { name: "1 Hour session with human designer", price: 49 },
   ];
   const total = PACK.reduce((s, it, i) => s + (packSel[i] ? it.price : 0), 0);
 
   /* round 18 #4: ONE delivery ZIP named after the wine — labels + fonts,
      marketing assets, sample contract (TEMP free until payments exist) */
   async function proceedToPayment() {
-    if (!agree) { alert("Please agree to the Terms & Conditions."); return; }
     setBusyMsg("Packing your delivery…");
     try {
       const r = await fetch("/api/package", {
@@ -878,25 +939,35 @@ export default function NewUI() {
   const renderOverlay = (p: PageKey, inSlide = false) => {
     switch (p) {
       case "welcome":
-        return <button aria-label="start" onClick={() => { setArrowFly(true); go("vision"); setTimeout(() => setArrowFly(false), SLIDE_MS + 80); }}
-          style={{ ...px(122, 662, 60, 48), ...ghost }} />;
+        return (<>
+          {patch(118, 658, 70, 54, "welarrow")}
+          <button aria-label="start" onClick={() => { setArrowFly(true); go("front"); setTimeout(() => setArrowFly(false), SLIDE_MS + 80); }}
+            style={{ ...px(122, 662, 60, 48), ...ghost }}>
+            <svg viewBox="0 0 60 40" width="60" height="40"><line x1="13" y1="24" x2="47" y2="24" stroke={BAR_RED} strokeWidth="3" /><polyline points="37,13.5 47.5,24 37,34.5" fill="none" stroke={BAR_RED} strokeWidth="3" /></svg>
+          </button>
+        </>);
       case "vision":
         return (<>
           {patch(1213, 421, 87, 17, "cnt")}
           <span style={{ ...px(1178, 422, 110, 15), font: `11px ${HNW}`, color: "#111", textAlign: "right" }}>{vision.trim() ? vision.trim().split(/\s+/).length : 0} / 300 {t("words")}</span>
           <textarea value={vision} onChange={(e) => setVision(e.target.value)} maxLength={2200}
             style={{ ...px(148, 246, 1144, 168), ...inputStyle, fontStyle: "normal", textDecoration: "none", resize: "none", lineHeight: 1.5, overflow: "auto", background: "transparent" }} />
-          <button onClick={() => { setVision(IDEAS[Math.floor(Math.random() * IDEAS.length)]); setIdeaN((n) => n + 1); }}
-            style={{ ...px(960, 480, 342.9, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
-            {ideaN ? t("Next idea") : t("Give me an idea")}
-          </button>
-          <label style={{ ...px(137.1, 480, 342.9, 34.3), cursor: "pointer" }}>
+          {/* round 45: two BLACK buttons per mock — upload (with "(Optional)")
+              and "Surprise me", which cycles ideas on every click */}
+          {patch(134, 476, 745, 44, "visbtns")}
+          {patch(950, 470, 360, 56, "visbtn2")}
+          <label style={{ ...px(137.1, 480, 342.9, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, textTransform: "none" }}>
             <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
               const file = e.target.files?.[0]; if (!file) { setSketch(null); return; }
               const rd = new FileReader(); rd.onload = () => setSketch(String(rd.result)); rd.readAsDataURL(file);
             }} />
-            {sketch && <span style={{ ...px(0, 38, 300, 16), font: `12px ${HNW}`, color: "#3f6d2a" }}>{t("✓ sketch attached")}</span>}
+            {t("Upload a sketch or a photo (Optional)")}
+            {sketch && <span style={{ position: "absolute", left: 0, top: 38, width: 343, font: `12px ${HNW}`, color: "#3f6d2a", textAlign: "center" }}>{t("✓ sketch attached")}</span>}
           </label>
+          <button onClick={() => { setVision(IDEAS[Math.floor(Math.random() * IDEAS.length)]); setIdeaN((n) => n + 1); }}
+            style={{ ...px(532, 480, 341.4, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
+            {t("Surprise me")}
+          </button>
         </>);
       case "front": {
         /* size area: top = the Producer row's input RULE (round 9 #4),
@@ -908,8 +979,9 @@ export default function NewUI() {
         return (<>
           {/* round 7 #3: shorter intro replaces the baked paragraph */}
           {patch(134, 166, 700, 46, "intro")}
-          <span style={{ ...px(136.97, 183.62 - 15.5, 560, 20), font: `15px ${HNW}`, color: "#111", lineHeight: "20px" }}>
-            {t("Feel free to leave out fields you don't want on your front label.")}
+          <span style={{ ...px(136.97, 183.62 - 15.5, 660, 40), font: `15px ${HNW}`, color: "#111", lineHeight: "20px" }}>
+            {t("If you have a specific idea for the front label, describe it in simple words")}<br />
+            {t("or upload a sketch or photo reference. Or, let us suggest ideas for you.")}
           </span>
           {/* cover baked E.g. column incl. its underlines */}
           {patch(263, 234, 572, 390, "phcol")}
@@ -1014,12 +1086,25 @@ export default function NewUI() {
         const covers: React.ReactNode[] = [];
         covers.push(patch(255, 503, 930, 24, "dots"));
         covers.push(patch(135, 546, 1172, 40, "selrow"));
+        covers.push(patch(135, 578, 1172, 44, "selbars"));
         for (const fx0 of [137.1, 480, 548.5, 891.4, 960, 1302.9])
           for (const fy0 of [240, 468.6]) covers.push(patch(fx0 - 11, fy0 - 11, 22, 22, `c${fx0}-${fy0}`));
         const CUBE = 34.3, AREA_TOP = 240, AREA_BOT = 528;   /* space below labels (owner) */
+        const base = optPage === 1 ? 3 : 0;                  /* round 45: variations at 3..5 */
+        const STYLE_NAMES = ["Traditional", "Contemporary", "Punk"];
         return (<>
           {covers}
-          {OPT_FRAMES.map((fr, i) => {
+          {/* round 45: the baked style-name row gives way to the subtitle
+              (and, on the variations page, a right-aligned header) */}
+          {patch(135, 164, 1170, 26, "stynames")}
+          <span style={{ ...px(136.97, 183.62 - 15.5, 500, 20), font: `15px ${HNW}`, color: "#111", lineHeight: "20px" }}>
+            {t("Variations are limited, so choose wisely.")}</span>
+          {optPage === 1 && (
+            <span style={{ ...px(703.41, 183.62 - 15.5, 600, 20), font: `700 15px ${HNW}`, lineHeight: "20px", textAlign: "right", display: "block" }}>
+              {t(varStyle.charAt(0).toUpperCase() + varStyle.slice(1))} — {t("Variations")}</span>
+          )}
+          {OPT_FRAMES.map((fr, fi) => {
+            const i = base + fi;
             const d = dreams[i];
             if (!d?.preview && !d?.dream) return null;
             const nat = imgDims[i];
@@ -1040,20 +1125,39 @@ export default function NewUI() {
               </div>
             );
           })}
+          {/* variations still rendering → glasses in the empty frames */}
+          {optPage === 1 && OPT_FRAMES.map((fr, fi) => !dreams[3 + fi] && (
+            <div key={"vg" + fi} style={{ ...px(fr.x, AREA_TOP, OPT_W, 288), background: "#F4F3EE", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {varBusy ? miniGlass("var" + fi, Math.min(0.9, 0.14 + ((Date.now() - varT.current) / 45000) * 0.75 + tick * 0)) : null}
+            </div>
+          ))}
           {dreams.length === 0 && OPT_FRAMES.map((fr, i) =>
             notMade(fr.x, OPT_TOP, OPT_W, OPT_BOT - OPT_TOP, "front", "nmopt" + i))}
-          {OPT_FRAMES.map((fr, i) => (
-            <button key={"s" + i} onClick={() => { setSelected(i); setWarn(""); }}
-              style={{
-                /* round 21 #2: one button-height lower (top = old bottom) */
-                ...px(fr.x + 0.2, 582.9, OPT_W, 34.3), cursor: "pointer",
-                /* round 7 #11: WHITE by default, inverts to black "Selected" */
-                font: `12px ${HNW}`, letterSpacing: 0.3, transition: `all 240ms ${EASE}`,
-                background: selected === i ? "#111" : "#fff",
-                color: selected === i ? "#fff" : "#111",
-                border: "1px solid #111", boxSizing: "border-box",
-                display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4,
-              }}>{selected === i ? t("Selected") : t("Select")}</button>
+          {/* round 45: one-shot "Create {Style} Variations" buttons — after
+              the run they disappear and the two pager dots appear */}
+          {!varStyle && dreams.length > 0 && OPT_FRAMES.map((fr, fi) => (
+            <button key={"cv" + fi} onClick={() => createVariations(STYLE_NAMES[fi].toLowerCase())}
+              style={{ ...px(fr.x + 0.2, 565, OPT_W, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
+              {t("Create " + STYLE_NAMES[fi] + " Variations")}</button>
+          ))}
+          {varStyle && (<>
+            <button onClick={() => setOptPage(0)} aria-label="first labels"
+              style={{ ...px(W / 2 - 22, 558, 20, 20), ...ghost }}>
+              <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 9, height: 9, borderRadius: 5, border: "1px solid #111", background: optPage === 0 ? "#111" : "#fff", boxSizing: "border-box" }} />
+            </button>
+            <button onClick={() => setOptPage(1)} aria-label="variations"
+              style={{ ...px(W / 2 + 2, 558, 20, 20), ...ghost }}>
+              <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 9, height: 9, borderRadius: 5, border: "1px solid #111", background: optPage === 1 ? "#111" : "#fff", boxSizing: "border-box" }} />
+            </button>
+          </>)}
+          {/* Select {Style} radios — always pick the style's FIRST label */}
+          {dreams.length > 0 && OPT_FRAMES.map((fr, fi) => (
+            <span key={"sr" + fi}>
+              {dotBtn(fr.x + OPT_W / 2 - 78, 634, selected >= 0 && dreams[selected]?.style === STYLE_NAMES[fi].toLowerCase(), () => { setSelected(fi); setOptPage(0); setWarn(""); }, "srad" + fi, { ring: true, r: 7.5 })}
+              <button onClick={() => { setSelected(fi); setOptPage(0); setWarn(""); }}
+                style={{ ...px(fr.x + OPT_W / 2 - 60, 634 - 12, 180, 24), ...ghost, font: `700 15px ${HNW}`, color: "#111", textAlign: "left", textTransform: "none", lineHeight: "24px" }}>
+                {t("Select " + STYLE_NAMES[fi])}</button>
+            </span>
           ))}
           {/* round 7 #12: gate message when proceeding without a selection */}
           {warn && (
@@ -1065,7 +1169,11 @@ export default function NewUI() {
         return (<>
           {patch(560, 421, 122, 17, "cnt2")}
           <span style={{ ...px(552, 422, 116, 15), font: `11px ${HNW}`, textAlign: "right" }}>{(b.description || "").trim() ? (b.description || "").trim().split(/\s+/).length : 0} / 300 {t("words")}</span>
-          <textarea value={b.description || ""} onChange={(e) => setB((m) => ({ ...m, description: e.target.value }))}
+          {/* round 45: "Wine Description" lives INSIDE the box as a
+              placeholder; the baked heading above is covered */}
+          {patch(134, 168, 300, 44, "wdesc")}
+          <textarea value={b.description || ""} placeholder={t("Wine Description")}
+            onChange={(e) => setB((m) => ({ ...m, description: e.target.value }))}
             style={{ ...px(148, 251, 528, 168), ...inputStyle, fontStyle: "normal", textDecoration: "none", fontSize: 14, resize: "none", lineHeight: 1.45, overflow: "auto", background: "transparent" }} />
           {/* cover baked E.g. column incl. its underlines (they overrun the
               right margin in the artboard) */}
@@ -1365,198 +1473,154 @@ export default function NewUI() {
         </>);
       }
       case "assets": {
-        const thumbs = [{ x: 994.3, y: 171.5 }, { x: 1165.8, y: 171.5 }, { x: 994.3, y: 376.9 }, { x: 1165.7, y: 377.4 }];
+        /* ROUND 45 "New layout": three columns with headers — two tall
+           product shots · hero + vertical strip of 4 marketing images ·
+           a BIG landing-page browser preview (moved here from checkout).
+           The baked board content is covered wholesale. */
         const order = [heroAsset, ...[0, 1, 2, 3, 4].filter((i) => i !== heroAsset)];
-        const lifeGallery = assets.life.filter(Boolean).map((l) => l.full);
-        const shotGallery = [assets.front, assets.back].filter(Boolean).map((s) => s!.full);
-        const pic = (it: { full: string; prev: string } | undefined, w2: number, h2: number, label: string, fs = 12, fit: "cover" | "contain" = "cover", gal?: string[], loadKey?: string) =>
+        const head = (x: number, title: string, sub: string, spec: string) => (
+          <span key={"h" + x}>
+            <span style={{ ...px(x, 180 - 13, 320, 16), font: `700 15px ${HNW}`, lineHeight: "16px" }}>{t(title)}</span>
+            <span style={{ ...px(x, 198 - 12, 320, 30), font: `12px ${HNW}`, color: "#111", lineHeight: "15px", whiteSpace: "pre-line" }}>{t(sub)}</span>
+            <span style={{ ...px(x, 232 - 12, 320, 16), font: `12px ${HNW}`, color: "#111", lineHeight: "15px" }}>{spec}</span>
+          </span>
+        );
+        const slot = (x: number, y: number, w2: number, h2: number, it: { full: string; prev: string } | undefined, loadKey: string, fit: "cover" | "contain") =>
           it ? (
             /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={it.prev} alt={label}
-              style={{ width: w2, height: h2, objectFit: fit, display: "block", animation: `nuiFadeIn ${FADE_MS}ms ${EASE}` }} />
+            <img key={loadKey} src={it.prev} alt="" style={{ ...px(x, y, w2, h2), objectFit: fit, animation: `nuiFadeIn ${FADE_MS}ms ${EASE}` }} />
           ) : (
-            <button onClick={() => { if (!assetsStage) go("vision", -1); }}
-              style={{ width: w2, height: h2, background: assetsStage ? "#F4F3EE" : "#ECECEA", border: "none", cursor: assetsStage ? "default" : "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", font: `12px ${HNW}`, color: assetsStage ? "#999" : "#8a887e", textAlign: "center", textTransform: "none", padding: 4 }}>
-              {/* round 17 #1: rising glass + three-dot indicator below it */}
-              {assetsStage && loadKey ? (<>
+            <div key={loadKey} style={{ ...px(x, y, w2, h2), background: assetsStage ? "#F4F3EE" : "#ECECEA", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+              {assetsStage ? (<>
                 {miniGlass(loadKey, assetFill(loadKey))}
-                <span style={{ marginTop: 10, font: `16.5px ${HNW}`, color: "#111", letterSpacing: 2.2, lineHeight: "11px" }}>
+                <span style={{ marginTop: 8, font: `14px ${HNW}`, color: "#111", letterSpacing: 2, lineHeight: "10px" }}>
                   {[0, 1, 2].map((dd) => <span key={dd} style={{ animation: `nuiDot 1.2s ${dd * 0.2}s infinite` }}>.</span>)}
                 </span>
-              </>) : <>{t("Create a front label first")}</>}
-            </button>
+              </>) : (
+                <button onClick={() => go("vision", -1)} style={{ ...ghost, position: "relative", width: "100%", height: "100%", font: `12px ${HNW}`, color: "#8a887e", textTransform: "none", cursor: "pointer" }}>{t("Create a front label first")}</button>
+              )}
+            </div>
           );
         return (<>
-          {/* round 14 #3: number words in the titles */}
-          {patch(136, 542, 132, 18, "t1")}
-          {patch(547.5, 542, 162, 18, "t2")}
-          <span style={{ ...px(138.16, 556.39 - (IN_BASE - 2), 200, 16), font: `700 15px ${HNW}`, lineHeight: "16px" }}>{t("Two Product Shots")}</span>
-          <span style={{ ...px(548.57, 556.39 - (IN_BASE - 2), 220, 16), font: `700 15px ${HNW}`, lineHeight: "16px" }}>{t("Five Marketing Images")}</span>
-          {/* round 14 #6: status message in the 12px subtitle style, on the
-              titles' line, left-aligned with the small-thumb block */}
+          {patch(0, 160, W, 500, "aswipe")}
+          {head(137.5, "Two Product Shots", "Face & Back", "PNG / 700x2500px / 72dpi")}
+          {head(411, "Five Marketing Images", "Product placed in contextual environments", "JPEG / 2500x2500px / 72dpi")}
+          {head(857, "Landing Page", "You will be provided with the link\nto your product page.", "")}
+          {/* status line */}
           {assetsStage && (
-            <span style={{ ...px(994.3, 556.39 - 12.4, 310, 32), font: `italic 12px ${HNW}`, color: "#BA141A", lineHeight: "16px" }}>
-              {t("Creating your marketing assets")} — {tStage(assetsStage)}… {t("please stay on the page.")}
-            </span>
+            <span style={{ ...px(857, 232 - 12, 440, 16), font: `italic 12px ${HNW}`, color: "#BA141A", lineHeight: "15px" }}>
+              {t("Creating your marketing assets")} — {tStage(assetsStage)}…</span>
           )}
-          {!assetsStage && selected < 0 && (
-            <span style={{ ...px(994.3, 556.39 - 12.4, 310, 32), font: `italic 12px ${HNW}`, color: "#BA141A", lineHeight: "16px" }}>
-              {t("Select a front label first — assets are built from it.")}
-            </span>
-          )}
-          <div style={{ ...px(548.6, 171.9, 338.6, 338.6) }}>{pic(assets.life[order[0]], 338.6, 338.6, `Context ${order[0] + 1}`, 14, "cover", lifeGallery, `lifestyle ${order[0] + 1}/5`)}</div>
-          {cross(548.6, 171.9, "ah1")}{cross(887.2, 171.9, "ah2")}{cross(548.6, 510.5, "ah3")}{cross(887.2, 510.5, "ah4")}
-          {cross(994.3, 171.5, "at1")}{cross(1303.7, 171.5, "at2")}{cross(994.3, 515.3, "at3")}{cross(1303.7, 515.3, "at4")}
-          {thumbs.map((t, k) => {
-            const img = assets.life[order[k + 1]];
-            const inner = pic(img, 137.9, 137.9, `Context ${order[k + 1] + 1}`, 12, "cover", lifeGallery, `lifestyle ${order[k + 1] + 1}/5`);
-            /* round 42: the thumb (placeholder + glass) is ALWAYS there —
-               only the hero-swap click needs the image to exist */
-            return img ? (
-              <button key={k} onClick={() => setHeroAsset(order[k + 1])} style={{ ...px(t.x, t.y, 137.9, 137.9), ...ghost }}>{inner}</button>
-            ) : (
-              <div key={k} style={{ ...px(t.x, t.y, 137.9, 137.9) }}>{inner}</div>
+          {/* column frames */}
+          {dashedBox(137.5, 272, 271.5, 344, "asd1")}
+          {dashedBox(411, 272, 424, 344, "asd2")}
+          {dashedBox(857, 272, 446, 344, "asd3")}
+          {cross(137.5, 272, "as1")}{cross(409, 272, "as2")}{cross(137.5, 616, "as3")}{cross(409, 616, "as4")}
+          {cross(411, 272, "as5")}{cross(835, 272, "as6")}{cross(411, 616, "as7")}{cross(835, 616, "as8")}
+          {cross(857, 272, "as9")}{cross(1303, 272, "as10")}{cross(857, 616, "as11")}{cross(1303, 616, "as12")}
+          {/* col 1: two tall shots */}
+          {slot(148, 285, 120, 318, assets.front, "front shot", "contain")}
+          {slot(278, 285, 120, 318, assets.back, "back shot", "contain")}
+          {/* col 2: hero + vertical strip; small thumbs swap into the hero */}
+          {slot(422, 285, 274, 318, assets.life[order[0]], `lifestyle ${order[0] + 1}/5`, "cover")}
+          {[0, 1, 2, 3].map((k) => {
+            const idx = order[k + 1];
+            const it = assets.life[idx];
+            const y = 285 + k * 81;
+            return (
+              <span key={"sm" + k}>
+                {slot(706, y, 74, 74, it, `lifestyle ${idx + 1}/5`, "cover")}
+                {it && <button onClick={() => setHeroAsset(idx)} style={{ ...px(706, y, 74, 74), ...ghost }} />}
+              </span>
             );
           })}
-          {/* product shots in the CROSS-MARKED area (137.1–411.4 × 171.9–514.8) */}
-          <div style={{ ...px(139, 174, 133, 339) }}>{pic(assets.front, 133, 339, "Shot: Face", 12, "contain", shotGallery, "front shot")}</div>
-          <div style={{ ...px(276.3, 174, 133, 339) }}>{pic(assets.back, 133, 339, "Shot: Back", 12, "contain", shotGallery, "back shot")}</div>
-          {/* round 8 #10: pluses over everything */}
-          {cross(137.1, 171.9, "as1")}{cross(411.4, 171.9, "as2")}{cross(137.1, 514.8, "as3")}{cross(411.4, 514.8, "as4")}
+          {/* col 3: BIG landing browser */}
+          {productUrl && selected >= 0 ? (
+            <div style={{ ...px(872, 290, 416, 251), background: "#fff", borderRadius: 6, boxShadow: "0 10px 26px rgba(0,0,0,0.22)", overflow: "hidden" }}>
+              <div style={{ height: 15, background: "#E8E8E6", display: "flex", alignItems: "center", gap: 3, padding: "0 7px" }}>
+                {["#FF5F57", "#FEBC2E", "#28C840"].map((c) => <span key={c} style={{ width: 5, height: 5, borderRadius: 3, background: c }} />)}
+                <span style={{ flex: 1, margin: "0 8px", height: 8, background: "#fff", borderRadius: 4, font: `6px ${HNW}`, color: "#999", paddingLeft: 5, lineHeight: "8px" }}>8klabels.com{productUrl}</span>
+              </div>
+              <iframe src={productUrl} title="product page" onLoad={() => setPpLoaded(true)} style={{ width: W, height: 823, transform: `scale(${416 / W})`, transformOrigin: "0 0", border: 0, pointerEvents: "none" }} />
+              {!ppLoaded && (
+                <div style={{ position: "absolute", left: 0, top: 15, right: 0, bottom: 0, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  {miniGlass("ppload", ppFill)}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{ ...px(872, 290, 416, 251), background: assetsStage ? "#F4F3EE" : "#ECECEA", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              {assetsStage ? miniGlass("landing", Math.min(0.9, assetFill("lifestyle 5/5"))) :
+                <button onClick={() => go("vision", -1)} style={{ ...ghost, position: "relative", width: "100%", height: "100%", font: `12px ${HNW}`, color: "#8a887e", textTransform: "none", cursor: "pointer" }}>{t("Create a front label first")}</button>}
+            </div>
+          )}
         </>);
       }
-      case "checkout":
+
+      case "checkout": {
+        /* ROUND 45 "New layout": ONE carousel of every deliverable with
+           filename captions, a four-row pricing list and Pay & Download.
+           The baked board content is covered wholesale. */
+        const CAR = { x: 480, y: 205, w: 481, h: 295 };
+        type Slide = { name: string; img?: string; landing?: boolean; kind?: "front" | "back" };
+        const slides: Slide[] = [
+          { name: "Front_Label.svg", img: selected >= 0 ? (dreams[selected]?.preview || dreams[selected]?.dream) : undefined, kind: "front" },
+          { name: "Back_Label.svg", img: backPng || undefined, kind: "back" },
+          { name: "Product_Shot_Face.png", img: assets.front?.prev, kind: "front" },
+          { name: "Product_Shot_Back.png", img: assets.back?.prev, kind: "front" },
+          ...[0, 1, 2, 3, 4].map((i) => ({ name: `Marketing_Image_${i + 1}.jpg`, img: assets.life[i]?.prev, kind: "front" as const })),
+          { name: "Product_Page", landing: true, kind: "front" },
+        ];
+        const sl = slides[carIdx % slides.length];
+        const pgScale = (CAR.w - 40) / W;
         return (<>
-          {selected >= 0 && dreams[selected] ? (
+          {/* wipe the baked board below the title */}
+          {patch(0, 160, W, FOOTER_Y - 160, "cowipe")}
+          {dashedBox(CAR.x, CAR.y, CAR.w, CAR.h, "carD")}
+          {cross(CAR.x, CAR.y, "cc1")}{cross(CAR.x + CAR.w, CAR.y, "cc2")}
+          {cross(CAR.x, CAR.y + CAR.h, "cc3")}{cross(CAR.x + CAR.w, CAR.y + CAR.h, "cc4")}
+          {sl.landing ? (
+            productUrl && selected >= 0 ? (
+              <div style={{ ...px(CAR.x + 20, CAR.y + 14, CAR.w - 40, (CAR.w - 40) / W * 823 + 13), background: "#fff", borderRadius: 5, boxShadow: "0 8px 22px rgba(0,0,0,0.2)", overflow: "hidden" }}>
+                <div style={{ height: 13, background: "#E8E8E6", display: "flex", alignItems: "center", gap: 3, padding: "0 6px" }}>
+                  {["#FF5F57", "#FEBC2E", "#28C840"].map((c) => <span key={c} style={{ width: 4.5, height: 4.5, borderRadius: 3, background: c }} />)}
+                  <span style={{ flex: 1, margin: "0 8px", height: 7, background: "#fff", borderRadius: 3, font: `5px ${HNW}`, color: "#999", paddingLeft: 4, lineHeight: "7px" }}>8klabels.com{productUrl}</span>
+                </div>
+                <iframe src={productUrl} title="product page" style={{ width: W, height: 823, transform: `scale(${pgScale})`, transformOrigin: "0 0", border: 0, pointerEvents: "none" }} />
+              </div>
+            ) : notMade(CAR.x + 20, CAR.y + 20, CAR.w - 40, CAR.h - 60, "front", "nmCar")
+          ) : sl.img ? (
             /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={dreams[selected].preview || dreams[selected].dream} alt="front"
-              style={{ ...px(171, 279.3, 245.8, 163.8), objectFit: "contain" }} />
-          ) : notMade(171, 279.3, 245.8, 163.8, "front", "nmFront")}
-          {!backPng && (<>
-            {patch(452, 268, 230, 180, "bmock2e")}
-            {notMade(452, 280, 227, 160, "back", "nmBack")}
-          </>)}
-          {backPng && (<>
-            {/* slot 2 — cover the baked mock WITHOUT touching the dashed
-                divider at x685.7 (round 8 #12), centre the real back label
-                on the dashed band's midline (round 14 #8) */}
-            {patch(452, 268, 230, 180, "bmock2")}
-            {(() => {
-              const fit2 = fitIn(227, 160, backDims.w, backDims.h);
-              return (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={backPng} alt="back"
-                  style={{ ...px(452 + fit2.dx, 280 + fit2.dy, fit2.w, fit2.h), objectFit: "fill" }} />
-              );
-            })()}
-          </>)}
-          {/* slot-1 heading is OUTLINED in the artboard (not live text) —
-              covered and re-rendered so ENG/GEO both translate (2026-09-07) */}
-          {patch(136, 168, 185, 38, "slot1h")}
-          <span style={{ ...px(137.14, 183.93 - (IN_BASE - 2), 200, 16), font: `700 15px ${HNW}`, lineHeight: "16px" }}>{t("Front label")}</span>
-          <span style={{ ...px(137.14, 198.33 - 12.4, 300, 16), font: `12px ${HNW}`, lineHeight: "16px", whiteSpace: "nowrap" }}>{t("Print ready high resolution file")}</span>
-          {/* round 8 #14 / round 14 #9: real sizes instead of ???x???, in the
-              design's own 12px subtitle size on its baseline 227.13 */}
-          {patch(137, 214, 208, 19, "fmt1")}
-          {patch(445.7, 214, 208, 19, "fmt2")}
-          <span style={{ ...px(137.14, 227.13 - 12.4, 280, 16), font: `12px ${HNW}`, lineHeight: "16px" }}>
-            Tiff / {f.width || "110"}x{f.height || "80"}mm / 300dpi / CMYK</span>
-          <span style={{ ...px(445.71, 227.13 - 12.4, 280, 16), font: `12px ${HNW}`, lineHeight: "16px" }}>
-            SVG / {backDims.w > 1 ? Math.round((backDims.w / 300) * 25.4) : f.width || "110"}x{f.height || "80"}mm / 300dpi / CMYK</span>
-          {/* round 14 #2: slots 3-4 at the DESIGN's exact geometry — two tall
-              shots; marketing = hero square + a row of 4 small thumbs */}
-          {(() => {
-            const box = (x: number, y: number, w2: number, h2: number, it: { full: string; prev: string } | undefined, label: string, fit: "cover" | "contain", gal?: string[], fs = 10) =>
-              it ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img key={`${label}@${x}`} src={it.prev} alt={label}
-                  style={{ ...px(x, y, w2, h2), objectFit: fit }} />
-              ) : (
-                <button key={`${label}@${x}`} onClick={() => go("vision", -1)} style={{ ...px(x, y, w2, h2), background: "#ECECEA", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", font: `12px ${HNW}`, color: "#8a887e", textAlign: "center", textTransform: "none", padding: 3 }}>{label ? t("Create a front label first") : ""}</button>
-              );
-            const lifeG = assets.life.filter(Boolean).map((l) => l.full);
-            const shotG = [assets.front, assets.back].filter(Boolean).map((s) => s!.full);
-            const others = [0, 1, 2, 3, 4].filter((i) => i !== heroAsset);
-            return (<>
-              {box(688, 266.3, 97.6, 184.9, assets.front, "Shot: Face", "contain", shotG)}
-              {box(791.1, 265.7, 96.9, 185.4, assets.back, "Shot: Back", "contain", shotG)}
-              {box(925.71, 273.84, 137.9, 137.9, assets.life[heroAsset], "Context", "cover", lifeG)}
-              {[925.71, 963.75, 1001.89, 1040.03].map((tx, k) =>
-                box(tx, 422.44, 25.1, 25.1, assets.life[others[k]], "", "cover", lifeG))}
-              {productUrl && selected >= 0 ? (
-                <span key="pp">
-                  {/* browser-framed live page (owner's reference: soft shadow,
-                      traffic lights, URL bar), QR and the link below */}
-                  <div style={{ ...px(1112, 273, 178, 116), background: "#fff", borderRadius: 5, boxShadow: "0 10px 26px rgba(0,0,0,0.22)", overflow: "hidden" }}>
-                    <div style={{ height: 13, background: "#E8E8E6", display: "flex", alignItems: "center", gap: 3, padding: "0 6px" }}>
-                      {["#FF5F57", "#FEBC2E", "#28C840"].map((c) => <span key={c} style={{ width: 4.5, height: 4.5, borderRadius: 3, background: c }} />)}
-                      <span style={{ flex: 1, margin: "0 8px", height: 7, background: "#fff", borderRadius: 3, font: `5px ${HNW}`, color: "#999", paddingLeft: 4, lineHeight: "7px" }}>8klabels.com{productUrl}</span>
-                    </div>
-                    <iframe src={productUrl} title="product page" onLoad={() => setPpLoaded(true)} style={{ width: W, height: 823, transform: "scale(0.1236)", transformOrigin: "0 0", border: 0, pointerEvents: "none" }} />
-                    {/* round 30 #5: while the live page builds, the little
-                        wine glass fills in the thumb's centre */}
-                    {!ppLoaded && (
-                      <div style={{ position: "absolute", left: 0, top: 13, right: 0, bottom: 0, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        {miniGlass("ppload", ppFill)}
-                      </div>
-                    )}
-                  </div>
-                  {/* round 41 #18: QR at small-thumb size on the thumbs' line;
-                      "Copy the link" bottom-aligned to the QR, right-aligned
-                      to the browser frame's edge */}
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={`/api/qr?u=${encodeURIComponent(`https://8klabels.com${productUrl}`)}`} alt="QR"
-                    style={{ ...px(1112, 422.44, 25.1, 25.1) }} />
-                  {/* round 43: writeText is async — a bare try/catch never
-                      caught its rejection, so a blocked clipboard failed
-                      silently with no sign anything happened; now confirmed
-                      visually and with a textarea fallback */}
-                  <button onClick={() => {
-                    const link = `https://8klabels.com${productUrl}`;
-                    const done = () => { setLinkCopied(true); setTimeout(() => setLinkCopied(false), 1800); };
-                    navigator.clipboard?.writeText(link).then(done).catch(() => {
-                      try {
-                        const ta = document.createElement("textarea");
-                        ta.value = link; ta.style.position = "fixed"; ta.style.opacity = "0";
-                        document.body.appendChild(ta); ta.select(); document.execCommand("copy"); document.body.removeChild(ta);
-                        done();
-                      } catch { }
-                    });
-                  }}
-                    style={{ ...px(1150, 422.44 + 25.1 - 14, 140, 14), ...ghost, font: `italic 11px ${HNW}`, color: linkCopied ? "#3f6d2a" : "#111", textDecoration: "underline", textAlign: "right", textTransform: "none" }}>
-                    {linkCopied ? t("Copied ✓") : t("Copy the link")}</button>
-                </span>
-              ) : notMade(1112, 284, 176, 150, "front", "nmLanding")}
-            </>);
-          })()}
-          {/* round 8 #11/#15: the whole pricing block re-rendered 20.5px
-              higher — no top dashed rule, agree row lands on the back
-              arrow's line, ring+dot+text aligned by construction */}
-          {patch(130, 503, 1180, 240, "pricing")}
-          {(() => {
-            const SH = 20.5, B = IN_BASE - 2;   /* baseline offset in a 16px line */
-            const rows = [536.49, 570.78, 604.93, 639.35].map((y) => y - SH);
-            return (<>
-              {[548.84, 582.86, 617.14].map((y, i) => (
-                <div key={"dsh" + i} style={{ ...px(137.14, y - SH, 1302.47 - 137.14, 1), background: `repeating-linear-gradient(90deg,${DASH})` }} />
-              ))}
-              {PACK.map((it, i) => (
-                <span key={it.name}>
-                  <span style={{ ...px(171.43, rows[i] - B, 500, 16), font: `700 15px ${HNW}`, lineHeight: "16px" }}>{t(it.name)}</span>
-                  <span style={{ ...px(1152.9, rows[i] - B, 150, 16), font: `700 15px ${HNW}`, lineHeight: "16px", textAlign: "right", display: "block" }}>${it.price}</span>
-                  {dotBtn(144.64, rows[i] - 4.93, !!packSel[i], () => setPackSel((ps) => ps.map((v, k) => (k === i ? !v : v))), "pk" + i, { ring: true })}
-                </span>
-              ))}
-              {dotBtn(144.64, 686, agree, () => setAgree(!agree), "agree", { ring: true })}
-              <span style={{ ...px(171.43, 691.3 - B, 400, 16), font: `15px ${HNW}`, lineHeight: "16px" }}>{t("I agree to the")} <u>{t("Terms & Conditions")}</u></span>
-              <span style={{ ...px(852.24, 691.3 - B - 3, 240, 20), font: `700 19px ${HNW}`, lineHeight: "20px" }}>{t("TOTAL SUM:")} ${total}</span>
-              {/* paddingBottom 5 measured-in: HNW's tall ascent leaves the
-                  glyphs 2.5px low in a naively-centred flex line */}
-              <button onClick={proceedToPayment} style={{ ...px(1032, 669.5, 268, 32), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 0 5px" }}>{t("Proceed to payment")}</button>
-            </>);
-          })()}
-          <button aria-label="back" onClick={goBack} style={{ ...px(56, 664, 60, 44), ...ghost }} />
+            <img src={sl.img} alt={sl.name} style={{ ...px(CAR.x + 20, CAR.y + 16, CAR.w - 40, CAR.h - 56), objectFit: "contain" }} />
+          ) : notMade(CAR.x + 20, CAR.y + 20, CAR.w - 40, CAR.h - 60, sl.kind || "front", "nmCar")}
+          <span style={{ ...px(CAR.x, CAR.y + CAR.h - 24, CAR.w, 16), font: `12px ${HNW}`, color: "#111", textAlign: "center", display: "block" }}>{sl.name}</span>
+          <button aria-label="prev slide" onClick={() => setCarIdx((c) => (c + slides.length - 1) % slides.length)}
+            style={{ ...px(CAR.x + 12, CAR.y + CAR.h / 2 - 20, 34, 40), ...ghost, font: `300 26px ${HNW}`, color: "#111" }}>‹</button>
+          <button aria-label="next slide" onClick={() => setCarIdx((c) => (c + 1) % slides.length)}
+            style={{ ...px(CAR.x + CAR.w - 46, CAR.y + CAR.h / 2 - 20, 34, 40), ...ghost, font: `300 26px ${HNW}`, color: "#111" }}>›</button>
+          {/* pricing rows */}
+          {PACK.map((it, i) => {
+            const ry = 522 + i * 34;
+            return (
+              <span key={it.name}>
+                {i > 0 && <div style={{ ...px(CAR.x, ry - 17, CAR.w, 1), backgroundImage: `repeating-linear-gradient(90deg,${DASH})`, backgroundSize: "100% 1px", backgroundRepeat: "no-repeat" }} />}
+                {dotBtn(CAR.x + 14, ry, !!packSel[i], () => setPackSel((ps) => ps.map((v, k) => (k === i ? !v : v))), "pk" + i, { ring: true, r: 7.5 })}
+                <span style={{ ...px(CAR.x + 40, ry - 11, 340, 18), font: `15px ${HNW}`, lineHeight: "18px" }}>{t(it.name)}</span>
+                <span style={{ ...px(CAR.x + CAR.w - 120, ry - 11, 120, 18), font: `15px ${HNW}`, lineHeight: "18px", textAlign: "right", display: "block" }}>{"$" + it.price}</span>
+              </span>
+            );
+          })}
+          <span style={{ ...px(CAR.x + 40, 522 + 4 * 34 - 11, 200, 18), font: `700 16px ${HNW}`, lineHeight: "18px" }}>{t("Total:")}</span>
+          <span style={{ ...px(CAR.x + CAR.w - 140, 522 + 4 * 34 - 11, 140, 18), font: `700 16px ${HNW}`, lineHeight: "18px", textAlign: "right", display: "block" }}>{"$" + total}</span>
+          <button onClick={proceedToPayment}
+            style={{ ...px(CAR.x, 522 + 4 * 34 + 14, CAR.w, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
+            {t("Pay & Download")}</button>
+          <button aria-label="back" onClick={goBack} style={{ ...px(56, 664, 60, 44), ...ghost }}>
+            <svg viewBox="0 0 60 40" width="60" height="40"><line x1="47" y1="20" x2="13" y2="20" stroke="#000" strokeWidth="3" /><polyline points="23,9.5 12.5,20 23,30.5" fill="none" stroke="#000" strokeWidth="3" /></svg>
+          </button>
         </>);
+      }
+
       default:
         return null;
     }
@@ -1565,7 +1629,7 @@ export default function NewUI() {
   const step = STEP_OF[page];
   const thick = THICK[page];
   const bandBottom = BAND_BOTTOM[page];
-  const fullSlide = (page === "vision" && prev === "welcome") || page === "welcome";
+  const fullSlide = (page === "front" && prev === "welcome") || page === "welcome";
 
   return (
     <main style={{ background: "#000", minHeight: "100vh", margin: 0, padding: 0, maxWidth: "none", width: "100%" }}>
@@ -1678,43 +1742,36 @@ export default function NewUI() {
           {(thick !== null || (page === "checkout" && prev !== null)) && (
             <div style={{ ...px(0, 660, W, FOOTER_Y - 660), background: "#fff" }}>
               {thick === null ? null : (<>
-              <div style={{ ...px(137.14, 685.09 - 660, 1297.9 - 137.14, 1), background: "#111" }} />
-              <div style={{ ...px(142.06, 684.09 - 660, thick - 142.06, 3), background: "#111", transition: `width ${SLIDE_MS}ms ${EASE}` }} />
+              <div style={{ ...px(137.14, 685.09 - 660, 1303.41 - 137.14, 1), background: "#111" }} />
+              <div style={{ ...px(142.06, 684.09 - 660, thick - 142.06, 3), background: BAR_RED, transition: `width ${SLIDE_MS}ms ${EASE}` }} />
               {STEPS.map((st, i) => {
-                const r = st.big ? 4.9 : 3.1;
+                const on = step >= i;
                 return (
-                  /* round 41 #10: the dots navigate too */
+                  /* dots navigate (round 41 #10); reached dots are RED */
                   <button key={"d" + i} onClick={() => { if (st.page !== page) { barJumped.current = true; go(st.page, ORDER.indexOf(st.page) > ORDER.indexOf(page) ? 1 : -1); } }}
                     style={{ ...px(CIRCLE_X[i] - 12, 685.59 - 12 - 660, 24, 24), ...ghost }}>
-                    <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: r * 2, height: r * 2, borderRadius: r + 1, border: "1px solid #111", background: step >= i ? "#111" : "#fff", transition: `background 300ms ${EASE}`, boxSizing: "border-box" }} />
+                    <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 9.8, height: 9.8, borderRadius: 5, border: on ? "none" : "1px solid #111", background: on ? BAR_RED : "#fff", transition: `background 300ms ${EASE}`, boxSizing: "border-box" }} />
                   </button>
                 );
               })}
-              {STEPS.map((st, i) => {
-                /* hit zones must never overlap a neighbour (dot pitch 192.65) */
-                const pos: React.CSSProperties =
-                  i === 0 ? { left: 137.14, width: 120, textAlign: "left" }
-                  : i === STEPS.length - 1 ? { left: 1303 - 120, width: 120, textAlign: "right" }
-                  : { left: CIRCLE_X[i] - 85, width: 170, textAlign: "center" };
-                return (
-                  /* round 40 #3: every stage navigates to its page; jumping
-                     ahead never auto-generates (Not-yet-created placeholders) */
-                  <button key={st.label} onClick={() => { if (st.page !== page) { barJumped.current = true; go(st.page, ORDER.indexOf(st.page) > ORDER.indexOf(page) ? 1 : -1); } }}
-                    style={{ position: "absolute", top: 708.5 - 660, height: 18, ...pos, ...ghost, font: `${st.big ? 700 : 400} 15px ${HNW}`, color: "#111", lineHeight: "15px", textTransform: "none" }}>{t(st.label)}</button>
-                );
-              })}
+              {STEPS.map((st, i) => i > 0 && (
+                <button key={st.label} onClick={() => { if (st.page !== page) { barJumped.current = true; go(st.page, ORDER.indexOf(st.page) > ORDER.indexOf(page) ? 1 : -1); } }}
+                  style={{ position: "absolute", top: 708.5 - 660, height: 18, ...ghost, font: `700 15px ${HNW}`, color: "#111", lineHeight: "15px", textTransform: "none",
+                    ...(i === STEPS.length - 1 ? { left: 1303.41 - 260, width: 260, textAlign: "right" as const } : { left: CIRCLE_X[i] - 130, width: 260, textAlign: "center" as const }) }}>
+                  {t(st.label)}</button>
+              ))}
               {/* back arrow */}
               {(
                 <button aria-label="back" onClick={() => { barJumped.current = false; goBack(); }} style={{ ...px(56, 666 - 660, 60, 40), ...ghost }}>
                   <svg viewBox="0 0 60 40" width="60" height="40"><line x1="47" y1="20" x2="13" y2="20" stroke="#000" strokeWidth="3" /><polyline points="23,9.5 12.5,20 23,30.5" fill="none" stroke="#000" strokeWidth="3" /></svg>
                 </button>
               )}
-              {/* forward arrow */}
-              <button aria-label="next"
+              {/* forward arrow — RED, hidden while the loader runs */}
+              {page !== "loader" && <button aria-label="next"
                 onClick={() => {
                   barJumped.current = false;
-                  if (page === "vision") go("front");
-                  else if (page === "front") nextFromFront();
+                  if (page === "front") go("vision");
+                  else if (page === "vision") nextFromFront();
                   else if (page === "options") {
                     /* round 7 #12: warn instead of silently ignoring */
                     if (selected >= 0) go("backdetails");
@@ -1730,8 +1787,8 @@ export default function NewUI() {
                   else if (page === "assets") go("checkout");
                 }}
                 style={{ ...px(1324, 666 - 660, 60, 40), ...ghost }}>
-                <svg viewBox="0 0 60 40" width="60" height="40"><line x1="13" y1="20" x2="47" y2="20" stroke="#000" strokeWidth="3" /><polyline points="37,9.5 47.5,20 37,30.5" fill="none" stroke="#000" strokeWidth="3" /></svg>
-              </button>
+                <svg viewBox="0 0 60 40" width="60" height="40"><line x1="13" y1="20" x2="47" y2="20" stroke={BAR_RED} strokeWidth="3" /><polyline points="37,9.5 47.5,20 37,30.5" fill="none" stroke={BAR_RED} strokeWidth="3" /></svg>
+              </button>}
               </>)}
             </div>
           )}
@@ -1739,7 +1796,7 @@ export default function NewUI() {
           {/* welcome→vision: the arrow flies right while the page slides (owner #3) */}
           {arrowFly && (
             <div style={{ position: "absolute", top: 662, left: 122, width: 60, height: 48, animation: `arrowFly ${SLIDE_MS}ms ${EASE} forwards`, pointerEvents: "none", zIndex: 6 }}>
-              <svg viewBox="0 0 60 40" width="60" height="40"><line x1="13" y1="24" x2="47" y2="24" stroke="#000" strokeWidth="3" /><polyline points="37,13.5 47.5,24 37,34.5" fill="none" stroke="#000" strokeWidth="3" /></svg>
+              <svg viewBox="0 0 60 40" width="60" height="40"><line x1="13" y1="24" x2="47" y2="24" stroke={BAR_RED} strokeWidth="3" /><polyline points="37,13.5 47.5,24 37,34.5" fill="none" stroke={BAR_RED} strokeWidth="3" /></svg>
             </div>
           )}
 
