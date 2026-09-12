@@ -67,11 +67,15 @@ const STEPS: { label: string; page: PageKey }[] = [
   { label: "Back Label", page: "backdetails" },
   { label: "Marketing Assets", page: "assets" },
 ];
-/* red-line endpoint per page (null = no bar) */
+/* red-line endpoint per page (null = no bar). ROUND 46 (owner: "Red line
+   must grow in thirds"): each dot-to-dot segment splits EVENLY by its page
+   count — segment 1 (front 1/3, vision 2/3), segment 2 (backdetails 1/3,
+   compliance 2/3), segment 3 (bottle 1/2). On assets the red line ends
+   flush with the last circle's right edge (1297.96 + 4.9). */
 const THICK: Record<PageKey, number | null> = {
-  welcome: null, front: 200, vision: 330, loader: 527.36, options: 527.36,
-  backdetails: 660, compliance: 810, backdesign: 912.66, bottle: 1105,
-  assets: 1303.41, checkout: null,
+  welcome: null, front: 270.49, vision: 398.93, loader: 527.36, options: 527.36,
+  backdetails: 655.79, compliance: 784.23, backdesign: 912.66, bottle: 1108.04,
+  assets: 1302.86, checkout: null,
 };
 /* highest station index REACHED — that dot (and earlier ones) turn red */
 const STEP_OF: Record<PageKey, number> = { welcome: 0, front: 0, vision: 0, loader: 0, options: 1, backdetails: 1, compliance: 1, backdesign: 2, bottle: 2, assets: 3, checkout: 3 };
@@ -675,6 +679,7 @@ export default function NewUI() {
     if (dreams.length && frontSig === sigFront()) { go("options"); return; }
     go("loader");
     setGenProgress(0);
+    const genT0 = Date.now();   /* round 46: feed the loader's REAL average */
     const aspect = (Number(f.width) || 110) / (Number(f.height) || 80);
     const aspectKey = aspect > 1.15 ? "landscape" : aspect < 0.87 ? "portrait" : "square";
     const fx = (k: string) => f[k]?.trim() || DEMO_FRONT[k] || "";
@@ -735,6 +740,13 @@ export default function NewUI() {
          fresh order code too, so a later publish never reuses the old one. */
       setProductUrl(""); productCode.current = Math.random().toString(36).slice(2, 10);
       try { localStorage.removeItem("nui-product-code"); } catch { }
+      /* round 46 (owner: "calculate real average"): remember how long the
+         full set really took — the loader note averages the last 10 runs */
+      try {
+        const s = (JSON.parse(localStorage.getItem("nui-gen-secs") || "[]") as number[]).filter((n) => Number.isFinite(n));
+        s.push(Math.round((Date.now() - genT0) / 1000));
+        localStorage.setItem("nui-gen-secs", JSON.stringify(s.slice(-10)));
+      } catch { }
       go("options");
     } catch (e) {
       alert(e instanceof Error ? e.message : String(e));
@@ -1078,7 +1090,18 @@ export default function NewUI() {
             ))}
           </span>
           <span style={{ ...px(0, 522, W, 18), font: `italic 13px ${HNW}`, color: "#555", textAlign: "center", display: "block" }}>
-            {t("Please stay on this page — preparing your labels usually takes 15–35 seconds.")}
+            {(() => {
+              /* round 46 (owner: "calculate real average"): once real runs
+                 exist, the estimate is their measured average */
+              let avg = 0;
+              try {
+                const s = (JSON.parse(localStorage.getItem("nui-gen-secs") || "[]") as number[]).filter((n) => Number.isFinite(n) && n > 0);
+                if (s.length) avg = Math.round(s.reduce((a, b2) => a + b2, 0) / s.length);
+              } catch { }
+              return avg
+                ? t("Please stay on this page — preparing your labels usually takes about {N} seconds.").replace("{N}", String(avg))
+                : t("Please stay on this page — preparing your labels usually takes 15–35 seconds.");
+            })()}
           </span>
         </>);
       }
@@ -1125,12 +1148,24 @@ export default function NewUI() {
               </div>
             );
           })}
-          {/* variations still rendering → glasses in the empty frames */}
-          {optPage === 1 && OPT_FRAMES.map((fr, fi) => !dreams[3 + fi] && (
-            <div key={"vg" + fi} style={{ ...px(fr.x, AREA_TOP, OPT_W, 288), background: "#F4F3EE", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              {varBusy ? miniGlass("var" + fi, Math.min(0.9, 0.14 + ((Date.now() - varT.current) / 45000) * 0.75 + tick * 0)) : null}
-            </div>
-          ))}
+          {/* variations still rendering → glasses in the empty frames.
+              ROUND 46 (owner: "we already know the size of the label —
+              match the placeholders to real labels"): the grey box takes
+              the varied style's real label shape, not a generic square */}
+          {optPage === 1 && (() => {
+            const si = ["traditional", "contemporary", "punk"].indexOf(varStyle);
+            const nat = si >= 0 ? imgDims[si] : undefined;
+            const ar = nat ? nat.w / nat.h : (Number(f.width) || 110) / (Number(f.height) || 80);
+            let lw: number, lh: number;
+            if (ar >= 1) { lw = OPT_W; lh = OPT_W / ar; if (lh > AREA_BOT - AREA_TOP) { lh = AREA_BOT - AREA_TOP; lw = lh * ar; } }
+            else { lh = AREA_BOT - AREA_TOP; lw = lh * ar; if (lw > OPT_W - 2 * CUBE) { lw = OPT_W - 2 * CUBE; lh = lw / ar; } }
+            const ly = AREA_TOP + (ar >= 1 ? 0 : (AREA_BOT - AREA_TOP - lh) / 2);
+            return OPT_FRAMES.map((fr, fi) => !dreams[3 + fi] && (
+              <div key={"vg" + fi} style={{ ...px(fr.x + (OPT_W - lw) / 2, ly, lw, lh), background: "#F4F3EE", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {varBusy ? miniGlass("var" + fi, Math.min(0.9, 0.14 + ((Date.now() - varT.current) / 45000) * 0.75 + tick * 0)) : null}
+              </div>
+            ));
+          })()}
           {dreams.length === 0 && OPT_FRAMES.map((fr, i) =>
             notMade(fr.x, OPT_TOP, OPT_W, OPT_BOT - OPT_TOP, "front", "nmopt" + i))}
           {/* round 45: one-shot "Create {Style} Variations" buttons — after
@@ -1150,15 +1185,28 @@ export default function NewUI() {
               <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 9, height: 9, borderRadius: 5, border: "1px solid #111", background: optPage === 1 ? "#111" : "#fff", boxSizing: "border-box" }} />
             </button>
           </>)}
-          {/* Select {Style} radios — always pick the style's FIRST label */}
-          {dreams.length > 0 && OPT_FRAMES.map((fr, fi) => (
-            <span key={"sr" + fi}>
-              {dotBtn(fr.x + OPT_W / 2 - 78, 634, selected >= 0 && dreams[selected]?.style === STYLE_NAMES[fi].toLowerCase(), () => { setSelected(fi); setOptPage(0); setWarn(""); }, "srad" + fi, { ring: true, r: 7.5 })}
-              <button onClick={() => { setSelected(fi); setOptPage(0); setWarn(""); }}
-                style={{ ...px(fr.x + OPT_W / 2 - 60, 634 - 12, 180, 24), ...ghost, font: `700 15px ${HNW}`, color: "#111", textAlign: "left", textTransform: "none", lineHeight: "24px" }}>
-                {t("Select " + STYLE_NAMES[fi])}</button>
-            </span>
-          ))}
+          {/* Select radios. ROUND 46 (owner: "middle label is selected and
+              wrong circle is selected"): the filled circle follows the
+              selected IMAGE by index — page 1 marks first labels, the
+              variations page marks variations, labeled "Select {Style} N".
+              Ring + label ride ONE centered flex row so the pair is
+              centered under its column and the text sits on the circle's
+              line (owner: "push a bit up", "center"). */}
+          {dreams.length > 0 && OPT_FRAMES.map((fr, fi) => {
+            const on = selected === base + fi;
+            const lbl = optPage === 1
+              ? t("Select " + varStyle.charAt(0).toUpperCase() + varStyle.slice(1)) + " " + (fi + 1)
+              : t("Select " + STYLE_NAMES[fi]);
+            return (
+              <button key={"sr" + optPage + fi} onClick={() => { if (!dreams[base + fi]) return; setSelected(base + fi); setWarn(""); }}
+                style={{ ...px(fr.x, 634 - 13, OPT_W, 26), ...ghost, display: "flex", alignItems: "center", justifyContent: "center", columnGap: 10, textTransform: "none", cursor: "pointer" }}>
+                <span style={{ position: "relative", width: 15, height: 15, borderRadius: "50%", border: "2px solid #111", background: "#fff", boxSizing: "border-box", flex: "0 0 auto" }}>
+                  {on && <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 7.5, height: 7.5, borderRadius: "50%", background: "#111" }} />}
+                </span>
+                <span style={{ font: `700 15px ${HNW}`, color: "#111", lineHeight: "15px" }}>{lbl}</span>
+              </button>
+            );
+          })}
           {/* round 7 #12: gate message when proceeding without a selection */}
           {warn && (
             <span style={{ ...px(0, 632, W, 18), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block" }}>{warn}</span>
@@ -1511,32 +1559,34 @@ export default function NewUI() {
             <span style={{ ...px(857, 232 - 12, 440, 16), font: `italic 12px ${HNW}`, color: "#BA141A", lineHeight: "15px" }}>
               {t("Creating your marketing assets")} — {tStage(assetsStage)}…</span>
           )}
-          {/* column frames */}
-          {dashedBox(137.5, 272, 271.5, 344, "asd1")}
-          {dashedBox(411, 272, 424, 344, "asd2")}
-          {dashedBox(857, 272, 446, 344, "asd3")}
-          {cross(137.5, 272, "as1")}{cross(409, 272, "as2")}{cross(137.5, 616, "as3")}{cross(409, 616, "as4")}
-          {cross(411, 272, "as5")}{cross(835, 272, "as6")}{cross(411, 616, "as7")}{cross(835, 616, "as8")}
-          {cross(857, 272, "as9")}{cross(1303, 272, "as10")}{cross(857, 616, "as11")}{cross(1303, 616, "as12")}
+          {/* column frames — ROUND 46 (owner: "there should be one line,
+              not two"): ONE outer dashed frame with single dashed
+              dividers between columns instead of three touching boxes */}
+          {dashedBox(137.5, 272, 1165.5, 344, "asd1")}
+          <div style={{ ...px(410, 272, 1, 344), background: `repeating-linear-gradient(180deg,${DASH})`, pointerEvents: "none" }} />
+          <div style={{ ...px(846, 272, 1, 344), background: `repeating-linear-gradient(180deg,${DASH})`, pointerEvents: "none" }} />
+          {cross(137.5, 272, "as1")}{cross(410, 272, "as2")}{cross(846, 272, "as3")}{cross(1303, 272, "as4")}
+          {cross(137.5, 616, "as5")}{cross(410, 616, "as6")}{cross(846, 616, "as7")}{cross(1303, 616, "as8")}
           {/* col 1: two tall shots */}
           {slot(148, 285, 120, 318, assets.front, "front shot", "contain")}
           {slot(278, 285, 120, 318, assets.back, "back shot", "contain")}
-          {/* col 2: hero + vertical strip; small thumbs swap into the hero */}
-          {slot(422, 285, 274, 318, assets.life[order[0]], `lifestyle ${order[0] + 1}/5`, "cover")}
+          {/* col 2: hero + vertical strip, centered in its column (round 46);
+              small thumbs swap into the hero */}
+          {slot(449, 285, 274, 318, assets.life[order[0]], `lifestyle ${order[0] + 1}/5`, "cover")}
           {[0, 1, 2, 3].map((k) => {
             const idx = order[k + 1];
             const it = assets.life[idx];
             const y = 285 + k * 81;
             return (
               <span key={"sm" + k}>
-                {slot(706, y, 74, 74, it, `lifestyle ${idx + 1}/5`, "cover")}
-                {it && <button onClick={() => setHeroAsset(idx)} style={{ ...px(706, y, 74, 74), ...ghost }} />}
+                {slot(733, y, 74, 74, it, `lifestyle ${idx + 1}/5`, "cover")}
+                {it && <button onClick={() => setHeroAsset(idx)} style={{ ...px(733, y, 74, 74), ...ghost }} />}
               </span>
             );
           })}
-          {/* col 3: BIG landing browser */}
+          {/* col 3: BIG landing browser, centered in its column (round 46) */}
           {productUrl && selected >= 0 ? (
-            <div style={{ ...px(872, 290, 416, 251), background: "#fff", borderRadius: 6, boxShadow: "0 10px 26px rgba(0,0,0,0.22)", overflow: "hidden" }}>
+            <div style={{ ...px(866.5, 318.5, 416, 251), background: "#fff", borderRadius: 6, boxShadow: "0 10px 26px rgba(0,0,0,0.22)", overflow: "hidden" }}>
               <div style={{ height: 15, background: "#E8E8E6", display: "flex", alignItems: "center", gap: 3, padding: "0 7px" }}>
                 {["#FF5F57", "#FEBC2E", "#28C840"].map((c) => <span key={c} style={{ width: 5, height: 5, borderRadius: 3, background: c }} />)}
                 <span style={{ flex: 1, margin: "0 8px", height: 8, background: "#fff", borderRadius: 4, font: `6px ${HNW}`, color: "#999", paddingLeft: 5, lineHeight: "8px" }}>8klabels.com{productUrl}</span>
@@ -1549,7 +1599,7 @@ export default function NewUI() {
               )}
             </div>
           ) : (
-            <div style={{ ...px(872, 290, 416, 251), background: assetsStage ? "#F4F3EE" : "#ECECEA", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ ...px(866.5, 318.5, 416, 251), background: assetsStage ? "#F4F3EE" : "#ECECEA", display: "flex", alignItems: "center", justifyContent: "center" }}>
               {assetsStage ? miniGlass("landing", Math.min(0.9, assetFill("lifestyle 5/5"))) :
                 <button onClick={() => go("vision", -1)} style={{ ...ghost, position: "relative", width: "100%", height: "100%", font: `12px ${HNW}`, color: "#8a887e", textTransform: "none", cursor: "pointer" }}>{t("Create a front label first")}</button>}
             </div>
@@ -1742,7 +1792,8 @@ export default function NewUI() {
           {(thick !== null || (page === "checkout" && prev !== null)) && (
             <div style={{ ...px(0, 660, W, FOOTER_Y - 660), background: "#fff" }}>
               {thick === null ? null : (<>
-              <div style={{ ...px(137.14, 685.09 - 660, 1303.41 - 137.14, 1), background: "#111" }} />
+              {/* round 46: baseline ends where the last circle ends */}
+              <div style={{ ...px(137.14, 685.09 - 660, 1302.86 - 137.14, 1), background: "#111" }} />
               <div style={{ ...px(142.06, 684.09 - 660, thick - 142.06, 3), background: BAR_RED, transition: `width ${SLIDE_MS}ms ${EASE}` }} />
               {STEPS.map((st, i) => {
                 const on = step >= i;
@@ -1760,8 +1811,8 @@ export default function NewUI() {
                     ...(i === STEPS.length - 1 ? { left: 1303.41 - 260, width: 260, textAlign: "right" as const } : { left: CIRCLE_X[i] - 130, width: 260, textAlign: "center" as const }) }}>
                   {t(st.label)}</button>
               ))}
-              {/* back arrow */}
-              {(
+              {/* back arrow — hidden while the loader runs (round 46) */}
+              {page !== "loader" && (
                 <button aria-label="back" onClick={() => { barJumped.current = false; goBack(); }} style={{ ...px(56, 666 - 660, 60, 40), ...ghost }}>
                   <svg viewBox="0 0 60 40" width="60" height="40"><line x1="47" y1="20" x2="13" y2="20" stroke="#000" strokeWidth="3" /><polyline points="23,9.5 12.5,20 23,30.5" fill="none" stroke="#000" strokeWidth="3" /></svg>
                 </button>

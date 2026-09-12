@@ -182,6 +182,7 @@ export const UI_GE: Record<string, string> = {
   "words": "სიტყვა",
   "Designing your label": "თქვენი ეტიკეტი მზადდება",
   "Please stay on this page — preparing your labels usually takes 15–35 seconds.": "გთხოვთ, დარჩეთ ამ გვერდზე — ეტიკეტების მომზადებას საშუალოდ 30 წამი სჭირდება.",
+  "Please stay on this page — preparing your labels usually takes about {N} seconds.": "გთხოვთ, დარჩეთ ამ გვერდზე — ეტიკეტების მომზადებას საშუალოდ {N} წამი სჭირდება.",
   "Select": "არჩევა",
   "Selected": "არჩეულია",
   "Select a label design to continue": "გასაგრძელებლად აირჩიეთ ეტიკეტის დიზაინი",

@@ -1990,6 +1990,37 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 46 (owner's New_Progressbar folder, 12 annotated refinement
+  screenshots on the Round-45 build): (1) "Red line must grow in
+  thirds" — THICK now splits every dot-to-dot segment EVENLY by its
+  page count: front 270.49 / vision 398.93 (segment 1 thirds),
+  backdetails 655.79 / compliance 784.23 (segment 2 thirds), bottle
+  1108.04 (segment 3 half). (2) assets: red line AND thin baseline
+  end flush with the last circle's right edge (1302.86 = 1297.96 +
+  4.9) — "line and circle right edge must be aligned". (3) loader:
+  back arrow HIDDEN (green X on mock; forward was already hidden)
+  and the "15–35 seconds" note becomes a REAL measured average —
+  nextFromFront stores each successful set's duration in
+  localStorage 'nui-gen-secs' (last 10), the loader note averages
+  them ("usually takes about {N} seconds."), falls back to 15–35
+  until a first run exists. (4) options radios REBUILT: filled
+  circle follows the selected IMAGE by index (selected === base+fi;
+  owner's bug: middle label selected but wrong circle filled —
+  style-based marking broke on variations where all 3 share one
+  style); ring (15px, 2px border) + label ride ONE centered flex
+  row per column (owner: "center", "push a bit up to be on the same
+  line as circle"); variations page labels are numbered "Select
+  {Style} 1/2/3"; clicking selects within the CURRENT page, no
+  auto-flip to page 1. (5) variations loading placeholders take the
+  varied style's real label shape (imgDims of that style's first
+  label, form-dims fallback) instead of a generic square. (6)
+  assets columns: ONE outer dashed frame + single vertical dashed
+  dividers at x 410/846 ("one line, not two"), crosses on the
+  divider ends; hero+thumb group centered in col 2 (hero x 449,
+  thumbs x 733); landing preview centered in col 3 (866.5, 318.5).
+  Verified with mock-provider Playwright flow (thirds on every
+  page, index radios both pages, numbered variation labels,
+  real-shape placeholders, single dividers, loader without arrows).
 - ROUND 45 (owner's New_Progressbar mock folder — MAJOR redesign,
   4 answers confirmed): (1) PAGE ORDER CHANGED: front (details)
   FIRST, Your Vision second — generation fires from vision's next;
