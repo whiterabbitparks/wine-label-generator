@@ -1990,6 +1990,28 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 53 (owner, 8 items, 2026-09-12): (1) the gens top-up card
+  keeps an EMPTY thumbnail box (live dashedBox+crosses at 480,137.14,
+  480x274.29 — owner sends its image later), full baked rhythm
+  centered (dx -342.86, dy 0). (2) credits indicator = bold 15 at the
+  title line, digit in BAR_RED, shown on every options page; the
+  "{Style} — Variations" header moved UNDER the page title (left,
+  183.62 baseline). (3) style-correlation audited (click → modal →
+  createVariations → API passes the style verbatim; pages label
+  themselves from varRuns) and repeated styles number their pages
+  "… 02", "… 03". (4) back label: QR renders ONLY when uploaded or
+  requested (no more d.web/example fallback), "See ingredients"
+  exists only beside a real QR, BOTTLED slides to x4 without one;
+  client sends qrImage/qrUrl only for its chosen mode. (5) assets:
+  qrMode !== "create" → landing column DIES and the thirds layout
+  (2×2 145px thumbs, group centered right) applies with BOTH shots
+  centered in the left third (divider between them). (6) the T&C
+  ring resets to unchecked on EVERY checkout entry. (7) no
+  Product_Page carousel slide unless qrMode === "create". (8) bar
+  words jump to RESULT pages (Front Label → options, Back Label →
+  backdesign); empty options/backdesign show the real furniture
+  greyed & inert (#ECECEA fills, #C9C7BF rings/text); "Create a
+  front label first" navigates to the front DETAILS page.
 - ROUND 52 (owner, 4 items, 2026-09-12): (1) EVERY pay path
   (standard, own-label, gens top-up) gates on the T&C ring —
   requireAgree() shows "Agree to the Terms & Conditions to continue"

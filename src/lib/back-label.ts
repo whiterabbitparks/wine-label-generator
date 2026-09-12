@@ -299,14 +299,19 @@ export async function composeBackLabel(
   /* round 18 #3: QR ink runs EXACTLY from the ground-colour line (61.5) to
      the barcode digits' baseline (76.5) — margin 0, size 15.0 */
   const qrS = 15.0, qrX = 4, qrY = BAND_TOP;
+  /* ROUND 53 #4 (owner: a QR appeared without asking for one): the QR
+     renders ONLY when the customer uploaded one or asked us to create
+     one (qrUrl arrives only then) — no fallback URL, and the
+     "See ingredients" caption exists only next to a real QR. */
+  const hasQr = !!(d.qrImage || d.qrUrl);
   if (d.qrImage) {
     body += `<image x="${(qrX * s).toFixed(2)}" y="${(qrY * s).toFixed(2)}" width="${(qrS * s).toFixed(2)}" height="${(qrS * s).toFixed(2)}" href="${d.qrImage}"/>`;
-  } else {
-    const qrPng = await QRCode.toDataURL(d.qrUrl || d.web || "https://8klabels.example", { margin: 0, width: 300 });
+  } else if (d.qrUrl) {
+    const qrPng = await QRCode.toDataURL(d.qrUrl, { margin: 0, width: 300 });
     body += `<image x="${(qrX * s).toFixed(2)}" y="${(qrY * s).toFixed(2)}" width="${(qrS * s).toFixed(2)}" height="${(qrS * s).toFixed(2)}" href="${qrPng}"/>`;
   }
-  if (d.bottlingDate) body += T(21.3, 65.5, 7.7 * PT, `BOTTLED: ${d.bottlingDate}`);
-  body += T(21.2, 76.0, S7, "See ingredients");
+  if (d.bottlingDate) body += T(hasQr ? 21.3 : 4, 65.5, 7.7 * PT, `BOTTLED: ${d.bottlingDate}`);
+  if (hasQr) body += T(21.2, 76.0, S7, "See ingredients");
   /* ROUND 27: no invented digits — the EAN renders ONLY from a real GTIN
      the winery typed (or a legacy uploaded image); otherwise the right
      side of the codes band stays clean (empty-fields-disappear law) */

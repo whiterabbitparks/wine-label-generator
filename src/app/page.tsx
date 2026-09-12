@@ -62,10 +62,11 @@ type PageKey = (typeof ORDER)[number];
    page by page; a station's dot turns red when its group is reached. */
 const BAR_RED = "#BA141A";
 const CIRCLE_X = [142.06, 527.36, 912.66, 1297.96];
+/* round 53 #8 (owner): the bar words jump to the RESULT pages */
 const STEPS: { label: string; page: PageKey }[] = [
   { label: "", page: "front" },
-  { label: "Front Label", page: "front" },
-  { label: "Back Label", page: "backdetails" },
+  { label: "Front Label", page: "options" },
+  { label: "Back Label", page: "backdesign" },
   { label: "Marketing Assets", page: "assets" },
 ];
 /* red-line endpoint per page (null = no bar). ROUND 46 (owner: "Red line
@@ -498,6 +499,8 @@ export default function NewUI() {
      ROUND 47: an own-label order preselects ONLY Marketing Assets. */
   useEffect(() => {
     if (page !== "checkout") return;
+    /* ROUND 53 #6 (owner): the T&C ring starts UNCHECKED — always */
+    setAgree(false);
     if (customLabel) setPackSel([false, false, true, false]);
     else setPackSel((ps) => [ps[0], qrMode !== "upload", ps[2], false]);
   }, [page, qrMode, customLabel]);
@@ -899,8 +902,10 @@ export default function NewUI() {
         bottlingDate: b.bottlingDate || "", lot: b.lot || "", web: b.web || "",
         alcohol: (f.alcohol || "12.5").replace("%", ""), volume: (f.volume || "750").replace(/\D/g, "") || "750",
         countryOfOrigin: (f.regionCountry || DEMO_FRONT.regionCountry).split(",")[1]?.trim() || "",
-        barcodeDigits: gtinValid ? gtinNorm : "", qrImage: qrImg,
-        qrUrl: `https://8klabels.com/p/${productCode.current}`,
+        barcodeDigits: gtinValid ? gtinNorm : "",
+        /* round 53 #4: QR data travels ONLY when the customer chose one */
+        qrImage: qrMode === "upload" ? qrImg : "",
+        qrUrl: qrMode === "create" ? `https://8klabels.com/p/${productCode.current}` : "",
       },
       markets, heightMM: Number(f.height) || 80, bgColor: bg,
     };
@@ -960,7 +965,7 @@ export default function NewUI() {
   /* round 41 #4/#5/#11: grey placeholder — clickable, takes you where the
      missing thing is created; message in the 12px subtitle size */
   const notMade = (x: number, y: number, w: number, h: number, kind: "front" | "back" = "front", key?: string, msg = true) => (
-    <button key={key} onClick={() => go(kind === "front" ? "vision" : "backdetails", -1)}
+    <button key={key} onClick={() => go(kind === "front" ? "front" : "backdetails", -1)}
       style={{ ...px(x, y, w, h), background: "#ECECEA", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", font: `12px ${HNW}`, color: "#8a887e", textAlign: "center", textTransform: "none", padding: 4 }}>
       {msg ? t(kind === "front" ? "Create a front label first" : "Create a back label first") : ""}
     </button>
@@ -1259,16 +1264,23 @@ export default function NewUI() {
             <span style={{ ...px(136.97, 183.62 - 15.5, 500, 20), font: `15px ${HNW}`, color: "#111", lineHeight: "20px" }}>
               {t("Variations are limited, so choose wisely.")}</span>
           )}
-          {/* ROUND 50 #2: generation-credit balance (placement = my
-              proposal, owner to comment) */}
-          {optPage === 0 && varRuns.length > 0 && (
-            <span style={{ ...px(903, 149.08 - 15.5, 400, 20), font: `italic 12px ${HNW}`, color: "#8a8a8a", lineHeight: "20px", textAlign: "right", display: "block" }}>
-              {t("Generations available:")} {genCredits}</span>
+          {/* ROUND 53 #2 (owner): the balance rides the title line in the
+              variations-header style — bold 15, the digit progress-red */}
+          {varRuns.length > 0 && (
+            <span style={{ ...px(903, 149.08 - 15.5, 400, 20), font: `700 15px ${HNW}`, lineHeight: "20px", textAlign: "right", display: "block" }}>
+              {t("Generations available:")} <span style={{ color: BAR_RED }}>{genCredits}</span></span>
           )}
-          {optPage >= 1 && (() => { const st = varRuns[optPage - 1] || ""; return (
-            <span style={{ ...px(703.41, 149.08 - 15.5, 600, 20), font: `700 15px ${HNW}`, lineHeight: "20px", textAlign: "right", display: "block" }}>
-              {t(st.charAt(0).toUpperCase() + st.slice(1))} — {t("Variations")}</span>
-          ); })()}
+          {/* ROUND 53 #2/#3: header sits UNDER the page title; repeated
+              styles number their pages 02, 03… */}
+          {optPage >= 1 && (() => {
+            const st = varRuns[optPage - 1] || "";
+            const occ = varRuns.slice(0, optPage - 1).filter((v) => v === st).length;
+            const suffix = occ > 0 ? " " + String(occ + 1).padStart(2, "0") : "";
+            return (
+              <span style={{ ...px(136.97, 183.62 - 15.5, 600, 20), font: `700 15px ${HNW}`, lineHeight: "20px" }}>
+                {t(st.charAt(0).toUpperCase() + st.slice(1))} — {t("Variations")}{suffix}</span>
+            );
+          })()}
           {OPT_FRAMES.map((fr, fi) => {
             const i = base + fi;
             const d = dreams[i];
@@ -1311,6 +1323,18 @@ export default function NewUI() {
           })()}
           {dreams.length === 0 && OPT_FRAMES.map((fr, i) =>
             notMade(fr.x, OPT_TOP, OPT_W, OPT_BOT - OPT_TOP, "front", "nmopt" + i))}
+          {/* ROUND 53 #8: a bar-jump before generation shows the REAL page
+              furniture, deactivated and grey */}
+          {dreams.length === 0 && OPT_FRAMES.map((fr, fi) => (
+            <span key={"grey" + fi}>
+              <div style={{ ...px(fr.x + 0.2, 565, OPT_W, 34.3), background: "#ECECEA", color: "#B3B1A8", font: `12px ${HNW}`, letterSpacing: 0.3, display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
+                {t("Create " + STYLE_NAMES[fi] + " Variations")}</div>
+              <div style={{ ...px(fr.x, 634 - 13, OPT_W, 26), display: "flex", alignItems: "center", justifyContent: "center", columnGap: 10 }}>
+                <span style={{ width: 15, height: 15, borderRadius: "50%", border: "2px solid #C9C7BF", background: "#fff", boxSizing: "border-box" }} />
+                <span style={{ font: `700 15px ${HNW}`, color: "#C9C7BF", lineHeight: `${fm.a + fm.d}px`, transform: `translateY(${(17 - ((26 - (fm.a + fm.d)) / 2 + fm.a)).toFixed(2)}px)` }}>{t("Select")}</span>
+              </div>
+            </span>
+          ))}
           {/* ROUND 49 #2 (owner): the "Create {Style} Variations" buttons
               STAY after a run — the first run is free, later runs go
               through the email gate (requestVariations) */}
@@ -1540,7 +1564,19 @@ export default function NewUI() {
           {/* cover baked mock + its corner crosses + Edit/magnifier row */}
           {patch(BD_AREA.x - 12, BD_AREA.y - 12, BD_AREA.w + 24, BD_AREA.h + 24, "bdmock")}
           {patch(546, 546, 350, 40, "bdrow")}
-          {!backPng && notMade(BD_AREA.x, BD_AREA.y, BD_AREA.w, BD_AREA.h, "back", "nmbd")}
+          {!backPng && (<>
+            {notMade(BD_AREA.x, BD_AREA.y, BD_AREA.w, BD_AREA.h, "back", "nmbd")}
+            {/* round 53 #8: deactivated grey furniture on the empty page */}
+            <div style={{ position: "absolute", left: BD_AREA.x, top: 559, width: BD_AREA.w, display: "flex", justifyContent: "center", alignItems: "baseline", columnGap: 24, pointerEvents: "none" }}>
+              {(["Width:", "Height:"] as const).map((cap) => (
+                <span key={cap} style={{ display: "flex", alignItems: "baseline" }}>
+                  <span style={{ font: `700 14px ${HNW}`, lineHeight: "15px", color: "#C9C7BF" }}>{t(cap)}</span>
+                  <span style={{ font: `italic 14px ${HNW}`, lineHeight: "15px", marginLeft: 4, color: "#C9C7BF" }}>— {t("mm")}</span>
+                </span>
+              ))}
+            </div>
+            <div style={{ ...px(548.6, 589, 341.4, 34.3), background: "#ECECEA", color: "#B3B1A8", font: `12px ${HNW}`, letterSpacing: 0.3, display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>{t("Edit")}</div>
+          </>)}
           {backPng && (<>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={backPng} alt="back label"
@@ -1759,17 +1795,21 @@ export default function NewUI() {
            front shot in the first, the image group centered in the merged
            right two-thirds; no back shot, no landing page. */
         const custom = !!customLabel;
+        /* ROUND 53 #5 (owner): no requested product page (qrMode not
+           "create") → the landing column DIES and the board splits into
+           thirds — shots left, 2×2 marketing group centered right — the
+           own-label geometry, now for every landing-less order. */
+        const thirds = custom || qrMode !== "create";
         const order = [heroAsset, ...[0, 1, 2, 3, 4].filter((i) => i !== heroAsset)];
         const BOX = { x: 137.5, y: 272, w: 1165.5, h: 344 };
-        /* ROUND 48 #6 / ROUND 49 #8: own-label mode lays the 4 thumbs 2×2
-           beside the hero, and the 2×2 block is EXACTLY the hero's height
-           (thumbs 145, so 2·145+10 = 300); the block↔hero gap equals the
-           thumb gap; the whole group centers in the dashed zone. */
-        const SQ = 300, GAP = 10, TH = custom ? (SQ - GAP) / 2 : (SQ - 3 * GAP) / 4;
-        const groupW = custom ? SQ + GAP + 2 * TH + GAP : SQ + GAP + TH;
+        /* ROUND 48 #6 / ROUND 49 #8: thirds mode lays the 4 thumbs 2×2
+           beside the hero, the block EXACTLY the hero's height (thumbs
+           145, 2·145+10 = 300); every gap equal; group centered. */
+        const SQ = 300, GAP = 10, TH = thirds ? (SQ - GAP) / 2 : (SQ - 3 * GAP) / 4;
+        const groupW = thirds ? SQ + GAP + 2 * TH + GAP : SQ + GAP + TH;
         const third = BOX.w / 3;                                   // 388.5
         const splitX = BOX.x + third;                              // 526
-        const gx = custom ? splitX + (2 * third - groupW) / 2 : 410 + (436 - groupW) / 2;
+        const gx = thirds ? splitX + (2 * third - groupW) / 2 : 410 + (436 - groupW) / 2;
         const gy = BOX.y + (BOX.h - SQ) / 2;                       // 294
         const head = (x: number, title: string, sub: string, spec: string) => (
           <span key={"h" + x}>
@@ -1792,14 +1832,16 @@ export default function NewUI() {
               </>) : custom ? (
                 <span style={{ font: `12px ${HNW}`, color: "#8a887e" }}>{t("Not yet created")}</span>
               ) : (
-                <button onClick={() => go("vision", -1)} style={{ ...ghost, position: "relative", width: "100%", height: "100%", font: `12px ${HNW}`, color: "#8a887e", textTransform: "none", cursor: "pointer" }}>{t("Create a front label first")}</button>
+                <button onClick={() => go("front", -1)} style={{ ...ghost, position: "relative", width: "100%", height: "100%", font: `12px ${HNW}`, color: "#8a887e", textTransform: "none", cursor: "pointer" }}>{t("Create a front label first")}</button>
               )}
             </div>
           );
         return (<>
           {patch(0, 160, W, 500, "aswipe")}
-          {custom ? (<>
-            {head(137.5, "Product Shot", "Face", "PNG / 700x2500px / 72dpi")}
+          {thirds ? (<>
+            {custom
+              ? head(137.5, "Product Shot", "Face", "PNG / 700x2500px / 72dpi")
+              : head(137.5, "Two Product Shots", "Face & Back", "PNG / 700x2500px / 72dpi")}
             {head(splitX + 1, "Five Marketing Images", "Product placed in contextual environments", "JPEG / 2500x2500px / 72dpi")}
           </>) : (<>
             {head(137.5, "Two Product Shots", "Face & Back", "PNG / 700x2500px / 72dpi")}
@@ -1816,18 +1858,23 @@ export default function NewUI() {
               not two"): ONE outer dashed frame with single dashed
               dividers between columns instead of three touching boxes */}
           {dashedBox(BOX.x, BOX.y, BOX.w, BOX.h, "asd1")}
-          {custom ? (
+          {thirds ? (
             <div style={{ ...px(splitX, 272, 1, 344), background: `repeating-linear-gradient(180deg,${DASH})`, pointerEvents: "none" }} />
           ) : (<>
             <div style={{ ...px(410, 272, 1, 344), background: `repeating-linear-gradient(180deg,${DASH})`, pointerEvents: "none" }} />
             <div style={{ ...px(846, 272, 1, 344), background: `repeating-linear-gradient(180deg,${DASH})`, pointerEvents: "none" }} />
           </>)}
-          {cross(137.5, 272, "as1")}{cross(custom ? splitX : 410, 272, "as2")}{!custom && cross(846, 272, "as3")}{cross(1303, 272, "as4")}
-          {cross(137.5, 616, "as5")}{cross(custom ? splitX : 410, 616, "as6")}{!custom && cross(846, 616, "as7")}{cross(1303, 616, "as8")}
+          {cross(137.5, 272, "as1")}{cross(thirds ? splitX : 410, 272, "as2")}{!thirds && cross(846, 272, "as3")}{cross(1303, 272, "as4")}
+          {cross(137.5, 616, "as5")}{cross(thirds ? splitX : 410, 616, "as6")}{!thirds && cross(846, 616, "as7")}{cross(1303, 616, "as8")}
           {/* col 1: product shots (own-label mode: front only, centered) */}
           {custom ? (
             slot(BOX.x + (third - 120) / 2, 285, 120, 318, assets.front, "front shot", "contain")
-          ) : (<>
+          ) : thirds ? (<>
+            {/* both shots centered inside the first third */}
+            {slot(206.75, 285, 120, 318, assets.front, "front shot", "contain")}
+            {slot(336.75, 285, 120, 318, assets.back, "back shot", "contain")}
+            <div style={{ ...px(331.75, gy, 1, SQ), background: `repeating-linear-gradient(180deg,${DASH})`, pointerEvents: "none" }} />
+          </>) : (<>
             {slot(148, 285, 120, 318, assets.front, "front shot", "contain")}
             {slot(278, 285, 120, 318, assets.back, "back shot", "contain")}
             {/* ROUND 49 #12: dashed divider between the two shots — never
@@ -1840,8 +1887,8 @@ export default function NewUI() {
           {[0, 1, 2, 3].map((k) => {
             const idx = order[k + 1];
             const it = assets.life[idx];
-            const x = gx + SQ + GAP + (custom ? (k % 2) * (TH + GAP) : 0);
-            const y = gy + (custom ? Math.floor(k / 2) : k) * (TH + GAP);
+            const x = gx + SQ + GAP + (thirds ? (k % 2) * (TH + GAP) : 0);
+            const y = gy + (thirds ? Math.floor(k / 2) : k) * (TH + GAP);
             return (
               <span key={"sm" + k}>
                 {slot(x, y, TH, TH, it, `lifestyle ${idx + 1}/5`, "cover")}
@@ -1850,7 +1897,7 @@ export default function NewUI() {
             );
           })}
           {/* col 3: BIG landing browser, centered in its column (round 46) */}
-          {custom ? null : productUrl && selected >= 0 ? (
+          {thirds ? null : productUrl && selected >= 0 ? (
             <div style={{ ...px(866.5, 318.5, 416, 251), background: "#fff", borderRadius: 6, boxShadow: "0 10px 26px rgba(0,0,0,0.22)", overflow: "hidden" }}>
               <div style={{ height: 15, background: "#E8E8E6", display: "flex", alignItems: "center", gap: 3, padding: "0 7px" }}>
                 {["#FF5F57", "#FEBC2E", "#28C840"].map((c) => <span key={c} style={{ width: 5, height: 5, borderRadius: 3, background: c }} />)}
@@ -1866,7 +1913,7 @@ export default function NewUI() {
           ) : (
             <div style={{ ...px(866.5, 318.5, 416, 251), background: assetsStage ? "#F4F3EE" : "#ECECEA", display: "flex", alignItems: "center", justifyContent: "center" }}>
               {assetsStage ? miniGlass("landing", Math.min(0.9, assetFill("lifestyle 5/5"))) :
-                <button onClick={() => go("vision", -1)} style={{ ...ghost, position: "relative", width: "100%", height: "100%", font: `12px ${HNW}`, color: "#8a887e", textTransform: "none", cursor: "pointer" }}>{t("Create a front label first")}</button>}
+                <button onClick={() => go("front", -1)} style={{ ...ghost, position: "relative", width: "100%", height: "100%", font: `12px ${HNW}`, color: "#8a887e", textTransform: "none", cursor: "pointer" }}>{t("Create a front label first")}</button>}
             </div>
           )}
         </>);
@@ -1896,7 +1943,8 @@ export default function NewUI() {
           { name: "Product_Shot_Front.png", img: assets.front?.prev, kind: "front" },
           { name: "Product_Shot_Back.png", img: assets.back?.prev, kind: "front" },
           ...[0, 1, 2, 3, 4].map((i) => ({ name: `Marketing_Image_${i + 1}.jpg`, img: assets.life[i]?.prev, kind: "front" as const })),
-          { name: "Product_Page", landing: true, kind: "front" },
+          /* round 53 #7: no requested QR/page → no landing slide */
+          ...(qrMode === "create" ? [{ name: "Product_Page", landing: true, kind: "front" as const }] : []),
         ];
         const sl = slides[carIdx % slides.length];
         const ROWC = [497.28, 531.29, 565.71, 600.14];   // baked ring centres
@@ -1945,31 +1993,34 @@ export default function NewUI() {
             <button aria-label="terms" onClick={() => { setTermsOpen(true); setTermsPos(0); }} style={{ ...px(977, 436, 122, 20), ...ghost, cursor: "pointer" }} />
           </>)}
           {gensMode ? (<>
-            {/* ROUND 52 #2 (owner): the top-up page hides the tree AND the
-                carousel — ONE purchase card centered on the page. Same
-                rhythm as the baked card, shifted to x480 / total baseline
-                489.48 (dy -150). */}
+            {/* ROUND 52 #2 / ROUND 53 #1 (owner): the top-up card keeps
+                the thumbnail box (empty for now — image arrives later),
+                same rhythm as the standard pack, centered on the page:
+                everything at baked y, shifted dx -342.86. */}
             {patch(126, 158, 706, 470, "notreeg")}
             {patch(818, 128, 494, 565, "nocarg")}
-            {dotBtn(516.52, 295.71, agree, () => setAgree((a) => !a), "agreeg", { ring: true, r: 7.5 })}
-            <span style={{ ...px(542.9, 301.28 - 13.5, 340, 16), font: `15px ${HNW}`, lineHeight: "16px" }}>
+            {dashedBox(480, 137.14, 480, 274.29, "genFrame")}
+            {cross(480, 137.14, "gf1")}{cross(960, 137.14, "gf2")}
+            {cross(480, 411.43, "gf3")}{cross(960, 411.43, "gf4")}
+            {dotBtn(516.52, 445.71, agree, () => setAgree((a) => !a), "agreeg", { ring: true, r: 7.5 })}
+            <span style={{ ...px(542.9, 445.71 - 8.1, 340, 16), font: `15px ${HNW}`, lineHeight: "16px" }}>
               <span onClick={() => setAgree((a) => !a)} style={{ cursor: "pointer" }}>{t("I agree to the")} </span>
-              <span onClick={() => { setTermsOpen(true); setTermsPos(0); }} style={{ textDecoration: "underline", cursor: "pointer" }}>{t("Terms & Conditions").replace("&amp;", "&")}</span>
+              <span onClick={() => { setTermsOpen(true); setTermsPos(0); }} style={{ textDecoration: "underline", cursor: "pointer" }}>{t("Terms & Conditions")}</span>
             </span>
-            {[330, 364.56, 398.57, 432.86].map((ly) => (
+            {[480, 514.56, 548.57, 582.86].map((ly) => (
               <div key={"gl" + ly} style={{ ...px(480, ly, 480, 1), backgroundImage: `repeating-linear-gradient(90deg,${DASH})`, backgroundSize: "100% 1px", backgroundRepeat: "no-repeat" }} />
             ))}
             {GENS.map((g, i) => (
               <span key={g.name}>
-                {dotBtn(514.28, ROWC[i] - 150, gensSel === i, () => setGensSel(i), "gen" + i, { ring: true, r: 7.5 })}
-                <button onClick={() => setGensSel(i)} style={{ ...px(537, ROWC[i] - 162, 340, 24), ...ghost, textAlign: "left", textTransform: "none", font: `15px ${HNW}`, color: "#111" }}>{t(g.name)}</button>
-                {priceAtX(891.14, ROWC[i] - 145.1, "$" + g.price)}
+                {dotBtn(514.28, ROWC[i], gensSel === i, () => setGensSel(i), "gen" + i, { ring: true, r: 7.5 })}
+                <button onClick={() => setGensSel(i)} style={{ ...px(537, ROWC[i] - 12, 340, 24), ...ghost, textAlign: "left", textTransform: "none", font: `15px ${HNW}`, color: "#111" }}>{t(g.name)}</button>
+                {priceAtX(891.14, ROWC[i] + 4.9, "$" + g.price)}
               </span>
             ))}
-            <span style={{ ...px(548.54, 489.48 - 14, 200, 18), font: `700 16px ${HNW}`, lineHeight: "18px" }}>{t("Total:")}</span>
-            {priceAtX(891.14, 489.48, "$" + GENS[gensSel].price, true)}
-            <div style={{ ...px(480, 501.43, 480, 34.29), background: "#111", display: "flex", alignItems: "center", justifyContent: "center", font: `12px ${HNW}`, letterSpacing: 0.3, color: "#fff", paddingBottom: 4 }}>{t("Pay")}</div>
-            <button aria-label="pay" onClick={() => { if (requireAgree()) payForGenerations(); }} style={{ ...px(480, 501.43, 480, 34.29), ...ghost }} />
+            <span style={{ ...px(548.54, 639.48 - 14, 200, 18), font: `700 16px ${HNW}`, lineHeight: "18px" }}>{t("Total:")}</span>
+            {priceAtX(891.14, 639.48, "$" + GENS[gensSel].price, true)}
+            <div style={{ ...px(480, 651.43, 480, 34.29), background: "#111", display: "flex", alignItems: "center", justifyContent: "center", font: `12px ${HNW}`, letterSpacing: 0.3, color: "#fff", paddingBottom: 4 }}>{t("Pay")}</div>
+            <button aria-label="pay" onClick={() => { if (requireAgree()) payForGenerations(); }} style={{ ...px(480, 651.43, 480, 34.29), ...ghost }} />
           </>) : customLabel ? (<>
             {/* own-label order: only Marketing Assets and its price */}
             {patch(822.5, 469, 481, 150, "custrows")}
@@ -1997,7 +2048,7 @@ export default function NewUI() {
           </>)}
           {/* round 52 #1: the agree gate message under the Pay bar */}
           {warn && (
-            <span style={{ ...px(0, gensMode ? 545 : 694, W, 16), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block" }}>{warn}</span>
+            <span style={{ ...px(0, 694, W, 16), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block" }}>{warn}</span>
           )}
           {/* back arrow is baked — ghost zone; a gens visit returns to the
               options page it came from */}
