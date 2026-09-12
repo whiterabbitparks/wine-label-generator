@@ -1990,6 +1990,37 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 47 (owner's New_Progressbar folder, 6 annotated screenshots
+  2026-09-12): (1) NEW FUNCTION — "Upload Another Label" on the
+  bottle page (underlined text under the bottle drawing): a customer
+  who ALREADY has printed labels uploads one and the flow flips to
+  assets-only mode — the upload rides the bottle preview (110mm wide,
+  height from the image's own aspect), the marketing run uses it as
+  the front label with back:null (engine already skips the back shot)
+  and NO product-page publish, the assets board splits into vertical
+  THIRDS (front shot centered in the first, image group centered in
+  the merged right two-thirds, headers "Product Shot / Face" + "Five
+  Marketing Images"), and the final pack preselects ONLY Marketing
+  Assets ($19) with just 6 carousel slides. Without an upload NOTHING
+  changes; a fresh label generation clears the mode. (2) assets hero
+  is a SQUARE (300) that never crops (contain); the 4 thumbs scale to
+  67.5 so their 10px gaps equal the hero↔strip gap; hero+strip ride
+  as ONE group centered in their area, strip bottom flush with hero
+  bottom. (3) "Creating your marketing assets — …" moved from the
+  Landing-Page column to page-center just above the progress line
+  (y634). (4) checkout: Product_Page browser thumb downsized to 340
+  and centered in the frame; carousel arrows are SVG chevrons twice
+  the old glyph size with the progress bar's 3px stroke; filename
+  caption pulled 10px up. (5) options: "Variations are limited…"
+  subtitle deletes itself once a variations run starts (!varStyle);
+  the three Select radio labels ride ONE explicit baseline (real
+  ascent+descent line-height + metric translate, baseline 17px from
+  row top) — kills Safari's per-column baseline drift the owner
+  circled, text optically on the circle's line. (6) front details
+  page: baked title string-replaced to "FRONT LABEL DETAILS" at fetch
+  time (SVG_GE gets the Mtavruli "…ᲓᲔᲢᲐᲚᲔᲑᲘ" key), and the two-line
+  intro paragraph is deleted (white patch keeps covering the baked
+  one).
 - ROUND 46 (owner's New_Progressbar folder, 12 annotated refinement
   screenshots on the Round-45 build): (1) "Red line must grow in
   thirds" — THICK now splits every dot-to-dot segment EVENLY by its

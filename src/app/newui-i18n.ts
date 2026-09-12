@@ -31,7 +31,9 @@ export const SVG_GE: Record<string, string> = {
   "Upload a sketch or a reference photo": "ატვირთეთ ესკიზი ან ფოტო ნიმუში",
   "Give me an idea": "მომეცი იდეა",
   "Next idea": "შემდეგი იდეა",
-  /* front */
+  /* front — round 47: the page is titled "…DETAILS" (renamed in page.tsx
+     before translation, so the key is the new title) */
+  "FRONT LABEL DETAILS": "ᲬᲘᲜᲐ ᲔᲢᲘᲙᲔᲢᲘᲡ ᲓᲔᲢᲐᲚᲔᲑᲘ",
   "FRONT LABEL": "ᲬᲘᲜᲐ ᲔᲢᲘᲙᲔᲢᲘ",
   "Producer:": "მწარმოებელი:",
   "Wine Name:": "ღვინის სახელი:",
@@ -203,6 +205,11 @@ export const UI_GE: Record<string, string> = {
   "Next idea": "შემდეგი იდეა",
   "Two Product Shots": "ორი პროდუქტის ფოტო",
   "Five Marketing Images": "ხუთი სამარკეტინგო ფოტო",
+  /* round 47: own-label (assets-only) mode */
+  "Upload Another Label": "ატვირთე სხვა ეტიკეტი",
+  "Your label ✓ — upload another": "შენი ეტიკეტი ✓ — ატვირთე სხვა",
+  "Product Shot": "პროდუქტის ფოტო",
+  "Face": "წინა",
   "please stay on the page.": "გთხოვთ, დარჩეთ გვერდზე.",
   "Creating your marketing assets": "თქვენი სამარკეტინგო მასალა მუშავდება",
   "Select a front label first — assets are built from it.": "ჯერ აირჩიეთ წინა ეტიკეტი — მასალა მისგან იქმნება.",

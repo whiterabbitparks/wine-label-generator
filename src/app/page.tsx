@@ -354,6 +354,13 @@ export default function NewUI() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bottleScanKey, wheel, shade, bottle.closure, bottle.finish, page, prev]);
   const [heroAsset, setHeroAsset] = useState(0);
+  /* ROUND 47 (owner): "Upload Another Label" on the bottle page — a
+     customer who ALREADY has a printed label uploads it and the tail of
+     the flow flips to assets-only mode (no back shot, no landing page,
+     final pack = Marketing Assets only). Without an upload nothing
+     anywhere changes. A fresh label generation clears it. */
+  const [customLabel, setCustomLabel] = useState<string | null>(null);
+  const [customDims, setCustomDims] = useState({ w: 110, h: 80 });
   /* marketing assets (round 13): 2 product shots + 5 lifestyle images */
   const [assets, setAssets] = useState<{ front?: { full: string; prev: string }; back?: { full: string; prev: string }; life: { full: string; prev: string }[] }>({ life: [] });
   const [assetsSig, setAssetsSig] = useState("");
@@ -439,26 +446,32 @@ export default function NewUI() {
     else go();
   }, []);
   /* round 8 #13 (round 27: barcode row gone): entering checkout, the QR row
-     follows the back-details choice; designer-edit always starts unmarked */
+     follows the back-details choice; designer-edit always starts unmarked.
+     ROUND 47: an own-label order preselects ONLY Marketing Assets. */
   useEffect(() => {
-    if (page === "checkout") setPackSel((ps) => [ps[0], qrMode !== "upload", ps[2], false]);
-  }, [page, qrMode]);
+    if (page !== "checkout") return;
+    if (customLabel) setPackSel([false, false, true, false]);
+    else setPackSel((ps) => [ps[0], qrMode !== "upload", ps[2], false]);
+  }, [page, qrMode, customLabel]);
 
   /* MARKETING ASSETS (round 13): entering the assets page kicks off the
      generation run (2 product shots + 5 lifestyle) unless the same brief
      is already generated. Sequential on the server (~5 imgs/min cap). */
   useEffect(() => {
-    if (page !== "assets" || selected < 0 || !dreams[selected] || assetsRunning.current) return;
+    if (page !== "assets" || assetsRunning.current) return;
+    /* ROUND 47: an uploaded own label stands in for the generated front —
+       otherwise a selected dream is still required */
+    if (!customLabel && (selected < 0 || !dreams[selected])) return;
     /* round 40 #3: a progress-bar JUMP never starts a paid generation —
        placeholders show "Not yet created"; the run starts only when the
        page is reached through the normal flow (bottle → next) */
     if (barJumped.current && !assets.front && !assets.back) return;
-    const sel = dreams[selected];
+    const sel = customLabel ? { style: "contemporary", dream: customLabel, preview: null } : dreams[selected];
     /* round 21 #7: NO client-side "same inputs" skip — it knew nothing
        about admin charter changes and replayed stale sets. The server
        cache (charter-aware since round 19) answers true duplicates
        instantly, so refetching costs nothing. */
-    const sig = JSON.stringify({ fs: frontSig, bs: backSig, bottle, rgb: wheel.rgb, shade, sel: sel.style });
+    const sig = JSON.stringify({ fs: frontSig, bs: backSig, bottle, rgb: wheel.rgb, shade, sel: sel.style, cl: customLabel ? customLabel.length + customLabel.slice(-64) : "" });
     assetsRunning.current = true;
     (async () => {
       const got = { front: "", back: "", life: [] as string[] };
@@ -467,7 +480,8 @@ export default function NewUI() {
         assetT.current = { run: Date.now(), stage: Date.now() };
         setAssetsStage("preparing");
         let backData: string | null = null;
-        if (backPng) {
+        /* ROUND 47: own-label mode makes NO back product shot */
+        if (backPng && !customLabel) {
           try {
             const blob = await (await fetch(backPng)).blob();
             backData = await new Promise<string>((res) => { const rd = new FileReader(); rd.onload = () => res(String(rd.result)); rd.readAsDataURL(blob); });
@@ -480,7 +494,7 @@ export default function NewUI() {
             front: sel.dream, back: backData,
             bottle: { type: bottle.type, color: bottle.color, closure: bottle.closure, finish: bottle.finish, closureColour: shadeRgb() },
             wine: { colour: f.colour || DEMO_FRONT.colour, name: f.wine || DEMO_FRONT.wine },
-            labelMM: { w: Number(f.width) || 110, h: Number(f.height) || 80 },
+            labelMM: customLabel ? customDims : { w: Number(f.width) || 110, h: Number(f.height) || 80 },
             style: sel.style, seed,
           }),
         });
@@ -503,8 +517,9 @@ export default function NewUI() {
         }
         setAssetsSig(sig);
         /* PRODUCT PAGE snapshot (owner 2026-09-08): QR requested → publish
-           /p/<code> from everything known at this moment */
-        if (qrMode === "create") {
+           /p/<code> from everything known at this moment.
+           ROUND 47: own-label mode builds NO landing page. */
+        if (qrMode === "create" && !customLabel) {
           try {
             const fx2 = (k: string) => f[k]?.trim() || DEMO_FRONT[k] || "";
             const r2 = await fetch("/api/product", {
@@ -562,7 +577,9 @@ export default function NewUI() {
           const processed = namespaceSvg(t, p).replace(/<\?xml[^>]*\?>/, "").replace(/<svg /, '<svg preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%" ')
             /* Mtavruli titles: HNW lacks Georgian capitals — Apple's own
                Helvetica Neue supplies them seamlessly (round 24 #1) */
-            .replace(/'Helvetica Neue World'/g, "'Helvetica Neue World','Helvetica Neue'");
+            .replace(/'Helvetica Neue World'/g, "'Helvetica Neue World','Helvetica Neue'")
+            /* ROUND 47 (owner): the details page is titled like the back one */
+            .replace(/>FRONT LABEL</, ">FRONT LABEL DETAILS<");
           setBoards((m) => ({ ...m, [p]: processed }));
           setBoardsGe((m) => ({ ...m, [p]: translateSvg(processed) }));
         }
@@ -740,6 +757,8 @@ export default function NewUI() {
          fresh order code too, so a later publish never reuses the old one. */
       setProductUrl(""); productCode.current = Math.random().toString(36).slice(2, 10);
       try { localStorage.removeItem("nui-product-code"); } catch { }
+      /* ROUND 47: generating a fresh label ends own-label (assets-only) mode */
+      setCustomLabel(null);
       /* round 46 (owner: "calculate real average"): remember how long the
          full set really took — the loader note averages the last 10 runs */
       try {
@@ -806,9 +825,11 @@ export default function NewUI() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           wineName: f.wine || "Wine",
-          front: selected >= 0 ? dreams[selected]?.dream : null,
-          back: backPayload,
-          shots: { front: assets.front?.full, back: assets.back?.full },
+          /* ROUND 47: an own-label order ships marketing assets only —
+             the customer already has their printed labels */
+          front: customLabel ? null : selected >= 0 ? dreams[selected]?.dream : null,
+          back: customLabel ? null : backPayload,
+          shots: { front: assets.front?.full, back: customLabel ? undefined : assets.back?.full },
           lifestyle: assets.life.filter(Boolean).map((l) => l.full),
         }),
       });
@@ -989,12 +1010,9 @@ export default function NewUI() {
         const k = Math.min(area.w / wmm, area.h / hmm);
         const bw = wmm * k, bh = hmm * k;
         return (<>
-          {/* round 7 #3: shorter intro replaces the baked paragraph */}
+          {/* ROUND 47 (owner: "this text should not be here"): the intro
+              paragraph is gone — the patch keeps covering the baked one */}
           {patch(134, 166, 700, 46, "intro")}
-          <span style={{ ...px(136.97, 183.62 - 15.5, 660, 40), font: `15px ${HNW}`, color: "#111", lineHeight: "20px" }}>
-            {t("If you have a specific idea for the front label, describe it in simple words")}<br />
-            {t("or upload a sketch or photo reference. Or, let us suggest ideas for you.")}
-          </span>
           {/* cover baked E.g. column incl. its underlines */}
           {patch(263, 234, 572, 390, "phcol")}
           {FRONT_ROWS.map((k2, i) => {
@@ -1118,10 +1136,13 @@ export default function NewUI() {
         return (<>
           {covers}
           {/* round 45: the baked style-name row gives way to the subtitle
-              (and, on the variations page, a right-aligned header) */}
+              (and, on the variations page, a right-aligned header).
+              ROUND 47 (owner): the warning disappears once variations exist */}
           {patch(135, 164, 1170, 26, "stynames")}
-          <span style={{ ...px(136.97, 183.62 - 15.5, 500, 20), font: `15px ${HNW}`, color: "#111", lineHeight: "20px" }}>
-            {t("Variations are limited, so choose wisely.")}</span>
+          {!varStyle && (
+            <span style={{ ...px(136.97, 183.62 - 15.5, 500, 20), font: `15px ${HNW}`, color: "#111", lineHeight: "20px" }}>
+              {t("Variations are limited, so choose wisely.")}</span>
+          )}
           {optPage === 1 && (
             <span style={{ ...px(703.41, 183.62 - 15.5, 600, 20), font: `700 15px ${HNW}`, lineHeight: "20px", textAlign: "right", display: "block" }}>
               {t(varStyle.charAt(0).toUpperCase() + varStyle.slice(1))} — {t("Variations")}</span>
@@ -1203,7 +1224,13 @@ export default function NewUI() {
                 <span style={{ position: "relative", width: 15, height: 15, borderRadius: "50%", border: "2px solid #111", background: "#fff", boxSizing: "border-box", flex: "0 0 auto" }}>
                   {on && <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 7.5, height: 7.5, borderRadius: "50%", background: "#111" }} />}
                 </span>
-                <span style={{ font: `700 15px ${HNW}`, color: "#111", lineHeight: "15px" }}>{lbl}</span>
+                {/* ROUND 47 (owner: "pull those two texts to the same
+                    baseline as I pulled this one up"): line-height = the
+                    font's REAL ascent+descent (no half-leading), then a
+                    translate puts the baseline at exactly 17px from the
+                    row top in every browser — text optically on the
+                    circle's line, all three columns on ONE baseline */}
+                <span style={{ font: `700 15px ${HNW}`, color: "#111", lineHeight: `${fm.a + fm.d}px`, whiteSpace: "nowrap", transform: `translateY(${(17 - ((26 - (fm.a + fm.d)) / 2 + fm.a)).toFixed(2)}px)` }}>{lbl}</span>
               </button>
             );
           })}
@@ -1479,7 +1506,10 @@ export default function NewUI() {
             const s = 407.4 / 1600;                       // cover scale
             const xoff = 139.2 - (800 * s - 201.6) / 2;
             const scan = bottleScans.current[bottleScanKey === src ? src : ""];
-            const lab = selected >= 0 ? dreams[selected] : null;
+            /* ROUND 47: an uploaded own label takes the preview slot */
+            const lab = customLabel ? { style: "custom", dream: customLabel, preview: customLabel } : selected >= 0 ? dreams[selected] : null;
+            const mmW = customLabel ? customDims.w : Number(f.width) || 110;
+            const mmH = customLabel ? customDims.h : Number(f.height) || 80;
             let labelEl: React.ReactNode = null;
             /* round 41 #8: no label yet → grey placeholder at the true
                position and default size from the front-details page */
@@ -1487,8 +1517,8 @@ export default function NewUI() {
               const bhD = (scan.bottom - scan.top) * s;
               const topD = 174 + scan.top * s;
               const pxPerCm = bhD / (bottle.type === "Alsace / Rhine" ? 35 : 30);
-              const lw = ((Number(f.width) || 110) / 10) * pxPerCm;
-              const lh = ((Number(f.height) || 80) / 10) * pxPerCm;
+              const lw = (mmW / 10) * pxPerCm;
+              const lh = (mmH / 10) * pxPerCm;
               const anc = LABEL_ANCHOR[bottle.type] || LABEL_ANCHOR["Bordeaux"];
               const ly = anc.anchor === "top" ? topD + anc.pct * bhD : topD + bhD - anc.pct * bhD - lh;
               labelEl = <div style={{ position: "absolute", left: xoff + scan.cx * s - lw / 2, top: ly, width: lw, height: lh, background: "#ECECEA", pointerEvents: "none" }} />;
@@ -1497,8 +1527,8 @@ export default function NewUI() {
               const bhD = (scan.bottom - scan.top) * s;
               const topD = 174 + scan.top * s;
               const pxPerCm = bhD / (bottle.type === "Alsace / Rhine" ? 35 : 30);
-              const lw = ((Number(f.width) || 110) / 10) * pxPerCm;
-              const lh = ((Number(f.height) || 80) / 10) * pxPerCm;
+              const lw = (mmW / 10) * pxPerCm;
+              const lh = (mmH / 10) * pxPerCm;
               const anc = LABEL_ANCHOR[bottle.type] || LABEL_ANCHOR["Bordeaux"];
               const ly = anc.anchor === "top" ? topD + anc.pct * bhD : topD + bhD - anc.pct * bhD - lh;
               labelEl = (
@@ -1518,14 +1548,48 @@ export default function NewUI() {
           })()}
           {/* round 12 #3: corner pluses back ON TOP of the photo */}
           {cross(137.14, 172, "bt1")}{cross(342.84, 172, "bt2")}{cross(137.14, 583.41, "bt3")}{cross(342.84, 583.41, "bt4")}
+          {/* ROUND 47 (owner): customers who already have their labels
+              upload one here and go straight to marketing assets */}
+          <label style={{ ...px(137.14, 596, 205.7, 18), font: `13px ${HNW}`, color: "#111", textDecoration: "underline", textTransform: "none", textAlign: "center", cursor: "pointer", display: "block", lineHeight: "18px" }}>
+            <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
+              const file = e.target.files?.[0]; if (!file) return;
+              const rd = new FileReader();
+              rd.onload = () => {
+                const url = String(rd.result);
+                const im = new Image();
+                im.onload = () => {
+                  setCustomDims({ w: 110, h: Math.max(20, Math.round((110 * im.height) / im.width)) });
+                  setCustomLabel(url);
+                  setAssets({ life: [] }); setAssetsSig("");
+                };
+                im.src = url;
+              };
+              rd.readAsDataURL(file);
+            }} />
+            {customLabel ? t("Your label ✓ — upload another") : t("Upload Another Label")}
+          </label>
         </>);
       }
       case "assets": {
         /* ROUND 45 "New layout": three columns with headers — two tall
            product shots · hero + vertical strip of 4 marketing images ·
            a BIG landing-page browser preview (moved here from checkout).
-           The baked board content is covered wholesale. */
+           The baked board content is covered wholesale.
+           ROUND 47 (owner): the hero is a SQUARE that never crops; the 4
+           thumbs scale so their internal gaps equal the hero↔strip gap;
+           hero+strip ride as ONE group centered in their area. In
+           own-label mode the board splits into vertical THIRDS instead —
+           front shot in the first, the image group centered in the merged
+           right two-thirds; no back shot, no landing page. */
+        const custom = !!customLabel;
         const order = [heroAsset, ...[0, 1, 2, 3, 4].filter((i) => i !== heroAsset)];
+        const BOX = { x: 137.5, y: 272, w: 1165.5, h: 344 };
+        const SQ = 300, GAP = 10, TH = (SQ - 3 * GAP) / 4;
+        const groupW = SQ + GAP + TH;
+        const third = BOX.w / 3;                                   // 388.5
+        const splitX = BOX.x + third;                              // 526
+        const gx = custom ? splitX + (2 * third - groupW) / 2 : 410 + (436 - groupW) / 2;
+        const gy = BOX.y + (BOX.h - SQ) / 2;                       // 294
         const head = (x: number, title: string, sub: string, spec: string) => (
           <span key={"h" + x}>
             <span style={{ ...px(x, 180 - 13, 320, 16), font: `700 15px ${HNW}`, lineHeight: "16px" }}>{t(title)}</span>
@@ -1544,48 +1608,64 @@ export default function NewUI() {
                 <span style={{ marginTop: 8, font: `14px ${HNW}`, color: "#111", letterSpacing: 2, lineHeight: "10px" }}>
                   {[0, 1, 2].map((dd) => <span key={dd} style={{ animation: `nuiDot 1.2s ${dd * 0.2}s infinite` }}>.</span>)}
                 </span>
-              </>) : (
+              </>) : custom ? (
+                <span style={{ font: `12px ${HNW}`, color: "#8a887e" }}>{t("Not yet created")}</span>
+              ) : (
                 <button onClick={() => go("vision", -1)} style={{ ...ghost, position: "relative", width: "100%", height: "100%", font: `12px ${HNW}`, color: "#8a887e", textTransform: "none", cursor: "pointer" }}>{t("Create a front label first")}</button>
               )}
             </div>
           );
         return (<>
           {patch(0, 160, W, 500, "aswipe")}
-          {head(137.5, "Two Product Shots", "Face & Back", "PNG / 700x2500px / 72dpi")}
-          {head(411, "Five Marketing Images", "Product placed in contextual environments", "JPEG / 2500x2500px / 72dpi")}
-          {head(857, "Landing Page", "You will be provided with the link\nto your product page.", "")}
-          {/* status line */}
+          {custom ? (<>
+            {head(137.5, "Product Shot", "Face", "PNG / 700x2500px / 72dpi")}
+            {head(splitX + 1, "Five Marketing Images", "Product placed in contextual environments", "JPEG / 2500x2500px / 72dpi")}
+          </>) : (<>
+            {head(137.5, "Two Product Shots", "Face & Back", "PNG / 700x2500px / 72dpi")}
+            {head(411, "Five Marketing Images", "Product placed in contextual environments", "JPEG / 2500x2500px / 72dpi")}
+            {head(857, "Landing Page", "You will be provided with the link\nto your product page.", "")}
+          </>)}
+          {/* status line — ROUND 47 (owner): above the progress line,
+              centered on the page */}
           {assetsStage && (
-            <span style={{ ...px(857, 232 - 12, 440, 16), font: `italic 12px ${HNW}`, color: "#BA141A", lineHeight: "15px" }}>
+            <span style={{ ...px(0, 634, W, 16), font: `italic 12px ${HNW}`, color: "#BA141A", lineHeight: "15px", textAlign: "center", display: "block" }}>
               {t("Creating your marketing assets")} — {tStage(assetsStage)}…</span>
           )}
           {/* column frames — ROUND 46 (owner: "there should be one line,
               not two"): ONE outer dashed frame with single dashed
               dividers between columns instead of three touching boxes */}
-          {dashedBox(137.5, 272, 1165.5, 344, "asd1")}
-          <div style={{ ...px(410, 272, 1, 344), background: `repeating-linear-gradient(180deg,${DASH})`, pointerEvents: "none" }} />
-          <div style={{ ...px(846, 272, 1, 344), background: `repeating-linear-gradient(180deg,${DASH})`, pointerEvents: "none" }} />
-          {cross(137.5, 272, "as1")}{cross(410, 272, "as2")}{cross(846, 272, "as3")}{cross(1303, 272, "as4")}
-          {cross(137.5, 616, "as5")}{cross(410, 616, "as6")}{cross(846, 616, "as7")}{cross(1303, 616, "as8")}
-          {/* col 1: two tall shots */}
-          {slot(148, 285, 120, 318, assets.front, "front shot", "contain")}
-          {slot(278, 285, 120, 318, assets.back, "back shot", "contain")}
-          {/* col 2: hero + vertical strip, centered in its column (round 46);
-              small thumbs swap into the hero */}
-          {slot(449, 285, 274, 318, assets.life[order[0]], `lifestyle ${order[0] + 1}/5`, "cover")}
+          {dashedBox(BOX.x, BOX.y, BOX.w, BOX.h, "asd1")}
+          {custom ? (
+            <div style={{ ...px(splitX, 272, 1, 344), background: `repeating-linear-gradient(180deg,${DASH})`, pointerEvents: "none" }} />
+          ) : (<>
+            <div style={{ ...px(410, 272, 1, 344), background: `repeating-linear-gradient(180deg,${DASH})`, pointerEvents: "none" }} />
+            <div style={{ ...px(846, 272, 1, 344), background: `repeating-linear-gradient(180deg,${DASH})`, pointerEvents: "none" }} />
+          </>)}
+          {cross(137.5, 272, "as1")}{cross(custom ? splitX : 410, 272, "as2")}{!custom && cross(846, 272, "as3")}{cross(1303, 272, "as4")}
+          {cross(137.5, 616, "as5")}{cross(custom ? splitX : 410, 616, "as6")}{!custom && cross(846, 616, "as7")}{cross(1303, 616, "as8")}
+          {/* col 1: product shots (own-label mode: front only, centered) */}
+          {custom ? (
+            slot(BOX.x + (third - 120) / 2, 285, 120, 318, assets.front, "front shot", "contain")
+          ) : (<>
+            {slot(148, 285, 120, 318, assets.front, "front shot", "contain")}
+            {slot(278, 285, 120, 318, assets.back, "back shot", "contain")}
+          </>)}
+          {/* marketing images: square uncropped hero + equal-gap strip,
+              one centered group (round 47); small thumbs swap into the hero */}
+          {slot(gx, gy, SQ, SQ, assets.life[order[0]], `lifestyle ${order[0] + 1}/5`, "contain")}
           {[0, 1, 2, 3].map((k) => {
             const idx = order[k + 1];
             const it = assets.life[idx];
-            const y = 285 + k * 81;
+            const y = gy + k * (TH + GAP);
             return (
               <span key={"sm" + k}>
-                {slot(733, y, 74, 74, it, `lifestyle ${idx + 1}/5`, "cover")}
-                {it && <button onClick={() => setHeroAsset(idx)} style={{ ...px(733, y, 74, 74), ...ghost }} />}
+                {slot(gx + SQ + GAP, y, TH, TH, it, `lifestyle ${idx + 1}/5`, "cover")}
+                {it && <button onClick={() => setHeroAsset(idx)} style={{ ...px(gx + SQ + GAP, y, TH, TH), ...ghost }} />}
               </span>
             );
           })}
           {/* col 3: BIG landing browser, centered in its column (round 46) */}
-          {productUrl && selected >= 0 ? (
+          {custom ? null : productUrl && selected >= 0 ? (
             <div style={{ ...px(866.5, 318.5, 416, 251), background: "#fff", borderRadius: 6, boxShadow: "0 10px 26px rgba(0,0,0,0.22)", overflow: "hidden" }}>
               <div style={{ height: 15, background: "#E8E8E6", display: "flex", alignItems: "center", gap: 3, padding: "0 7px" }}>
                 {["#FF5F57", "#FEBC2E", "#28C840"].map((c) => <span key={c} style={{ width: 5, height: 5, borderRadius: 3, background: c }} />)}
@@ -1613,7 +1693,11 @@ export default function NewUI() {
            The baked board content is covered wholesale. */
         const CAR = { x: 480, y: 205, w: 481, h: 295 };
         type Slide = { name: string; img?: string; landing?: boolean; kind?: "front" | "back" };
-        const slides: Slide[] = [
+        /* ROUND 47: own-label orders deliver ONLY the marketing assets */
+        const slides: Slide[] = customLabel ? [
+          { name: "Product_Shot_Face.png", img: assets.front?.prev, kind: "front" },
+          ...[0, 1, 2, 3, 4].map((i) => ({ name: `Marketing_Image_${i + 1}.jpg`, img: assets.life[i]?.prev, kind: "front" as const })),
+        ] : [
           { name: "Front_Label.svg", img: selected >= 0 ? (dreams[selected]?.preview || dreams[selected]?.dream) : undefined, kind: "front" },
           { name: "Back_Label.svg", img: backPng || undefined, kind: "back" },
           { name: "Product_Shot_Face.png", img: assets.front?.prev, kind: "front" },
@@ -1622,7 +1706,6 @@ export default function NewUI() {
           { name: "Product_Page", landing: true, kind: "front" },
         ];
         const sl = slides[carIdx % slides.length];
-        const pgScale = (CAR.w - 40) / W;
         return (<>
           {/* wipe the baked board below the title */}
           {patch(0, 160, W, FOOTER_Y - 160, "cowipe")}
@@ -1631,23 +1714,31 @@ export default function NewUI() {
           {cross(CAR.x, CAR.y + CAR.h, "cc3")}{cross(CAR.x + CAR.w, CAR.y + CAR.h, "cc4")}
           {sl.landing ? (
             productUrl && selected >= 0 ? (
-              <div style={{ ...px(CAR.x + 20, CAR.y + 14, CAR.w - 40, (CAR.w - 40) / W * 823 + 13), background: "#fff", borderRadius: 5, boxShadow: "0 8px 22px rgba(0,0,0,0.2)", overflow: "hidden" }}>
+              /* ROUND 47 (owner: "downsize Product Page thumb"): the
+                 browser preview shrinks and centers inside the frame */
+              <div style={{ ...px(CAR.x + (CAR.w - 340) / 2, CAR.y + 22, 340, 340 / W * 823 + 13), background: "#fff", borderRadius: 5, boxShadow: "0 8px 22px rgba(0,0,0,0.2)", overflow: "hidden" }}>
                 <div style={{ height: 13, background: "#E8E8E6", display: "flex", alignItems: "center", gap: 3, padding: "0 6px" }}>
                   {["#FF5F57", "#FEBC2E", "#28C840"].map((c) => <span key={c} style={{ width: 4.5, height: 4.5, borderRadius: 3, background: c }} />)}
                   <span style={{ flex: 1, margin: "0 8px", height: 7, background: "#fff", borderRadius: 3, font: `5px ${HNW}`, color: "#999", paddingLeft: 4, lineHeight: "7px" }}>8klabels.com{productUrl}</span>
                 </div>
-                <iframe src={productUrl} title="product page" style={{ width: W, height: 823, transform: `scale(${pgScale})`, transformOrigin: "0 0", border: 0, pointerEvents: "none" }} />
+                <iframe src={productUrl} title="product page" style={{ width: W, height: 823, transform: `scale(${340 / W})`, transformOrigin: "0 0", border: 0, pointerEvents: "none" }} />
               </div>
             ) : notMade(CAR.x + 20, CAR.y + 20, CAR.w - 40, CAR.h - 60, "front", "nmCar")
           ) : sl.img ? (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img src={sl.img} alt={sl.name} style={{ ...px(CAR.x + 20, CAR.y + 16, CAR.w - 40, CAR.h - 56), objectFit: "contain" }} />
           ) : notMade(CAR.x + 20, CAR.y + 20, CAR.w - 40, CAR.h - 60, sl.kind || "front", "nmCar")}
-          <span style={{ ...px(CAR.x, CAR.y + CAR.h - 24, CAR.w, 16), font: `12px ${HNW}`, color: "#111", textAlign: "center", display: "block" }}>{sl.name}</span>
+          {/* ROUND 47 (owner): caption a bit up; arrows twice as big,
+              stroke = the progress bar's thick red line (3px) */}
+          <span style={{ ...px(CAR.x, CAR.y + CAR.h - 34, CAR.w, 16), font: `12px ${HNW}`, color: "#111", textAlign: "center", display: "block" }}>{sl.name}</span>
           <button aria-label="prev slide" onClick={() => setCarIdx((c) => (c + slides.length - 1) % slides.length)}
-            style={{ ...px(CAR.x + 12, CAR.y + CAR.h / 2 - 20, 34, 40), ...ghost, font: `300 26px ${HNW}`, color: "#111" }}>‹</button>
+            style={{ ...px(CAR.x + 10, CAR.y + CAR.h / 2 - 28, 40, 56), ...ghost }}>
+            <svg viewBox="0 0 32 52" width="32" height="52"><polyline points="23,4 9,26 23,48" fill="none" stroke="#111" strokeWidth="3" /></svg>
+          </button>
           <button aria-label="next slide" onClick={() => setCarIdx((c) => (c + 1) % slides.length)}
-            style={{ ...px(CAR.x + CAR.w - 46, CAR.y + CAR.h / 2 - 20, 34, 40), ...ghost, font: `300 26px ${HNW}`, color: "#111" }}>›</button>
+            style={{ ...px(CAR.x + CAR.w - 50, CAR.y + CAR.h / 2 - 28, 40, 56), ...ghost }}>
+            <svg viewBox="0 0 32 52" width="32" height="52"><polyline points="9,4 23,26 9,48" fill="none" stroke="#111" strokeWidth="3" /></svg>
+          </button>
           {/* pricing rows */}
           {PACK.map((it, i) => {
             const ry = 522 + i * 34;
