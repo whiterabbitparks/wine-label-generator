@@ -1990,6 +1990,45 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 50 (owner, 13 items, 2026-09-12): (1) VARIATIONS ARE
+  MULTI-PAGE — varRuns: string[] (style per run), run k's dreams at
+  3+3k..5+3k, base = optPage*3, N = runs+1 pager dots centered on the
+  page axis at y542; AREA_BOT 528→519 so portrait labels leave the
+  dots the same 18.5px air as dots→buttons. (2) GENERATION CREDITS:
+  run 1 free, run 2 email-gated, run 3+ costs 3 credits (1 credit =
+  1 image) or routes to the checkout in gensMode — a single-select
+  top-up list (3X $1 / 9X $2 / 20X $5, no summing; the standard pack
+  still sums) over the same layout; TEMP "before IP reset": Pay just
+  adds credits (localStorage nui-gen-credits) and auto-fires the
+  pending style. Credits indicator (my proposal, owner to comment):
+  italic right-aligned "Generations available: N" on options page 0.
+  (3) every gate message ("Select a label…", compliance, bottle) now
+  renders ONCE in the static progress zone at y664 — midway between
+  content and the bar line. (4) Matte/Glossy grey+freeze with the
+  wheel. (5) engine: front/back labels declared SAME size in
+  scaleLine. (6) bare cork = FULLY SEATED, never half-pulled;
+  lifestyle adds "BOTTLE STATE: unopened unless the scene requires".
+  (7) in-neck cork through glass: one clean uniform ~45mm cylinder,
+  no doubling/blur (bare + capsule branches). (8) UI sparkling foil
+  zone 0.505→0.455 (1/10 off the bottom). (9) changed brief clears
+  productUrl before the assets rerun — stale landing thumbs die.
+  (10) lifestyle "PRODUCT CONSISTENCY — NON-NEGOTIABLE" (sparkling
+  never with a still cork). (11) wheel block y380→368. (12) both
+  prompts: silhouette matched EXACTLY, "when in doubt TRACE the
+  outline". (13) CHECKOUT REBUILT from the owner's Check Out copy 2
+  board: public/newui/checkout.svg = New_UI_2.svg minus Illustrator
+  metadata (8.8MB!), the mock label <image>, its caption and the 5
+  price texts (script-stripped by coordinate). The board carries the
+  folder tree + paragraph + carousel frame + thin arrows + T&C + row
+  names + Pay bar; the overlay adds only: slide image/caption, ghost
+  arrows/pay/back zones, live dots on baked rings (cx 857.14, cy
+  497.28+34.43k; T&C 859.38,445.71), prices right-aligned to 1234
+  (baseline-13.5, lineHeight 16 lands on the baked baseline), live
+  total. gensMode covers rows with patch(822.5,469,481,150) — NOT
+  taller, or it eats the baked "Total:". OWNER FOLLOW-UP: the tree
+  layout is FULL-PACK ONLY — an own-label order covers the left block
+  (patch 126,158,706x470) and the row list becomes ONE live row
+  (Marketing Assets $9) + T&C + carousel + total.
 - ROUND 49 (owner, 14 items, 2026-09-12): (1) vision GEO intro names
   the real button — "გამაკვირვე". (2) VARIATIONS EMAIL GATE: the
   Create-Variations buttons never disappear; first run free, any

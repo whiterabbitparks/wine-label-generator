@@ -52,7 +52,8 @@ const CAP_ZONES: Record<string, [number, number][]> = {
   "Screw Cap": [[0, 0.145]],
   "Wax Seal": [[0, 0.1]],
   "Crown Cap": [[0, 0.028]],
-  "Sparkling Cork": [[0, 0.505]],
+  /* round 50 #8: foil reads too long — trimmed 1/10 from below */
+  "Sparkling Cork": [[0, 0.455]],
 };
 type PageKey = (typeof ORDER)[number];
 
@@ -256,12 +257,12 @@ export default function NewUI() {
   const [sketch, setSketch] = useState<string | null>(null);
   const [f, setF] = useState<Record<string, string>>({ width: "110", height: "80" });
   const [dreams, setDreams] = useState<Dream[]>([]);
-  /* ROUND 45 variations (owner's mock): ONE variations run per label set —
-     3 extra dreams of the clicked style live at indices 3..5 of `dreams`;
-     optPage flips between "First Labels" (0..2) and "Variations" (3..5) */
-  const [varStyle, setVarStyle] = useState("");
+  /* ROUND 45 variations; ROUND 50 #1 (owner): every run ADDS a page —
+     run k's 3 dreams live at indices 3+3k..5+3k, optPage 0..varRuns.length,
+     one pager dot per page. varRuns holds each run's style. */
+  const [varRuns, setVarRuns] = useState<string[]>([]);
   const [varBusy, setVarBusy] = useState(false);
-  const [optPage, setOptPage] = useState<0 | 1>(0);
+  const [optPage, setOptPage] = useState(0);
   const varT = useRef(0);
   /* ROUND 49 #2 (owner): the variations buttons never disappear — the
      FIRST run is free, every later run asks for an email once (kept in
@@ -272,6 +273,21 @@ export default function NewUI() {
   const [emailInput, setEmailInput] = useState("");
   const [emailErr, setEmailErr] = useState(false);
   useEffect(() => { try { const e = localStorage.getItem("nui-var-email"); if (e) setVarEmail(e); } catch { } }, []);
+  /* ROUND 50 #2 (owner): from the THIRD variations run on, generation is
+     paid — a generation-credit balance (1 credit = 1 image, one run = 3)
+     bought on the checkout page via a single-select top-up list. TEMP:
+     Pay simply adds the credits (no real payment yet, "before IP reset"). */
+  const GENS = [
+    { name: "3X Generation", price: 1, gens: 3 },
+    { name: "9X Generation", price: 2, gens: 9 },
+    { name: "20X Generation", price: 5, gens: 20 },
+  ];
+  const [gensMode, setGensMode] = useState(false);
+  const [gensSel, setGensSel] = useState(0);
+  const [genCredits, setGenCredits] = useState(0);
+  const pendingGen = useRef("");
+  useEffect(() => { try { const c = Number(localStorage.getItem("nui-gen-credits")); if (Number.isFinite(c) && c > 0) setGenCredits(c); } catch { } }, []);
+  const saveCredits = (n: number) => { setGenCredits(n); try { localStorage.setItem("nui-gen-credits", String(n)); } catch { } };
   const [selected, setSelected] = useState(-1);
   const [genProgress, setGenProgress] = useState(0);
   const [frontSig, setFrontSig] = useState("");
@@ -495,6 +511,10 @@ export default function NewUI() {
        cache (charter-aware since round 19) answers true duplicates
        instantly, so refetching costs nothing. */
     const sig = JSON.stringify({ fs: frontSig, bs: backSig, bottle, wc: wineColor, rgb: wheel.rgb, shade, sel: sel.style, cl: customLabel ? customLabel.length + customLabel.slice(-64) : "" });
+    /* ROUND 50 #9 (owner: "old bottle still in the landing thumbs!"):
+       any changed input invalidates the previously published page — the
+       thumb shows its loader until the fresh publish lands */
+    if (assetsSig && sig !== assetsSig) setProductUrl("");
     assetsRunning.current = true;
     (async () => {
       const got = { front: "", back: "", life: [] as string[] };
@@ -711,23 +731,41 @@ export default function NewUI() {
   }
   async function createVariations(style: string) {
     if (varBusy) return;
-    /* a re-run replaces slots 3..5 — a selection pointing there resets */
-    setSelected((s) => (s >= 3 ? -1 : s));
-    setVarStyle(style); setVarBusy(true); setOptPage(1); varT.current = Date.now();
-    setDreams((prev) => prev.slice(0, 3));
+    /* round 50 #1: every run APPENDS a page — nothing gets replaced */
+    const runIdx = varRuns.length;
+    setVarRuns((p) => [...p, style]);
+    setVarBusy(true); setOptPage(runIdx + 1); varT.current = Date.now();
     await Promise.allSettled([0, 1, 2].map(async (i) => {
       try {
         const d = await genVariation(style);
-        setDreams((prev) => { const nd = [...prev]; nd[3 + i] = d; return nd; });
+        setDreams((prev) => { const nd = [...prev]; nd[3 + 3 * runIdx + i] = d; return nd; });
       } catch { /* an empty slot stays grey */ }
     }));
     setVarBusy(false);
   }
-  /* round 49 #2: button → free first run, email-gated afterwards */
+  /* round 49 #2 / round 50 #2: run 1 free → run 2 email-gated → run 3+
+     spends 3 generation credits or routes to the top-up checkout */
   const requestVariations = (style: string) => {
     if (varBusy) return;
-    if (!varStyle || varEmail) { createVariations(style); return; }
-    setEmailInput(""); setEmailErr(false); setEmailModal(style);
+    const runIdx = varRuns.length;
+    if (runIdx === 0) { createVariations(style); return; }
+    if (runIdx === 1) {
+      if (varEmail) createVariations(style);
+      else { setEmailInput(""); setEmailErr(false); setEmailModal(style); }
+      return;
+    }
+    if (genCredits >= 3) { saveCredits(genCredits - 3); createVariations(style); }
+    else { pendingGen.current = style; setGensMode(true); setGensSel(0); go("checkout"); }
+  };
+  /* TEMP (owner, "before IP reset"): Pay just adds the credits; if a
+     style click brought us here, that run fires right away (minus its 3) */
+  const payForGenerations = () => {
+    const bought = GENS[gensSel].gens;
+    const st = pendingGen.current; pendingGen.current = "";
+    saveCredits(genCredits + bought - (st ? 3 : 0));
+    setGensMode(false);
+    go("options", -1);
+    if (st) createVariations(st);
   };
   const submitVarEmail = () => {
     const e = emailInput.trim();
@@ -795,7 +833,7 @@ export default function NewUI() {
       if (!ok.length) throw new Error("all generations failed — try again");
       ok.sort((a, b2) => styles3.indexOf(a.style) - styles3.indexOf(b2.style));
       setDreams(ok); setSelected(-1); setFrontSig(sigFront()); setBackSig("");
-      setVarStyle(""); setVarBusy(false); setOptPage(0);
+      setVarRuns([]); setVarBusy(false); setOptPage(0);
       /* round 43 #3 (owner: "landing page thumb shows the previous bottle"):
          a freshly generated wine invalidates any earlier published page —
          the restored productUrl (round 28b, meant to survive a reload of
@@ -1179,8 +1217,11 @@ export default function NewUI() {
         covers.push(patch(135, 578, 1172, 44, "selbars"));
         for (const fx0 of [137.1, 480, 548.5, 891.4, 960, 1302.9])
           for (const fy0 of [240, 468.6]) covers.push(patch(fx0 - 11, fy0 - 11, 22, 22, `c${fx0}-${fy0}`));
-        const CUBE = 34.3, AREA_TOP = 240, AREA_BOT = 528;   /* space below labels (owner) */
-        const base = optPage === 1 ? 3 : 0;                  /* round 45: variations at 3..5 */
+        /* round 50 #1: portrait labels stop at 519 so the raised pager
+           dots (y542) get the same air below the label as above the
+           buttons (18.5px each side) */
+        const CUBE = 34.3, AREA_TOP = 240, AREA_BOT = 519;
+        const base = optPage * 3;                            /* round 50: page k shows 3k..3k+2 */
         const STYLE_NAMES = ["Traditional", "Contemporary", "Punk"];
         return (<>
           {covers}
@@ -1188,14 +1229,20 @@ export default function NewUI() {
               (and, on the variations page, a right-aligned header).
               ROUND 47 (owner): the warning disappears once variations exist */}
           {patch(135, 164, 1170, 26, "stynames")}
-          {!varStyle && (
+          {varRuns.length === 0 && (
             <span style={{ ...px(136.97, 183.62 - 15.5, 500, 20), font: `15px ${HNW}`, color: "#111", lineHeight: "20px" }}>
               {t("Variations are limited, so choose wisely.")}</span>
           )}
-          {optPage === 1 && (
-            <span style={{ ...px(703.41, 183.62 - 15.5, 600, 20), font: `700 15px ${HNW}`, lineHeight: "20px", textAlign: "right", display: "block" }}>
-              {t(varStyle.charAt(0).toUpperCase() + varStyle.slice(1))} — {t("Variations")}</span>
+          {/* ROUND 50 #2: generation-credit balance (placement = my
+              proposal, owner to comment) */}
+          {optPage === 0 && varRuns.length > 0 && (
+            <span style={{ ...px(903, 183.62 - 15.5, 400, 20), font: `italic 12px ${HNW}`, color: "#8a8a8a", lineHeight: "20px", textAlign: "right", display: "block" }}>
+              {t("Generations available:")} {genCredits}</span>
           )}
+          {optPage >= 1 && (() => { const st = varRuns[optPage - 1] || ""; return (
+            <span style={{ ...px(703.41, 183.62 - 15.5, 600, 20), font: `700 15px ${HNW}`, lineHeight: "20px", textAlign: "right", display: "block" }}>
+              {t(st.charAt(0).toUpperCase() + st.slice(1))} — {t("Variations")}</span>
+          ); })()}
           {OPT_FRAMES.map((fr, fi) => {
             const i = base + fi;
             const d = dreams[i];
@@ -1222,17 +1269,17 @@ export default function NewUI() {
               ROUND 46 (owner: "we already know the size of the label —
               match the placeholders to real labels"): the grey box takes
               the varied style's real label shape, not a generic square */}
-          {optPage === 1 && (() => {
-            const si = ["traditional", "contemporary", "punk"].indexOf(varStyle);
+          {optPage >= 1 && (() => {
+            const si = ["traditional", "contemporary", "punk"].indexOf(varRuns[optPage - 1] || "");
             const nat = si >= 0 ? imgDims[si] : undefined;
             const ar = nat ? nat.w / nat.h : (Number(f.width) || 110) / (Number(f.height) || 80);
             let lw: number, lh: number;
             if (ar >= 1) { lw = OPT_W; lh = OPT_W / ar; if (lh > AREA_BOT - AREA_TOP) { lh = AREA_BOT - AREA_TOP; lw = lh * ar; } }
             else { lh = AREA_BOT - AREA_TOP; lw = lh * ar; if (lw > OPT_W - 2 * CUBE) { lw = OPT_W - 2 * CUBE; lh = lw / ar; } }
             const ly = AREA_TOP + (ar >= 1 ? 0 : (AREA_BOT - AREA_TOP - lh) / 2);
-            return OPT_FRAMES.map((fr, fi) => !dreams[3 + fi] && (
+            return OPT_FRAMES.map((fr, fi) => !dreams[base + fi] && (
               <div key={"vg" + fi} style={{ ...px(fr.x + (OPT_W - lw) / 2, ly, lw, lh), background: "#F4F3EE", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                {varBusy ? miniGlass("var" + fi, Math.min(0.9, 0.14 + ((Date.now() - varT.current) / 45000) * 0.75 + tick * 0)) : null}
+                {varBusy && optPage === varRuns.length ? miniGlass("var" + fi, Math.min(0.9, 0.14 + ((Date.now() - varT.current) / 45000) * 0.75 + tick * 0)) : null}
               </div>
             ));
           })()}
@@ -1246,17 +1293,14 @@ export default function NewUI() {
               style={{ ...px(fr.x + 0.2, 565, OPT_W, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
               {t("Create " + STYLE_NAMES[fi] + " Variations")}</button>
           ))}
-          {/* pager rides above the buttons (round 49: both are visible now) */}
-          {varStyle && (<>
-            <button onClick={() => setOptPage(0)} aria-label="first labels"
-              style={{ ...px(W / 2 - 22, 541, 20, 20), ...ghost }}>
-              <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 9, height: 9, borderRadius: 5, border: "1px solid #111", background: optPage === 0 ? "#111" : "#fff", boxSizing: "border-box" }} />
+          {/* ROUND 50 #1: one dot per page, the block centered on the
+              page's centre axis, raised to y542 (18.5px air both ways) */}
+          {varRuns.length > 0 && Array.from({ length: varRuns.length + 1 }, (_, i) => (
+            <button key={"pg" + i} onClick={() => setOptPage(i)} aria-label={i === 0 ? "first labels" : "variations " + i}
+              style={{ ...px(W / 2 + (i - varRuns.length / 2) * 24 - 10, 532, 20, 20), ...ghost }}>
+              <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 9, height: 9, borderRadius: 5, border: "1px solid #111", background: optPage === i ? "#111" : "#fff", boxSizing: "border-box" }} />
             </button>
-            <button onClick={() => setOptPage(1)} aria-label="variations"
-              style={{ ...px(W / 2 + 2, 541, 20, 20), ...ghost }}>
-              <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 9, height: 9, borderRadius: 5, border: "1px solid #111", background: optPage === 1 ? "#111" : "#fff", boxSizing: "border-box" }} />
-            </button>
-          </>)}
+          ))}
           {/* round 49 #2: email gate for repeat variation runs */}
           {emailModal && (<>
             <div style={{ ...px(0, HEADER_H, W, 660 - HEADER_H), background: "rgba(255,255,255,0.88)", zIndex: 20 }} onClick={() => setEmailModal("")} />
@@ -1304,10 +1348,6 @@ export default function NewUI() {
               </button>
             );
           })}
-          {/* round 7 #12: gate message when proceeding without a selection */}
-          {warn && (
-            <span style={{ ...px(0, 632, W, 18), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block" }}>{warn}</span>
-          )}
         </>);
       }
       case "backdetails":
@@ -1464,9 +1504,6 @@ export default function NewUI() {
               </span>
             );
           })}
-          {warn && (
-            <span style={{ ...px(0, 600, W, 18), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block" }}>{warn}</span>
-          )}
         </>);
       }
       case "backdesign": {
@@ -1548,15 +1585,17 @@ export default function NewUI() {
           {colHead(3, "Closure Type")}
           {closures.map((o, i) => optRow(3, i, o, bottle.closure === o, pickOf("closure", o)))}
           {colHead(4, "Closure Color")}
-          {/* round 49 #7: Glossy rides the SECOND row under Matte, like
-              every other list */}
-          {optRow(4, 0, "Matte", bottle.finish === "Matte", () => setBottle((m) => ({ ...m, finish: "Matte" })))}
-          {optRow(4, 1, "Glossy", bottle.finish === "Glossy", () => setBottle((m) => ({ ...m, finish: "Glossy" })))}
+          {/* round 49 #7: Glossy rides the SECOND row under Matte;
+              round 50 #4: both grey out and freeze with the wheel */}
+          <div style={{ opacity: wheelOff ? 0.3 : 1, pointerEvents: wheelOff ? "none" : "auto", filter: wheelOff ? "grayscale(1)" : "none", transition: `opacity 240ms ${EASE}` }}>
+            {optRow(4, 0, "Matte", bottle.finish === "Matte", () => setBottle((m) => ({ ...m, finish: "Matte" })))}
+            {optRow(4, 1, "Glossy", bottle.finish === "Glossy", () => setBottle((m) => ({ ...m, finish: "Glossy" })))}
+          </div>
           {/* round 49 #6: result rect GONE; the lightness bar lies
               HORIZONTAL below the wheel (white left → black right), bar
               and wheel share the column's centre axis. Round 48 #3 /
               49 #4: greyed and inert without a real capsule. */}
-          <div style={{ ...px(COLS_X[4], 380, 191.9, 175), opacity: wheelOff ? 0.3 : 1, filter: wheelOff ? "grayscale(1)" : "none", pointerEvents: wheelOff ? "none" : "auto", transition: `opacity 240ms ${EASE}` }}>
+          <div style={{ ...px(COLS_X[4], 368, 191.9, 175), opacity: wheelOff ? 0.3 : 1, filter: wheelOff ? "grayscale(1)" : "none", pointerEvents: wheelOff ? "none" : "auto", transition: `opacity 240ms ${EASE}` }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/newui/colorwheel.png" alt="" style={{ ...px(27.35, 0, 137.2, 137.2), pointerEvents: "none" }} />
             <div style={{ ...px(27.35, 0, 137.2, 137.2), cursor: "crosshair" }}
@@ -1659,10 +1698,6 @@ export default function NewUI() {
             }} />
             {customLabel ? t("Your label ✓ — upload another") : t("Upload Another Label")}
           </label>
-          {/* round 48 #5: section gate message */}
-          {warn && (
-            <span style={{ ...px(0, 630, W, 18), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block" }}>{warn}</span>
-          )}
         </>);
       }
       case "assets": {
@@ -1791,10 +1826,18 @@ export default function NewUI() {
       }
 
       case "checkout": {
-        /* ROUND 45 "New layout": ONE carousel of every deliverable with
-           filename captions, a four-row pricing list and Pay & Download.
-           The baked board content is covered wholesale. */
-        const CAR = { x: 480, y: 205, w: 481, h: 295 };
+        /* ROUND 50 #13 (owner's Check Out copy 2 mock, rebuilt 1:1): the
+           BOARD carries the whole layout — left folder-tree diagram +
+           paragraph, right carousel frame with thin baked arrows, T&C
+           row, four dashed pricing rows, black Pay bar, back arrow. The
+           mock label raster, its caption and the five price texts were
+           stripped from the SVG at build time; the overlay adds ONLY the
+           live parts: slide image, caption, ring dots, prices, total and
+           ghost click zones. Geometry from the SVG: frame 822.86,137.14
+           480x274.29; rings cx 857.14 cy 497.28+34.43k (T&C 859.38,
+           445.71); text baselines 502.2+; prices right-aligned to 1234;
+           button rect 822.86,651.43,480x34.29. */
+        const FR = { x: 822.86, y: 137.14, w: 480, h: 274.29 };
         type Slide = { name: string; img?: string; landing?: boolean; kind?: "front" | "back" };
         /* ROUND 47: own-label orders deliver ONLY the marketing assets */
         const slides: Slide[] = customLabel ? [
@@ -1809,59 +1852,88 @@ export default function NewUI() {
           { name: "Product_Page", landing: true, kind: "front" },
         ];
         const sl = slides[carIdx % slides.length];
+        const ROWC = [497.28, 531.29, 565.71, 600.14];   // baked ring centres
+        const priceAt = (baseline: number, v: string, bold = false) => (
+          /* the span's own baseline lands exactly on the baked row's */
+          <span key={"pr" + baseline} style={{ ...px(1234 - 140, baseline - (bold ? 14 : 13.5), 140, 16), font: `${bold ? 700 : 400} ${bold ? 16 : 15}px ${HNW}`, lineHeight: "16px", textAlign: "right", display: "block" }}>{v}</span>
+        );
         return (<>
-          {/* wipe the baked board below the title */}
-          {patch(0, 160, W, FOOTER_Y - 160, "cowipe")}
-          {dashedBox(CAR.x, CAR.y, CAR.w, CAR.h, "carD")}
-          {cross(CAR.x, CAR.y, "cc1")}{cross(CAR.x + CAR.w, CAR.y, "cc2")}
-          {cross(CAR.x, CAR.y + CAR.h, "cc3")}{cross(CAR.x + CAR.w, CAR.y + CAR.h, "cc4")}
+          {/* ROUND 50 (owner follow-up): the folder tree + paragraph
+              describe the FULL pack — an own-label (assets-only) order
+              hides that whole left block */}
+          {customLabel && patch(126, 158, 706, 470, "notree")}
+          {/* live slide inside the baked dashed frame */}
           {sl.landing ? (
             productUrl && selected >= 0 ? (
-              /* ROUND 47 (owner: "downsize Product Page thumb"): the
-                 browser preview shrinks and centers inside the frame */
-              <div style={{ ...px(CAR.x + (CAR.w - 340) / 2, CAR.y + 22, 340, 340 / W * 823 + 13), background: "#fff", borderRadius: 5, boxShadow: "0 8px 22px rgba(0,0,0,0.2)", overflow: "hidden" }}>
+              <div style={{ ...px(FR.x + (FR.w - 340) / 2, FR.y + 16, 340, 340 / W * 823 + 13), background: "#fff", borderRadius: 5, boxShadow: "0 8px 22px rgba(0,0,0,0.2)", overflow: "hidden" }}>
                 <div style={{ height: 13, background: "#E8E8E6", display: "flex", alignItems: "center", gap: 3, padding: "0 6px" }}>
                   {["#FF5F57", "#FEBC2E", "#28C840"].map((c) => <span key={c} style={{ width: 4.5, height: 4.5, borderRadius: 3, background: c }} />)}
                   <span style={{ flex: 1, margin: "0 8px", height: 7, background: "#fff", borderRadius: 3, font: `5px ${HNW}`, color: "#999", paddingLeft: 4, lineHeight: "7px" }}>8klabels.com{productUrl}</span>
                 </div>
                 <iframe src={productUrl} title="product page" style={{ width: W, height: 823, transform: `scale(${340 / W})`, transformOrigin: "0 0", border: 0, pointerEvents: "none" }} />
               </div>
-            ) : notMade(CAR.x + 20, CAR.y + 20, CAR.w - 40, CAR.h - 60, "front", "nmCar")
+            ) : notMade(FR.x + 20, FR.y + 16, FR.w - 40, FR.h - 66, "front", "nmCar")
           ) : sl.img ? (
             /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={sl.img} alt={sl.name} style={{ ...px(CAR.x + 20, CAR.y + 16, CAR.w - 40, CAR.h - 56), objectFit: "contain" }} />
-          ) : notMade(CAR.x + 20, CAR.y + 20, CAR.w - 40, CAR.h - 60, sl.kind || "front", "nmCar")}
-          {/* ROUND 47 (owner): caption a bit up; arrows twice as big,
-              stroke = the progress bar's thick red line (3px) */}
-          <span style={{ ...px(CAR.x, CAR.y + CAR.h - 34, CAR.w, 16), font: `12px ${HNW}`, color: "#111", textAlign: "center", display: "block" }}>{sl.name}</span>
+            <img src={sl.img} alt={sl.name} style={{ ...px(FR.x + 20, FR.y + 15, FR.w - 40, 226), objectFit: "contain" }} />
+          ) : notMade(FR.x + 20, FR.y + 16, FR.w - 40, FR.h - 66, sl.kind || "front", "nmCar")}
+          {/* caption (stripped from the board, drawn live at its spot) */}
+          <span style={{ ...px(FR.x, 396.04 - 12, FR.w, 16), font: `12px ${HNW}`, color: "#111", textAlign: "center", display: "block" }}>{sl.name}</span>
+          {/* baked thin chevrons get ghost click zones */}
           <button aria-label="prev slide" onClick={() => setCarIdx((c) => (c + slides.length - 1) % slides.length)}
-            style={{ ...px(CAR.x + 10, CAR.y + CAR.h / 2 - 28, 40, 56), ...ghost }}>
-            <svg viewBox="0 0 32 52" width="32" height="52"><polyline points="23,4 9,26 23,48" fill="none" stroke="#111" strokeWidth="3" /></svg>
-          </button>
+            style={{ ...px(834, 252, 36, 44), ...ghost }} />
           <button aria-label="next slide" onClick={() => setCarIdx((c) => (c + 1) % slides.length)}
-            style={{ ...px(CAR.x + CAR.w - 50, CAR.y + CAR.h / 2 - 28, 40, 56), ...ghost }}>
-            <svg viewBox="0 0 32 52" width="32" height="52"><polyline points="9,4 23,26 9,48" fill="none" stroke="#111" strokeWidth="3" /></svg>
-          </button>
-          {/* pricing rows */}
-          {PACK.map((it, i) => {
-            const ry = 522 + i * 34;
-            return (
-              <span key={it.name}>
-                {i > 0 && <div style={{ ...px(CAR.x, ry - 17, CAR.w, 1), backgroundImage: `repeating-linear-gradient(90deg,${DASH})`, backgroundSize: "100% 1px", backgroundRepeat: "no-repeat" }} />}
-                {dotBtn(CAR.x + 14, ry, !!packSel[i], () => setPackSel((ps) => ps.map((v, k) => (k === i ? !v : v))), "pk" + i, { ring: true, r: 7.5 })}
-                <span style={{ ...px(CAR.x + 40, ry - 11, 340, 18), font: `15px ${HNW}`, lineHeight: "18px" }}>{t(it.name)}</span>
-                <span style={{ ...px(CAR.x + CAR.w - 120, ry - 11, 120, 18), font: `15px ${HNW}`, lineHeight: "18px", textAlign: "right", display: "block" }}>{"$" + it.price}</span>
+            style={{ ...px(1256, 252, 36, 44), ...ghost }} />
+          {/* T&C — baked ring + underlined text; the dot and click are live */}
+          {dotBtn(859.38, 445.71, agree, () => setAgree((a) => !a), "agree")}
+          <button onClick={() => setAgree((a) => !a)} style={{ ...px(880, 436, 250, 20), ...ghost }} />
+          {gensMode ? (<>
+            {/* ROUND 50 #2: generation top-up — the baked 4-row list is
+                covered; THREE single-select rows in the same style */}
+            {patch(822.5, 469, 481, 150, "genrows")}
+            {[480, 514.56, 548.57, 582.86].map((ly) => (
+              <div key={"gl" + ly} style={{ ...px(822.86, ly, 480, 1), backgroundImage: `repeating-linear-gradient(90deg,${DASH})`, backgroundSize: "100% 1px", backgroundRepeat: "no-repeat" }} />
+            ))}
+            {GENS.map((g, i) => (
+              <span key={g.name}>
+                {dotBtn(857.14, ROWC[i], gensSel === i, () => setGensSel(i), "gen" + i, { ring: true, r: 7.5 })}
+                <button onClick={() => setGensSel(i)} style={{ ...px(880, ROWC[i] - 12, 340, 24), ...ghost, textAlign: "left", textTransform: "none", font: `15px ${HNW}`, color: "#111" }}>{t(g.name)}</button>
+                {priceAt(ROWC[i] + 4.9, "$" + g.price)}
               </span>
-            );
-          })}
-          <span style={{ ...px(CAR.x + 40, 522 + 4 * 34 - 11, 200, 18), font: `700 16px ${HNW}`, lineHeight: "18px" }}>{t("Total:")}</span>
-          <span style={{ ...px(CAR.x + CAR.w - 140, 522 + 4 * 34 - 11, 140, 18), font: `700 16px ${HNW}`, lineHeight: "18px", textAlign: "right", display: "block" }}>{"$" + total}</span>
-          <button onClick={proceedToPayment}
-            style={{ ...px(CAR.x, 522 + 4 * 34 + 14, CAR.w, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
-            {t("Pay & Download")}</button>
-          <button aria-label="back" onClick={goBack} style={{ ...px(56, 664, 60, 44), ...ghost }}>
-            <svg viewBox="0 0 60 40" width="60" height="40"><line x1="47" y1="20" x2="13" y2="20" stroke="#000" strokeWidth="3" /><polyline points="23,9.5 12.5,20 23,30.5" fill="none" stroke="#000" strokeWidth="3" /></svg>
-          </button>
+            ))}
+            {priceAt(639.48, "$" + GENS[gensSel].price, true)}
+            {/* the baked button says Pay & Download — top-ups just Pay */}
+            <div style={{ ...px(822.86, 651.43, 480, 34.29), background: "#111", display: "flex", alignItems: "center", justifyContent: "center", font: `12px ${HNW}`, letterSpacing: 0.3, color: "#fff", paddingBottom: 4 }}>{t("Pay")}</div>
+            <button aria-label="pay" onClick={payForGenerations} style={{ ...px(822.86, 651.43, 480, 34.29), ...ghost }} />
+          </>) : customLabel ? (<>
+            {/* own-label order: only Marketing Assets and its price */}
+            {patch(822.5, 469, 481, 150, "custrows")}
+            {[480, 514.56].map((ly) => (
+              <div key={"cl" + ly} style={{ ...px(822.86, ly, 480, 1), backgroundImage: `repeating-linear-gradient(90deg,${DASH})`, backgroundSize: "100% 1px", backgroundRepeat: "no-repeat" }} />
+            ))}
+            {dotBtn(857.14, ROWC[0], !!packSel[2], () => setPackSel((ps) => ps.map((v, k) => (k === 2 ? !v : v))), "pkc", { ring: true, r: 7.5 })}
+            <button onClick={() => setPackSel((ps) => ps.map((v, k) => (k === 2 ? !v : v)))}
+              style={{ ...px(880, ROWC[0] - 12, 340, 24), ...ghost, textAlign: "left", textTransform: "none", font: `15px ${HNW}`, color: "#111" }}>{t("Marketing Assets")}</button>
+            {priceAt(ROWC[0] + 4.9, "$" + PACK[2].price)}
+            {priceAt(639.48, "$" + total, true)}
+            <button aria-label="pay" onClick={proceedToPayment} style={{ ...px(822.86, 651.43, 480, 34.29), ...ghost }} />
+          </>) : (<>
+            {/* live dots on the baked rings + row click zones */}
+            {PACK.map((it, i) => (
+              <span key={it.name}>
+                {dotBtn(857.14, ROWC[i], !!packSel[i], () => setPackSel((ps) => ps.map((v, k) => (k === i ? !v : v))), "pk" + i)}
+                <button onClick={() => setPackSel((ps) => ps.map((v, k) => (k === i ? !v : v)))}
+                  style={{ ...px(880, ROWC[i] - 12, 340, 24), ...ghost }} />
+                {priceAt(ROWC[i] + 4.9, "$" + it.price)}
+              </span>
+            ))}
+            {priceAt(639.48, "$" + total, true)}
+            <button aria-label="pay" onClick={proceedToPayment} style={{ ...px(822.86, 651.43, 480, 34.29), ...ghost }} />
+          </>)}
+          {/* back arrow is baked — ghost zone; a gens visit returns to the
+              options page it came from */}
+          <button aria-label="back" onClick={() => { if (gensMode) { setGensMode(false); go("options", -1); } else goBack(); }}
+            style={{ ...px(72, 666, 52, 40), ...ghost }} />
         </>);
       }
 
@@ -2005,6 +2077,11 @@ export default function NewUI() {
                     ...(i === STEPS.length - 1 ? { left: 1303.41 - 260, width: 260, textAlign: "right" as const } : { left: CIRCLE_X[i] - 130, width: 260, textAlign: "center" as const }) }}>
                   {t(st.label)}</button>
               ))}
+              {/* ROUND 50 #3 (owner): every gate message sits midway
+                  between the content and the progress line */}
+              {warn && (
+                <span style={{ ...px(0, 664 - 660, W, 16), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block" }}>{warn}</span>
+              )}
               {/* back arrow — hidden while the loader runs (round 46) */}
               {page !== "loader" && (
                 <button aria-label="back" onClick={() => { barJumped.current = false; goBack(); }} style={{ ...px(56, 666 - 660, 60, 40), ...ghost }}>

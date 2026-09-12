@@ -116,8 +116,24 @@ export const SVG_GE: Record<string, string> = {
   "MARKETING ASSETS": "ᲡᲐᲛᲐᲠᲙᲔᲢᲘᲜᲒᲝ ᲛᲐᲡᲐᲚᲐ",
   "Face &amp; Back": "წინა და უკანა",
   "Product placed in contextual environments": "პროდუქტი კონტექსტურ გარემოში",
-  /* checkout */
+  /* checkout — round 50: the owner's new Final Pack board (folder tree +
+     T&C + baked rows; file names stay untranslated on purpose) */
   "FINAL PACK": "ᲡᲐᲑᲝᲚᲝᲝ ᲞᲐᲙᲔᲢᲘ",
+  "After payment, you’ll be able to download": "გადახდის შემდეგ შეძლებთ ჩამოტვირთოთ",
+  "your Final Pack with high-resolution,": "თქვენი საბოლოო პაკეტი — მაღალი გარჩევადობის,",
+  "print-ready files, instructions, and a": "საბეჭდად მზა ფაილები, ინსტრუქცია და",
+  "Read Me containing the link to your": "Read Me ფაილი, სადაც იქნება თქვენი",
+  "published product page.": "პროდუქტის გვერდის ბმული.",
+  "LABELS": "ეტიკეტები",
+  "MARKETING": "სამარკეტინგო",
+  "ASSETS": "მასალა",
+  "I agree to the": "ვეთანხმები",
+  "Terms &amp; Conditions": "წესებსა და პირობებს",
+  "Print ready Front &amp; Back Labels": "საბეჭდად მზა წინა და უკანა ეტიკეტები",
+  "QR Code &amp; Published Product Page": "QR კოდი და გამოქვეყნებული გვერდი",
+  "1 Hour session with human designer": "1 საათი დიზაინერთან",
+  "Total:": "ჯამი:",
+  "Pay &amp; Download": "გადახდა და ჩამოტვირთვა",
   "Front label": "წინა ეტიკეტი",
   "Print ready high resolution file": "მაღალი გარჩევადობის საბეჭდი ფაილი",
   "Back label": "უკანა ეტიკეტი",
@@ -212,6 +228,12 @@ export const UI_GE: Record<string, string> = {
   "Your label ✓ — upload another": "შენი ეტიკეტი ✓ — ატვირთე სხვა",
   "Product Shot": "პროდუქტის ფოტო",
   "Face": "წინა",
+  /* round 50 #2: generation credits + top-up checkout */
+  "3X Generation": "3X გენერაცია",
+  "9X Generation": "9X გენერაცია",
+  "20X Generation": "20X გენერაცია",
+  "Pay": "გადახდა",
+  "Generations available:": "დარჩენილი გენერაციები:",
   /* round 49 #2: email-gated repeat variations */
   "3 more variations?": "კიდევ 3 ვარიაცია?",
   "Leave your email and we'll generate three more variations of the chosen style.": "დატოვე იმეილი და დაგიგენერირებთ არჩეული სტილის კიდევ სამ ვარიაციას.",

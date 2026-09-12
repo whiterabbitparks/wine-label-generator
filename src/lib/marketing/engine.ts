@@ -113,7 +113,9 @@ function closureLine(closure: string, colourCSS: string, finish: string) {
   if (/no cap/i.test(finish) || /no capsule/i.test(closure))
     return closure === "Sparkling Cork"
       ? "CLOSURE — NON-NEGOTIABLE: a mushroom sparkling cork held by its BARE wire cage (muselet) with its round metal cap plate — no foil hood; the cage and its neatly twisted wire sit fully visible against the glass"
-      : "CLOSURE — NON-NEGOTIABLE: a natural cork sits flush in the bare bottle mouth — NO capsule, NO foil, the glass lip fully visible";
+      /* round 50 #6 (owner: cork kept rendering half-pulled) + #7 (cork
+         through the glass had defects) */
+      : "CLOSURE — NON-NEGOTIABLE: a natural cork sits FULLY SEATED in the bare bottle mouth, driven ALL the way in exactly like an unopened bottle — its top level with the glass lip or at most 1–2 mm above it. NEVER half-pulled, never rising tall out of the neck, never partially extracted. NO capsule, NO foil, the glass lip fully visible. THROUGH THE GLASS: where the neck is transparent, the cork inside reads as ONE clean uniform cylinder of natural cork length (~45 mm), crisp and evenly rendered along its FULL length — no doubling, no half-sharp half-hazy sections, no short stubs, no artifacts";
   switch (closure) {
     case "Screw Cap": return `CLOSURE — NON-NEGOTIABLE: a ${fin} ${col} aluminium SCREW CAP with a clean straight skirt over the bottle mouth and upper neck. There is NO cork and NO foil capsule — a screw cap only`;
     /* round 29 #3: medium-height wax; round 49 #14 (owner: "reads like a
@@ -125,7 +127,8 @@ function closureLine(closure: string, colourCSS: string, finish: string) {
     /* round 37 #2: wires were rendered poking OUT of the foil — anatomy
        spelled out: with a foil hood the cage lives entirely UNDER the foil */
     case "Sparkling Cork": return `CLOSURE — NON-NEGOTIABLE: a ${fin} ${col} FOIL HOOD dressed smoothly over the sparkling cork AND its entire wire cage, running down the upper neck with a clean crimped lower edge. The foil COMPLETELY covers the cage — no wire ever pokes through, over or out of the foil; at most the cage's form reads as a soft embossed relief under the foil surface`;
-    default: return `CLOSURE — NON-NEGOTIABLE: a natural cork under a ${fin} ${col} foil capsule covering the bottle lip and upper neck`;
+    /* round 50 #7: the visible in-neck cork must be clean and full-length */
+    default: return `CLOSURE — NON-NEGOTIABLE: a natural cork under a ${fin} ${col} foil capsule covering the bottle lip and upper neck. THROUGH THE GLASS: where the neck is transparent below the capsule, the cork inside reads as ONE clean uniform cylinder of natural cork length (~45 mm), crisp and evenly rendered along its FULL length — no doubling, no half-sharp half-hazy sections, no short stubs, no artifacts`;
   }
 }
 
@@ -160,7 +163,10 @@ function scaleLine(wmm: number, hmm: number, spec: BottleSpec) {
   const wrap = wmm > circ * 0.62 ? " (it wraps well around the body's curve; its sides foreshorten realistically)" : "";
   return `SCALE — CRITICAL AND EXACT: the bottle is ${spec.heightCM} cm tall and ${spec.diamCM} cm wide; ` +
     `the label is exactly ${wmm} mm wide × ${hmm} mm tall, so it covers about ${pct}% of the bottle's height${wrap}. ` +
-    `Keep this label-to-bottle ratio precisely realistic — never enlarge or shrink the label relative to the bottle.`;
+    `Keep this label-to-bottle ratio precisely realistic — never enlarge or shrink the label relative to the bottle. ` +
+    /* round 50 #5 (owner: back shot rendered a TALLER label than the
+       front shot): both sides carry the same-size label — say it */
+    `The FRONT and BACK labels of this wine are exactly THE SAME physical size — every shot of this bottle shows the label at this one identical scale.`;
 }
 
 /* ---- product-shot prompt ------------------------------------------- */
@@ -211,7 +217,8 @@ export function buildShotPrompt(b: MarketingBrief, side: "front" | "back", hasSh
     /* round 29 #5: bottle and label must be lit as one object */
     `ONE LIGHT: the label is lit by exactly the same light as the glass — same direction, same colour temperature, same contrast and shadow fall — so bottle and label read as ONE object photographed together, never as a graphic pasted on afterwards. ` +
     (hasShape
-      ? `The SECOND attached image is a technical outline drawing of this exact bottle model — match its GLASS silhouette, proportions, shoulder curve and neck length PRECISELY, but render a real photographed glass bottle, never a drawing. IGNORE the closure/top drawn in the outline — the closure is specified above and OVERRIDES the drawing. `
+      /* round 50 #12: exact-trace wording, matching the lifestyle prompt */
+      ? `The SECOND attached image is a technical outline drawing of this exact bottle model — match its GLASS silhouette EXACTLY: the same shoulder curve, the same neck length, the same width-to-height ratio; when in doubt, TRACE the outline. Render a real photographed glass bottle, never a drawing, and never substitute a different bottle model. IGNORE the closure/top drawn in the outline — the closure is specified above and OVERRIDES the drawing. `
       : "") +
     `Lighting: crisp premium studio softbox lighting, elegant vertical highlights along the glass, true colours, razor-sharp focus. ` +
     `CUTOUT: pure transparent background, no surface, no table, no cast shadow, no glow or halo around the silhouette — a clean isolated product cutout.` +
@@ -271,8 +278,14 @@ export function buildLifestylePrompt(b: MarketingBrief, scenario: string, charte
        a label once rendered rotated 90° relative to the bottle. */
     `LABEL-TO-BOTTLE ALIGNMENT — NON-NEGOTIABLE: the label is applied to the bottle the normal way — its vertical axis runs along the bottle's own axis, its TOP edge always facing the bottle's NECK and its BOTTOM edge facing the base, text baselines perpendicular to that axis, exactly as a real glued-on wine label. The bottle may stand, tilt, be held or lie down — the label always moves WITH the bottle: when the bottle lies horizontally the label lies with it (its text then reads along the bottle). Never rotated 90° on the glass, never upright text on a lying bottle, never upside down, never mirrored. ` +
     (hasShape
-      ? `The SECOND attached image is a technical outline of this exact bottle model — the bottle in the photo matches that GLASS silhouette and its proportions precisely (the closure drawn in the outline is irrelevant; the closure specified above overrides it). `
+      /* round 50 #12 (owner: bottle shape drifts too much between images) */
+      ? `The SECOND attached image is a technical outline of this exact bottle model — the bottle in the photo matches that GLASS silhouette EXACTLY: the same shoulder curve, the same neck length, the same width-to-height ratio; when in doubt, TRACE the outline. Never substitute a different bottle model (the closure drawn in the outline is irrelevant; the closure specified above overrides it). `
       : "") +
+    /* round 50 #10 (owner: a sparkling wine got a still-wine cork in one
+       image): the category's elements are locked across the series */
+    `PRODUCT CONSISTENCY — NON-NEGOTIABLE: every image shows THIS exact product — the bottle type, glass colour, CLOSURE and label described above. Never a generic wine bottle, never a different closure style: a sparkling wine NEVER appears with a still-wine cork or capsule, and the specified closure overrides whatever is typical for the scene. ` +
+    /* round 50 #6: unopened by default */
+    `BOTTLE STATE: the bottle is UNOPENED unless the scene explicitly requires it open — the closure fully seated, never a half-pulled cork. ` +
     `PEOPLE (house rule): never show a human face — any person appears from behind, framed below the shoulders, or as hands only. ` +
     `Shot on professional camera, beautiful natural light for the scene, crisp focus on the bottle and label. Square composition. No added text, no watermarks, no logos other than the label itself.` +
     houseRules(rules)
