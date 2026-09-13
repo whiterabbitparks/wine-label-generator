@@ -303,9 +303,47 @@ export default function NewUI() {
   const termsRef = useRef<HTMLDivElement | null>(null);
   const [gensSel, setGensSel] = useState(0);
   const [genCredits, setGenCredits] = useState(0);
-  const pendingGen = useRef("");
-  useEffect(() => { try { const c = Number(localStorage.getItem("nui-gen-credits")); if (Number.isFinite(c) && c > 0) setGenCredits(c); } catch { } }, []);
+  /* ROUND 56 #7 (owner): every visitor STARTS with 3 credits; every
+     generation (labels run, variations run, assets pack, more
+     variations) costs 1. At zero: no email yet → the mailing-list gift
+     modal (+1); email known → the CREDITS purchase page. */
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("nui-gen-credits");
+      if (raw === null) { setGenCredits(3); localStorage.setItem("nui-gen-credits", "3"); }
+      else { const c = Number(raw); if (Number.isFinite(c) && c >= 0) setGenCredits(c); }
+    } catch { }
+  }, []);
   const saveCredits = (n: number) => { setGenCredits(n); try { localStorage.setItem("nui-gen-credits", String(n)); } catch { } };
+  const gensReturn = useRef<PageKey>("options");
+  /* round 56 #8: the mailing-list gift spins the indicator like a slot
+     machine up to the new balance */
+  const [spinning, setSpinning] = useState(false);
+  const [spinDigit, setSpinDigit] = useState(0);
+  const grantCredit = (n: number) => {
+    saveCredits(genCredits + n);
+    setSpinning(true);
+    let k = 0;
+    const iv = setInterval(() => {
+      k++; setSpinDigit(Math.floor(Math.random() * 10));
+      if (k > 13) { clearInterval(iv); setSpinning(false); }
+    }, 65);
+  };
+  /* ONE gate for every paid action: spends a credit or routes to the
+     gift modal / purchase page. Returns true when the action may run. */
+  const requestCredit = (from: PageKey): boolean => {
+    if (genCredits >= 1) { saveCredits(genCredits - 1); return true; }
+    if (!varEmail) { setEmailInput(""); setEmailErr(false); setEmailModal("gift"); return false; }
+    gensReturn.current = from; setGensMode(true); setGensSel(0); go("checkout");
+    return false;
+  };
+  /* round 56 #3 (owner, TEMP DEV TOOL — remove before launch): the
+     footer switch fakes every generation with already-made images */
+  const [liveGen, setLiveGen] = useState(true);
+  const liveGenRef = useRef(true);
+  useEffect(() => { try { if (localStorage.getItem("nui-live-gen") === "0") { setLiveGen(false); liveGenRef.current = false; } } catch { } }, []);
+  const FAKE_IMG = "/newui/bottles/bordeaux.jpg";
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const [selected, setSelected] = useState(-1);
   const [genProgress, setGenProgress] = useState(0);
   const [frontSig, setFrontSig] = useState("");
@@ -545,9 +583,30 @@ export default function NewUI() {
     }
     assetsRunning.current = true;
     (async () => {
+      /* round 56 #3 (TEMP dev switch): fake the whole run with whatever
+         art already exists — same stages, no API, no cost */
+      if (!liveGenRef.current) {
+        setAssets({ life: [] }); setLifeTarget(5);
+        assetT.current = { run: Date.now(), stage: Date.now() };
+        const lab = sel.preview || sel.dream;
+        setAssetsStage("front shot"); await sleep(700);
+        setAssets((a2) => ({ ...a2, front: { full: lab, prev: lab } }));
+        if (backPng && !customLabel) {
+          setAssetsStage("back shot"); await sleep(550);
+          setAssets((a2) => ({ ...a2, back: { full: backPng, prev: backPng } }));
+        }
+        for (let i = 0; i < 5; i++) {
+          setAssetsStage(`lifestyle ${i + 1}/5`); await sleep(420);
+          setAssets((a2) => { const life = [...a2.life]; life[i] = { full: lab, prev: lab }; return { ...a2, life }; });
+        }
+        setAssetsSig(sig);
+        setAssetsStage("");
+        assetsRunning.current = false;
+        return;
+      }
       const got = { front: "", back: "", life: [] as string[] };
       try {
-        setAssets({ life: [] });
+        setAssets({ life: [] }); setLifeTarget(5);
         assetT.current = { run: Date.now(), stage: Date.now() };
         setAssetsStage("preparing");
         let backData: string | null = null;
@@ -628,6 +687,61 @@ export default function NewUI() {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, assetsTick]);
+  /* ROUND 56 (owner's PSD): "More Variations" — each press buys 5 more
+     lifestyle images; the thumbs grid densifies to fit them all */
+  const [lifeTarget, setLifeTarget] = useState(5);
+  const moreRunning = useRef(false);
+  async function moreVariations() {
+    if (assetsRunning.current || moreRunning.current || assetsStage) return;
+    const sel = customLabel ? { style: "contemporary", dream: customLabel, preview: null as string | null } : selected >= 0 ? dreams[selected] : null;
+    if (!sel) return;
+    if (!requestCredit("assets")) return;
+    const base = lifeTarget;
+    const batch = Math.floor(base / 5);
+    setLifeTarget(base + 5);
+    moreRunning.current = true;
+    assetT.current = { run: Date.now(), stage: Date.now() };
+    try {
+      if (!liveGenRef.current) {
+        for (let i = 0; i < 5; i++) {
+          setAssetsStage(`lifestyle ${i + 1}/5`); await sleep(450);
+          setAssets((a2) => { const life = [...a2.life]; const src = a2.life[i]?.prev || sel.preview || sel.dream; life[base + i] = { full: src, prev: src }; return { ...a2, life }; });
+        }
+      } else {
+        setAssetsStage("preparing");
+        let seed = 5381; const sg = assetsSig || "more";
+        for (let i = 0; i < sg.length; i++) seed = ((seed * 33) ^ sg.charCodeAt(i)) >>> 0;
+        const r = await fetch("/api/marketing-assets", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            front: sel.dream, back: null,
+            bottle: { type: bottle.type, color: bottle.color, closure: bottle.closure, finish: bottle.finish, closureColour: shadeRgb() },
+            wine: { colour: wineColor || f.colour || DEMO_FRONT.colour, name: f.wine || DEMO_FRONT.wine },
+            labelMM: customLabel ? customDims : { w: Number(f.width) || 110, h: Number(f.height) || 80 },
+            style: sel.style, seed, lifeOnly: true, batch,
+          }),
+        });
+        if (!r.ok || !r.body) throw new Error(`more variations failed (${r.status})`);
+        const reader = r.body.getReader(); const dec = new TextDecoder();
+        let buf = "";
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += dec.decode(value, { stream: true });
+          let nl;
+          while ((nl = buf.indexOf("\n")) >= 0) {
+            const line = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1);
+            if (!line) continue;
+            const m = JSON.parse(line);
+            if (m.type === "progress") { assetT.current.stage = Date.now(); setAssetsStage(m.stage || ""); }
+            else if (m.type === "life") setAssets((a2) => { const life = [...a2.life]; life[base + m.i] = { full: m.image, prev: m.preview || m.image }; return { ...a2, life }; });
+          }
+        }
+      }
+    } catch { /* missing slots stay grey; another press retries */ }
+    setAssetsStage("");
+    moreRunning.current = false;
+  }
   const [imgDims, setImgDims] = useState<Record<number, { w: number; h: number }>>({});
   useEffect(() => {
     dreams.forEach((d, i) => {
@@ -739,6 +853,13 @@ export default function NewUI() {
   };
   /* one variation dream — same endpoint, no page-level progress */
   async function genVariation(style: string): Promise<Dream> {
+    /* round 56 #3 (TEMP dev switch): fake with an already-made label */
+    if (!liveGenRef.current) {
+      await sleep(600 + Math.random() * 700);
+      const pool = dreams.filter(Boolean);
+      const d0 = pool[Math.floor(Math.random() * Math.max(1, pool.length))];
+      return { style, dream: d0?.dream || FAKE_IMG, preview: d0?.preview || null };
+    }
     const { data, aspectKey } = buildDreamPayload();
     const r = await fetch("/api/dream-label", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -776,20 +897,10 @@ export default function NewUI() {
     }));
     setVarBusy(false);
   }
-  /* round 49 #2 / round 50 #2: run 1 free → run 2 email-gated → run 3+
-     spends 3 generation credits or routes to the top-up checkout */
+  /* ROUND 56 #7: every variations run spends 1 credit through the gate */
   const requestVariations = (style: string) => {
     if (varBusy) return;
-    const runIdx = varRuns.length;
-    if (runIdx === 0) { createVariations(style); return; }
-    if (runIdx === 1) {
-      /* ROUND 51 #3 (owner): the second run ALWAYS asks — a known email
-         only prefills the field */
-      setEmailInput(varEmail); setEmailErr(false); setEmailModal(style);
-      return;
-    }
-    if (genCredits >= 1) { saveCredits(genCredits - 1); createVariations(style); }
-    else { pendingGen.current = style; setGensMode(true); setGensSel(0); go("checkout"); }
+    if (requestCredit("options")) createVariations(style);
   };
   /* round 52 #1 (owner: "it let me download without agreeing!"):
      every pay path checks the T&C ring first */
@@ -802,20 +913,21 @@ export default function NewUI() {
   /* TEMP (owner, "before IP reset"): Pay just adds the credits; if a
      style click brought us here, that run fires right away (minus its 3) */
   const payForGenerations = () => {
-    /* ROUND 51 #4 (owner): buying does NOT auto-generate — back to the
-       first-labels page; they press the style button themselves */
+    /* ROUND 51 #4 (owner): buying does NOT auto-generate — back to
+       where they came from; they press the button themselves */
     saveCredits(genCredits + GENS[gensSel].gens);
-    pendingGen.current = "";
     setGensMode(false);
     setOptPage(0);
-    go("options", -1);
+    go(gensReturn.current || "options", -1);
   };
   const submitVarEmail = () => {
     const e = emailInput.trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e)) { setEmailErr(true); return; }
     setVarEmail(e); try { localStorage.setItem("nui-var-email", e); } catch { }
-    const st = emailModal; setEmailModal("");
-    createVariations(st);
+    setEmailModal("");
+    /* round 56 #8: the gift button NEVER generates — it grants the
+       credit and the indicator rolls up like a slot machine */
+    grantCredit(1);
   };
 
   async function nextFromFront() {
@@ -838,6 +950,13 @@ export default function NewUI() {
       volume: fx("volume").replace(/\D/g, "") || "750",
     };
     const one = async (style: string): Promise<Dream> => {
+      /* round 56 #3 (TEMP dev switch): fake the run with existing art */
+      if (!liveGenRef.current) {
+        await sleep(500);
+        setGenProgress((p) => p + 1 / 3);
+        const d0 = dreams.find(Boolean);
+        return { style, dream: d0?.dream || FAKE_IMG, preview: d0?.preview || FAKE_IMG };
+      }
       const r = await fetch("/api/dream-label", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ vision, style, data, sketch, aspect: aspectKey }),
@@ -1099,6 +1218,28 @@ export default function NewUI() {
     return `rgb(${mix(r)}, ${mix(g)}, ${mix(bl)})`;
   };
 
+  /* ROUND 56 #2/#7: the credit balance rides EVERY generation page
+     (vision, options, assets); at zero it becomes the "Add credit" link
+     to the purchase page; while a gift lands it spins like a slot
+     machine (round 56 #8) */
+  const creditsIndicator = (withSubline = false) => (<>
+    <span style={{ ...px(903, 149.08 - 15.5, 400, 20), font: `700 15px ${HNW}`, lineHeight: "20px", textAlign: "right", display: "block" }}>
+      {t("Credits available:")}{" "}
+      {spinning ? (
+        <span style={{ color: BAR_RED }}>{spinDigit}</span>
+      ) : genCredits === 0 ? (
+        <button onClick={() => { gensReturn.current = pageNow.current; setGensMode(true); setGensSel(0); go("checkout"); }}
+          style={{ ...ghost, font: `700 15px ${HNW}`, color: BAR_RED, textDecoration: "underline", textTransform: "none", display: "inline" }}>{t("Add credit")}</button>
+      ) : (
+        <span style={{ color: BAR_RED }}>{genCredits}</span>
+      )}
+    </span>
+    {withSubline && (
+      <span style={{ ...px(903, 183.62 - 15.5, 400, 20), font: `12px ${HNW}`, color: "#8a8a8a", lineHeight: "20px", textAlign: "right", display: "block" }}>
+        {t("1 Credit = 3 new labels")}</span>
+    )}
+  </>);
+
   /* inSlide = rendered inside a moving slide layer (inert, entry
      animations suppressed — the slide itself is the entry) */
   const renderOverlay = (p: PageKey, inSlide = false) => {
@@ -1113,6 +1254,7 @@ export default function NewUI() {
         </>);
       case "vision":
         return (<>
+          {creditsIndicator()}
           {patch(1213, 421, 87, 17, "cnt")}
           <span style={{ ...px(1178, 422, 110, 15), font: `11px ${HNW}`, color: "#111", textAlign: "right" }}>{vision.trim() ? vision.trim().split(/\s+/).length : 0} / 300 {t("words")}</span>
           <textarea value={vision} onChange={(e) => setVision(e.target.value)} maxLength={2200}
@@ -1282,13 +1424,7 @@ export default function NewUI() {
           )}
           {/* ROUND 53 #2 (owner): the balance rides the title line in the
               variations-header style — bold 15, the digit progress-red */}
-          {varRuns.length > 0 && (<>
-            <span style={{ ...px(903, 149.08 - 15.5, 400, 20), font: `700 15px ${HNW}`, lineHeight: "20px", textAlign: "right", display: "block" }}>
-              {t("Credits available:")} <span style={{ color: BAR_RED, fontWeight: 700 }}>{genCredits}</span></span>
-            {/* round 54 #1: the explainer rides the second title line */}
-            <span style={{ ...px(903, 183.62 - 15.5, 400, 20), font: `12px ${HNW}`, color: "#8a8a8a", lineHeight: "20px", textAlign: "right", display: "block" }}>
-              {t("1 Credit = 3 new labels")}</span>
-          </>)}
+          {creditsIndicator(true)}
           {/* ROUND 53 #2/#3: header sits UNDER the page title; repeated
               styles number their pages 02, 03… */}
           {optPage >= 1 && (() => {
@@ -1371,26 +1507,7 @@ export default function NewUI() {
               <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 9, height: 9, borderRadius: 5, border: "1px solid #111", background: optPage === i ? "#111" : "#fff", boxSizing: "border-box" }} />
             </button>
           ))}
-          {/* round 49 #2: email gate for repeat variation runs */}
-          {emailModal && (<>
-            <div style={{ ...px(0, HEADER_H, W, 660 - HEADER_H), background: "rgba(255,255,255,0.88)", zIndex: 20 }} onClick={() => setEmailModal("")} />
-            <div style={{ ...px(W / 2 - 230, 258, 460, 188), background: "#fff", border: "1px solid #111", zIndex: 21, boxSizing: "border-box" }}>
-              <button aria-label="close" onClick={() => setEmailModal("")}
-                style={{ position: "absolute", right: 6, top: 4, ...ghost, font: `15px ${HNW}`, color: "#111", width: 24, height: 24 }}>✕</button>
-              <span style={{ position: "absolute", left: 32, top: 30, font: `700 15px ${HNW}` }}>{t("3 more variations?")}</span>
-              <span style={{ position: "absolute", left: 32, top: 56, width: 396, font: `13px ${HNW}`, lineHeight: "18px" }}>
-                {t("Leave your email and we'll generate three more variations of the chosen style.")}</span>
-              <input value={emailInput} placeholder="your@email.com" autoFocus
-                onChange={(e) => { setEmailInput(e.target.value); setEmailErr(false); }}
-                onKeyDown={(e) => { if (e.key === "Enter") submitVarEmail(); }}
-                style={{ position: "absolute", left: 32, top: 104, width: 250, font: `italic 15px ${HNW}`, border: "none", outline: "none", background: "transparent", padding: "0 0 2px 2px", color: "#111" }} />
-              <div style={{ position: "absolute", left: 32, top: 126, width: 254, height: 1, background: "#111" }} />
-              {emailErr && <span style={{ position: "absolute", left: 32, top: 132, font: `11px ${HNW}`, color: "#8e2b2b" }}>{t("Enter a valid email")}</span>}
-              <button onClick={submitVarEmail}
-                style={{ position: "absolute", left: 306, top: 96, width: 122, height: 34.3, cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", paddingBottom: 4 }}>
-                {t("Generate")}</button>
-            </div>
-          </>)}
+
           {/* Select radios. ROUND 46 (owner: "middle label is selected and
               wrong circle is selected"): the filled circle follows the
               selected IMAGE by index — page 1 marks first labels, the
@@ -1816,16 +1933,21 @@ export default function NewUI() {
         const custom = !!customLabel;
         /* ROUND 53 #5 (owner): no requested product page (qrMode not
            "create") → the landing column DIES and the board splits into
-           thirds — shots left, 2×2 marketing group centered right — the
-           own-label geometry, now for every landing-less order. */
-        const thirds = custom || qrMode !== "create";
-        const order = [heroAsset, ...[0, 1, 2, 3, 4].filter((i) => i !== heroAsset)];
+           thirds. ROUND 56 #2: a bar-jump with NOTHING selected previews
+           the FULL layout including the landing-page placeholder. */
+        const emptyJump = !custom && selected < 0;
+        const thirds = custom || (!emptyJump && qrMode !== "create");
+        const order = [heroAsset, ...Array.from({ length: Math.max(5, lifeTarget) }, (_, i) => i).filter((i) => i !== heroAsset)];
         const BOX = { x: 137.5, y: 272, w: 1165.5, h: 344 };
-        /* ROUND 48 #6 / ROUND 49 #8: thirds mode lays the 4 thumbs 2×2
-           beside the hero, the block EXACTLY the hero's height (thumbs
-           145, 2·145+10 = 300); every gap equal; group centered. */
-        const SQ = 300, GAP = 10, TH = thirds ? (SQ - GAP) / 2 : (SQ - 3 * GAP) / 4;
-        const groupW = thirds ? SQ + GAP + 2 * TH + GAP : SQ + GAP + TH;
+        /* ROUND 56 (owner's PSD): the thumbs ride a DENSE grid that grows
+           with More Variations (2×2 → 3×3 → 4×4); grid + the black More
+           button together equal the hero's height. */
+        const SQ = 300, GAP = 10;
+        const NTH = thirds ? Math.max(4, lifeTarget - 1) : 4;
+        const cols = NTH <= 4 ? 2 : NTH <= 9 ? 3 : 4;
+        const GH = SQ - 44;                                        // 256
+        const TH = thirds ? (GH - (cols - 1) * GAP) / cols : (SQ - 3 * GAP) / 4;
+        const groupW = thirds ? SQ + GAP + GH : SQ + GAP + TH;
         const third = BOX.w / 3;                                   // 388.5
         const splitX = BOX.x + third;                              // 526
         const gx = thirds ? splitX + (2 * third - groupW) / 2 : 410 + (436 - groupW) / 2;
@@ -1857,6 +1979,7 @@ export default function NewUI() {
           );
         return (<>
           {patch(0, 160, W, 500, "aswipe")}
+          {creditsIndicator()}
           {thirds ? (<>
             {custom
               ? head(137.5, "Product Shot", "Face", "PNG / 700x2500px / 72dpi")
@@ -1904,18 +2027,24 @@ export default function NewUI() {
           {/* marketing images: square uncropped hero + equal-gap strip,
               one centered group (round 47); small thumbs swap into the hero */}
           {slot(gx, gy, SQ, SQ, assets.life[order[0]], `lifestyle ${order[0] + 1}/5`, "contain")}
-          {[0, 1, 2, 3].map((k) => {
+          {Array.from({ length: NTH }, (_, k) => {
             const idx = order[k + 1];
             const it = assets.life[idx];
-            const x = gx + SQ + GAP + (thirds ? (k % 2) * (TH + GAP) : 0);
-            const y = gy + (thirds ? Math.floor(k / 2) : k) * (TH + GAP);
+            const x = gx + SQ + GAP + (thirds ? (k % cols) * (TH + GAP) : 0);
+            const y = gy + (thirds ? Math.floor(k / cols) : k) * (TH + GAP);
             return (
               <span key={"sm" + k}>
-                {slot(x, y, TH, TH, it, `lifestyle ${idx + 1}/5`, "cover")}
+                {slot(x, y, TH, TH, it, `lifestyle ${(idx % 5) + 1}/5`, "cover")}
                 {it && <button onClick={() => setHeroAsset(idx)} style={{ ...px(x, y, TH, TH), ...ghost }} />}
               </span>
             );
           })}
+          {/* round 56 (owner's PSD): +5 images per press, 1 credit each */}
+          {thirds && !assetsStage && assets.life.filter(Boolean).length >= 1 && (
+            <button onClick={moreVariations}
+              style={{ ...px(gx + SQ + GAP, gy + GH + GAP, GH, SQ - GH - GAP), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
+              {t("More Variations")}</button>
+          )}
           {/* col 3: BIG landing browser, centered in its column (round 46) */}
           {thirds ? null : productUrl && selected >= 0 ? (
             <div style={{ ...px(866.5, 318.5, 416, 251), background: "#fff", borderRadius: 6, boxShadow: "0 10px 26px rgba(0,0,0,0.22)", overflow: "hidden" }}>
@@ -1956,13 +2085,13 @@ export default function NewUI() {
         /* ROUND 47: own-label orders deliver ONLY the marketing assets */
         const slides: Slide[] = customLabel ? [
           { name: "Product_Shot_Front.png", img: assets.front?.prev, kind: "front" },
-          ...[0, 1, 2, 3, 4].map((i) => ({ name: `Marketing_Image_${i + 1}.jpg`, img: assets.life[i]?.prev, kind: "front" as const })),
+          ...Array.from({ length: Math.max(5, assets.life.length) }, (_, i) => ({ name: `Marketing_Image_${i + 1}.jpg`, img: assets.life[i]?.prev, kind: "front" as const })),
         ] : [
           { name: "Front_Label.svg", img: selected >= 0 ? (dreams[selected]?.preview || dreams[selected]?.dream) : undefined, kind: "front" },
           { name: "Back_Label.svg", img: backPng || undefined, kind: "back" },
           { name: "Product_Shot_Front.png", img: assets.front?.prev, kind: "front" },
           { name: "Product_Shot_Back.png", img: assets.back?.prev, kind: "front" },
-          ...[0, 1, 2, 3, 4].map((i) => ({ name: `Marketing_Image_${i + 1}.jpg`, img: assets.life[i]?.prev, kind: "front" as const })),
+          ...Array.from({ length: Math.max(5, assets.life.length) }, (_, i) => ({ name: `Marketing_Image_${i + 1}.jpg`, img: assets.life[i]?.prev, kind: "front" as const })),
           /* round 53 #7: no requested QR/page → no landing slide */
           ...(qrMode === "create" ? [{ name: "Product_Page", landing: true, kind: "front" as const }] : []),
         ];
@@ -1988,6 +2117,9 @@ export default function NewUI() {
             {patch(306, 339, 138, 7, "nolabelsline")}
           </>)}
           {!customLabel && !gensMode && !packSel[2] && patch(396, 344, 104, 275, "nomarketing")}
+          {/* round 56 #6: no QR/page row → the domain line leaves the
+              READ ME file list */}
+          {!customLabel && !gensMode && !packSel[1] && patch(521, 566, 175, 13, "noqrfile")}
           {/* live slide inside the baked dashed frame (hidden entirely on
               the round-52 centered top-up card) */}
           {gensMode ? null : sl.landing ? (
@@ -2083,7 +2215,7 @@ export default function NewUI() {
           )}
           {/* back arrow is baked — ghost zone; a gens visit returns to the
               options page it came from */}
-          <button aria-label="back" onClick={() => { if (gensMode) { setGensMode(false); go("options", -1); } else goBack(); }}
+          <button aria-label="back" onClick={() => { if (gensMode) { setGensMode(false); go(gensReturn.current || "options", -1); } else goBack(); }}
             style={{ ...px(72, 666, 52, 40), ...ghost }} />
           {/* ROUND 52 #3: Terms & Conditions modal — lorem body behind the
               house-style scroll (1px track + black dot, draggable), black
@@ -2330,10 +2462,42 @@ export default function NewUI() {
           {/* STATIC footer bar */}
           <div style={{ ...px(0, FOOTER_Y, W, H - FOOTER_Y), background: "#000" }}>
             <span style={{ ...px(138.4, 779.4 - FOOTER_Y, 700, 16), font: `300 11px ${HNW}`, color: "#fff" }}>{t("© 8K Labels — a demo interface built from your uploaded mockup")}</span>
+            {/* round 56 #3 — TEMP DEV SWITCH (remove before launch): off =
+                every generation is faked with already-made images */}
+            <button aria-label="toggle live generation"
+              onClick={() => { const v = !liveGen; setLiveGen(v); liveGenRef.current = v; try { localStorage.setItem("nui-live-gen", v ? "1" : "0"); } catch { } }}
+              style={{ ...px(600, 779.4 - FOOTER_Y - 3, 130, 18), ...ghost, display: "flex", alignItems: "center", columnGap: 6, textTransform: "none" }}>
+              <span style={{ width: 22, height: 12, borderRadius: 7, border: "1px solid #666", position: "relative", background: "#111", boxSizing: "border-box", flex: "0 0 auto" }}>
+                <span style={{ position: "absolute", top: 1.5, left: liveGen ? 11.5 : 1.5, width: 7, height: 7, borderRadius: 4, background: liveGen ? "#3fd05e" : "#666", transition: "left 160ms" }} />
+              </span>
+              <span style={{ font: `300 9px ${HNW}`, color: "#666", whiteSpace: "nowrap" }}>live generation</span>
+            </button>
             <a href="/classic" style={{ ...px(1240, 779.4 - FOOTER_Y, 160, 16), font: `300 11px ${HNW}`, color: "#888", textDecoration: "none" }}>{t("classic interface")}</a>
           </div>
 
           {busyMsg && <div style={{ ...px(1090, 78, 320, 20), font: `13px ${HNW}`, color: "#8a887e", textAlign: "right" }}>{busyMsg}</div>}
+
+          {/* ROUND 56 #7/#8: the mailing-list GIFT modal — global, because
+              the credit gate can fire from vision, options or assets */}
+          {emailModal && (<>
+            <div style={{ ...px(0, HEADER_H, W, 660 - HEADER_H), background: "rgba(255,255,255,0.88)", zIndex: 20 }} onClick={() => setEmailModal("")} />
+            <div style={{ ...px(W / 2 - 230, 258, 460, 188), background: "#fff", border: "1px solid #111", zIndex: 21, boxSizing: "border-box" }}>
+              <button aria-label="close" onClick={() => setEmailModal("")}
+                style={{ position: "absolute", right: 6, top: 4, ...ghost, font: `15px ${HNW}`, color: "#111", width: 24, height: 24 }}>✕</button>
+              <span style={{ position: "absolute", left: 32, top: 30, font: `700 15px ${HNW}` }}>{t("1 free credit")}</span>
+              <span style={{ position: "absolute", left: 32, top: 56, width: 396, font: `13px ${HNW}`, lineHeight: "18px" }}>
+                {t("Join our mailing list and we'll gift you 1 extra credit.")}</span>
+              <input value={emailInput} placeholder="your@email.com" autoFocus
+                onChange={(e) => { setEmailInput(e.target.value); setEmailErr(false); }}
+                onKeyDown={(e) => { if (e.key === "Enter") submitVarEmail(); }}
+                style={{ position: "absolute", left: 32, top: 104, width: 250, font: `italic 15px ${HNW}`, border: "none", outline: "none", background: "transparent", padding: "0 0 2px 2px", color: "#111" }} />
+              <div style={{ position: "absolute", left: 32, top: 126, width: 254, height: 1, background: "#111" }} />
+              {emailErr && <span style={{ position: "absolute", left: 32, top: 132, font: `11px ${HNW}`, color: "#8e2b2b" }}>{t("Enter a valid email")}</span>}
+              <button onClick={submitVarEmail}
+                style={{ position: "absolute", left: 306, top: 96, width: 122, height: 34.3, cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", paddingBottom: 4 }}>
+                {t("Add credit")}</button>
+            </div>
+          </>)}
 
           {/* ROUND 54 #2: pre-generation confirmation popups — every
               detail that shapes the result, laid out clean, with Create /
@@ -2346,9 +2510,11 @@ export default function NewUI() {
             const FR_CAPS = ["Producer:", "Wine Name:", "Appellation:", "Classification:", "Vintage:", "Grape Variety:", "Region, Country:", "Special mention:", "Sweetness:", "Colour:", "Wine Type:", "Alcohol:", "Volume:"];
             const frontThumb = customLabel || (selected >= 0 ? (dreams[selected]?.preview || dreams[selected]?.dream) : "");
             const onCreate = () => {
+              /* round 56 #7: creating SPENDS a credit (or routes to the
+                 gift modal / purchase page) */
               setConfirmModal("");
-              if (isL) nextFromFront();
-              else { confirmedAssetsSig.current = pendingAssetsSig.current; setAssetsTick((t2) => t2 + 1); }
+              if (isL) { if (requestCredit("vision")) nextFromFront(); }
+              else if (requestCredit("assets")) { confirmedAssetsSig.current = pendingAssetsSig.current; setAssetsTick((t2) => t2 + 1); }
             };
             const onEdit = () => { setConfirmModal(""); go(isL ? "front" : "bottle", -1); };
             return (<>

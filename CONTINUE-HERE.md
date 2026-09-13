@@ -1990,6 +1990,35 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 56 (owner, 8 items + PSD, 2026-09-13): (1) PSD: "More
+  Variations" — a black bar under the thumbs (grid+button = hero
+  height); each press costs 1 credit and appends 5 lifestyle images
+  via /api/marketing-assets {lifeOnly, batch}; dealScenarios deals a
+  windowed batch*5 slice off ONE seed so batches never repeat scenes;
+  the thumbs grid densifies 2×2(123)→3×3(78.7)→4×4 inside GH=256.
+  (2) an EMPTY bar-jump to assets (selected<0, no custom) previews
+  the FULL 3-column layout incl. the Landing-Page placeholder (never
+  the browser); the credits indicator now rides vision, options
+  (with the 1-Credit subline) AND assets — always. (3) TEMP DEV
+  SWITCH "live generation" in the footer (nui-live-gen): off = all
+  three generation paths (labels, variations, assets/more) fake with
+  already-made art + staged loaders, no API calls; Pay&Download in
+  fake mode packages fake art — REMOVE BEFORE LAUNCH (CLAUDE.md).
+  (4) label-height drift KILLED MECHANICALLY: the finished front
+  shot rides as an extra reference on the back shot ("copy its scale
+  exactly; the photos must overlay"). (5) dealScenarios deletes
+  near-duplicates (sim>=0.35) and tops up from the GENERIC list —
+  never backfills with twins; owner's boards hold 8/12/10 distinct
+  scenes (enough). (6) no QR row → the www line under READ ME is
+  patched off (521,566,175x13). (7) CREDIT ECONOMY: everyone starts
+  with 3 (localStorage null → 3); EVERY generation spends 1 through
+  requestCredit(); at zero: no email → mailing-list GIFT modal ("1
+  free credit", button "Add credit", +1); email known → CREDITS page
+  (gensReturn remembers where to come back). Indicator at zero shows
+  a red underlined "Add credit" link to the CREDITS page. (8) the
+  gift button NEVER generates — it grants the credit, returns to the
+  page, and the indicator digit spins slot-machine style (~900ms)
+  before settling.
 - ROUND 55 (owner's Comments/New_Progressbar/New folder — the NEW
   drop point for annotated screenshots, 2026-09-13): (1) top-up page
   is titled CREDITS (baked FINAL PACK covered, live 19px title) and

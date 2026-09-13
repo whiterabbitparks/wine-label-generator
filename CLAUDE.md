@@ -72,3 +72,5 @@ John/Doe), MongoDB Atlas db `8k-labels`.
 - Cover images: black & white (grayscale filter), never cropped — the hero
   takes the uploaded image's own aspect ratio (2026-08-16).
 - DEMO_FILL=true in editor-embed.js is TEMPORARY — revert before launch.
+- The NEW UI footer "live generation" switch (round 56) is a TEMPORARY
+  dev tool that fakes all image generation — remove before launch.

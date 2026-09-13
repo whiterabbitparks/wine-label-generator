@@ -199,7 +199,7 @@ function bottleDescription(b: MarketingBrief) {
   };
 }
 
-export function buildShotPrompt(b: MarketingBrief, side: "front" | "back", hasShape: boolean, charter = "", rules?: string[]) {
+export function buildShotPrompt(b: MarketingBrief, side: "front" | "back", hasShape: boolean, charter = "", rules?: string[], hasFrontRef = false) {
   /* round 51 #9: the back shot describes the BACK label's true size */
   const d = bottleDescription(side === "back" && b.backWmm && b.backHmm ? { ...b, labelWmm: b.backWmm, labelHmm: b.backHmm } : b);
   return (
@@ -223,6 +223,12 @@ export function buildShotPrompt(b: MarketingBrief, side: "front" | "back", hasSh
     (hasShape
       /* round 50 #12: exact-trace wording, matching the lifestyle prompt */
       ? `The SECOND attached image is a technical outline drawing of this exact bottle model — match its GLASS silhouette EXACTLY: the same shoulder curve, the same neck length, the same width-to-height ratio; when in doubt, TRACE the outline. Render a real photographed glass bottle, never a drawing, and never substitute a different bottle model. IGNORE the closure/top drawn in the outline — the closure is specified above and OVERRIDES the drawing. `
+      : "") +
+    /* round 56 #4 (owner's THIRD report of label-height drift): the back
+       shot no longer trusts words alone — the finished FRONT shot rides
+       along as a reference to copy */
+    (hasFrontRef
+      ? `The ${hasShape ? "THIRD" : "SECOND"} attached image is the finished FRONT-view photograph of THIS VERY BOTTLE — the same physical bottle rotated 180°. COPY its bottle size, position, framing and lighting EXACTLY, and place the back label in EXACTLY the same vertical band at EXACTLY the same height as the front label sits in that photo. The two photographs must overlay perfectly; only the label artwork differs. `
       : "") +
     `Lighting: crisp premium studio softbox lighting, elegant vertical highlights along the glass, true colours, razor-sharp focus. ` +
     `CUTOUT: pure transparent background, no surface, no table, no cast shadow, no glow or halo around the silhouette — a clean isolated product cutout.` +
@@ -299,29 +305,35 @@ export function buildLifestylePrompt(b: MarketingBrief, scenario: string, charte
 /* seeded scenario deal — full coverage before repeats, stable per seed.
    round 31: when the owner's board yielded scenes, deal from THOSE —
    the generic list is only the no-board fallback. */
-export function dealScenarios(seed: number, boardScenes?: string[]): { text: string; fromBoard: boolean }[] {
+export function dealScenarios(seed: number, boardScenes?: string[], count = 5): { text: string; fromBoard: boolean }[] {
   let s = seed >>> 0;
   const rnd = () => ((s = (Math.imul(s, 1664525) + 1013904223) >>> 0) / 2 ** 32);
   const shuffle = <T,>(a: T[]) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const toks = (s2: string) => new Set(s2.toLowerCase().split(/[^a-zà-ÿ]+/).filter((w) => w.length > 3));
+  const sim = (a: string, b: string) => {
+    const A = toks(a), B = toks(b);
+    let n = 0; for (const w of A) if (B.has(w)) n++;
+    return n / Math.max(1, Math.min(A.size, B.size));
+  };
+  const generic = shuffle([...SCENARIOS]).map(([, text]) => ({ text, fromBoard: false }));
+  /* round 56 #5 (owner: identical prompts again): near-duplicates are
+     DELETED, never dealt — when the distinct board pool runs short the
+     GENERIC scenarios top it up (they are distinct by construction).
+     The same seed always deals the same order, so a "More Variations"
+     batch takes the NEXT window without repeating earlier images. */
+  const out: { text: string; fromBoard: boolean }[] = [];
   if (boardScenes && boardScenes.length) {
-    /* round 40 #9 (owner: two near-identical scenes in one set): greedy
-       DIVERSITY pick — a candidate too word-similar to an already-picked
-       scene is skipped while alternatives remain */
-    const toks = (s2: string) => new Set(s2.toLowerCase().split(/[^a-zà-ÿ]+/).filter((w) => w.length > 3));
-    const sim = (a: string, b: string) => {
-      const A = toks(a), B = toks(b);
-      let n = 0; for (const w of A) if (B.has(w)) n++;
-      return n / Math.max(1, Math.min(A.size, B.size));
-    };
-    const arr = shuffle([...boardScenes]);
-    const picked: string[] = [];
-    /* round 49 #10: 0.55 still let near-twin scenes through — stricter */
-    for (const cand of arr) { if (picked.length >= 5) break; if (picked.every((p2) => sim(p2, cand) < 0.35)) picked.push(cand); }
-    for (const cand of arr) { if (picked.length >= 5) break; if (!picked.includes(cand)) picked.push(cand); }
-    while (picked.length < 5) picked.push(arr[picked.length % arr.length]);
-    return picked.map((text) => ({ text, fromBoard: true }));
+    for (const cand of shuffle([...boardScenes])) {
+      if (out.length >= count) break;
+      if (out.every((o) => sim(o.text, cand) < 0.35)) out.push({ text: cand, fromBoard: true });
+    }
   }
-  return shuffle([...SCENARIOS]).slice(0, 5).map(([, text]) => ({ text, fromBoard: false }));
+  for (const g of generic) {
+    if (out.length >= count) break;
+    if (out.every((o) => sim(o.text, g.text) < 0.35)) out.push(g);
+  }
+  while (out.length < count) out.push(generic[out.length % generic.length]);
+  return out.slice(0, count);
 }
 
 /* ---- final sizing --------------------------------------------------- */
@@ -401,9 +413,13 @@ export async function generateMarketingAssets(
   frontLabel: string,
   backLabel: string | null,
   send: (e: AssetEvent) => void,
-  charters?: { life: string; shots: string; scenes: string[]; rules: string[] }
+  charters?: { life: string; shots: string; scenes: string[]; rules: string[] },
+  /* round 56 (owner's More Variations): lifeOnly batches skip the shots
+     and deal the NEXT window of 5 scenes */
+  opts?: { lifeOnly?: boolean; batch?: number }
 ): Promise<void> {
   const final = imageQuality() === "prod";
+  const batch = Math.max(0, opts?.batch || 0);
   const { life: charter, shots: shotCharter, scenes, rules } = charters || await loadMarketingCharters(b.style);
   /* ops visibility (owner escalation 2026-09-07: "references have no
      influence") — every run states what steering it actually carries */
@@ -415,24 +431,28 @@ export async function generateMarketingAssets(
 
   /* sequential on purpose: OpenAI allows ~5 images/min — the retry absorbs
      the occasional 429, and the stream keeps the page honest meanwhile */
-  send({ type: "progress", stage: "front shot" });
-  const front = await generateImageRawWithRetry({
-    prompt: buildShotPrompt(b, "front", !!shape, shotCharter, rules),
-    references: shape ? [frontLabel, shape] : [frontLabel], transparent: true, size: { w: 1024, h: 1536 },
-  });
-  const frontSized = await sizeShot(front, final);
-  send({ type: "shot", side: "front", image: frontSized, preview: await previewOf(front) });
-
-  if (backLabel) {
-    send({ type: "progress", stage: "back shot" });
-    const back = await generateImageRawWithRetry({
-      prompt: buildShotPrompt(b, "back", !!shape, shotCharter, rules),
-      references: shape ? [backLabel, shape] : [backLabel], transparent: true, size: { w: 1024, h: 1536 },
+  if (!opts?.lifeOnly) {
+    send({ type: "progress", stage: "front shot" });
+    const front = await generateImageRawWithRetry({
+      prompt: buildShotPrompt(b, "front", !!shape, shotCharter, rules),
+      references: shape ? [frontLabel, shape] : [frontLabel], transparent: true, size: { w: 1024, h: 1536 },
     });
-    send({ type: "shot", side: "back", image: await sizeShot(back, final), preview: await previewOf(back) });
+    const frontSized = await sizeShot(front, final);
+    send({ type: "shot", side: "front", image: frontSized, preview: await previewOf(front) });
+
+    if (backLabel) {
+      send({ type: "progress", stage: "back shot" });
+      /* round 56 #4: the finished front shot rides along — the back shot
+         COPIES its scale, so the two labels can never differ in height */
+      const back = await generateImageRawWithRetry({
+        prompt: buildShotPrompt(b, "back", !!shape, shotCharter, rules, true),
+        references: shape ? [backLabel, shape, front] : [backLabel, front], transparent: true, size: { w: 1024, h: 1536 },
+      });
+      send({ type: "shot", side: "back", image: await sizeShot(back, final), preview: await previewOf(back) });
+    }
   }
 
-  const scenarios = dealScenarios(b.seed, scenes);
+  const scenarios = dealScenarios(b.seed, scenes, 5 * (batch + 1)).slice(batch * 5);
   for (let i = 0; i < scenarios.length; i++) {
     send({ type: "progress", stage: `lifestyle ${i + 1}/5` });
     try {

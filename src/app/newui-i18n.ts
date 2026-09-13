@@ -254,6 +254,11 @@ export const UI_GE: Record<string, string> = {
   "Size:": "ზომა:",
   "Label size:": "ეტიკეტის ზომა:",
   "attached ✓": "მიმაგრებულია ✓",
+  /* round 56: credit economy + more variations */
+  "Add credit": "დაამატე კრედიტი",
+  "1 free credit": "1 საჩუქარი კრედიტი",
+  "Join our mailing list and we'll gift you 1 extra credit.": "დარეგისტრირდი ჩვენს მეილინგ ლისტში და 1 კრედიტს გაჩუქებთ.",
+  "More Variations": "მეტი ვარიაცია",
   /* round 49 #2: email-gated repeat variations */
   "3 more variations?": "კიდევ 3 ვარიაცია?",
   "Leave your email and we'll generate three more variations of the chosen style.": "დატოვე იმეილი და დაგიგენერირებთ არჩეული სტილის კიდევ სამ ვარიაციას.",
