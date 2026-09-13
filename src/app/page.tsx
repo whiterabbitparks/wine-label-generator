@@ -283,12 +283,20 @@ export default function NewUI() {
      paid — a generation-credit balance (1 credit = 1 image, one run = 3)
      bought on the checkout page via a single-select top-up list. TEMP:
      Pay simply adds the credits (no real payment yet, "before IP reset"). */
+  /* round 54: CREDITS — 1 credit = one 3-label run OR one assets pack */
   const GENS = [
-    { name: "3X Generation", price: 1, gens: 3 },
-    { name: "9X Generation", price: 2, gens: 9 },
-    { name: "20X Generation", price: 5, gens: 20 },
+    { name: "3 Credits", price: 2.99, gens: 3 },
+    { name: "5 Credits", price: 3.99, gens: 5 },
+    { name: "10 Credits", price: 7.99, gens: 10 },
+    { name: "100 Credits", price: 69.99, gens: 100 },
   ];
   const [gensMode, setGensMode] = useState(false);
+  /* ROUND 54 #2: pre-generation confirmation popups — a run starts only
+     after the customer reviews everything that shapes the result */
+  const [confirmModal, setConfirmModal] = useState<"" | "labels" | "assets">("");
+  const [assetsTick, setAssetsTick] = useState(0);
+  const pendingAssetsSig = useRef("");
+  const confirmedAssetsSig = useRef("");
   /* round 52 #3: Terms & Conditions modal with the house-style scroll */
   const [termsOpen, setTermsOpen] = useState(false);
   const [termsPos, setTermsPos] = useState(0);
@@ -527,6 +535,14 @@ export default function NewUI() {
        any changed input invalidates the previously published page — the
        thumb shows its loader until the fresh publish lands */
     if (assetsSig && sig !== assetsSig) setProductUrl("");
+    /* ROUND 54 #2: a NEW brief pauses for the confirmation popup — the
+       run starts from its Create button (revisits of the same brief
+       replay the server cache silently) */
+    if (sig !== assetsSig && confirmedAssetsSig.current !== sig) {
+      pendingAssetsSig.current = sig;
+      setConfirmModal("assets");
+      return;
+    }
     assetsRunning.current = true;
     (async () => {
       const got = { front: "", back: "", life: [] as string[] };
@@ -611,7 +627,7 @@ export default function NewUI() {
       assetsRunning.current = false;
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page]);
+  }, [page, assetsTick]);
   const [imgDims, setImgDims] = useState<Record<number, { w: number; h: number }>>({});
   useEffect(() => {
     dreams.forEach((d, i) => {
@@ -772,7 +788,7 @@ export default function NewUI() {
       setEmailInput(varEmail); setEmailErr(false); setEmailModal(style);
       return;
     }
-    if (genCredits >= 3) { saveCredits(genCredits - 3); createVariations(style); }
+    if (genCredits >= 1) { saveCredits(genCredits - 1); createVariations(style); }
     else { pendingGen.current = style; setGensMode(true); setGensSel(0); go("checkout"); }
   };
   /* round 52 #1 (owner: "it let me download without agreeing!"):
@@ -1266,10 +1282,13 @@ export default function NewUI() {
           )}
           {/* ROUND 53 #2 (owner): the balance rides the title line in the
               variations-header style — bold 15, the digit progress-red */}
-          {varRuns.length > 0 && (
+          {varRuns.length > 0 && (<>
             <span style={{ ...px(903, 149.08 - 15.5, 400, 20), font: `700 15px ${HNW}`, lineHeight: "20px", textAlign: "right", display: "block" }}>
-              {t("Generations available:")} <span style={{ color: BAR_RED }}>{genCredits}</span></span>
-          )}
+              {t("Credits available:")} <span style={{ color: BAR_RED, fontWeight: 700 }}>{genCredits}</span></span>
+            {/* round 54 #1: the explainer rides the second title line */}
+            <span style={{ ...px(903, 183.62 - 15.5, 400, 20), font: `12px ${HNW}`, color: "#8a8a8a", lineHeight: "20px", textAlign: "right", display: "block" }}>
+              {t("1 Credit = 3 new labels")}</span>
+          </>)}
           {/* ROUND 53 #2/#3: header sits UNDER the page title; repeated
               styles number their pages 02, 03… */}
           {optPage >= 1 && (() => {
@@ -2007,18 +2026,18 @@ export default function NewUI() {
               <span onClick={() => setAgree((a) => !a)} style={{ cursor: "pointer" }}>{t("I agree to the")} </span>
               <span onClick={() => { setTermsOpen(true); setTermsPos(0); }} style={{ textDecoration: "underline", cursor: "pointer" }}>{t("Terms & Conditions")}</span>
             </span>
-            {[480, 514.56, 548.57, 582.86].map((ly) => (
+            {[480, 514.56, 548.57, 582.86, 617.41].map((ly) => (
               <div key={"gl" + ly} style={{ ...px(480, ly, 480, 1), backgroundImage: `repeating-linear-gradient(90deg,${DASH})`, backgroundSize: "100% 1px", backgroundRepeat: "no-repeat" }} />
             ))}
             {GENS.map((g, i) => (
               <span key={g.name}>
                 {dotBtn(514.28, ROWC[i], gensSel === i, () => setGensSel(i), "gen" + i, { ring: true, r: 7.5 })}
                 <button onClick={() => setGensSel(i)} style={{ ...px(537, ROWC[i] - 12, 340, 24), ...ghost, textAlign: "left", textTransform: "none", font: `15px ${HNW}`, color: "#111" }}>{t(g.name)}</button>
-                {priceAtX(891.14, ROWC[i] + 4.9, "$" + g.price)}
+                {priceAtX(891.14, ROWC[i] + 4.9, "$" + g.price.toFixed(2))}
               </span>
             ))}
             <span style={{ ...px(548.54, 639.48 - 14, 200, 18), font: `700 16px ${HNW}`, lineHeight: "18px" }}>{t("Total:")}</span>
-            {priceAtX(891.14, 639.48, "$" + GENS[gensSel].price, true)}
+            {priceAtX(891.14, 639.48, "$" + GENS[gensSel].price.toFixed(2), true)}
             <div style={{ ...px(480, 651.43, 480, 34.29), background: "#111", display: "flex", alignItems: "center", justifyContent: "center", font: `12px ${HNW}`, letterSpacing: 0.3, color: "#fff", paddingBottom: 4 }}>{t("Pay")}</div>
             <button aria-label="pay" onClick={() => { if (requireAgree()) payForGenerations(); }} style={{ ...px(480, 651.43, 480, 34.29), ...ghost }} />
           </>) : customLabel ? (<>
@@ -2256,7 +2275,12 @@ export default function NewUI() {
                 onClick={() => {
                   barJumped.current = false;
                   if (page === "front") go("vision");
-                  else if (page === "vision") nextFromFront();
+                  else if (page === "vision") {
+                    /* round 54 #2: a REAL generation asks for confirmation;
+                       unchanged inputs just move along */
+                    if (dreams.length && frontSig === sigFront()) nextFromFront();
+                    else setConfirmModal("labels");
+                  }
                   else if (page === "options") {
                     /* round 7 #12: warn instead of silently ignoring */
                     if (selected >= 0) go("backdetails");
@@ -2298,6 +2322,84 @@ export default function NewUI() {
           </div>
 
           {busyMsg && <div style={{ ...px(1090, 78, 320, 20), font: `13px ${HNW}`, color: "#8a887e", textAlign: "right" }}>{busyMsg}</div>}
+
+          {/* ROUND 54 #2: pre-generation confirmation popups — every
+              detail that shapes the result, laid out clean, with Create /
+              Edit Details / ✕ in the house style */}
+          {confirmModal && (() => {
+            const B = { x: 390, y: 112, w: 660, h: 476 };
+            const cap = (txt: string) => <span style={{ font: `700 12px ${HNW}`, lineHeight: "16px", whiteSpace: "nowrap" }}>{txt}</span>;
+            const val = (txt: string) => <span style={{ font: `italic 12px ${HNW}`, lineHeight: "16px", marginLeft: 5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{txt || "—"}</span>;
+            const isL = confirmModal === "labels";
+            const FR_CAPS = ["Producer:", "Wine Name:", "Appellation:", "Classification:", "Vintage:", "Grape Variety:", "Region, Country:", "Special mention:", "Sweetness:", "Colour:", "Wine Type:", "Alcohol:", "Volume:"];
+            const frontThumb = customLabel || (selected >= 0 ? (dreams[selected]?.preview || dreams[selected]?.dream) : "");
+            const onCreate = () => {
+              setConfirmModal("");
+              if (isL) nextFromFront();
+              else { confirmedAssetsSig.current = pendingAssetsSig.current; setAssetsTick((t2) => t2 + 1); }
+            };
+            const onEdit = () => { setConfirmModal(""); go(isL ? "front" : "bottle", -1); };
+            return (<>
+              <div style={{ ...px(0, HEADER_H, W, FOOTER_Y - HEADER_H), background: "rgba(255,255,255,0.88)", zIndex: 40 }} onClick={() => setConfirmModal("")} />
+              <div style={{ ...px(B.x, B.y, B.w, B.h), background: "#fff", border: "1px solid #111", zIndex: 41, boxSizing: "border-box" }}>
+                <button aria-label="close confirm" onClick={() => setConfirmModal("")}
+                  style={{ position: "absolute", right: 6, top: 4, ...ghost, font: `15px ${HNW}`, color: "#111", width: 24, height: 24 }}>✕</button>
+                <span style={{ position: "absolute", left: 32, top: 26, font: `700 15px ${HNW}` }}>{t("Check your details")}</span>
+                <span style={{ position: "absolute", left: 32, top: 52, width: B.w - 64, font: `13px ${HNW}`, lineHeight: "18px" }}>
+                  {t(isL ? "Make sure everything is correct — creating labels costs credits." : "Make sure everything is correct — creating marketing assets costs credits.")} {t("You have")} <span style={{ fontWeight: 700, color: BAR_RED }}>{genCredits}</span>.
+                </span>
+                <div style={{ position: "absolute", left: 32, top: 86, width: B.w - 64, height: 1, background: "#111" }} />
+                {isL ? (<>
+                  <div style={{ position: "absolute", left: 32, top: 100, width: 430, display: "flex" }}>
+                    {cap(t("Prompt:"))}
+                    <span style={{ font: `italic 12px ${HNW}`, lineHeight: "16px", marginLeft: 5, height: 32, overflow: "hidden" }}>{vision.trim() || "—"}</span>
+                  </div>
+                  <div style={{ position: "absolute", left: 486, top: 100, display: "flex" }}>{cap(t("Sketch:"))}{val(sketch ? t("attached ✓") : "—")}</div>
+                  {sketch && (/* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={sketch} alt="" style={{ position: "absolute", left: 486, top: 120, width: 60, height: 42, objectFit: "cover", border: "1px solid #111" }} />)}
+                  {FR_CAPS.map((c, i) => (
+                    <div key={c} style={{ position: "absolute", left: 32 + (i % 2) * 305, top: 150 + Math.floor(i / 2) * 24, width: 295, display: "flex" }}>
+                      {cap(t(c))}{val(f[FRONT_ROWS[i]] || "")}
+                    </div>
+                  ))}
+                  <div style={{ position: "absolute", left: 337, top: 150 + 6 * 24, width: 295, display: "flex" }}>
+                    {cap(t("Size:"))}{val(`${f.width || 110} × ${f.height || 80} ${t("mm")}`)}
+                  </div>
+                </>) : (<>
+                  <div style={{ position: "absolute", left: 32, top: 104, display: "flex" }}>{cap(`${t("Front Label")}:`)}</div>
+                  {frontThumb ? (/* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={frontThumb} alt="" style={{ position: "absolute", left: 32, top: 124, maxWidth: 170, maxHeight: 110, border: "1px solid #111" }} />
+                  ) : <span style={{ position: "absolute", left: 32, top: 126, font: `italic 12px ${HNW}` }}>—</span>}
+                  <div style={{ position: "absolute", left: 32, top: 250, display: "flex" }}>{cap(`${t("Back Label")}:`)}</div>
+                  {backPng && !customLabel ? (/* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={backPng} alt="" style={{ position: "absolute", left: 32, top: 270, maxWidth: 170, maxHeight: 100, border: "1px solid #111" }} />
+                  ) : <span style={{ position: "absolute", left: 32, top: 272, font: `italic 12px ${HNW}` }}>—</span>}
+                  {([
+                    ["Wine Name:", f.wine || (customLabel ? "—" : DEMO_FRONT.wine)],
+                    ["Wine Color", wineColor],
+                    ["Bottle Type", bottle.type],
+                    ["Bottle Color", bottle.color],
+                    ["Closure Type", bottle.closure],
+                    ["Closure Color", bottle.closure === "No Capsule" ? "—" : bottle.finish],
+                    ["Label size:", `${customLabel ? customDims.w : f.width || 110} × ${customLabel ? customDims.h : f.height || 80} ${t("mm")}`],
+                  ] as const).map(([c, v], i) => (
+                    <div key={c} style={{ position: "absolute", left: 260, top: 104 + i * 26, width: 370, display: "flex", alignItems: "center" }}>
+                      {cap(t(c).endsWith(":") ? t(c) : t(c) + ":")}{val(v ? t(v) : "")}
+                      {c === "Closure Color" && bottle.closure !== "No Capsule" && (
+                        <span style={{ width: 14, height: 14, background: shadeRgb(), border: "1px solid #111", marginLeft: 8, flex: "0 0 auto" }} />
+                      )}
+                    </div>
+                  ))}
+                </>)}
+                <button onClick={onCreate}
+                  style={{ position: "absolute", left: 32, top: B.h - 76, width: 288, height: 34.3, cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", paddingBottom: 4 }}>
+                  {t("Create")}</button>
+                <button onClick={onEdit}
+                  style={{ position: "absolute", left: 340, top: B.h - 76, width: 288, height: 34.3, cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#fff", color: "#111", border: "1px solid #111", boxSizing: "border-box", paddingBottom: 4 }}>
+                  {t("Edit Details")}</button>
+              </div>
+            </>);
+          })()}
 
         </div>
       </div>

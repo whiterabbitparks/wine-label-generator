@@ -1990,6 +1990,22 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 54 (owner, 4 items, 2026-09-13): (1) CREDITS replace
+  "generations" — 1 credit = one 3-label run OR one marketing-assets
+  pack; a repeat variations run now costs 1 credit; indicator says
+  "Credits available: N" (bold, red digit) with the explainer
+  "1 Credit = 3 new labels" on the second title line. (2) PRE-GEN
+  CONFIRMATION POPUPS: the vision next-arrow and the assets page
+  pause on "Check your details" — labels popup lists prompt, sketch,
+  all 13 front fields (2-col grid) and size; assets popup shows
+  front/back label thumbs + wine name/colour, bottle type/colour,
+  closure type/colour (with swatch) and label size. Create fires the
+  run (assets: confirmedAssetsSig + assetsTick re-arms the effect);
+  Edit Details goes to front details / bottle; ✕ or scrim closes.
+  Same-brief revisits replay the cache silently. (3) credit digit
+  bold+red everywhere incl. the popup balance. (4) top-up list is
+  FOUR rows: 3 Credits $2.99 / 5 $3.99 / 10 $7.99 / 100 $69.99
+  (extra separator at 617.41; prices .toFixed(2)).
 - ROUND 53 (owner, 8 items, 2026-09-12): (1) the gens top-up card
   keeps an EMPTY thumbnail box (live dashedBox+crosses at 480,137.14,
   480x274.29 — owner sends its image later), full baked rhythm
