@@ -1990,6 +1990,23 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 57 (owner, 5 items, 2026-09-13): (1) credits RESET to 3 on
+  every browser refresh (no persistence). (2) fake-mode stand-in is a
+  REAL generated label (public/newui/sample-label.jpg, converted from
+  the owner's downloaded Wine_Front_Label.tiff), not a bottle
+  drawing. (3) the small marketing thumbs are QUIET placeholders
+  (slot(...,quiet) — no message text). (4) "Marketing Assets" bar
+  word → BOTTLE page; the empty label slot on the bottle is a
+  clickable "Create front label" → front details; the message is the
+  new SHORT version everywhere ("Create front label"/"Create back
+  label", GEO "შექმენი წინა/უკანა ეტიკეტი"). (5) uploaded-label
+  scale: BEST-GUESS mm by fitting the image aspect in a 110×120mm
+  window (5mm steps, min 40×30) + the DRAWN label hard-clamps to the
+  scanned silhouette (bw stored in bottleScans; ≤ body width −12px,
+  ≤ 62% bottle height, aspect kept) — awaiting the owner's margin
+  silhouettes to encode exact per-bottle zones. NOTE: the owner's
+  comments drop folder is now Comments/New (directly under
+  Comments).
 - ROUND 56 (owner, 8 items + PSD, 2026-09-13): (1) PSD: "More
   Variations" — a black bar under the thumbs (grid+button = hero
   height); each press costs 1 credit and appends 5 lifestyle images

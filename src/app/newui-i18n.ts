@@ -166,8 +166,9 @@ export const UI_GE: Record<string, string> = {
   "Download": "ჩამოტვირთვა",
   "Not yet created": "ჯერ არ არის შექმნილი",
   /* round 41 */
-  "Create a front label first": "ჯერ შექმენით წინა ეტიკეტი",
-  "Create a back label first": "ჯერ შექმენით უკანა ეტიკეტი",
+  /* round 57 #4: short clean version everywhere */
+  "Create front label": "შექმენი წინა ეტიკეტი",
+  "Create back label": "შექმენი უკანა ეტიკეტი",
   "No compliance needed": "შესაბამისობა არ მჭირდება",
   "Copy the link": "ბმულის კოპირება",
   "Copied ✓": "დაკოპირდა ✓",

@@ -67,7 +67,7 @@ const STEPS: { label: string; page: PageKey }[] = [
   { label: "", page: "front" },
   { label: "Front Label", page: "options" },
   { label: "Back Label", page: "backdesign" },
-  { label: "Marketing Assets", page: "assets" },
+  { label: "Marketing Assets", page: "bottle" },   /* round 57 #4 */
 ];
 /* red-line endpoint per page (null = no bar). ROUND 46 (owner: "Red line
    must grow in thirds"): each dot-to-dot segment splits EVENLY by its page
@@ -307,14 +307,9 @@ export default function NewUI() {
      generation (labels run, variations run, assets pack, more
      variations) costs 1. At zero: no email yet → the mailing-list gift
      modal (+1); email known → the CREDITS purchase page. */
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem("nui-gen-credits");
-      if (raw === null) { setGenCredits(3); localStorage.setItem("nui-gen-credits", "3"); }
-      else { const c = Number(raw); if (Number.isFinite(c) && c >= 0) setGenCredits(c); }
-    } catch { }
-  }, []);
-  const saveCredits = (n: number) => { setGenCredits(n); try { localStorage.setItem("nui-gen-credits", String(n)); } catch { } };
+  /* round 57 #1 (owner): every browser refresh starts the balance over */
+  useEffect(() => { setGenCredits(3); }, []);
+  const saveCredits = (n: number) => setGenCredits(n);
   const gensReturn = useRef<PageKey>("options");
   /* round 56 #8: the mailing-list gift spins the indicator like a slot
      machine up to the new balance */
@@ -342,7 +337,8 @@ export default function NewUI() {
   const [liveGen, setLiveGen] = useState(true);
   const liveGenRef = useRef(true);
   useEffect(() => { try { if (localStorage.getItem("nui-live-gen") === "0") { setLiveGen(false); liveGenRef.current = false; } } catch { } }, []);
-  const FAKE_IMG = "/newui/bottles/bordeaux.jpg";
+  /* round 57 #2: the stand-in is a REAL generated label, not a bottle */
+  const FAKE_IMG = "/newui/sample-label.jpg";
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const [selected, setSelected] = useState(-1);
   const [genProgress, setGenProgress] = useState(0);
@@ -383,7 +379,7 @@ export default function NewUI() {
   /* round 38 #2/#3: the drawing is pixel-scanned ONCE per variant — the
      per-row silhouette spans drive the cap-colour overlay, the bbox drives
      the label-position preview */
-  const bottleScans = useRef<Record<string, { top: number; bottom: number; cx: number; spans: [number, number][] }>>({});
+  const bottleScans = useRef<Record<string, { top: number; bottom: number; cx: number; bw: number; spans: [number, number][] }>>({});
   const [bottleScanKey, setBottleScanKey] = useState("");
   const capCanvasRef = useRef<HTMLCanvasElement | null>(null);
   /* round 7 #20: marker starts centred; result box starts WHITE */
@@ -414,7 +410,7 @@ export default function NewUI() {
       }
       let cx0 = 400, w0 = 0;
       for (let y = top; y <= bottom; y++) { const [l, r] = spans[y]; if (r - l > w0) { w0 = r - l; cx0 = (l + r) / 2; } }
-      bottleScans.current[src] = { top, bottom, cx: cx0, spans };
+      bottleScans.current[src] = { top, bottom, cx: cx0, bw: w0, spans };
       setBottleScanKey(src);
     };
     im.src = src;
@@ -1102,7 +1098,7 @@ export default function NewUI() {
   const notMade = (x: number, y: number, w: number, h: number, kind: "front" | "back" = "front", key?: string, msg = true) => (
     <button key={key} onClick={() => go(kind === "front" ? "front" : "backdetails", -1)}
       style={{ ...px(x, y, w, h), background: "#ECECEA", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", font: `12px ${HNW}`, color: "#8a887e", textAlign: "center", textTransform: "none", padding: 4 }}>
-      {msg ? t(kind === "front" ? "Create a front label first" : "Create a back label first") : ""}
+      {msg ? t(kind === "front" ? "Create front label" : "Create back label") : ""}
     </button>
   );
   /* round 41 #19: ONE dash style everywhere — the final-pack slot dashes
@@ -1856,22 +1852,36 @@ export default function NewUI() {
             let labelEl: React.ReactNode = null;
             /* round 41 #8: no label yet → grey placeholder at the true
                position and default size from the front-details page */
+            /* round 57 #5: whatever the mm say, the DRAWN label may never
+               cross the bottle — cap to the scanned body width (minus a
+               6px margin each side) and 62% of the bottle's height,
+               keeping the aspect. The owner's margin silhouettes can
+               tighten these zones per bottle later. */
+            const fitLabel = (lw0: number, lh0: number) => {
+              const maxW = scan ? scan.bw * s - 12 : lw0;
+              const bhD0 = scan ? (scan.bottom - scan.top) * s : 1;
+              const k2 = Math.min(1, maxW / lw0, (bhD0 * 0.62) / lh0);
+              return { lw: lw0 * k2, lh: lh0 * k2 };
+            };
             if (scan && !lab) {
               const bhD = (scan.bottom - scan.top) * s;
               const topD = 174 + scan.top * s;
               const pxPerCm = bhD / (bottle.type === "Alsace / Rhine" ? 35 : 30);
-              const lw = (mmW / 10) * pxPerCm;
-              const lh = (mmH / 10) * pxPerCm;
+              const { lw, lh } = fitLabel((mmW / 10) * pxPerCm, (mmH / 10) * pxPerCm);
               const anc = LABEL_ANCHOR[bottle.type] || LABEL_ANCHOR["Bordeaux"];
               const ly = anc.anchor === "top" ? topD + anc.pct * bhD : topD + bhD - anc.pct * bhD - lh;
-              labelEl = <div style={{ position: "absolute", left: xoff + scan.cx * s - lw / 2, top: ly, width: lw, height: lh, background: "#ECECEA", pointerEvents: "none" }} />;
+              /* round 57 #4: the empty label slot INVITES — click → details */
+              labelEl = (
+                <button onClick={() => go("front", -1)}
+                  style={{ position: "absolute", left: xoff + scan.cx * s - lw / 2, top: ly, width: lw, height: lh, background: "#ECECEA", border: "none", cursor: "pointer", font: `11px ${HNW}`, color: "#8a887e", textTransform: "none", padding: 4, lineHeight: "14px" }}>
+                  {t("Create front label")}</button>
+              );
             }
             if (scan && lab) {
               const bhD = (scan.bottom - scan.top) * s;
               const topD = 174 + scan.top * s;
               const pxPerCm = bhD / (bottle.type === "Alsace / Rhine" ? 35 : 30);
-              const lw = (mmW / 10) * pxPerCm;
-              const lh = (mmH / 10) * pxPerCm;
+              const { lw, lh } = fitLabel((mmW / 10) * pxPerCm, (mmH / 10) * pxPerCm);
               const anc = LABEL_ANCHOR[bottle.type] || LABEL_ANCHOR["Bordeaux"];
               const ly = anc.anchor === "top" ? topD + anc.pct * bhD : topD + bhD - anc.pct * bhD - lh;
               labelEl = (
@@ -1904,7 +1914,16 @@ export default function NewUI() {
                 const url = String(rd.result);
                 const im = new Image();
                 im.onload = () => {
-                  setCustomDims({ w: 110, h: Math.max(20, Math.round((110 * im.height) / im.width)) });
+                  /* round 57 #5: BEST-GUESS real size — fit the image's
+                     aspect inside a typical 110×120mm label window and
+                     round to 5mm, so an oversized file can never claim
+                     half the bottle */
+                  const ar = im.width / Math.max(1, im.height);
+                  let wmm = Math.min(110, 120 * ar);
+                  let hmm = wmm / ar;
+                  wmm = Math.max(40, Math.round(wmm / 5) * 5);
+                  hmm = Math.max(30, Math.round(hmm / 5) * 5);
+                  setCustomDims({ w: wmm, h: hmm });
                   setCustomLabel(url);
                   setAssets({ life: [] }); setAssetsSig("");
                   setBottle({ type: "", color: "", closure: "", finish: "" });
@@ -1959,7 +1978,9 @@ export default function NewUI() {
             <span style={{ ...px(x, 232 - 12, 320, 16), font: `12px ${HNW}`, color: "#111", lineHeight: "15px" }}>{spec}</span>
           </span>
         );
-        const slot = (x: number, y: number, w2: number, h2: number, it: { full: string; prev: string } | undefined, loadKey: string, fit: "cover" | "contain") =>
+        /* round 57 #3: `quiet` cells (the small thumbs) show NO message —
+           just the grey box (and the loader glass during a run) */
+        const slot = (x: number, y: number, w2: number, h2: number, it: { full: string; prev: string } | undefined, loadKey: string, fit: "cover" | "contain", quiet = false) =>
           it ? (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img key={loadKey} src={it.prev} alt="" style={{ ...px(x, y, w2, h2), objectFit: fit, animation: `nuiFadeIn ${FADE_MS}ms ${EASE}` }} />
@@ -1970,10 +1991,10 @@ export default function NewUI() {
                 <span style={{ marginTop: 8, font: `14px ${HNW}`, color: "#111", letterSpacing: 2, lineHeight: "10px" }}>
                   {[0, 1, 2].map((dd) => <span key={dd} style={{ animation: `nuiDot 1.2s ${dd * 0.2}s infinite` }}>.</span>)}
                 </span>
-              </>) : custom ? (
+              </>) : quiet ? null : custom ? (
                 <span style={{ font: `12px ${HNW}`, color: "#8a887e" }}>{t("Not yet created")}</span>
               ) : (
-                <button onClick={() => go("front", -1)} style={{ ...ghost, position: "relative", width: "100%", height: "100%", font: `12px ${HNW}`, color: "#8a887e", textTransform: "none", cursor: "pointer" }}>{t("Create a front label first")}</button>
+                <button onClick={() => go("front", -1)} style={{ ...ghost, position: "relative", width: "100%", height: "100%", font: `12px ${HNW}`, color: "#8a887e", textTransform: "none", cursor: "pointer" }}>{t("Create front label")}</button>
               )}
             </div>
           );
@@ -2034,7 +2055,7 @@ export default function NewUI() {
             const y = gy + (thirds ? Math.floor(k / cols) : k) * (TH + GAP);
             return (
               <span key={"sm" + k}>
-                {slot(x, y, TH, TH, it, `lifestyle ${(idx % 5) + 1}/5`, "cover")}
+                {slot(x, y, TH, TH, it, `lifestyle ${(idx % 5) + 1}/5`, "cover", true)}
                 {it && <button onClick={() => setHeroAsset(idx)} style={{ ...px(x, y, TH, TH), ...ghost }} />}
               </span>
             );
@@ -2062,7 +2083,7 @@ export default function NewUI() {
           ) : (
             <div style={{ ...px(866.5, 318.5, 416, 251), background: assetsStage ? "#F4F3EE" : "#ECECEA", display: "flex", alignItems: "center", justifyContent: "center" }}>
               {assetsStage ? miniGlass("landing", Math.min(0.9, assetFill("lifestyle 5/5"))) :
-                <button onClick={() => go("front", -1)} style={{ ...ghost, position: "relative", width: "100%", height: "100%", font: `12px ${HNW}`, color: "#8a887e", textTransform: "none", cursor: "pointer" }}>{t("Create a front label first")}</button>}
+                <button onClick={() => go("front", -1)} style={{ ...ghost, position: "relative", width: "100%", height: "100%", font: `12px ${HNW}`, color: "#8a887e", textTransform: "none", cursor: "pointer" }}>{t("Create front label")}</button>}
             </div>
           )}
         </>);
