@@ -1887,11 +1887,12 @@ export default function NewUI() {
           {cross(137.5, 616, "as5")}{cross(thirds ? splitX : 410, 616, "as6")}{!thirds && cross(846, 616, "as7")}{cross(1303, 616, "as8")}
           {/* col 1: product shots (own-label mode: front only, centered) */}
           {custom ? (
-            slot(BOX.x + (third - 120) / 2, 285, 120, 318, assets.front, "front shot", "contain")
+            slot(241.75, gy, 180, SQ, assets.front, "front shot", "contain")
           ) : thirds ? (<>
-            {/* both shots centered inside the first third */}
-            {slot(206.75, 285, 120, 318, assets.front, "front shot", "contain")}
-            {slot(336.75, 285, 120, 318, assets.back, "back shot", "contain")}
+            {/* owner (New folder): shots ride the divider's exact height,
+                each centered in its half-cell — wider slots = bigger bottles */}
+            {slot(144.63, gy, 180, SQ, assets.front, "front shot", "contain")}
+            {slot(338.88, gy, 180, SQ, assets.back, "back shot", "contain")}
             <div style={{ ...px(331.75, gy, 1, SQ), background: `repeating-linear-gradient(180deg,${DASH})`, pointerEvents: "none" }} />
           </>) : (<>
             {slot(148, 285, 120, 318, assets.front, "front shot", "contain")}
@@ -1979,6 +1980,14 @@ export default function NewUI() {
               describe the FULL pack — an own-label (assets-only) order
               hides that whole left block */}
           {customLabel && !gensMode && patch(126, 158, 706, 470, "notree")}
+          {/* owner (New folder): unselected rows prune their tree branch —
+              row 1 (labels) removes the LABELS folder+files and its arm of
+              the connector; row 3 removes the MARKETING ASSETS branch */}
+          {!customLabel && !gensMode && !packSel[0] && (<>
+            {patch(262, 344, 104, 232, "nolabels")}
+            {patch(306, 339, 138, 7, "nolabelsline")}
+          </>)}
+          {!customLabel && !gensMode && !packSel[2] && patch(396, 344, 104, 275, "nomarketing")}
           {/* live slide inside the baked dashed frame (hidden entirely on
               the round-52 centered top-up card) */}
           {gensMode ? null : sl.landing ? (
@@ -2018,6 +2027,9 @@ export default function NewUI() {
                 everything at baked y, shifted dx -342.86. */}
             {patch(126, 158, 706, 470, "notreeg")}
             {patch(818, 128, 494, 565, "nocarg")}
+            {/* owner (New folder): the top-up page is titled CREDITS */}
+            {patch(130, 132, 260, 28, "gtitle")}
+            <span style={{ ...px(137.15, 151.8 - 16, 300, 22), font: `700 19px ${HNW}`, lineHeight: "22px" }}>{t("CREDITS")}</span>
             {dashedBox(480, 137.14, 480, 274.29, "genFrame")}
             {cross(480, 137.14, "gf1")}{cross(960, 137.14, "gf2")}
             {cross(480, 411.43, "gf3")}{cross(960, 411.43, "gf4")}
@@ -2038,7 +2050,7 @@ export default function NewUI() {
             ))}
             <span style={{ ...px(548.54, 639.48 - 14, 200, 18), font: `700 16px ${HNW}`, lineHeight: "18px" }}>{t("Total:")}</span>
             {priceAtX(891.14, 639.48, "$" + GENS[gensSel].price.toFixed(2), true)}
-            <div style={{ ...px(480, 651.43, 480, 34.29), background: "#111", display: "flex", alignItems: "center", justifyContent: "center", font: `12px ${HNW}`, letterSpacing: 0.3, color: "#fff", paddingBottom: 4 }}>{t("Pay")}</div>
+            <div style={{ ...px(480, 651.43, 480, 34.29), background: "#111", display: "flex", alignItems: "center", justifyContent: "center", font: `12px ${HNW}`, letterSpacing: 0.3, color: "#fff", paddingBottom: 4 }}>{t("Proceed to Payment")}</div>
             <button aria-label="pay" onClick={() => { if (requireAgree()) payForGenerations(); }} style={{ ...px(480, 651.43, 480, 34.29), ...ghost }} />
           </>) : customLabel ? (<>
             {/* own-label order: only Marketing Assets and its price */}
@@ -2067,7 +2079,7 @@ export default function NewUI() {
           </>)}
           {/* round 52 #1: the agree gate message under the Pay bar */}
           {warn && (
-            <span style={{ ...px(0, 694, W, 16), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block" }}>{warn}</span>
+            <span style={{ ...px(gensMode ? 480 : 822.86, 694, 480, 16), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block" }}>{warn}</span>
           )}
           {/* back arrow is baked — ghost zone; a gens visit returns to the
               options page it came from */}

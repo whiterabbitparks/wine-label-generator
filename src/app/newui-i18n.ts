@@ -237,6 +237,9 @@ export const UI_GE: Record<string, string> = {
   "10 Credits": "10 კრედიტი",
   "100 Credits": "100 კრედიტი",
   "Pay": "გადახდა",
+  /* round 55 (owner's New folder): top-up page wording */
+  "CREDITS": "ᲙᲠᲔᲓᲘᲢᲔᲑᲘ",
+  "Proceed to Payment": "გადახდაზე გადასვლა",
   "Credits available:": "დარჩენილი კრედიტები:",
   "1 Credit = 3 new labels": "1 კრედიტი = 3 ახალი ეტიკეტი",
   /* round 54 #2: pre-generation confirmation popups */

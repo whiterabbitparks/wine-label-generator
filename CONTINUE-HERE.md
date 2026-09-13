@@ -1990,6 +1990,20 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 55 (owner's Comments/New_Progressbar/New folder — the NEW
+  drop point for annotated screenshots, 2026-09-13): (1) top-up page
+  is titled CREDITS (baked FINAL PACK covered, live 19px title) and
+  its button says "Proceed to Payment"; the Total gap the owner
+  circled was already closed by the 4-row list. (2) assets thirds
+  mode: the two product shots ride the divider's exact height
+  (gy..gy+300), each CENTERED in its half-cell (slots 180 wide at
+  144.63 / 338.88 — wider slot = visibly bigger bottle; custom's
+  single shot centered at 241.75). (3) Final Pack folder tree PRUNES
+  with the selection: labels row off → patch(262,344,104,232) +
+  connector-arm patch(306,339,138,7); marketing row off →
+  patch(396,344,104,275); README always stays. (4) the agree warning
+  sits under the Pay bar CENTERED TO THE BUTTON (x822.86/480 gens,
+  width 480).
 - ROUND 54 (owner, 4 items, 2026-09-13): (1) CREDITS replace
   "generations" — 1 credit = one 3-label run OR one marketing-assets
   pack; a repeat variations run now costs 1 credit; indicator says
