@@ -1990,6 +1990,26 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 59 (owner, 5 items + Assets@3x mocks, 2026-09-14): (1) the
+  bottle-preview label got its size BACK — the round-57 body-width
+  cap was wrongly shrinking a 110mm label below the anchor-chart
+  look (labels legitimately read wider than the silhouette: they
+  wrap); only the red-line zone clamps now. (2) gate messages float
+  at ROOT level (y658, unclipped) — truly midway between the Select
+  row and the bar line. (3) all modals centered in the white band
+  (confirm y84, gift y240, terms y144). (4) modal titles 700 60px,
+  the credits sentence 26px; boxes grown (confirm 740×560, gift
+  580×248, terms 680×440; terms TRACK 628/104/240). (5) ASSETS PAGE
+  REBUILT to the mocks: FOUR equal marketing images (2×2 grid 273²
+  at 479/278.75, cells 122+29 gaps, densifying 3/4-col via More
+  Variations +4 per credit), shots in a SPLIT col1 (halves centered,
+  slots 120×274 at 145.5/281.75, custom = one at 213.75), frame y
+  243.5 h 343.5 ending at 821 without a landing — or extending to
+  1303 with "Product Landing Page" (browser 340 at 892/279 + 36px
+  /api/qr?u= QR at 892/522) when qrMode==="create" or on an empty
+  preview jump. Sets are 4 lifestyle everywhere (ASSET_STAGES /4,
+  engine 4*(batch+1) windows, stage text i/len). Spec text now
+  "Transparent PNG / 700x2500px / 72dpi"; heroAsset retired.
 - ROUND 58 (owner's Comments/maximum_margins silhouettes,
   2026-09-13): the red-line label limits are now LAW — LABEL_ZONE
   (fractions of the drawn bottle height, extracted programmatically

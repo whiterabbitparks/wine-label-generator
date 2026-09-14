@@ -223,6 +223,7 @@ export const UI_GE: Record<string, string> = {
   "Next idea": "შემდეგი იდეა",
   "Two Product Shots": "ორი პროდუქტის ფოტო",
   "Five Marketing Images": "ხუთი სამარკეტინგო ფოტო",
+  "Four Marketing Images": "ოთხი სამარკეტინგო ფოტო",
   /* round 47: own-label (assets-only) mode */
   "Upload Another Label": "ატვირთე სხვა ეტიკეტი",
   "Your label ✓ — upload another": "შენი ეტიკეტი ✓ — ატვირთე სხვა",
