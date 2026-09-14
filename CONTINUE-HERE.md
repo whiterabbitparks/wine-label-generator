@@ -1990,6 +1990,16 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 58 (owner's Comments/maximum_margins silhouettes,
+  2026-09-13): the red-line label limits are now LAW — LABEL_ZONE
+  (fractions of the drawn bottle height, extracted programmatically
+  from the six JPGs): Bordeaux .387-.909, Prestige .395-.894,
+  Burgundy .607-.929, Sparkling .664-.927, Alsace .652-.944, IceWine
+  .314-.938. The bottle-preview label clamps its HEIGHT to the zone
+  and its POSITION into it (clampY), on top of the body-width cap;
+  default zone [0.35,0.92] until a type is picked. Default 110×80
+  labels sit inside every zone — no visual change for the normal
+  flow.
 - ROUND 57 (owner, 5 items, 2026-09-13): (1) credits RESET to 3 on
   every browser refresh (no persistence). (2) fake-mode stand-in is a
   REAL generated label (public/newui/sample-label.jpg, converted from

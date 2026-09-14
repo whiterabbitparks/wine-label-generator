@@ -46,6 +46,17 @@ const LABEL_ANCHOR: Record<string, { anchor: "top" | "bottom"; pct: number }> = 
    drawn height, painted INSIDE the silhouette, multiply-blended so the
    line art reads through) — capsule + sparkling measured from the owner's
    Cap_reference images; the rest derived from the drawings */
+/* ROUND 58 (owner's maximum_margins silhouettes): the red-line zone —
+   fractions of the DRAWN bottle height — that a label may NEVER cross.
+   Extracted programmatically from Comments/maximum_margins/*.jpg. */
+const LABEL_ZONE: Record<string, [number, number]> = {
+  "Bordeaux": [0.387, 0.909],
+  "Bordeaux Prestige": [0.395, 0.894],
+  "Burgundy": [0.607, 0.929],
+  "Sparkling": [0.664, 0.927],
+  "Alsace / Rhine": [0.652, 0.944],
+  "Ice Wine": [0.314, 0.938],
+};
 const CAP_ZONES: Record<string, [number, number][]> = {
   "Cork": [[0.005, 0.145]],
   /* round 43 #1: was far shorter than the capsule — match Cork's span */
@@ -1852,24 +1863,26 @@ export default function NewUI() {
             let labelEl: React.ReactNode = null;
             /* round 41 #8: no label yet → grey placeholder at the true
                position and default size from the front-details page */
-            /* round 57 #5: whatever the mm say, the DRAWN label may never
-               cross the bottle — cap to the scanned body width (minus a
-               6px margin each side) and 62% of the bottle's height,
-               keeping the aspect. The owner's margin silhouettes can
-               tighten these zones per bottle later. */
+            /* round 57 #5 / ROUND 58: whatever the mm say, the DRAWN
+               label may never cross the bottle — capped to the scanned
+               body width (minus a 6px margin each side) and the owner's
+               red-line LABEL_ZONE for this bottle, keeping the aspect. */
+            const zone = LABEL_ZONE[bottle.type] || [0.35, 0.92];
             const fitLabel = (lw0: number, lh0: number) => {
               const maxW = scan ? scan.bw * s - 12 : lw0;
               const bhD0 = scan ? (scan.bottom - scan.top) * s : 1;
-              const k2 = Math.min(1, maxW / lw0, (bhD0 * 0.62) / lh0);
+              const k2 = Math.min(1, maxW / lw0, ((zone[1] - zone[0]) * bhD0) / lh0);
               return { lw: lw0 * k2, lh: lh0 * k2 };
             };
+            const clampY = (ly0: number, lh0: number, topD0: number, bhD0: number) =>
+              Math.min(Math.max(ly0, topD0 + zone[0] * bhD0), topD0 + zone[1] * bhD0 - lh0);
             if (scan && !lab) {
               const bhD = (scan.bottom - scan.top) * s;
               const topD = 174 + scan.top * s;
               const pxPerCm = bhD / (bottle.type === "Alsace / Rhine" ? 35 : 30);
               const { lw, lh } = fitLabel((mmW / 10) * pxPerCm, (mmH / 10) * pxPerCm);
               const anc = LABEL_ANCHOR[bottle.type] || LABEL_ANCHOR["Bordeaux"];
-              const ly = anc.anchor === "top" ? topD + anc.pct * bhD : topD + bhD - anc.pct * bhD - lh;
+              const ly = clampY(anc.anchor === "top" ? topD + anc.pct * bhD : topD + bhD - anc.pct * bhD - lh, lh, topD, bhD);
               /* round 57 #4: the empty label slot INVITES — click → details */
               labelEl = (
                 <button onClick={() => go("front", -1)}
@@ -1883,7 +1896,7 @@ export default function NewUI() {
               const pxPerCm = bhD / (bottle.type === "Alsace / Rhine" ? 35 : 30);
               const { lw, lh } = fitLabel((mmW / 10) * pxPerCm, (mmH / 10) * pxPerCm);
               const anc = LABEL_ANCHOR[bottle.type] || LABEL_ANCHOR["Bordeaux"];
-              const ly = anc.anchor === "top" ? topD + anc.pct * bhD : topD + bhD - anc.pct * bhD - lh;
+              const ly = clampY(anc.anchor === "top" ? topD + anc.pct * bhD : topD + bhD - anc.pct * bhD - lh, lh, topD, bhD);
               labelEl = (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img src={lab.preview || lab.dream} alt="label position"
