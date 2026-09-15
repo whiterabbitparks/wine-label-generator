@@ -1990,6 +1990,16 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 62 (owner, 3 items + live bug, 2026-09-15): (1) variation
+  buttons say just "{Style} Variations" (Create dropped, EN+GEO).
+  (2) footer explainer "1 Credit = 3 new labels" removed. (3) CREDIT
+  MODEL: 1 credit = 1 label — newcomers get 5, the initial 3-label
+  run costs 3 (requestCredit(from, cost)), a variation 1, an assets
+  pack 1. LIVE BUG FIXED: the server back label rendered TOFU
+  rectangles — sharp/librsvg needs SYSTEM fonts; installed
+  public/fonts/backlabel/BarlowCondensed-*.ttf into
+  /usr/local/share/fonts/barlow + fc-cache on the server (part of
+  any future server rebuild!). Verified with a live server render.
 - DEPLOYED (2026-09-14): Hetzner CPX22 (Ubuntu 26.04, x86) at
   2.28.48.43 — app in /opt/8klabels, systemd service "8klabels"
   (npm run start :3000), Caddy on :80 reverse-proxying, ufw

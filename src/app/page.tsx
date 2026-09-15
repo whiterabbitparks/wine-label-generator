@@ -325,7 +325,7 @@ export default function NewUI() {
      variations) costs 1. At zero: no email yet → the mailing-list gift
      modal (+1); email known → the CREDITS purchase page. */
   /* round 57 #1 (owner): every browser refresh starts the balance over */
-  useEffect(() => { setGenCredits(3); }, []);
+  useEffect(() => { setGenCredits(5); }, []);
   const saveCredits = (n: number) => setGenCredits(n);
   const gensReturn = useRef<PageKey>("options");
   /* round 56 #8: the mailing-list gift spins the indicator like a slot
@@ -343,8 +343,9 @@ export default function NewUI() {
   };
   /* ONE gate for every paid action: spends a credit or routes to the
      gift modal / purchase page. Returns true when the action may run. */
-  const requestCredit = (from: PageKey): boolean => {
-    if (genCredits >= 1) { saveCredits(genCredits - 1); return true; }
+  const requestCredit = (from: PageKey, cost = 1): boolean => {
+    /* round 62 #3: 1 credit = 1 label — the initial 3-label run costs 3 */
+    if (genCredits >= cost) { saveCredits(genCredits - cost); return true; }
     if (!varEmail) { setEmailInput(""); setEmailErr(false); setEmailModal("gift"); return false; }
     gensReturn.current = from; setGensMode(true); setGensSel(0); go("checkout");
     return false;
@@ -1461,7 +1462,7 @@ export default function NewUI() {
           {dreams.length === 0 && OPT_FRAMES.map((fr, fi) => (
             <span key={"grey" + fi}>
               <div style={{ ...px(fr.x + 0.2, 565, OPT_W, 34.3), background: "#ECECEA", color: "#B3B1A8", font: `12px ${HNW}`, letterSpacing: 0.3, display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
-                {t("Create " + STYLE_NAMES[fi] + " Variations")}</div>
+                {t(STYLE_NAMES[fi] + " Variations")}</div>
               <div style={{ ...px(fr.x, 634 - 13, OPT_W, 26), display: "flex", alignItems: "center", justifyContent: "center", columnGap: 10 }}>
                 <span style={{ width: 15, height: 15, borderRadius: "50%", border: "2px solid #C9C7BF", background: "#fff", boxSizing: "border-box" }} />
                 <span style={{ font: `700 15px ${HNW}`, color: "#C9C7BF", lineHeight: `${fm.a + fm.d}px`, transform: `translateY(${(17 - ((26 - (fm.a + fm.d)) / 2 + fm.a)).toFixed(2)}px)` }}>{t("Select")}</span>
@@ -1472,7 +1473,7 @@ export default function NewUI() {
           {dreams.length > 0 && OPT_FRAMES.map((fr, fi) => (
             <button key={"cv" + fi} onClick={() => requestVariations(fi)}
               style={{ ...px(fr.x + 0.2, 565, OPT_W, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
-              {t("Create " + STYLE_NAMES[fi] + " Variations")}</button>
+              {t(STYLE_NAMES[fi] + " Variations")}</button>
           ))}
           {/* Select radios — one per column, marking the VIEWED version */}
           {dreams.length > 0 && OPT_FRAMES.map((fr, fi) => {
@@ -2410,7 +2411,6 @@ export default function NewUI() {
             {/* ROUND 60 #3 (owner): the credit balance lives HERE — white
                 text, red number, right edge flush with the bar's last dot */}
             <div style={{ ...px(700, 779.4 - FOOTER_Y - 2, 602.86, 18), display: "flex", justifyContent: "flex-end", alignItems: "baseline", columnGap: 16 }}>
-              <span style={{ font: `300 11px ${HNW}`, color: "#8a8a8a", whiteSpace: "nowrap" }}>{t("1 Credit = 3 new labels")}</span>
               <span style={{ font: `700 13px ${HNW}`, color: "#fff", whiteSpace: "nowrap" }}>
                 {t("Credits available:")}{" "}
                 {spinning ? (
@@ -2476,7 +2476,7 @@ export default function NewUI() {
               /* round 56 #7: creating SPENDS a credit (or routes to the
                  gift modal / purchase page) */
               setConfirmModal("");
-              if (isL) { if (requestCredit("vision")) nextFromFront(); }
+              if (isL) { if (requestCredit("vision", 3)) nextFromFront(); }
               else if (requestCredit("assets")) { confirmedAssetsSig.current = pendingAssetsSig.current; setAssetsTick((t2) => t2 + 1); }
             };
             const onEdit = () => { setConfirmModal(""); go(isL ? "front" : "bottle", -1); };

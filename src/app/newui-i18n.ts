@@ -177,6 +177,10 @@ export const UI_GE: Record<string, string> = {
   "Upload a sketch or a photo (Optional)": "ატვირთე ესკიზი ან ფოტო (არასავალდებულო)",
   "Variations are limited, so choose wisely.": "ვარიაციები შეზღუდულია — აირჩიე გონივრულად.",
   "Create Traditional Variations": "ტრადიციულის ვარიაციები",
+  /* round 62 #1: buttons without "Create" */
+  "Traditional Variations": "ტრადიციულის ვარიაციები",
+  "Contemporary Variations": "თანამედროვეს ვარიაციები",
+  "Punk Variations": "პანკის ვარიაციები",
   /* round 48 #1: correct declension */
   "Create Contemporary Variations": "თანამედროვეს ვარიაციები",
   "Create Punk Variations": "პანკის ვარიაციები",
