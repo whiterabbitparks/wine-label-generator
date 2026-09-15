@@ -1990,6 +1990,11 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 61 (owner, 2 items, 2026-09-14): (1) variation dots sit
+  MIDWAY between the label bottom and the variations button
+  ((ly+lh+565)/2). (2) the More Variations button is OFF the assets
+  page (moreVariations plumbing kept for later). Deployment to a
+  Hetzner VPS begins this round — step by step with the owner.
 - ROUND 60 (owner, 5 items, 2026-09-14 — pre-launch): (1) VARIATIONS
   REMODELLED: each style column is its own mini-carousel — one press
   = ONE new label of that style (1 credit), switcher dots appear

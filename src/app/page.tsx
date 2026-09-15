@@ -1446,7 +1446,8 @@ export default function NewUI() {
                 {nDots > 1 && Array.from({ length: nDots }, (_, k) => (
                   <button key={"vd" + fi + k} onClick={() => setStyleView((p) => { const n = [...p]; n[fi] = k; return n; })}
                     aria-label={`view ${fi}-${k}`}
-                    style={{ ...px(lx + lw / 2 + (k - (nDots - 1) / 2) * 22 - 9, ly + lh + 8, 18, 18), ...ghost }}>
+                    /* round 61 #1: dots sit midway between label and button */
+                    style={{ ...px(lx + lw / 2 + (k - (nDots - 1) / 2) * 22 - 9, (ly + lh + 565) / 2 - 9, 18, 18), ...ghost }}>
                     <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 9, height: 9, borderRadius: 5, border: "1px solid #111", background: (styleView[fi] || 0) === k ? "#111" : "#fff", boxSizing: "border-box" }} />
                   </button>
                 ))}
@@ -1977,12 +1978,6 @@ export default function NewUI() {
             const y = GY + Math.floor(k / cols) * (T + G2);
             return <span key={"mi" + k}>{slot(x, y, T, T, assets.life[k], `lifestyle ${(k % 4) + 1}/4`, "cover", k > 0)}</span>;
           })}
-          {/* round 56 (PSD): +4 images per press, 1 credit each */}
-          {assets.life.filter(Boolean).length >= 1 && !assetsStage && (
-            <button onClick={moreVariations}
-              style={{ ...px(GX, 557, GRID, 26), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 3 }}>
-              {t("More Variations")}</button>
-          )}
           {/* landing column: browser + QR under it (mock) */}
           {landingCol && (() => {
             /* round 60 #2 (owner: "two loaders"): ONE box, ONE glass —
