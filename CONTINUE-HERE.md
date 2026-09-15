@@ -1990,6 +1990,25 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 60 (owner, 5 items, 2026-09-14 — pre-launch): (1) VARIATIONS
+  REMODELLED: each style column is its own mini-carousel — one press
+  = ONE new label of that style (1 credit), switcher dots appear
+  under the label centered to it (1 + N dots), styleVars[3]/
+  styleView[3]/varBusyCol replace varRuns/optPage; viewedDream(col)
+  is THE selector everywhere (assets brief, bottle preview, back
+  ground colour, checkout, package, popup thumb); pending slot shows
+  a label-shaped glass. (2) landing thumb has ONE continuous loader
+  — a single box+glass carries from generation into the iframe load
+  (grey overlay inside the browser box until ppLoaded; ppFill floor
+  0.55), QR appears after. (3) the credit balance moved to the BLACK
+  FOOTER right-aligned to 1302.86 ("1 Credit = 3 new labels" grey ·
+  "Credits available:" white + RED number/Add-credit link); the
+  classic-interface link is gone from the footer (still at /classic);
+  page-level indicators removed. (4) sigBack now carries qrMode AND
+  selected column:view — ANY back-details change regenerates the
+  back label. (5) gate messages at y648. NOTE: pricing wrinkle — a
+  single variation now costs 1 credit while the explainer says "1
+  Credit = 3 new labels"; owner to decide.
 - ROUND 59 (owner, 5 items + Assets@3x mocks, 2026-09-14): (1) the
   bottle-preview label got its size BACK — the round-57 body-width
   cap was wrongly shrinking a 110mm label below the anchor-chart

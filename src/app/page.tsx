@@ -274,12 +274,18 @@ export default function NewUI() {
   const [sketch, setSketch] = useState<string | null>(null);
   const [f, setF] = useState<Record<string, string>>({ width: "110", height: "80" });
   const [dreams, setDreams] = useState<Dream[]>([]);
-  /* ROUND 45 variations; ROUND 50 #1 (owner): every run ADDS a page —
-     run k's 3 dreams live at indices 3+3k..5+3k, optPage 0..varRuns.length,
-     one pager dot per page. varRuns holds each run's style. */
-  const [varRuns, setVarRuns] = useState<string[]>([]);
-  const [varBusy, setVarBusy] = useState(false);
-  const [optPage, setOptPage] = useState(0);
+  /* ROUND 60 #1 (owner): each style column is its OWN mini-carousel —
+     a variations press generates ONE new label of that style, dots under
+     the label switch between the original (0) and its variations. */
+  const [styleVars, setStyleVars] = useState<(Dream | null)[][]>([[], [], []]);
+  const [styleView, setStyleView] = useState<number[]>([0, 0, 0]);
+  const [varBusyCol, setVarBusyCol] = useState(-1);
+  const STYLES3 = ["traditional", "contemporary", "punk"];
+  const viewedDream = (col: number): Dream | null => {
+    if (col < 0) return null;
+    const v = styleView[col] || 0;
+    return v === 0 ? dreams[col] || null : styleVars[col]?.[v - 1] || null;
+  };
   const varT = useRef(0);
   /* ROUND 49 #2 (owner): the variations buttons never disappear — the
      FIRST run is free, every later run asks for an email once (kept in
@@ -565,12 +571,12 @@ export default function NewUI() {
     if (page !== "assets" || assetsRunning.current) return;
     /* ROUND 47: an uploaded own label stands in for the generated front —
        otherwise a selected dream is still required */
-    if (!customLabel && (selected < 0 || !dreams[selected])) return;
+    if (!customLabel && (selected < 0 || !viewedDream(selected))) return;
     /* round 40 #3: a progress-bar JUMP never starts a paid generation —
        placeholders show "Not yet created"; the run starts only when the
        page is reached through the normal flow (bottle → next) */
     if (barJumped.current && !assets.front && !assets.back) return;
-    const sel = customLabel ? { style: "contemporary", dream: customLabel, preview: null } : dreams[selected];
+    const sel = customLabel ? { style: "contemporary", dream: customLabel, preview: null } : viewedDream(selected)!;
     /* round 21 #7: NO client-side "same inputs" skip — it knew nothing
        about admin charter changes and replayed stale sets. The server
        cache (charter-aware since round 19) answers true duplicates
@@ -700,7 +706,7 @@ export default function NewUI() {
   const moreRunning = useRef(false);
   async function moreVariations() {
     if (assetsRunning.current || moreRunning.current || assetsStage) return;
-    const sel = customLabel ? { style: "contemporary", dream: customLabel, preview: null as string | null } : selected >= 0 ? dreams[selected] : null;
+    const sel = customLabel ? { style: "contemporary", dream: customLabel, preview: null as string | null } : viewedDream(selected);
     if (!sel) return;
     if (!requestCredit("assets")) return;
     const base = lifeTarget;
@@ -838,7 +844,9 @@ export default function NewUI() {
   }, [page, go]);
 
   const sigFront = () => JSON.stringify({ vision, sketch: !!sketch, f });
-  const sigBack = () => JSON.stringify({ b, markets, gtin: gtinValid ? gtinNorm : "", qrImg: !!qrImg, w: f.width, h: f.height, sel: dreams[selected]?.style });
+  /* round 60 #4: qrMode AND the viewed variation are part of the brief —
+     ANY back-details change births a fresh back label */
+  const sigBack = () => JSON.stringify({ b, markets, gtin: gtinValid ? gtinNorm : "", qrImg: !!qrImg, qm: qrMode, w: f.width, h: f.height, sel: selected >= 0 ? `${selected}:${styleView[selected] || 0}` : "" });
 
   const buildDreamPayload = () => {
     const aspect = (Number(f.width) || 110) / (Number(f.height) || 80);
@@ -863,7 +871,7 @@ export default function NewUI() {
     /* round 56 #3 (TEMP dev switch): fake with an already-made label */
     if (!liveGenRef.current) {
       await sleep(600 + Math.random() * 700);
-      const pool = dreams.filter(Boolean);
+      const pool = [...dreams, ...styleVars.flat()].filter(Boolean) as Dream[];
       const d0 = pool[Math.floor(Math.random() * Math.max(1, pool.length))];
       return { style, dream: d0?.dream || FAKE_IMG, preview: d0?.preview || null };
     }
@@ -890,24 +898,26 @@ export default function NewUI() {
     if (!res.dream) throw new Error("empty variation");
     return { style, dream: res.dream, preview: res.preview || null };
   }
-  async function createVariations(style: string) {
-    if (varBusy) return;
-    /* round 50 #1: every run APPENDS a page — nothing gets replaced */
-    const runIdx = varRuns.length;
-    setVarRuns((p) => [...p, style]);
-    setVarBusy(true); setOptPage(runIdx + 1); varT.current = Date.now();
-    await Promise.allSettled([0, 1, 2].map(async (i) => {
-      try {
-        const d = await genVariation(style);
-        setDreams((prev) => { const nd = [...prev]; nd[3 + 3 * runIdx + i] = d; return nd; });
-      } catch { /* an empty slot stays grey */ }
-    }));
-    setVarBusy(false);
+  async function createVariation(fi: number) {
+    /* round 60 #1: ONE variation of the pressed style; the column's dot
+       row grows by one and the view jumps to the fresh slot */
+    setVarBusyCol(fi); varT.current = Date.now();
+    const slot = (styleVars[fi] || []).length;
+    setStyleVars((p) => { const n = p.map((a2) => [...a2]); n[fi] = [...n[fi], null]; return n; });
+    setStyleView((p) => { const n = [...p]; n[fi] = slot + 1; return n; });
+    try {
+      const d = await genVariation(STYLES3[fi]);
+      setStyleVars((p) => { const n = p.map((a2) => [...a2]); n[fi][slot] = d; return n; });
+    } catch {
+      setStyleVars((p) => { const n = p.map((a2) => [...a2]); n[fi] = n[fi].filter((_, i2) => i2 !== slot); return n; });
+      setStyleView((p) => { const n = [...p]; n[fi] = 0; return n; });
+    }
+    setVarBusyCol(-1);
   }
-  /* ROUND 56 #7: every variations run spends 1 credit through the gate */
-  const requestVariations = (style: string) => {
-    if (varBusy) return;
-    if (requestCredit("options")) createVariations(style);
+  /* ROUND 56 #7: every variation spends 1 credit through the gate */
+  const requestVariations = (fi: number) => {
+    if (varBusyCol >= 0) return;
+    if (requestCredit("options")) createVariation(fi);
   };
   /* round 52 #1 (owner: "it let me download without agreeing!"):
      every pay path checks the T&C ring first */
@@ -924,7 +934,6 @@ export default function NewUI() {
        where they came from; they press the button themselves */
     saveCredits(genCredits + GENS[gensSel].gens);
     setGensMode(false);
-    setOptPage(0);
     go(gensReturn.current || "options", -1);
   };
   const submitVarEmail = () => {
@@ -1002,7 +1011,7 @@ export default function NewUI() {
       if (!ok.length) throw new Error("all generations failed — try again");
       ok.sort((a, b2) => styles3.indexOf(a.style) - styles3.indexOf(b2.style));
       setDreams(ok); setSelected(-1); setFrontSig(sigFront()); setBackSig("");
-      setVarRuns([]); setVarBusy(false); setOptPage(0);
+      setStyleVars([[], [], []]); setStyleView([0, 0, 0]); setVarBusyCol(-1);
       /* round 43 #3 (owner: "landing page thumb shows the previous bottle"):
          a freshly generated wine invalidates any earlier published page —
          the restored productUrl (round 28b, meant to survive a reload of
@@ -1032,7 +1041,7 @@ export default function NewUI() {
   async function nextFromCompliance() {
     if (backPng && backSig === sigBack()) { go("backdesign"); return; }
     setBusyMsg("Composing back label…");
-    const sel = dreams[selected];
+    const sel = viewedDream(selected);
     const bg = sel ? await groundOf(sel.preview || sel.dream) : "#FFFFFF";
     const payload = {
       data: {
@@ -1085,7 +1094,7 @@ export default function NewUI() {
           wineName: f.wine || "Wine",
           /* ROUND 47: an own-label order ships marketing assets only —
              the customer already has their printed labels */
-          front: customLabel ? null : selected >= 0 ? dreams[selected]?.dream : null,
+          front: customLabel ? null : viewedDream(selected)?.dream || null,
           back: customLabel ? null : backPayload,
           shots: { front: assets.front?.full, back: customLabel ? undefined : assets.back?.full },
           lifestyle: assets.life.filter(Boolean).map((l) => l.full),
@@ -1225,28 +1234,6 @@ export default function NewUI() {
     return `rgb(${mix(r)}, ${mix(g)}, ${mix(bl)})`;
   };
 
-  /* ROUND 56 #2/#7: the credit balance rides EVERY generation page
-     (vision, options, assets); at zero it becomes the "Add credit" link
-     to the purchase page; while a gift lands it spins like a slot
-     machine (round 56 #8) */
-  const creditsIndicator = (withSubline = false) => (<>
-    <span style={{ ...px(903, 149.08 - 15.5, 400, 20), font: `700 15px ${HNW}`, lineHeight: "20px", textAlign: "right", display: "block" }}>
-      {t("Credits available:")}{" "}
-      {spinning ? (
-        <span style={{ color: BAR_RED }}>{spinDigit}</span>
-      ) : genCredits === 0 ? (
-        <button onClick={() => { gensReturn.current = pageNow.current; setGensMode(true); setGensSel(0); go("checkout"); }}
-          style={{ ...ghost, font: `700 15px ${HNW}`, color: BAR_RED, textDecoration: "underline", textTransform: "none", display: "inline" }}>{t("Add credit")}</button>
-      ) : (
-        <span style={{ color: BAR_RED }}>{genCredits}</span>
-      )}
-    </span>
-    {withSubline && (
-      <span style={{ ...px(903, 183.62 - 15.5, 400, 20), font: `12px ${HNW}`, color: "#8a8a8a", lineHeight: "20px", textAlign: "right", display: "block" }}>
-        {t("1 Credit = 3 new labels")}</span>
-    )}
-  </>);
-
   /* inSlide = rendered inside a moving slide layer (inert, entry
      animations suppressed — the slide itself is the entry) */
   const renderOverlay = (p: PageKey, inSlide = false) => {
@@ -1261,7 +1248,6 @@ export default function NewUI() {
         </>);
       case "vision":
         return (<>
-          {creditsIndicator()}
           {patch(1213, 421, 87, 17, "cnt")}
           <span style={{ ...px(1178, 422, 110, 15), font: `11px ${HNW}`, color: "#111", textAlign: "right" }}>{vision.trim() ? vision.trim().split(/\s+/).length : 0} / 300 {t("words")}</span>
           <textarea value={vision} onChange={(e) => setVision(e.target.value)} maxLength={2200}
@@ -1407,82 +1393,66 @@ export default function NewUI() {
         </>);
       }
       case "options": {
+        /* ROUND 60 #1 (owner): each style column is its own mini-carousel.
+           A variations press makes ONE new label of that style; switcher
+           dots appear UNDER the label, centered to it — one dot per
+           version (original + each variation). */
         const covers: React.ReactNode[] = [];
         covers.push(patch(255, 503, 930, 24, "dots"));
         covers.push(patch(135, 546, 1172, 40, "selrow"));
         covers.push(patch(135, 578, 1172, 44, "selbars"));
         for (const fx0 of [137.1, 480, 548.5, 891.4, 960, 1302.9])
           for (const fy0 of [240, 468.6]) covers.push(patch(fx0 - 11, fy0 - 11, 22, 22, `c${fx0}-${fy0}`));
-        /* round 50 #1: portrait labels stop at 519 so the raised pager
-           dots (y542) get the same air below the label as above the
-           buttons (18.5px each side) */
+        /* round 50 #1: portrait labels stop at 519 so the dot rows keep
+           air above the buttons */
         const CUBE = 34.3, AREA_TOP = 240, AREA_BOT = 519;
-        const base = optPage * 3;                            /* round 50: page k shows 3k..3k+2 */
         const STYLE_NAMES = ["Traditional", "Contemporary", "Punk"];
+        const anyVars = styleVars.some((v) => v.length > 0);
         return (<>
           {covers}
-          {/* round 45: the baked style-name row gives way to the subtitle
-              (and, on the variations page, a right-aligned header).
-              ROUND 47 (owner): the warning disappears once variations exist */}
           {patch(135, 164, 1170, 26, "stynames")}
-          {varRuns.length === 0 && (
+          {!anyVars && (
             <span style={{ ...px(136.97, 183.62 - 15.5, 500, 20), font: `15px ${HNW}`, color: "#111", lineHeight: "20px" }}>
               {t("Variations are limited, so choose wisely.")}</span>
           )}
-          {/* ROUND 53 #2 (owner): the balance rides the title line in the
-              variations-header style — bold 15, the digit progress-red */}
-          {creditsIndicator(true)}
-          {/* ROUND 53 #2/#3: header sits UNDER the page title; repeated
-              styles number their pages 02, 03… */}
-          {optPage >= 1 && (() => {
-            const st = varRuns[optPage - 1] || "";
-            const occ = varRuns.slice(0, optPage - 1).filter((v) => v === st).length;
-            const suffix = occ > 0 ? " " + String(occ + 1).padStart(2, "0") : "";
-            return (
-              <span style={{ ...px(136.97, 183.62 - 15.5, 600, 20), font: `700 15px ${HNW}`, lineHeight: "20px" }}>
-                {t(st.charAt(0).toUpperCase() + st.slice(1))} — {t("Variations")}{suffix}</span>
-            );
-          })()}
           {OPT_FRAMES.map((fr, fi) => {
-            const i = base + fi;
-            const d = dreams[i];
-            if (!d?.preview && !d?.dream) return null;
-            const nat = imgDims[i];
+            const orig = dreams[fi];
+            if (!orig?.preview && !orig?.dream) return null;
+            const dv = viewedDream(fi);
+            const nat = imgDims[fi];
             const ar = nat ? nat.w / nat.h : (Number(f.width) || 110) / (Number(f.height) || 80);
             let lw: number, lh: number;
             if (ar >= 1) { lw = OPT_W; lh = OPT_W / ar; if (lh > AREA_BOT - AREA_TOP) { lh = AREA_BOT - AREA_TOP; lw = lh * ar; } }
             else { lh = AREA_BOT - AREA_TOP; lw = lh * ar; if (lw > OPT_W - 2 * CUBE) { lw = OPT_W - 2 * CUBE; lh = lw / ar; } }
             const lx = fr.x + (OPT_W - lw) / 2;
             const ly = AREA_TOP + (ar >= 1 ? 0 : (AREA_BOT - AREA_TOP - lh) / 2);
+            const nDots = 1 + (styleVars[fi]?.length || 0);
             return (
-              <div key={i}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={d.preview || d.dream} alt={d.style} onClick={() => { setSelected(i); setWarn(""); }}
-                  style={{ ...px(lx, ly, lw, lh), cursor: "pointer", objectFit: "fill" }} />
-                {selected === i && dashedBox(lx, ly, lw, lh, "selD" + i)}
-                {cross(lx, ly, `tl${i}`)}{cross(lx + lw, ly, `tr${i}`)}
-                {cross(lx, ly + lh, `bl${i}`)}{cross(lx + lw, ly + lh, `br${i}`)}
+              <div key={fi}>
+                {dv ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={dv.preview || dv.dream} alt={orig.style} onClick={() => { setSelected(fi); setWarn(""); }}
+                    style={{ ...px(lx, ly, lw, lh), cursor: "pointer", objectFit: "fill" }} />
+                ) : (
+                  /* a variation is being born — label-shaped loader */
+                  <div style={{ ...px(lx, ly, lw, lh), background: "#F4F3EE", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {miniGlass("var" + fi, Math.min(0.9, 0.14 + ((Date.now() - varT.current) / 45000) * 0.75 + tick * 0))}
+                  </div>
+                )}
+                {selected === fi && dashedBox(lx, ly, lw, lh, "selD" + fi)}
+                {cross(lx, ly, `tl${fi}`)}{cross(lx + lw, ly, `tr${fi}`)}
+                {cross(lx, ly + lh, `bl${fi}`)}{cross(lx + lw, ly + lh, `br${fi}`)}
+                {/* the column's dot switcher, centered to the label */}
+                {nDots > 1 && Array.from({ length: nDots }, (_, k) => (
+                  <button key={"vd" + fi + k} onClick={() => setStyleView((p) => { const n = [...p]; n[fi] = k; return n; })}
+                    aria-label={`view ${fi}-${k}`}
+                    style={{ ...px(lx + lw / 2 + (k - (nDots - 1) / 2) * 22 - 9, ly + lh + 8, 18, 18), ...ghost }}>
+                    <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 9, height: 9, borderRadius: 5, border: "1px solid #111", background: (styleView[fi] || 0) === k ? "#111" : "#fff", boxSizing: "border-box" }} />
+                  </button>
+                ))}
               </div>
             );
           })}
-          {/* variations still rendering → glasses in the empty frames.
-              ROUND 46 (owner: "we already know the size of the label —
-              match the placeholders to real labels"): the grey box takes
-              the varied style's real label shape, not a generic square */}
-          {optPage >= 1 && (() => {
-            const si = ["traditional", "contemporary", "punk"].indexOf(varRuns[optPage - 1] || "");
-            const nat = si >= 0 ? imgDims[si] : undefined;
-            const ar = nat ? nat.w / nat.h : (Number(f.width) || 110) / (Number(f.height) || 80);
-            let lw: number, lh: number;
-            if (ar >= 1) { lw = OPT_W; lh = OPT_W / ar; if (lh > AREA_BOT - AREA_TOP) { lh = AREA_BOT - AREA_TOP; lw = lh * ar; } }
-            else { lh = AREA_BOT - AREA_TOP; lw = lh * ar; if (lw > OPT_W - 2 * CUBE) { lw = OPT_W - 2 * CUBE; lh = lw / ar; } }
-            const ly = AREA_TOP + (ar >= 1 ? 0 : (AREA_BOT - AREA_TOP - lh) / 2);
-            return OPT_FRAMES.map((fr, fi) => !dreams[base + fi] && (
-              <div key={"vg" + fi} style={{ ...px(fr.x + (OPT_W - lw) / 2, ly, lw, lh), background: "#F4F3EE", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                {varBusy && optPage === varRuns.length ? miniGlass("var" + fi, Math.min(0.9, 0.14 + ((Date.now() - varT.current) / 45000) * 0.75 + tick * 0)) : null}
-              </div>
-            ));
-          })()}
           {dreams.length === 0 && OPT_FRAMES.map((fr, i) =>
             notMade(fr.x, OPT_TOP, OPT_W, OPT_BOT - OPT_TOP, "front", "nmopt" + i))}
           {/* ROUND 53 #8: a bar-jump before generation shows the REAL page
@@ -1497,47 +1467,23 @@ export default function NewUI() {
               </div>
             </span>
           ))}
-          {/* ROUND 49 #2 (owner): the "Create {Style} Variations" buttons
-              STAY after a run — the first run is free, later runs go
-              through the email gate (requestVariations) */}
-          {/* round 51 #4: the buttons live on EVERY page, variations too */}
+          {/* the buttons live on every state (round 51 #4) */}
           {dreams.length > 0 && OPT_FRAMES.map((fr, fi) => (
-            <button key={"cv" + fi} onClick={() => requestVariations(STYLE_NAMES[fi].toLowerCase())}
+            <button key={"cv" + fi} onClick={() => requestVariations(fi)}
               style={{ ...px(fr.x + 0.2, 565, OPT_W, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
               {t("Create " + STYLE_NAMES[fi] + " Variations")}</button>
           ))}
-          {/* ROUND 50 #1: one dot per page, the block centered on the
-              page's centre axis, raised to y542 (18.5px air both ways) */}
-          {varRuns.length > 0 && Array.from({ length: varRuns.length + 1 }, (_, i) => (
-            <button key={"pg" + i} onClick={() => setOptPage(i)} aria-label={i === 0 ? "first labels" : "variations " + i}
-              style={{ ...px(W / 2 + (i - varRuns.length / 2) * 24 - 10, 532, 20, 20), ...ghost }}>
-              <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 9, height: 9, borderRadius: 5, border: "1px solid #111", background: optPage === i ? "#111" : "#fff", boxSizing: "border-box" }} />
-            </button>
-          ))}
-
-          {/* Select radios. ROUND 46 (owner: "middle label is selected and
-              wrong circle is selected"): the filled circle follows the
-              selected IMAGE by index — page 1 marks first labels, the
-              variations page marks variations, labeled "Select {Style} N".
-              Ring + label ride ONE centered flex row so the pair is
-              centered under its column and the text sits on the circle's
-              line (owner: "push a bit up", "center"). */}
+          {/* Select radios — one per column, marking the VIEWED version */}
           {dreams.length > 0 && OPT_FRAMES.map((fr, fi) => {
-            const on = selected === base + fi;
-            /* ROUND 48 #2 (owner): just "Select" — no style name, no number */
+            const on = selected === fi;
             const lbl = t("Select");
             return (
-              <button key={"sr" + optPage + fi} onClick={() => { if (!dreams[base + fi]) return; setSelected(selected === base + fi ? -1 : base + fi); setWarn(""); }}
+              <button key={"sr" + fi} onClick={() => { if (!dreams[fi]) return; setSelected(selected === fi ? -1 : fi); setWarn(""); }}
                 style={{ ...px(fr.x, 634 - 13, OPT_W, 26), ...ghost, display: "flex", alignItems: "center", justifyContent: "center", columnGap: 10, textTransform: "none", cursor: "pointer" }}>
                 <span style={{ position: "relative", width: 15, height: 15, borderRadius: "50%", border: "2px solid #111", background: "#fff", boxSizing: "border-box", flex: "0 0 auto" }}>
                   {on && <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 7.5, height: 7.5, borderRadius: "50%", background: "#111" }} />}
                 </span>
-                {/* ROUND 47 (owner: "pull those two texts to the same
-                    baseline as I pulled this one up"): line-height = the
-                    font's REAL ascent+descent (no half-leading), then a
-                    translate puts the baseline at exactly 17px from the
-                    row top in every browser — text optically on the
-                    circle's line, all three columns on ONE baseline */}
+                {/* round 47: one explicit baseline in every browser */}
                 <span style={{ font: `700 15px ${HNW}`, color: "#111", lineHeight: `${fm.a + fm.d}px`, whiteSpace: "nowrap", transform: `translateY(${(17 - ((26 - (fm.a + fm.d)) / 2 + fm.a)).toFixed(2)}px)` }}>{lbl}</span>
               </button>
             );
@@ -1857,7 +1803,7 @@ export default function NewUI() {
             const xoff = 139.2 - (800 * s - 201.6) / 2;
             const scan = bottleScans.current[bottleScanKey === src ? src : ""];
             /* ROUND 47: an uploaded own label takes the preview slot */
-            const lab = customLabel ? { style: "custom", dream: customLabel, preview: customLabel } : selected >= 0 ? dreams[selected] : null;
+            const lab = customLabel ? { style: "custom", dream: customLabel, preview: customLabel } : viewedDream(selected);
             const mmW = customLabel ? customDims.w : Number(f.width) || 110;
             const mmH = customLabel ? customDims.h : Number(f.height) || 80;
             let labelEl: React.ReactNode = null;
@@ -1999,7 +1945,6 @@ export default function NewUI() {
           );
         return (<>
           {patch(0, 160, W, 500, "aswipe")}
-          {creditsIndicator()}
           {custom
             ? head(137.5, "Product Shot", "Face", "Transparent PNG / 700x2500px / 72dpi")
             : head(137.5, "Two Product Shots", "Face & Back", "Transparent PNG / 700x2500px / 72dpi")}
@@ -2039,28 +1984,36 @@ export default function NewUI() {
               {t("More Variations")}</button>
           )}
           {/* landing column: browser + QR under it (mock) */}
-          {landingCol && (productUrl && selected >= 0 ? (<>
-            <div style={{ ...px(892, 279, 340, 340 / W * 823 + 13), background: "#fff", borderRadius: 5, boxShadow: "0 8px 22px rgba(0,0,0,0.2)", overflow: "hidden" }}>
-              <div style={{ height: 13, background: "#E8E8E6", display: "flex", alignItems: "center", gap: 3, padding: "0 6px" }}>
-                {["#FF5F57", "#FEBC2E", "#28C840"].map((c) => <span key={c} style={{ width: 4.5, height: 4.5, borderRadius: 3, background: c }} />)}
-                <span style={{ flex: 1, margin: "0 8px", height: 7, background: "#fff", borderRadius: 3, font: `5px ${HNW}`, color: "#999", paddingLeft: 4, lineHeight: "7px" }}>8klabels.com{productUrl}</span>
+          {landingCol && (() => {
+            /* round 60 #2 (owner: "two loaders"): ONE box, ONE glass —
+               the same loader carries from generation into the iframe
+               load; only then the page appears */
+            const ready = !!productUrl && selected >= 0;
+            const BH = 340 / W * 823 + 13;
+            return (<>
+              <div style={{ ...px(892, 279, 340, BH), background: "#fff", borderRadius: ready ? 5 : 0, boxShadow: ready ? "0 8px 22px rgba(0,0,0,0.2)" : "none", overflow: "hidden" }}>
+                {ready && (<>
+                  <div style={{ height: 13, background: "#E8E8E6", display: "flex", alignItems: "center", gap: 3, padding: "0 6px" }}>
+                    {["#FF5F57", "#FEBC2E", "#28C840"].map((c) => <span key={c} style={{ width: 4.5, height: 4.5, borderRadius: 3, background: c }} />)}
+                    <span style={{ flex: 1, margin: "0 8px", height: 7, background: "#fff", borderRadius: 3, font: `5px ${HNW}`, color: "#999", paddingLeft: 4, lineHeight: "7px" }}>8klabels.com{productUrl}</span>
+                  </div>
+                  <iframe src={productUrl} title="product page" onLoad={() => setPpLoaded(true)} style={{ width: W, height: 823, transform: `scale(${340 / W})`, transformOrigin: "0 0", border: 0, pointerEvents: "none" }} />
+                </>)}
+                {(!ready || !ppLoaded) && (
+                  <div style={{ position: "absolute", inset: 0, background: assetsStage || ready ? "#F4F3EE" : "#ECECEA", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {assetsStage || ready
+                      ? miniGlass("landing", ready ? Math.max(ppFill, 0.55) : Math.min(0.9, assetFill("lifestyle 4/4")))
+                      : <button onClick={() => go("front", -1)} style={{ ...ghost, position: "relative", width: "100%", height: "100%", font: `12px ${HNW}`, color: "#8a887e", textTransform: "none", cursor: "pointer" }}>{t("Create front label")}</button>}
+                  </div>
+                )}
               </div>
-              <iframe src={productUrl} title="product page" onLoad={() => setPpLoaded(true)} style={{ width: W, height: 823, transform: `scale(${340 / W})`, transformOrigin: "0 0", border: 0, pointerEvents: "none" }} />
-              {!ppLoaded && (
-                <div style={{ position: "absolute", left: 0, top: 13, right: 0, bottom: 0, background: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {miniGlass("ppload", ppFill)}
-                </div>
+              {ready && ppLoaded && (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={`/api/qr?u=${encodeURIComponent("https://8klabels.com" + productUrl)}`} alt="QR"
+                  style={{ ...px(892, 522, 36, 36) }} />
               )}
-            </div>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={`/api/qr?u=${encodeURIComponent("https://8klabels.com" + productUrl)}`} alt="QR"
-              style={{ ...px(892, 522, 36, 36) }} />
-          </>) : (
-            <div style={{ ...px(892, 279, 340, 340 / W * 823 + 13), background: assetsStage ? "#F4F3EE" : "#ECECEA", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              {assetsStage ? miniGlass("landing", Math.min(0.9, assetFill("lifestyle 4/4"))) :
-                <button onClick={() => go("front", -1)} style={{ ...ghost, position: "relative", width: "100%", height: "100%", font: `12px ${HNW}`, color: "#8a887e", textTransform: "none", cursor: "pointer" }}>{t("Create front label")}</button>}
-            </div>
-          ))}
+            </>);
+          })()}
         </>);
       }
 
@@ -2083,7 +2036,7 @@ export default function NewUI() {
           { name: "Product_Shot_Front.png", img: assets.front?.prev, kind: "front" },
           ...Array.from({ length: Math.max(4, assets.life.length) }, (_, i) => ({ name: `Marketing_Image_${i + 1}.jpg`, img: assets.life[i]?.prev, kind: "front" as const })),
         ] : [
-          { name: "Front_Label.svg", img: selected >= 0 ? (dreams[selected]?.preview || dreams[selected]?.dream) : undefined, kind: "front" },
+          { name: "Front_Label.svg", img: viewedDream(selected)?.preview || viewedDream(selected)?.dream || undefined, kind: "front" },
           { name: "Back_Label.svg", img: backPng || undefined, kind: "back" },
           { name: "Product_Shot_Front.png", img: assets.front?.prev, kind: "front" },
           { name: "Product_Shot_Back.png", img: assets.back?.prev, kind: "front" },
@@ -2446,7 +2399,7 @@ export default function NewUI() {
           {/* ROUND 59 #2: the gate message floats at ROOT level so it can
               sit truly midway between the selection row and the bar line */}
           {warn && thick !== null && (
-            <span style={{ ...px(0, 658, W, 16), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block", zIndex: 7, position: "absolute" }}>{warn}</span>
+            <span style={{ ...px(0, 648, W, 16), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block", zIndex: 7, position: "absolute" }}>{warn}</span>
           )}
 
           {/* welcome→vision: the arrow flies right while the page slides (owner #3) */}
@@ -2459,6 +2412,22 @@ export default function NewUI() {
           {/* STATIC footer bar */}
           <div style={{ ...px(0, FOOTER_Y, W, H - FOOTER_Y), background: "#000" }}>
             <span style={{ ...px(138.4, 779.4 - FOOTER_Y, 700, 16), font: `300 11px ${HNW}`, color: "#fff" }}>{t("© 8K Labels — a demo interface built from your uploaded mockup")}</span>
+            {/* ROUND 60 #3 (owner): the credit balance lives HERE — white
+                text, red number, right edge flush with the bar's last dot */}
+            <div style={{ ...px(700, 779.4 - FOOTER_Y - 2, 602.86, 18), display: "flex", justifyContent: "flex-end", alignItems: "baseline", columnGap: 16 }}>
+              <span style={{ font: `300 11px ${HNW}`, color: "#8a8a8a", whiteSpace: "nowrap" }}>{t("1 Credit = 3 new labels")}</span>
+              <span style={{ font: `700 13px ${HNW}`, color: "#fff", whiteSpace: "nowrap" }}>
+                {t("Credits available:")}{" "}
+                {spinning ? (
+                  <span style={{ color: BAR_RED }}>{spinDigit}</span>
+                ) : genCredits === 0 ? (
+                  <button onClick={() => { gensReturn.current = pageNow.current; setGensMode(true); setGensSel(0); go("checkout"); }}
+                    style={{ ...ghost, font: `700 13px ${HNW}`, color: BAR_RED, textDecoration: "underline", textTransform: "none", display: "inline" }}>{t("Add credit")}</button>
+                ) : (
+                  <span style={{ color: BAR_RED }}>{genCredits}</span>
+                )}
+              </span>
+            </div>
             {/* round 56 #3 — TEMP DEV SWITCH (remove before launch): off =
                 every generation is faked with already-made images */}
             <button aria-label="toggle live generation"
@@ -2469,7 +2438,7 @@ export default function NewUI() {
               </span>
               <span style={{ font: `300 9px ${HNW}`, color: "#666", whiteSpace: "nowrap" }}>live generation</span>
             </button>
-            <a href="/classic" style={{ ...px(1240, 779.4 - FOOTER_Y, 160, 16), font: `300 11px ${HNW}`, color: "#888", textDecoration: "none" }}>{t("classic interface")}</a>
+
           </div>
 
           {busyMsg && <div style={{ ...px(1090, 78, 320, 20), font: `13px ${HNW}`, color: "#8a887e", textAlign: "right" }}>{busyMsg}</div>}
@@ -2507,7 +2476,7 @@ export default function NewUI() {
             const val = (txt: string) => <span style={{ font: `italic 12px ${HNW}`, lineHeight: "16px", marginLeft: 5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{txt || "—"}</span>;
             const isL = confirmModal === "labels";
             const FR_CAPS = ["Producer:", "Wine Name:", "Appellation:", "Classification:", "Vintage:", "Grape Variety:", "Region, Country:", "Special mention:", "Sweetness:", "Colour:", "Wine Type:", "Alcohol:", "Volume:"];
-            const frontThumb = customLabel || (selected >= 0 ? (dreams[selected]?.preview || dreams[selected]?.dream) : "");
+            const frontThumb = customLabel || viewedDream(selected)?.preview || viewedDream(selected)?.dream || "";
             const onCreate = () => {
               /* round 56 #7: creating SPENDS a credit (or routes to the
                  gift modal / purchase page) */
