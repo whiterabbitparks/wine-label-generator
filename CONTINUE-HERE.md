@@ -1990,6 +1990,18 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- DEPLOYED (2026-09-14): Hetzner CPX22 (Ubuntu 26.04, x86) at
+  2.28.48.43 — app in /opt/8klabels, systemd service "8klabels"
+  (npm run start :3000), Caddy on :80 reverse-proxying, ufw
+  22/80/443, Node 22. Env carried from local .env.local
+  (IMAGE_PROVIDER=openai, Mongo Atlas reachable). SSH: the owner's
+  Mac key is authorized for root. UPDATE PROCEDURE: rsync -az
+  --delete --exclude node_modules --exclude .next --exclude .git ./
+  root@2.28.48.43:/opt/8klabels/ && ssh root@2.28.48.43 "cd
+  /opt/8klabels && npm ci && npm run build && systemctl restart
+  8klabels". PENDING: domain + HTTPS (Caddyfile swap), replace the
+  hardcoded 8klabels.com QR domain, change admin John/Doe,
+  server-side credit enforcement before any public audience.
 - ROUND 61 (owner, 2 items, 2026-09-14): (1) variation dots sit
   MIDWAY between the label bottom and the variations button
   ((ly+lh+565)/2). (2) the More Variations button is OFF the assets
