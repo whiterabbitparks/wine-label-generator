@@ -1990,6 +1990,27 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 65 (owner, 4 items + mid-round note, 2026-09-16): (1) the
+  footer back arrow is GONE — the BROWSER's Back/Forward walks the
+  wizard instead: go() pushes {page} history entries (?page=…) and a
+  popstate listener navigates back, with barJumped set so a history
+  jump never starts a paid generation; the loader pushes NOTHING (a
+  waypoint, not a destination), so Back from the labels page lands on
+  Your Vision. Known consequence: Back from the welcome page leaves
+  the site, and a refresh keeps the page but not its state (same as
+  the old ?page= dev jump). (2) the red next button is 20% smaller
+  (r 27.2, arrow 28.8×19.2). (3) "LABEL SIZE" title dropped; the row
+  now reads "Label Width: / Label Height:". (4) the confirmation box
+  was rebuilt to the owner's reference (Comments/New screenshot):
+  740×560 centred in the WHITE BAND, uppercase 23px title + ✕, an
+  italic credits line ("Each creation costs N credits" · "You have N
+  Credits" with a red bold number), a dashed rule, then two columns
+  — Prompt + Sketch box (or Front/Back label boxes) at x32 and the
+  detail list at x385.5 (values 500, GEO 530) — and Edit Details
+  (outlined, left) + Create (N Credits) (black, right). The cost is
+  live: 3 for a label set, 1 for a marketing pack. MID-ROUND: every
+  modal scrim now covers the FULL artboard (0..H) so the progress
+  bar, next button and header are all inert until the box closes.
 - ROUND 63 (owner's Comments/New mocks — UI RESTRUCTURE, 2026-09-16;
   functionality unchanged): (1) NEW PROGRESS BAR measured off the 3x
   artboards: it rides the white/black boundary at y753.7 — filled red

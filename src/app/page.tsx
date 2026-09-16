@@ -80,7 +80,7 @@ const DOT_R = 4.35;            /* station dot */
 const START_R = 5.2;           /* the filled red start dot */
 const LINE_H = 3.6;
 const LABEL_BASE = 788.2;      /* white station labels' baseline */
-const NEXT_R = 34;             /* red round button */
+const NEXT_R = 27.2;           /* red round button (round 65: −20%) */
 const NEXT_X = 1268.4;         /* its centre on working pages … */
 const WELCOME_X = 168.1;       /* … and on the welcome page */
 const CIRCLE_X = [142.06, 428.7, 720.2, 1011.8];
@@ -262,6 +262,8 @@ export default function NewUI() {
     const sp = new URLSearchParams(window.location.search);
     const q = sp.get("page");
     if (q && (ORDER as readonly string[]).includes(q)) { pageNow.current = q as PageKey; setPage(q as PageKey); }
+    /* round 65: seed the history so the FIRST Back has somewhere to land */
+    try { window.history.replaceState({ page: pageNow.current }, "", `?page=${pageNow.current}`); } catch { }
     /* dev aid: &pp=<code> previews the final-pack product-page slot */
     const pp = sp.get("pp");
     if (pp) { setProductUrl(`/p/${pp.replace(/[^a-z0-9]/gi, "")}`); return; }
@@ -847,11 +849,18 @@ export default function NewUI() {
      front form replayed as the exiting layer instead of the loader fading.
      The current page now lives in a ref that never goes stale. */
   const pageNow = useRef<PageKey>("welcome");
-  const go = useCallback((next: PageKey, d = 1) => {
+  const go = useCallback((next: PageKey, d = 1, hist = true) => {
     const cur = pageNow.current;
     if (next === cur) return;
     pageNow.current = next;
     setPrev(cur); setDir(d); setPage(next);
+    /* ROUND 65 (owner): the browser's own Back button walks the wizard —
+       every step is a history entry. The loader is a waypoint, never a
+       destination, so it adds none (back from the labels page lands on
+       Your Vision, not on a dead loader). */
+    if (hist && next !== "loader") {
+      try { window.history.pushState({ page: next }, "", `?page=${next}`); } catch { }
+    }
     /* into the loader the fade starts only after the slide-out (round 9 #1);
        out of the loader the fade completes before the slide (round 21 #1);
        slice cascades extend the settle per page (round 16 #3) */
@@ -859,6 +868,21 @@ export default function NewUI() {
     const extra = next === "loader" || cur === "loader" ? FADE_MS : 0;
     setTimeout(() => setPrev(null), md + extra + 60);
   }, []);
+
+  /* ROUND 65: Back/Forward in the browser drive the same navigation */
+  useEffect(() => {
+    const onPop = (e: PopStateEvent) => {
+      const st = (e.state || {}) as { page?: string };
+      const target = st.page && (ORDER as readonly string[]).includes(st.page) ? (st.page as PageKey) : "welcome";
+      if (target === pageNow.current) return;
+      setGensMode(false);
+      /* a history jump must never start a paid generation */
+      barJumped.current = true;
+      go(target, ORDER.indexOf(target) > ORDER.indexOf(pageNow.current) ? 1 : -1, false);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [go]);
 
   const goBack = useCallback(() => {
     const i = ORDER.indexOf(page);
@@ -1297,9 +1321,8 @@ export default function NewUI() {
           <textarea value={vision} onChange={(e) => setVision(e.target.value)} maxLength={2200}
             style={{ ...px(BOX.x + 14, BOX.y + 12, BOX.w - 28, BOX.h - 40), ...inputStyle, fontStyle: "normal", fontSize: 14, textDecoration: "none", resize: "none", lineHeight: 1.5, overflow: "auto", background: "transparent", padding: 0 }} />
           <span style={{ ...px(BOX.x + BOX.w - 174, baseTop(BOX.y + BOX.h - 13, 11), 160, 14), font: `11px ${HNW}`, lineHeight: "11px", color: "#8a8a8a", textAlign: "right" }}>{words} / 300 {t("words")}</span>
-          <span style={{ ...px(137.14, baseTop(650.8, 24), 400, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t("LABEL SIZE")}</span>
           <div style={{ position: "absolute", right: W - 686.8, top: baseTop(650.8, 14), display: "flex", alignItems: "baseline" }}>
-            {([["Width:", "width"], ["Height:", "height"]] as const).map(([cap, key2], gi) => (
+            {([["Label Width:", "width"], ["Label Height:", "height"]] as const).map(([cap, key2], gi) => (
               <span key={key2} style={{ display: "flex", alignItems: "baseline", marginLeft: gi ? 28 : 0 }}>
                 <span style={{ font: `700 14px ${HNW}`, lineHeight: "14px" }}>{t(cap)}</span>
                 <input value={f[key2]} onChange={(e) => setF((m) => ({ ...m, [key2]: e.target.value.replace(/[^\d.]/g, "") }))}
@@ -1584,7 +1607,7 @@ export default function NewUI() {
           <span style={{ ...px(754.2, baseTop(684, 12), 540, 16), font: `12px ${HNW}`, lineHeight: "12px", color: "#8a8a8a", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>{summary}</span>
           {/* the dropdown — opens UPWARD (the trigger sits near the footer) */}
           {marketOpen && (<>
-            <div style={{ ...px(0, HEADER_H, W, FOOTER_Y - HEADER_H), zIndex: 12 }} onClick={() => setMarketOpen(false)} />
+            <div style={{ ...px(0, 0, W, H), zIndex: 12 }} onClick={() => setMarketOpen(false)} />
             <div style={{ ...px(754.2, 640 - panelH, PANEL_W, panelH), background: "#fff", border: "1px solid #111", boxSizing: "border-box", zIndex: 13, padding: "9px 0" }}>
               {COMP.map(({ code, col, row }) => {
                 const on = markets.includes(code);
@@ -2146,7 +2169,7 @@ export default function NewUI() {
               if (sc) sc.scrollTop = ratio * (sc.scrollHeight - sc.clientHeight);
             };
             return (<>
-              <div style={{ ...px(0, HEADER_H, W, FOOTER_Y - HEADER_H), background: "rgba(255,255,255,0.88)", zIndex: 30 }} onClick={() => setTermsOpen(false)} />
+              <div style={{ ...px(0, 0, W, H), background: "rgba(255,255,255,0.88)", zIndex: 30 }} onClick={() => setTermsOpen(false)} />
               <div style={{ ...px(W / 2 - 340, 144, 680, 440), background: "#fff", border: "1px solid #111", zIndex: 31, boxSizing: "border-box" }}>
                 <button aria-label="close terms" onClick={() => setTermsOpen(false)}
                   style={{ position: "absolute", right: 6, top: 4, ...ghost, font: `15px ${HNW}`, color: "#111", width: 24, height: 24 }}>✕</button>
@@ -2352,13 +2375,6 @@ export default function NewUI() {
                   style={{ ...px(CIRCLE_X[i] - 130, baseTop(LABEL_BASE, 14), 260, 18), ...ghost, pointerEvents: "auto", font: `700 14px ${HNW}`, lineHeight: "14px", color: "#fff", textAlign: "center", textTransform: "none" }}>
                   {t(st.label)}</button>
               ))}
-              {/* back — white, in the footer's empty left corner */}
-              {page !== "loader" && (
-                <button aria-label="back" onClick={() => { barJumped.current = false; goBack(); }}
-                  style={{ ...px(52, LABEL_BASE - 19, 56, 24), ...ghost, pointerEvents: "auto" }}>
-                  <svg viewBox="0 0 56 24" width="56" height="24"><line x1="52" y1="12" x2="17" y2="12" stroke="#fff" strokeWidth="2.6" /><polyline points="26,3 17,12 26,21" fill="none" stroke="#fff" strokeWidth="2.6" /></svg>
-                </button>
-              )}
             </>)}
             {/* the red round NEXT button */}
             {page !== "loader" && (
@@ -2397,7 +2413,7 @@ export default function NewUI() {
                   padding: 0, cursor: "pointer", pointerEvents: "auto", display: "flex", alignItems: "center", justifyContent: "center",
                   animation: arrowFly ? `btnFly ${SLIDE_MS}ms ${EASE} both` : "none",
                 }}>
-                <svg viewBox="0 0 36 24" width="36" height="24">
+                <svg viewBox="0 0 36 24" width="28.8" height="19.2">
                   <line x1="1" y1="12" x2="33" y2="12" stroke="#fff" strokeWidth="3.3" />
                   <polyline points="24,2.6 34,12 24,21.4" fill="none" stroke="#fff" strokeWidth="3.3" />
                 </svg>
@@ -2420,7 +2436,7 @@ export default function NewUI() {
           {/* ROUND 56 #7/#8: the mailing-list GIFT modal — global, because
               the credit gate can fire from vision, options or assets */}
           {emailModal && (<>
-            <div style={{ ...px(0, HEADER_H, W, 660 - HEADER_H), background: "rgba(255,255,255,0.88)", zIndex: 20 }} onClick={() => setEmailModal("")} />
+            <div style={{ ...px(0, 0, W, H), background: "rgba(255,255,255,0.88)", zIndex: 20 }} onClick={() => setEmailModal("")} />
             <div style={{ ...px(W / 2 - 290, 240, 580, 248), background: "#fff", border: "1px solid #111", zIndex: 21, boxSizing: "border-box" }}>
               <button aria-label="close" onClick={() => setEmailModal("")}
                 style={{ position: "absolute", right: 6, top: 4, ...ghost, font: `15px ${HNW}`, color: "#111", width: 24, height: 24 }}>✕</button>
@@ -2443,80 +2459,92 @@ export default function NewUI() {
               detail that shapes the result, laid out clean, with Create /
               Edit Details / ✕ in the house style */}
           {confirmModal && (() => {
-            /* round 59 #3/#4: centered in the white band; title 4x, the
-               credits sentence 2x */
-            const B = { x: 350, y: 84, w: 740, h: 560 };
-            const cap = (txt: string) => <span style={{ font: `700 12px ${HNW}`, lineHeight: "16px", whiteSpace: "nowrap" }}>{txt}</span>;
-            const val = (txt: string) => <span style={{ font: `italic 12px ${HNW}`, lineHeight: "16px", marginLeft: 5, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{txt || "—"}</span>;
+            /* ROUND 65 (owner's "Check your details" reference, measured on
+               its own 740x560 proportions): title + a credits line, a dashed
+               rule, then two columns — prompt/sketch (or the two labels) on
+               the left, the detail list on the right — and the two buttons
+               with Create on the right. The box is centred in the white
+               band and blocks everything behind it. */
+            const B = { x: 350, y: (HEADER_H + FOOTER_Y) / 2 - 280, w: 740, h: 560 };
             const isL = confirmModal === "labels";
-            const FR_CAPS = ["Producer:", "Wine Name:", "Appellation:", "Classification:", "Vintage:", "Grape Variety:", "Region, Country:", "Special mention:", "Sweetness:", "Colour:", "Wine Type:", "Alcohol:", "Volume:"];
+            const cost = isL ? 3 : 1;
+            const cap = (txt: string) => <span style={{ font: `700 ${lang === "ge" ? 13 : 15}px ${HNW}`, lineHeight: "15px", whiteSpace: "nowrap" }}>{txt}</span>;
+            const val = (txt: string) => <span style={{ font: `italic 15px ${HNW}`, lineHeight: "15px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{txt || "—"}</span>;
+            const FR_CAPS = FRONT_LABELS;
             const frontThumb = customLabel || viewedDream(selected)?.preview || viewedDream(selected)?.dream || "";
+            const rows: [string, string][] = isL
+              ? FR_CAPS.map((c, i) => [c, f[FRONT_ROWS[i]] || ""] as [string, string])
+              : ([
+                ["Wine Name:", f.wine || (customLabel ? "" : DEMO_FRONT.wine)],
+                ["Wine Color", wineColor],
+                ["Bottle Type", bottle.type],
+                ["Bottle Color", bottle.color],
+                ["Closure Type", bottle.closure],
+                ["Closure Color", bottle.closure === "No Capsule" ? "" : bottle.finish],
+                ["Label size:", `${customLabel ? customDims.w : f.width || 110} × ${customLabel ? customDims.h : f.height || 80} ${t("mm")}`],
+              ] as [string, string][]);
             const onCreate = () => {
-              /* round 56 #7: creating SPENDS a credit (or routes to the
-                 gift modal / purchase page) */
+              /* round 56 #7: creating SPENDS credits (or routes to the gift
+                 modal / purchase page) */
               setConfirmModal("");
               if (isL) { if (requestCredit("vision", 3)) nextFromFront(); }
               else if (requestCredit("assets")) { confirmedAssetsSig.current = pendingAssetsSig.current; setAssetsTick((t2) => t2 + 1); }
             };
             const onEdit = () => { setConfirmModal(""); go(isL ? "vision" : "bottle", -1); };
             return (<>
-              <div style={{ ...px(0, HEADER_H, W, FOOTER_Y - HEADER_H), background: "rgba(255,255,255,0.88)", zIndex: 40 }} onClick={() => setConfirmModal("")} />
+              <div style={{ ...px(0, 0, W, H), background: "rgba(255,255,255,0.88)", zIndex: 40 }} onClick={() => setConfirmModal("")} />
               <div style={{ ...px(B.x, B.y, B.w, B.h), background: "#fff", border: "1px solid #111", zIndex: 41, boxSizing: "border-box" }}>
+                <span style={{ position: "absolute", left: 32, top: baseTop(52, 23), font: `700 23px ${HNW}`, lineHeight: "23px", whiteSpace: "nowrap" }}>{t("CHECK YOUR DETAILS")}</span>
                 <button aria-label="close confirm" onClick={() => setConfirmModal("")}
-                  style={{ position: "absolute", right: 6, top: 4, ...ghost, font: `15px ${HNW}`, color: "#111", width: 24, height: 24 }}>✕</button>
-                <span style={{ position: "absolute", left: 32, top: 24, font: `700 60px ${HNW}`, lineHeight: "64px", whiteSpace: "nowrap" }}>{t("Check your details")}</span>
-                <span style={{ position: "absolute", left: 32, top: 102, width: B.w - 64, font: `26px ${HNW}`, lineHeight: "34px" }}>
-                  {t(isL ? "Make sure everything is correct — creating labels costs credits." : "Make sure everything is correct — creating marketing assets costs credits.")} {t("You have")} <span style={{ fontWeight: 700, color: BAR_RED }}>{genCredits}</span>.
-                </span>
-                <div style={{ position: "absolute", left: 32, top: 180, width: B.w - 64, height: 1, background: "#111" }} />
+                  style={{ position: "absolute", right: 24, top: 28, ...ghost, width: 26, height: 26 }}>
+                  <svg viewBox="0 0 20 20" width="20" height="20"><line x1="2" y1="2" x2="18" y2="18" stroke="#111" strokeWidth="2" /><line x1="18" y1="2" x2="2" y2="18" stroke="#111" strokeWidth="2" /></svg>
+                </button>
+                <span style={{ position: "absolute", left: 32, top: baseTop(104, 13), font: `italic 13px ${HNW}`, lineHeight: "13px" }}>
+                  {t("Each creation costs")} {cost} {cost === 1 ? t("credit") : t("credits")}</span>
+                <span style={{ position: "absolute", left: 300, top: baseTop(104, 13), width: B.w - 332, textAlign: "right", font: `italic 13px ${HNW}`, lineHeight: "13px" }}>
+                  {t("You have")} <span style={{ fontWeight: 700, fontStyle: "normal", color: BAR_RED }}>{genCredits}</span> {t("Credits")}</span>
+                <div style={{ position: "absolute", left: 32, top: 120, width: B.w - 64, height: 1, backgroundImage: `repeating-linear-gradient(90deg,${DASH})`, backgroundSize: "100% 1px", backgroundRepeat: "no-repeat" }} />
+                {/* ── left column ── */}
                 {isL ? (<>
-                  <div style={{ position: "absolute", left: 32, top: 196, width: 500, display: "flex" }}>
-                    {cap(t("Prompt:"))}
-                    <span style={{ font: `italic 12px ${HNW}`, lineHeight: "16px", marginLeft: 5, height: 32, overflow: "hidden" }}>{vision.trim() || "—"}</span>
-                  </div>
-                  <div style={{ position: "absolute", left: 566, top: 196, display: "flex" }}>{cap(t("Sketch:"))}{val(sketch ? t("attached ✓") : "—")}</div>
-                  {sketch && (/* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={sketch} alt="" style={{ position: "absolute", left: 566, top: 216, width: 60, height: 42, objectFit: "cover", border: "1px solid #111" }} />)}
-                  {FR_CAPS.map((c, i) => (
-                    <div key={c} style={{ position: "absolute", left: 32 + (i % 2) * 345, top: 250 + Math.floor(i / 2) * 26, width: 335, display: "flex" }}>
-                      {cap(t(c))}{val(f[FRONT_ROWS[i]] || "")}
-                    </div>
-                  ))}
-                  <div style={{ position: "absolute", left: 377, top: 250 + 6 * 26, width: 335, display: "flex" }}>
-                    {cap(t("Size:"))}{val(`${f.width || 110} × ${f.height || 80} ${t("mm")}`)}
+                  <span style={{ position: "absolute", left: 32, top: baseTop(163, 21), font: `700 21px ${HNW}`, lineHeight: "21px" }}>{t("Prompt:")}</span>
+                  <span style={{ position: "absolute", left: 32, top: baseTop(206, 15), width: 329, height: 68, font: `15px ${HNW}`, lineHeight: "17px", overflow: "hidden" }}>{vision.trim() || "—"}</span>
+                  <span style={{ position: "absolute", left: 32, top: baseTop(290, 21), font: `700 21px ${HNW}`, lineHeight: "21px" }}>{t("Sketch")}</span>
+                  <div style={{ position: "absolute", left: 32, top: 303, width: 329, height: 158, backgroundImage: `repeating-linear-gradient(90deg,${DASH}),repeating-linear-gradient(90deg,${DASH}),repeating-linear-gradient(180deg,${DASH}),repeating-linear-gradient(180deg,${DASH})`, backgroundPosition: "0 0, 0 100%, 0 0, 100% 0", backgroundSize: "100% 1px, 100% 1px, 1px 100%, 1px 100%", backgroundRepeat: "no-repeat" }}>
+                    {sketch && (/* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={sketch} alt="" style={{ position: "absolute", inset: 8, width: "calc(100% - 16px)", height: "calc(100% - 16px)", objectFit: "contain" }} />)}
                   </div>
                 </>) : (<>
-                  <div style={{ position: "absolute", left: 32, top: 196, display: "flex" }}>{cap(`${t("Front Label")}:`)}</div>
-                  {frontThumb ? (/* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={frontThumb} alt="" style={{ position: "absolute", left: 32, top: 216, maxWidth: 190, maxHeight: 120, border: "1px solid #111" }} />
-                  ) : <span style={{ position: "absolute", left: 32, top: 218, font: `italic 12px ${HNW}` }}>—</span>}
-                  <div style={{ position: "absolute", left: 32, top: 352, display: "flex" }}>{cap(`${t("Back Label")}:`)}</div>
-                  {backPng && !customLabel ? (/* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={backPng} alt="" style={{ position: "absolute", left: 32, top: 372, maxWidth: 190, maxHeight: 105, border: "1px solid #111" }} />
-                  ) : <span style={{ position: "absolute", left: 32, top: 374, font: `italic 12px ${HNW}` }}>—</span>}
-                  {([
-                    ["Wine Name:", f.wine || (customLabel ? "—" : DEMO_FRONT.wine)],
-                    ["Wine Color", wineColor],
-                    ["Bottle Type", bottle.type],
-                    ["Bottle Color", bottle.color],
-                    ["Closure Type", bottle.closure],
-                    ["Closure Color", bottle.closure === "No Capsule" ? "—" : bottle.finish],
-                    ["Label size:", `${customLabel ? customDims.w : f.width || 110} × ${customLabel ? customDims.h : f.height || 80} ${t("mm")}`],
-                  ] as const).map(([c, v], i) => (
-                    <div key={c} style={{ position: "absolute", left: 300, top: 198 + i * 30, width: 400, display: "flex", alignItems: "center" }}>
-                      {cap(t(c).endsWith(":") ? t(c) : t(c) + ":")}{val(v ? t(v) : "")}
-                      {c === "Closure Color" && bottle.closure !== "No Capsule" && (
-                        <span style={{ width: 14, height: 14, background: shadeRgb(), border: "1px solid #111", marginLeft: 8, flex: "0 0 auto" }} />
-                      )}
-                    </div>
-                  ))}
+                  <span style={{ position: "absolute", left: 32, top: baseTop(163, 21), font: `700 21px ${HNW}`, lineHeight: "21px" }}>{t("Front Label")}</span>
+                  <div style={{ position: "absolute", left: 32, top: 176, width: 329, height: 132, backgroundImage: `repeating-linear-gradient(90deg,${DASH}),repeating-linear-gradient(90deg,${DASH}),repeating-linear-gradient(180deg,${DASH}),repeating-linear-gradient(180deg,${DASH})`, backgroundPosition: "0 0, 0 100%, 0 0, 100% 0", backgroundSize: "100% 1px, 100% 1px, 1px 100%, 1px 100%", backgroundRepeat: "no-repeat" }}>
+                    {frontThumb && (/* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={frontThumb} alt="" style={{ position: "absolute", inset: 8, width: "calc(100% - 16px)", height: "calc(100% - 16px)", objectFit: "contain" }} />)}
+                  </div>
+                  <span style={{ position: "absolute", left: 32, top: baseTop(345, 21), font: `700 21px ${HNW}`, lineHeight: "21px" }}>{t("Back Label")}</span>
+                  <div style={{ position: "absolute", left: 32, top: 358, width: 329, height: 103, backgroundImage: `repeating-linear-gradient(90deg,${DASH}),repeating-linear-gradient(90deg,${DASH}),repeating-linear-gradient(180deg,${DASH}),repeating-linear-gradient(180deg,${DASH})`, backgroundPosition: "0 0, 0 100%, 0 0, 100% 0", backgroundSize: "100% 1px, 100% 1px, 1px 100%, 1px 100%", backgroundRepeat: "no-repeat" }}>
+                    {backPng && !customLabel && (/* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={backPng} alt="" style={{ position: "absolute", inset: 8, width: "calc(100% - 16px)", height: "calc(100% - 16px)", objectFit: "contain" }} />)}
+                  </div>
                 </>)}
-                <button onClick={onCreate}
-                  style={{ position: "absolute", left: 32, top: B.h - 76, width: 328, height: 34.3, cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", paddingBottom: 4 }}>
-                  {t("Create")}</button>
+                {/* ── right column ── */}
+                <span style={{ position: "absolute", left: 385.5, top: baseTop(163, 21), font: `700 21px ${HNW}`, lineHeight: "21px" }}>{t(isL ? "Label Details" : "Product Details")}</span>
+                {rows.map(([c, v], i) => (
+                  <span key={c}>
+                    <span style={{ position: "absolute", left: 385.5, top: baseTop(212 + i * 19.2, 15), width: 140 }}>{cap(t(c).endsWith(":") ? t(c) : t(c) + ":")}</span>
+                    <span style={{ position: "absolute", left: lang === "ge" ? 530 : 500, top: baseTop(212 + i * 19.2, 15), width: B.w - (lang === "ge" ? 562 : 532), display: "flex", alignItems: "center", columnGap: 6 }}>
+                      {val(v ? t(v) : "")}
+                      {c === "Closure Color" && bottle.closure !== "No Capsule" && bottle.finish && (
+                        <span style={{ width: 13, height: 13, background: shadeRgb(), border: "1px solid #111", flex: "0 0 auto" }} />
+                      )}
+                    </span>
+                  </span>
+                ))}
+                {/* ── the two actions ── */}
                 <button onClick={onEdit}
-                  style={{ position: "absolute", left: 380, top: B.h - 76, width: 328, height: 34.3, cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#fff", color: "#111", border: "1px solid #111", boxSizing: "border-box", paddingBottom: 4 }}>
+                  style={{ position: "absolute", left: 32, top: 485, width: 329, height: 30, cursor: "pointer", font: `13px ${HNW}`, letterSpacing: 0.3, background: "#fff", color: "#111", border: "1px solid #111", boxSizing: "border-box", paddingBottom: 3, textTransform: "none" }}>
                   {t("Edit Details")}</button>
+                <button onClick={onCreate}
+                  style={{ position: "absolute", left: 385.5, top: 485, width: 328.5, height: 30, cursor: "pointer", font: `700 13px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", paddingBottom: 3, textTransform: "none" }}>
+                  {t("Create")} <span style={{ fontWeight: 400, fontStyle: "italic" }}>({cost} {cost === 1 ? t("Credit") : t("Credits")})</span></button>
               </div>
             </>);
           })()}

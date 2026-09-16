@@ -233,6 +233,18 @@ export const UI_GE: Record<string, string> = {
   "Your label ✓ — upload another": "შენი ეტიკეტი ✓ — ატვირთე სხვა",
   "Product Shot": "პროდუქტის ფოტო",
   "Face": "წინა",
+  /* round 65: label-size captions + the redesigned confirmation box */
+  "Label Width:": "ეტიკეტის სიგანე:",
+  "Label Height:": "ეტიკეტის სიმაღლე:",
+  "CHECK YOUR DETAILS": "ᲒᲐᲓᲐᲐᲛᲝᲬᲛᲔ ᲓᲔᲢᲐᲚᲔᲑᲘ",
+  "Each creation costs": "თითო შექმნა ღირს",
+  "credit": "კრედიტი",
+  "credits": "კრედიტი",
+  "Credit": "კრედიტი",
+  "Credits": "კრედიტი",
+  "Label Details": "ეტიკეტის დეტალები",
+  "Product Details": "პროდუქტის დეტალები",
+  "Sketch": "ესკიზი",
   /* round 63: merged pages + market dropdown */
   "LABEL SIZE": "ᲔᲢᲘᲙᲔᲢᲘᲡ ᲖᲝᲛᲐ",
   "MARKET COMPLIANCE": "ᲑᲐᲖᲠᲔᲑᲘᲡ ᲨᲔᲡᲐᲑᲐᲛᲘᲡᲝᲑᲐ",
