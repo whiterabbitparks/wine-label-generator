@@ -233,6 +233,8 @@ export const UI_GE: Record<string, string> = {
   "Your label ✓ — upload another": "შენი ეტიკეტი ✓ — ატვირთე სხვა",
   "Product Shot": "პროდუქტის ფოტო",
   "Face": "წინა",
+  /* round 67: the market picker's three states */
+  "Select Market": "აირჩიე ბაზარი",
   /* round 65: label-size captions + the redesigned confirmation box */
   "Label Width:": "ეტიკეტის სიგანე:",
   "Label Height:": "ეტიკეტის სიმაღლე:",

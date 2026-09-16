@@ -1990,6 +1990,26 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 67 (owner, 2 items + two mid-round notes, 2026-09-16):
+  (1) the modal veil no longer washes over the black bars — each modal
+  now paints a TRANSPARENT full-page blocker (clicks) plus a white
+  88% veil across the WHITE BAND only, so header and footer stay
+  solid black. (2) MARKET PICKER rebuilt from the owner's three
+  reference screens (Unclicked / Opened / Selected): a black button
+  the size of the QR ones (753,653,241x34.3) with italic white text
+  and a 22x11 chevron drawn to the reference (UP while closed and
+  nothing picked, DOWN while open or after a pick); its label runs
+  "Select Market" → "Select" (open) → "Selected" (picked); the drop-UP
+  panel sits directly on the button (white, 1px border, "No compliance
+  needed" first, dashed rule, 13 flag rows of 25px with our ring at
+  the right, picked rows bold on #F2F1ED) and the chosen markets are
+  listed as flag + name to the RIGHT of the button. The trigger rides
+  z13 while open so pressing it closes the menu. MID-ROUND: (a) empty
+  rows in the confirmation box now show their own grey placeholder
+  (whole empty BLOCKS still disappear — round 66 #3); (b) the bottle
+  drawing in the marketing box is sized by its INK (the JPG's outline
+  fills only 32.6% x 68.8% of the canvas), so it stands 155 tall like
+  the reference instead of shrinking inside object-fit.
 - ROUND 66 (owner, 3 items, 2026-09-16): (1) a SPARKLING bottle now
   offers ONLY "Sparkling Cork" and "Crown Cap" in Closure Type (the
   still-wine closures and No Capsule disappear), and switching TO

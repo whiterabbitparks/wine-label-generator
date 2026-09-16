@@ -1511,8 +1511,6 @@ export default function NewUI() {
           AU: "Australia", NZ: "New Zealand", CN: "China", KR: "South Korea",
           BR: "Brazil", MX: "Mexico", IL: "Israel", GE: "Georgia", CA: "Canada",
         };
-        const ROW_H = 26, PANEL_W = 300;
-        const panelH = COMP.length * ROW_H + ROW_H + 18;
         const modeStyle = (active: boolean): React.CSSProperties => ({
           /* classic theme's global CSS uppercases <label> — undo it */
           cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, textTransform: "none", transition: `all 240ms ${EASE}`,
@@ -1520,9 +1518,6 @@ export default function NewUI() {
           border: "1px solid #111", boxSizing: "border-box",
           display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4,
         });
-        const summary = noComp
-          ? t("No compliance needed")
-          : COMP.filter((c) => markets.includes(c.code)).map((c) => t(NAMES[c.code])).join(", ");
         return (<>
           {patch(0, HEADER_H, W, FOOTER_Y - HEADER_H, "bdwipe")}
           <span style={{ ...px(139, baseTop(149.08, 24), 600, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t("BACK LABEL DETAILS")}</span>
@@ -1595,51 +1590,79 @@ export default function NewUI() {
           <span style={{ ...px(139, baseTop(655.2, 24), 500, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t("MARKET COMPLIANCE")}</span>
           <span style={{ ...px(lang === "ge" ? 139 : 446.2, baseTop(lang === "ge" ? 685 : 655, 14), lang === "ge" ? 560 : 270, 60), font: `14px ${HNW}`, lineHeight: "18px", color: "#111" }}>
             {t("Select the market(s) where your wine will be sold, and we’ll incorporate required regulatory information.")}</span>
-          {/* the trigger: Select MARKET ⌄ */}
-          <button onClick={() => setMarketOpen((o) => !o)}
-            style={{ ...px(754.2, baseTop(656.5, 21) - 4, 300, 30), ...ghost, display: "flex", alignItems: "baseline", columnGap: 8, textTransform: "none", cursor: "pointer" }}>
-            <span style={{ font: `21px ${HNW}`, lineHeight: "21px", color: "#111" }}>{t("Select")}</span>
-            <span style={{ font: `700 italic 21px ${HNW}`, lineHeight: "21px", color: "#111", textDecoration: "underline", whiteSpace: "nowrap" }}>{t("MARKET")}</span>
-            <svg viewBox="0 0 30 12" width="30" height="12" style={{ transform: marketOpen ? "rotate(180deg)" : "none", transition: `transform 200ms ${EASE}` }}>
-              <polyline points="2,2 15,10 28,2" fill="none" stroke="#111" strokeWidth="2" />
-            </svg>
-          </button>
-          <span style={{ ...px(754.2, baseTop(684, 12), 540, 16), font: `12px ${HNW}`, lineHeight: "12px", color: "#8a8a8a", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>{summary}</span>
-          {/* the dropdown — opens UPWARD (the trigger sits near the footer) */}
-          {marketOpen && (<>
-            <div style={{ ...px(0, 0, W, H), zIndex: 12 }} onClick={() => setMarketOpen(false)} />
-            <div style={{ ...px(754.2, 640 - panelH, PANEL_W, panelH), background: "#fff", border: "1px solid #111", boxSizing: "border-box", zIndex: 13, padding: "9px 0" }}>
-              {COMP.map(({ code, col, row }) => {
-                const on = markets.includes(code);
-                return (
-                  <button key={code} onClick={() => setMarkets((ms) => {
-                    const nxt = on ? ms.filter((m) => m !== code) : [...ms, code];
-                    setNoComp(nxt.length === 0);
-                    return nxt;
-                  })}
-                    style={{ position: "relative", display: "flex", alignItems: "center", width: "100%", height: ROW_H, padding: "0 14px", columnGap: 10, background: on ? "#F4F3EE" : "transparent", border: "none", cursor: "pointer", textTransform: "none" }}>
-                    <span style={{
-                      width: 26, height: 20, flex: "0 0 auto",
-                      backgroundImage: "url(/newui/flags.png)", backgroundSize: "959.8px 261.1px",
-                      backgroundPosition: `${-(FLAG_X[col] - 13 - 250.9)}px ${-(PNG_ROW[row] - 10 - 289.8)}px`,
-                    }} />
-                    <span style={{ font: `${on ? 700 : 400} 13px ${HNW}`, color: "#111", whiteSpace: "nowrap" }}>{t(NAMES[code])}</span>
-                    <span style={{ position: "absolute", right: 14, width: 13, height: 13, borderRadius: 7, border: "1.5px solid #111", background: "#fff", boxSizing: "border-box" }}>
-                      {on && <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 6.5, height: 6.5, borderRadius: 4, background: "#111" }} />}
-                    </span>
-                  </button>
-                );
-              })}
-              <div style={{ margin: "5px 14px", height: 1, backgroundImage: `repeating-linear-gradient(90deg,${DASH})`, backgroundSize: "100% 1px", backgroundRepeat: "no-repeat" }} />
-              <button onClick={() => { setMarkets([]); setNoComp(true); setMarketOpen(false); }}
-                style={{ position: "relative", display: "flex", alignItems: "center", width: "100%", height: ROW_H, padding: "0 14px", background: noComp ? "#F4F3EE" : "transparent", border: "none", cursor: "pointer", textTransform: "none" }}>
-                <span style={{ font: `${noComp ? 700 : 400} 13px ${HNW}`, color: "#111", whiteSpace: "nowrap" }}>{t("No compliance needed")}</span>
-                <span style={{ position: "absolute", right: 14, width: 13, height: 13, borderRadius: 7, border: "1.5px solid #111", background: "#fff", boxSizing: "border-box" }}>
-                  {noComp && <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 6.5, height: 6.5, borderRadius: 4, background: "#111" }} />}
-                </span>
+          {/* ROUND 67 (owner's Unclicked / Opened / Selected references):
+              the market picker is a BLACK button the size of the QR ones —
+              "Select Market ^" closed, "Select v" while the drop-UP panel
+              is open, "Selected v" once markets are chosen, with the picked
+              flags listed to its right. */}
+          {(() => {
+            const MB = { x: 753, y: 653, w: 241, h: 34.3 };
+            const ROW_H = 25, HEAD_H = 30, PAD = 12;
+            const panelH = PAD + HEAD_H + 8 + COMP.length * ROW_H + PAD;
+            const picked = COMP.filter((c) => markets.includes(c.code));
+            const label = marketOpen ? t("Select") : picked.length ? t("Selected") : t("Select Market");
+            const up = !marketOpen && picked.length === 0;
+            const flag = (col: number, row: number, w2 = 22) => (
+              <span style={{
+                width: w2, height: w2 * 20 / 26, flex: "0 0 auto",
+                backgroundImage: "url(/newui/flags.png)", backgroundSize: `${959.8 * w2 / 26}px ${261.1 * w2 / 26}px`,
+                backgroundPosition: `${-(FLAG_X[col] - 13 - 250.9) * w2 / 26}px ${-(PNG_ROW[row] - 10 - 289.8) * w2 / 26}px`,
+              }} />
+            );
+            const ring = (on: boolean) => (
+              <span style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", width: 11, height: 11, borderRadius: 6, border: "1.4px solid #111", background: "#fff", boxSizing: "border-box" }}>
+                {on && <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 5.5, height: 5.5, borderRadius: 3, background: "#111" }} />}
+              </span>
+            );
+            return (<>
+              <button onClick={() => setMarketOpen((o) => !o)}
+                /* while the panel is open the button rides ABOVE its
+                   click-blocker, so pressing it closes the menu */
+                style={{ ...px(MB.x, MB.y, MB.w, MB.h), background: "#111", border: "none", cursor: "pointer", padding: 0, textTransform: "none", zIndex: marketOpen ? 13 : undefined }}>
+                <span style={{ position: "absolute", left: 0, top: baseTop(MB.h / 2 + 5, 15), width: MB.w, textAlign: "center", font: `italic 15px ${HNW}`, lineHeight: "15px", color: "#fff" }}>{label}</span>
+                <svg viewBox="0 0 22 11" width="22" height="11" style={{ position: "absolute", right: 8, top: (MB.h - 11) / 2 }}>
+                  <polyline points={up ? "1,10 11,1 21,10" : "1,1 11,10 21,1"} fill="none" stroke="#fff" strokeWidth="2" />
+                </svg>
               </button>
-            </div>
-          </>)}
+              {/* the chosen markets, listed beside the button */}
+              {!marketOpen && picked.length > 0 && (
+                <div style={{ position: "absolute", left: MB.x + MB.w + 29, top: baseTop(MB.y + MB.h / 2 + 5, 14), display: "flex", alignItems: "center", columnGap: 10, flexWrap: "wrap", width: 300 }}>
+                  {picked.map((c) => (
+                    <span key={c.code} style={{ display: "flex", alignItems: "center", columnGap: 8 }}>
+                      {flag(c.col, c.row)}
+                      <span style={{ font: `14px ${HNW}`, lineHeight: "14px", color: "#111", whiteSpace: "nowrap" }}>{t(NAMES[c.code])}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+              {marketOpen && (<>
+                <div style={{ ...px(0, 0, W, H), zIndex: 12 }} onClick={() => setMarketOpen(false)} />
+                <div style={{ ...px(MB.x, MB.y - panelH, MB.w, panelH), background: "#fff", border: "1px solid #111", boxSizing: "border-box", zIndex: 13, padding: `${PAD}px 0` }}>
+                  <button onClick={() => { setMarkets([]); setNoComp(true); }}
+                    style={{ position: "relative", display: "flex", alignItems: "center", width: "100%", height: HEAD_H, padding: "0 14px", background: "transparent", border: "none", cursor: "pointer", textTransform: "none" }}>
+                    <span style={{ font: `700 14px ${HNW}`, color: "#111", whiteSpace: "nowrap" }}>{t("No compliance needed")}</span>
+                    {ring(noComp)}
+                  </button>
+                  <div style={{ margin: "4px 14px", height: 1, backgroundImage: `repeating-linear-gradient(90deg,${DASH})`, backgroundSize: "100% 1px", backgroundRepeat: "no-repeat" }} />
+                  {COMP.map(({ code, col, row }) => {
+                    const on = markets.includes(code);
+                    return (
+                      <button key={code} onClick={() => setMarkets((ms) => {
+                        const nxt = on ? ms.filter((m) => m !== code) : [...ms, code];
+                        setNoComp(nxt.length === 0);
+                        return nxt;
+                      })}
+                        style={{ position: "relative", display: "flex", alignItems: "center", width: "100%", height: ROW_H, padding: "0 14px", columnGap: 10, background: on ? "#F2F1ED" : "transparent", border: "none", cursor: "pointer", textTransform: "none" }}>
+                        {flag(col, row)}
+                        <span style={{ font: `${on ? 700 : 400} 13px ${HNW}`, color: "#111", whiteSpace: "nowrap" }}>{t(NAMES[code])}</span>
+                        {ring(on)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>)}
+            </>);
+          })()}
         </>);
       }
 
@@ -2174,7 +2197,8 @@ export default function NewUI() {
               if (sc) sc.scrollTop = ratio * (sc.scrollHeight - sc.clientHeight);
             };
             return (<>
-              <div style={{ ...px(0, 0, W, H), background: "rgba(255,255,255,0.88)", zIndex: 30 }} onClick={() => setTermsOpen(false)} />
+              <div style={{ ...px(0, 0, W, H), zIndex: 30 }} onClick={() => setTermsOpen(false)} />
+              <div style={{ ...px(0, HEADER_H, W, FOOTER_Y - HEADER_H), background: "rgba(255,255,255,0.88)", zIndex: 30, pointerEvents: "none" }} />
               <div style={{ ...px(W / 2 - 340, 144, 680, 440), background: "#fff", border: "1px solid #111", zIndex: 31, boxSizing: "border-box" }}>
                 <button aria-label="close terms" onClick={() => setTermsOpen(false)}
                   style={{ position: "absolute", right: 6, top: 4, ...ghost, font: `15px ${HNW}`, color: "#111", width: 24, height: 24 }}>✕</button>
@@ -2441,7 +2465,8 @@ export default function NewUI() {
           {/* ROUND 56 #7/#8: the mailing-list GIFT modal — global, because
               the credit gate can fire from vision, options or assets */}
           {emailModal && (<>
-            <div style={{ ...px(0, 0, W, H), background: "rgba(255,255,255,0.88)", zIndex: 20 }} onClick={() => setEmailModal("")} />
+            <div style={{ ...px(0, 0, W, H), zIndex: 20 }} onClick={() => setEmailModal("")} />
+            <div style={{ ...px(0, HEADER_H, W, FOOTER_Y - HEADER_H), background: "rgba(255,255,255,0.88)", zIndex: 20, pointerEvents: "none" }} />
             <div style={{ ...px(W / 2 - 290, 240, 580, 248), background: "#fff", border: "1px solid #111", zIndex: 21, boxSizing: "border-box" }}>
               <button aria-label="close" onClick={() => setEmailModal("")}
                 style={{ position: "absolute", right: 6, top: 4, ...ghost, font: `15px ${HNW}`, color: "#111", width: 24, height: 24 }}>✕</button>
@@ -2489,19 +2514,22 @@ export default function NewUI() {
             const backThumb = !customLabel && backPng ? backPng : "";
             const prompt = vision.trim();
             /* only what the customer actually gave us */
-            const rows: [string, string][] = (isL
-              ? (FRONT_LABELS.map((c, i) => [c, (f[FRONT_ROWS[i]] || "").trim()] as [string, string])
-                .concat([["Label size:", `${f.width || 110} × ${f.height || 80} ${t("mm")}`]]))
+            /* ROUND 67 (owner): every row is listed — a field the customer
+               left empty shows its own grey placeholder, exactly like the
+               form it came from. (Whole BLOCKS with nothing in them —
+               prompt, sketch, back label — still disappear, round 66 #3.) */
+            const rows: [string, string, string][] = isL
+              ? (FRONT_LABELS.map((c, i) => [c, (f[FRONT_ROWS[i]] || "").trim(), t(FRONT_PH[i])] as [string, string, string])
+                .concat([["Label size:", `${f.width || 110} × ${f.height || 80} ${t("mm")}`, ""]]))
               : ([
-                ["Wine Name:", (f.wine || "").trim()],
-                ["Wine Color", wineColor],
-                ["Bottle Type", bottle.type],
-                ["Bottle Color", bottle.color],
-                ["Closure Type", bottle.closure],
-                ["Closure Color", bottle.closure === "No Capsule" ? "" : bottle.finish],
-                ["Label size:", `${customLabel ? customDims.w : f.width || 110} × ${customLabel ? customDims.h : f.height || 80} ${t("mm")}`],
-              ] as [string, string][])
-            ).filter(([, v]) => !!v);
+                ["Wine Name:", (f.wine || "").trim(), t("E.g. Château Margaux")],
+                ["Wine Color", wineColor, "—"],
+                ["Bottle Type", bottle.type, "—"],
+                ["Bottle Color", bottle.color, "—"],
+                ["Closure Type", bottle.closure, "—"],
+                ["Closure Color", bottle.closure === "No Capsule" ? "" : bottle.finish, "—"],
+                ["Label size:", `${customLabel ? customDims.w : f.width || 110} × ${customLabel ? customDims.h : f.height || 80} ${t("mm")}`, ""],
+              ] as [string, string, string][]);
             /* ── the columns, then the height that fits them ── */
             const left: React.ReactNode[] = [];
             let leftBottom = 140;
@@ -2520,9 +2548,13 @@ export default function NewUI() {
                 leftBottom = ty + 171;
               }
             } else {
+              /* ROUND 67 (owner: "the bottle is small"): the drawing's INK
+                 fills only 32.6% x 68.8% of its 800x1600 JPG — sized by the
+                 ink, not the canvas, so the outline itself stands 155 tall
+                 like the reference (ink centred on x78.6, top at y177.6) */
               left.push(
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img key="bt" src={bottleSrc()} alt="" style={{ position: "absolute", left: 57, top: 178, width: 43, height: 155, objectFit: "contain" }} />
+                <img key="bt" src={bottleSrc()} alt="" style={{ position: "absolute", left: 22, top: 140, width: 112.7, height: 225.3 }} />
               );
               leftBottom = 333;
               if (frontThumb) left.push(<span key="fl">{colTitle(137.6, t("Front Label"))}{dashBox(137.6, 177.6, 160, 155, frontThumb)}</span>);
@@ -2544,7 +2576,8 @@ export default function NewUI() {
             };
             const onEdit = () => { setConfirmModal(""); go(isL ? "vision" : "bottle", -1); };
             return (<>
-              <div style={{ ...px(0, 0, W, H), background: "rgba(255,255,255,0.88)", zIndex: 40 }} onClick={() => setConfirmModal("")} />
+              <div style={{ ...px(0, 0, W, H), zIndex: 40 }} onClick={() => setConfirmModal("")} />
+              <div style={{ ...px(0, HEADER_H, W, FOOTER_Y - HEADER_H), background: "rgba(255,255,255,0.88)", zIndex: 40, pointerEvents: "none" }} />
               <div style={{ ...px(B.x, B.y, B.w, B.h), background: "#fff", border: "1px solid #111", zIndex: 41, boxSizing: "border-box" }}>
                 <span style={{ position: "absolute", left: 32, top: baseTop(52, 23), font: `700 23px ${HNW}`, lineHeight: "23px", whiteSpace: "nowrap" }}>{t("CHECK YOUR DETAILS")}</span>
                 <button aria-label="close confirm" onClick={() => setConfirmModal("")}
@@ -2558,12 +2591,12 @@ export default function NewUI() {
                 <div style={{ position: "absolute", left: 32, top: 120, width: B.w - 64, height: 1, backgroundImage: `repeating-linear-gradient(90deg,${DASH})`, backgroundSize: "100% 1px", backgroundRepeat: "no-repeat" }} />
                 {left}
                 {rows.length > 0 && colTitle(detX, t(isL ? "Label Details" : "Product Details"))}
-                {rows.map(([c, v], i) => (
+                {rows.map(([c, v, ph], i) => (
                   <span key={c}>
                     <span style={{ position: "absolute", left: detX, top: baseTop(212 + i * 19.2, 15), width: 150 }}>{cap(t(c).endsWith(":") ? t(c) : t(c) + ":")}</span>
                     <span style={{ position: "absolute", left: valX, top: baseTop(212 + i * 19.2, 15), width: B.w - valX - 32, display: "flex", alignItems: "center", columnGap: 6 }}>
-                      {val(t(v))}
-                      {c === "Closure Color" && (
+                      {v ? val(t(v)) : <span style={{ font: `italic ${fs}px ${HNW}`, lineHeight: "15px", color: "#B3B3B3", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ph}</span>}
+                      {v && c === "Closure Color" && (
                         <span style={{ width: 13, height: 13, background: shadeRgb(), border: "1px solid #111", flex: "0 0 auto" }} />
                       )}
                     </span>
