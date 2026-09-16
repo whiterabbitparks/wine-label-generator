@@ -2204,6 +2204,9 @@ export default function NewUI() {
         @font-face { font-family: 'Helvetica Neue World'; src: url('/newui/fonts/HNW-75Bold.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: block; }
         @font-face { font-family: 'Helvetica Neue World'; src: url('/newui/fonts/HNW-45Lt.woff2') format('woff2'); font-weight: 300; font-style: normal; font-display: block; }
         input::placeholder, textarea::placeholder { color: #B3B3B3; opacity: 1; font-style: italic; }
+        .nui-next { transition: transform 200ms cubic-bezier(0.33, 1, 0.68, 1); }
+        .nui-next:hover { transform: scale(1.09); }
+        .nui-next:active { transform: scale(1.02); }
         .nui-noscroll { scrollbar-width: none; -ms-overflow-style: none; }
         .nui-noscroll::-webkit-scrollbar { display: none; }
         @keyframes nuiDot { 0% { opacity: 0.15 } 30% { opacity: 1 } 60%, 100% { opacity: 0.15 } }
@@ -2359,7 +2362,7 @@ export default function NewUI() {
             </>)}
             {/* the red round NEXT button */}
             {page !== "loader" && (
-              <button aria-label={page === "welcome" ? "start" : "next"}
+              <button aria-label={page === "welcome" ? "start" : "next"} className="nui-next"
                 onClick={() => {
                   barJumped.current = false;
                   if (page === "welcome") { setArrowFly(true); go("vision"); setTimeout(() => setArrowFly(false), SLIDE_MS + 80); }
