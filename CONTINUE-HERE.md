@@ -1990,6 +1990,43 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 63 (owner's Comments/New mocks — UI RESTRUCTURE, 2026-09-16;
+  functionality unchanged): (1) NEW PROGRESS BAR measured off the 3x
+  artboards: it rides the white/black boundary at y753.7 — filled red
+  start dot (r5.2) at 142.06, white station dots (r4.35, 1px ring) at
+  428.7 / 720.2 / 1011.8, 3.6px red line with a round cap, station
+  labels WHITE 14px baseline 788.2 inside the footer, and the NEXT
+  action is a red round button (r34, #B71318, 36px white arrow) at
+  x1268.4 — at x168.1 on the welcome page (it flies between the two
+  via @keyframes btnFly). Back arrow = small white arrow at x52 in
+  the footer. Line stops: vision/loader HALFWAY to Front Label,
+  options ON it, backdetails halfway to Back Label, backdesign ON it,
+  bottle halfway to Marketing, assets ON it, checkout at the button.
+  (2) the FOOTER is empty — copyright, classic-interface link and the
+  credits row are gone; the TEMP live-generation switch moved to the
+  header (left of 8K) and the credit balance joined the header's
+  right group. (3) PAGES MERGED: "front" and "compliance" are gone
+  from ORDER — Your Vision + Front Label Details is one page (dashed
+  column rule at x788; left: title/italic intro/2 buttons/textarea
+  box 136,342,551x207/LABEL SIZE + W-H; right: title/intro/13 rows,
+  captions 891.8 bold 14, inputs 1012, rules 1013→1302.86 at
+  287+30i), Back Label Details + Market Compliance is one page
+  (description box 136,208,551x208, 7 rows at 217+32i with captions
+  755.5 and rules 990→1303, GTIN row + QR pair at y450, notes at 527,
+  dashed band rule y586, then MARKET COMPLIANCE). Captions that used
+  to be baked (FRONT_LABELS/BACK_LABELS) are drawn live; boards are
+  white-patched. ALL page titles are now 24px bold on baseline
+  149.08 (checkout 151.8) — the baked 19px ones are covered via
+  PAGE_TITLE in pageSpace, which ALSO wipes the boards' old baked bar
+  strip (y660-754; the Final-Pack board instead needs only its baked
+  back arrow hidden). (4) MARKET DROPDOWN: the underlined MARKET word
+  opens a 300px panel UPWARD (bottom at y640) with flag + name + our
+  ring per country and a "No compliance needed" row; picks are
+  summarised in grey under the trigger. GEO: field captions drop to
+  13px and the compliance paragraph stacks under its (much wider)
+  Mtavruli title. NOTE: the mock's "Create/Upload Barcode" buttons
+  would resurrect invented GTINs (round 27) — the honest GTIN input
+  keeps that slot instead.
 - ROUND 62 (owner, 3 items + live bug, 2026-09-15): (1) variation
   buttons say just "{Style} Variations" (Create dropped, EN+GEO).
   (2) footer explainer "1 Credit = 3 new labels" removed. (3) CREDIT

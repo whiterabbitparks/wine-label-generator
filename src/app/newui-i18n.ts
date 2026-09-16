@@ -233,6 +233,11 @@ export const UI_GE: Record<string, string> = {
   "Your label ✓ — upload another": "შენი ეტიკეტი ✓ — ატვირთე სხვა",
   "Product Shot": "პროდუქტის ფოტო",
   "Face": "წინა",
+  /* round 63: merged pages + market dropdown */
+  "LABEL SIZE": "ᲔᲢᲘᲙᲔᲢᲘᲡ ᲖᲝᲛᲐ",
+  "MARKET COMPLIANCE": "ᲑᲐᲖᲠᲔᲑᲘᲡ ᲨᲔᲡᲐᲑᲐᲛᲘᲡᲝᲑᲐ",
+  "MARKET": "ᲑᲐᲖᲐᲠᲘ",
+  "Select the market(s) where your wine will be sold, and we’ll incorporate required regulatory information.": "აირჩიეთ ბაზრები, სადაც თქვენი ღვინო გაიყიდება, და ჩვენ დავამატებთ საჭირო მარეგულირებელ ინფორმაციას.",
   /* round 52: terms gate + T&C modal */
   "Agree": "ვეთანხმები",
   "Disagree": "არ ვეთანხმები",

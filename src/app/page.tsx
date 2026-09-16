@@ -28,7 +28,9 @@ const HNW = "'HNW', 'Helvetica Neue', Helvetica, sans-serif";
 
 /* ROUND 45 (owner's New_Progressbar mocks): the DETAILS page comes first,
    Your Vision second — generation fires from the vision page now */
-const ORDER = ["welcome", "front", "vision", "loader", "options", "backdetails", "compliance", "backdesign", "bottle", "assets", "checkout"] as const;
+/* ROUND 63 (owner's new mocks): Your Vision + Front Label Details are ONE
+   page, and Back Label Details + Market Compliance are ONE page. */
+const ORDER = ["welcome", "vision", "loader", "options", "backdetails", "backdesign", "bottle", "assets", "checkout"] as const;
 /* round 38 #1: crown caps exist only on these bottles */
 const CROWN_TYPES = ["Burgundy", "Sparkling", "Alsace / Rhine"];
 /* round 38 #2: label anchors from the owner's positioning charts (same
@@ -68,40 +70,60 @@ const CAP_ZONES: Record<string, [number, number][]> = {
 };
 type PageKey = (typeof ORDER)[number];
 
-/* ROUND 45 (owner's New_Progressbar mocks): FOUR dots — an unlabeled RED
-   start dot + three labeled stations. The red line grows continuously
-   page by page; a station's dot turns red when its group is reached. */
-const BAR_RED = "#BA141A";
-const CIRCLE_X = [142.06, 527.36, 912.66, 1297.96];
+/* ROUND 63 (owner's mocks, measured off the 3x artboards): the bar RIDES
+   the white/black boundary — a filled red start dot, three white station
+   dots (labels below them in the black footer) and a big round red NEXT
+   button at the right. Nothing else lives in the footer. */
+const BAR_RED = "#B71318";
+const PROG_Y = 753.7;          /* dot + line centre = the band edge */
+const DOT_R = 4.35;            /* station dot */
+const START_R = 5.2;           /* the filled red start dot */
+const LINE_H = 3.6;
+const LABEL_BASE = 788.2;      /* white station labels' baseline */
+const NEXT_R = 34;             /* red round button */
+const NEXT_X = 1268.4;         /* its centre on working pages … */
+const WELCOME_X = 168.1;       /* … and on the welcome page */
+const CIRCLE_X = [142.06, 428.7, 720.2, 1011.8];
 /* round 53 #8 (owner): the bar words jump to the RESULT pages */
 const STEPS: { label: string; page: PageKey }[] = [
-  { label: "", page: "front" },
+  { label: "", page: "vision" },
   { label: "Front Label", page: "options" },
   { label: "Back Label", page: "backdesign" },
   { label: "Marketing Assets", page: "bottle" },   /* round 57 #4 */
 ];
-/* red-line endpoint per page (null = no bar). ROUND 46 (owner: "Red line
-   must grow in thirds"): each dot-to-dot segment splits EVENLY by its page
-   count — segment 1 (front 1/3, vision 2/3), segment 2 (backdetails 1/3,
-   compliance 2/3), segment 3 (bottle 1/2). On assets the red line ends
-   flush with the last circle's right edge (1297.96 + 4.9). */
+/* ROUND 63 (owner): the red line stops HALFWAY to the next station while
+   its details are being filled in, and lands ON the station when that
+   step's result exists. On checkout it runs up to the red button. */
+const MID = (a: number, b: number) => (a + b) / 2;
+/* the boards whose baked title is covered and redrawn bigger (round 63) */
+const PAGE_TITLE: Partial<Record<PageKey, string>> = {
+  options: "FRONT LABEL OPTIONS", backdesign: "BACK LABEL DESIGN",
+  bottle: "BOTTLE", assets: "MARKETING ASSETS", checkout: "FINAL PACK",
+};
 const THICK: Record<PageKey, number | null> = {
-  welcome: null, front: 270.49, vision: 398.93, loader: 527.36, options: 527.36,
-  backdetails: 655.79, compliance: 784.23, backdesign: 912.66, bottle: 1108.04,
-  assets: 1302.86, checkout: null,
+  welcome: null,
+  vision: MID(CIRCLE_X[0], CIRCLE_X[1]),        /* half way to Front Label */
+  loader: MID(CIRCLE_X[0], CIRCLE_X[1]),
+  options: CIRCLE_X[1],                          /* Front Label */
+  backdetails: MID(CIRCLE_X[1], CIRCLE_X[2]),    /* half way to Back Label */
+  backdesign: CIRCLE_X[2],                       /* Back Label */
+  bottle: MID(CIRCLE_X[2], CIRCLE_X[3]),         /* half way to Marketing */
+  assets: CIRCLE_X[3],                           /* Marketing Assets */
+  checkout: NEXT_X - NEXT_R,                     /* up to the red button */
 };
 /* highest station index REACHED — that dot (and earlier ones) turn red */
-const STEP_OF: Record<PageKey, number> = { welcome: 0, front: 0, vision: 0, loader: 0, options: 1, backdetails: 1, compliance: 1, backdesign: 2, bottle: 2, assets: 3, checkout: 3 };
+const STEP_OF: Record<PageKey, number> = { welcome: 0, vision: 0, loader: 0, options: 1, backdetails: 1, backdesign: 2, bottle: 2, assets: 3, checkout: 3 };
 
-/* content band bottom per page (checkout content reaches the footer) */
-const BAND_BOTTOM: Record<PageKey, number> = Object.fromEntries(ORDER.map((p) => [p, p === "checkout" || p === "welcome" ? FOOTER_Y : 660])) as Record<PageKey, number>;
+/* ROUND 63: the bar no longer eats a white strip — every page's content
+   band runs to the footer edge and the bar paints on top of it. */
+const BAND_BOTTOM: Record<PageKey, number> = Object.fromEntries(ORDER.map((p) => [p, FOOTER_Y])) as Record<PageKey, number>;
 
 /* parallax strip boundaries (page-coordinate y) — each pair sits in that
    artboard's natural empty bands so the cut never crosses a text row or a
    drawn box (loader entry fades, so its entry is unused) */
 const STRIP_BOUNDS: Record<PageKey, [number, number]> = {
-  welcome: [360, 560], vision: [225, 460], front: [225, 472], loader: [225, 460],
-  options: [225, 543], backdetails: [225, 468], compliance: [270, 555],
+  welcome: [360, 560], vision: [225, 460], loader: [225, 460],
+  options: [225, 543], backdetails: [225, 468],
   backdesign: [165, 540], bottle: [225, 515], assets: [165, 540], checkout: [250, 500],
 };
 
@@ -113,19 +135,15 @@ const STRIP_BOUNDS: Record<PageKey, [number, number]> = {
    bottle: VERTICAL column slices, each carrying its own dashed divider. */
 type Slice = { x0?: number; y0?: number; x1?: number; y1?: number; delay: number; mode?: "slide" | "fade" };
 const PAGE_SLICES: Partial<Record<PageKey, Slice[]>> = {
-  front: [
-    { y1: 234.77, delay: 0 },
-    ...Array.from({ length: 13 }, (_, i) => ({ x1: 806, y0: 234.77 + i * 30, y1: 264.77 + i * 30, delay: 40 + i * 18 })),
-    { x1: 806, y0: 624.77, delay: 40 + 13 * 18 },
-    { x0: 806, y0: 234.77, delay: 80, mode: "fade" as const },
+  /* ROUND 63: the merged pages slide as their two halves — vision splits
+     at its dashed column rule, back details at its dashed band rule */
+  vision: [
+    { x1: 788, delay: 0 },
+    { x0: 788, delay: 70 },
   ],
-  compliance: [
-    { y1: 326, delay: 0 },
-    { y0: 326, y1: 378.8, delay: 60 },
-    { y0: 378.8, y1: 431, delay: 130 },
-    { y0: 431, y1: 483.6, delay: 200 },
-    { y0: 483.6, y1: 536, delay: 270 },
-    { y0: 536, delay: 270 },
+  backdetails: [
+    { y1: 586, delay: 0 },
+    { y0: 586, delay: 70 },
   ],
   /* round 48: FIVE option columns — cuts ride the new dividers */
   bottle: [
@@ -539,6 +557,9 @@ export default function NewUI() {
     return data + ((10 - (s % 10)) % 10);
   })();
   const [qrMode, setQrMode] = useState<"" | "create" | "upload">("");
+  /* ROUND 63 #4 (owner): markets are picked from a dropdown now */
+  const [marketOpen, setMarketOpen] = useState(false);
+  useEffect(() => { if (page !== "backdetails") setMarketOpen(false); }, [page]);
   /* live font metrics of 'italic 15px HNW' (per-browser; Safari ≠ Chrome) */
   const [fm, setFm] = useState({ a: 14.28, d: 3.19 });
   useEffect(() => {
@@ -1035,7 +1056,7 @@ export default function NewUI() {
       go("options");
     } catch (e) {
       alert(e instanceof Error ? e.message : String(e));
-      go("front", -1);
+      go("vision", -1);
     }
   }
 
@@ -1117,7 +1138,7 @@ export default function NewUI() {
   /* round 41 #4/#5/#11: grey placeholder — clickable, takes you where the
      missing thing is created; message in the 12px subtitle size */
   const notMade = (x: number, y: number, w: number, h: number, kind: "front" | "back" = "front", key?: string, msg = true) => (
-    <button key={key} onClick={() => go(kind === "front" ? "front" : "backdetails", -1)}
+    <button key={key} onClick={() => go(kind === "front" ? "vision" : "backdetails", -1)}
       style={{ ...px(x, y, w, h), background: "#ECECEA", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", font: `12px ${HNW}`, color: "#8a887e", textAlign: "center", textTransform: "none", padding: 4 }}>
       {msg ? t(kind === "front" ? "Create front label" : "Create back label") : ""}
     </button>
@@ -1137,6 +1158,11 @@ export default function NewUI() {
      font metrics at runtime (round 8 #2): Safari and Chrome center line
      boxes with different ascent/descent values, so a hardcoded offset
      can never align both — the canvas metrics give each browser's own */
+  /* ROUND 63: put ANY live text on an exact baseline — line-height equals
+     the font size, so `top` is simply baseline − (half-leading + ascent),
+     measured from the browser's own metrics (fm) */
+  const baseTop = (baseline: number, size: number) =>
+    baseline - ((size - (fm.a + fm.d) * (size / 15)) / 2 + fm.a * (size / 15));
   const IN_BASE = (20 - (fm.a + fm.d)) / 2 + fm.a;
   const WH_BASE = (15 - (fm.a + fm.d) * (14 / 15)) / 2 + fm.a * (14 / 15);
   /* fixed-length input rule — 1px black, same weight as the progress line */
@@ -1193,11 +1219,16 @@ export default function NewUI() {
   };
 
   const FRONT_ROWS = ["producer", "wine", "appellation", "classification", "vintage", "grape", "regionCountry", "special", "sweetness", "colour", "wineType", "alcohol", "volume"];
+  /* ROUND 63: the captions used to be baked into front.svg — the merged
+     page draws them live (SVG_GE already carries their translations) */
+  const FRONT_LABELS = ["Producer:", "Wine Name:", "Appellation:", "Classification:", "Vintage:", "Grape Variety:", "Region, Country:", "Special mention:", "Sweetness:", "Colour:", "Wine Type:", "Alcohol:", "Volume:"];
   const FRONT_PH = ["E.g. GRAND VIN", "E.g. Château Margaux", "E.g. Margaux AOC", "E.g. Grand Cru Classé", "E.g. 2018", "E.g. Cabernet Sauvignon", "E.g. Bordeaux, France", "E.g. Vieilles Vignes", "Dry, etc.", "E.g. Red, White etc.", "E.g. Wine, Sparkling Wine, etc.", "E.g. 12.5%", "E.g. 750 mL"];
   const BACK_ROWS = ["producerCompany", "producerAddress", "importer", "importerAddress", "bottlingDate", "lot", "web"];
+  const BACK_LABELS = ["Producer Company:", "Producer Company Address:", "Importer:", "Importer Address:", "Bottling Date:", "LOT Number:", "Web Page:"];
   const BACK_PH = ['E.g. "Popiashvili Cellar" LLC', "E.g. #36 S. Chikovani st. 0171 Tbilisi, Georgia", 'E.g. "Teller Wines" LLC', "E.g. #36 S. Chikovani st. 0171 Tbilisi, Georgia", "E.g. 22/04/2019", "E.g. L206026342", "E.g. www.popiashvili.com"];
 
-  const COMP_COLS = [347.1, 601.8, 851.4, 1107.6];
+  /* market codes + their window in flags.png (col,row) — the grid page is
+     gone (round 63) but the sprite lookup lives on in the dropdown */
   const COMP: { code: string; col: number; row: number }[] = [
     { code: "EU", col: 0, row: 0 }, { code: "US", col: 0, row: 1 }, { code: "GB", col: 0, row: 2 }, { code: "JP", col: 0, row: 3 },
     { code: "AU", col: 1, row: 0 }, { code: "NZ", col: 1, row: 1 }, { code: "CN", col: 1, row: 2 },
@@ -1208,14 +1239,6 @@ export default function NewUI() {
   const OPT_FRAMES = [{ x: 137.1 }, { x: 548.5 }, { x: 960 }];
   const OPT_TOP = 240, OPT_BOT = 468.6, OPT_W = 342.9;
   const BD_AREA = { x: 548.6, y: 171.5, w: 342.9, h: 342.9 };
-
-  const sizeBox = () => {
-    const area = { x: 815.5, y: 173.4, w: 486.2, h: 374.9 };
-    const wmm = Number(f.width) || 110, hmm = Number(f.height) || 80;
-    const k = Math.min(area.w / wmm, area.h / hmm) * 0.92;
-    const bw = wmm * k, bh = hmm * k;
-    return { x: area.x + (area.w - bw) / 2, y: area.y + (area.h - bh) / 2, w: bw, h: bh };
-  };
 
   const wheelPick = (clientX: number, clientY: number, el: HTMLElement) => {
     const r = el.getBoundingClientRect();
@@ -1240,113 +1263,72 @@ export default function NewUI() {
   const renderOverlay = (p: PageKey, inSlide = false) => {
     switch (p) {
       case "welcome":
+        /* ROUND 63: the start action is the red round button on the bar */
+        return patch(118, 658, 70, 54, "welarrow");
+
+      case "vision": {
+        /* ROUND 63 (owner's "Your Vision@3x" mock, measured off the 3x
+           artboard): YOUR VISION and FRONT LABEL DETAILS share one page,
+           split by a dashed column rule at x788. Everything is drawn live
+           — the old baked board is covered wholesale. */
+        const BOX = { x: 136, y: 342, w: 551, h: 207 };
+        const words = vision.trim() ? vision.trim().split(/\s+/).length : 0;
         return (<>
-          {patch(118, 658, 70, 54, "welarrow")}
-          <button aria-label="start" onClick={() => { setArrowFly(true); go("front"); setTimeout(() => setArrowFly(false), SLIDE_MS + 80); }}
-            style={{ ...px(122, 662, 60, 48), ...ghost }}>
-            <svg viewBox="0 0 60 40" width="60" height="40"><line x1="13" y1="24" x2="47" y2="24" stroke={BAR_RED} strokeWidth="3" /><polyline points="37,13.5 47.5,24 37,34.5" fill="none" stroke={BAR_RED} strokeWidth="3" /></svg>
-          </button>
-        </>);
-      case "vision":
-        return (<>
-          {patch(1213, 421, 87, 17, "cnt")}
-          <span style={{ ...px(1178, 422, 110, 15), font: `11px ${HNW}`, color: "#111", textAlign: "right" }}>{vision.trim() ? vision.trim().split(/\s+/).length : 0} / 300 {t("words")}</span>
-          <textarea value={vision} onChange={(e) => setVision(e.target.value)} maxLength={2200}
-            style={{ ...px(148, 246, 1144, 168), ...inputStyle, fontStyle: "normal", textDecoration: "none", resize: "none", lineHeight: 1.5, overflow: "auto", background: "transparent" }} />
-          {/* round 45: two BLACK buttons per mock — upload (with "(Optional)")
-              and "Surprise me", which cycles ideas on every click */}
-          {patch(134, 476, 745, 44, "visbtns")}
-          {patch(950, 470, 360, 56, "visbtn2")}
-          <label style={{ ...px(137.1, 480, 342.9, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, textTransform: "none" }}>
+          {patch(0, HEADER_H, W, FOOTER_Y - HEADER_H, "viswipe")}
+          {/* ── left: the vision ── */}
+          <span style={{ ...px(137.14, baseTop(149.08, 24), 600, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t("YOUR VISION")}</span>
+          <span style={{ ...px(137.14, baseTop(183, 14), 600, 40), font: `italic 14px ${HNW}`, lineHeight: "18px", color: "#111" }}>
+            {t("If you have a specific idea for the front label, describe it in simple words")}<br />
+            {t("or upload a sketch or photo reference. Or, let us suggest ideas for you.")}
+          </span>
+          <label style={{ ...px(138, 275, 240, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, textTransform: "none" }}>
             <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
               const file = e.target.files?.[0]; if (!file) { setSketch(null); return; }
               const rd = new FileReader(); rd.onload = () => setSketch(String(rd.result)); rd.readAsDataURL(file);
             }} />
-            {t("Upload a sketch or a photo (Optional)")}
-            {sketch && <span style={{ position: "absolute", left: 0, top: 38, width: 343, font: `12px ${HNW}`, color: "#3f6d2a", textAlign: "center" }}>{t("✓ sketch attached")}</span>}
+            {t("Upload a sketch or a reference photo")}
+            {sketch && <span style={{ position: "absolute", left: 0, top: 38, width: 240, font: `12px ${HNW}`, color: "#3f6d2a", textAlign: "center" }}>{t("✓ sketch attached")}</span>}
           </label>
           <button onClick={() => { setVision(IDEAS[Math.floor(Math.random() * IDEAS.length)]); setIdeaN((n) => n + 1); }}
-            style={{ ...px(532, 480, 341.4, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
-            {t("Surprise me")}
+            style={{ ...px(412, 275, 274, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
+            {t("Give me an idea")}
           </button>
-        </>);
-      case "front": {
-        /* size area: top = the Producer row's input RULE (round 9 #4),
-           bottom = Wine Type's baseline (design row pitch 30) */
-        const area = { right: 1302.86, top: 253.77, w: 488.43, h: 297.5 };
-        const wmm = Number(f.width) || 110, hmm = Number(f.height) || 80;
-        const k = Math.min(area.w / wmm, area.h / hmm);
-        const bw = wmm * k, bh = hmm * k;
-        return (<>
-          {/* round 47 removed the vision intro; ROUND 51 #1 (owner): the
-              fields-are-optional note returns under the title */}
-          {patch(134, 166, 700, 46, "intro")}
-          <span style={{ ...px(136.97, 183.62 - 15.5, 660, 20), font: `15px ${HNW}`, color: "#111", lineHeight: "20px" }}>
-            {t("Feel free to leave out fields you don't want on your front label.")}</span>
-          {/* cover baked E.g. column incl. its underlines */}
-          {patch(263, 234, 572, 390, "phcol")}
-          {FRONT_ROWS.map((k2, i) => {
-            const base = 251.27 + i * 30;   /* design pitch 30 (round 8 #2) */
-            return (
-              <span key={k2}>
-                <input value={f[k2] || ""} placeholder={t(FRONT_PH[i])}
-                  onChange={(e) => setF((m) => ({ ...m, [k2]: e.target.value }))}
-                  style={{ ...px(264.9, base - IN_BASE, 450, 20), ...inputStyle }} />
-                {/* rule ends exactly at the window's horizontal centre (#3) */}
-                {rowLine(264.9, base + 2.5, 720 - 264.9, `ln${i}`)}
-              </span>
-            );
-          })}
-          {/* cover the ENTIRE baked size area (rect + diagonal + pluses whose
-              arms reach x1319.34 / y154.95-565.02 + dashed line y617.1) */}
-          {patch(806, 148, 517, 480, "szarea")}
-          {/* left tips of the baked corner pluses reach x798, past the big patch */}
-          {patch(796, 155, 11, 36, "szl1")}
-          {patch(796, 531, 11, 36, "szl2")}
-          {/* the ANIMATED OUTER FRAME: 1px black + corner pluses + the
-              design's corner-to-corner diagonal (round 7 #9). Edge-anchored
-              layout: the top-right plus NEVER moves; size changes glide via
-              width/height transitions (quick-in, prolonged-out easing).
-              Round 16 #3: the frame GROWS DURING the slide (its slice fades
-              in place), timed to land together with the last input row */}
-          {<div key="szf" style={{
-            position: "absolute", right: W - area.right - 16.5, top: area.top - 16.5,
-            width: bw + 33, height: bh + 33,
-            transition: `width 600ms ${EASE_IO}, height 600ms ${EASE_IO}`,
-            animation: inSlide ? `szGrow 800ms ${EASE_IO} 90ms both` : "none",
-            transformOrigin: "calc(100% - 16.5px) 16.5px",
-            pointerEvents: "none",
-          }}>
-            {/* inset 16 (not 16.5): the 1px border draws INSIDE the box, so
-                its centreline lands exactly on the pluses' 16.5 axis
-                (round 12 #2 — left pluses looked shifted off the line) */}
-            <div style={{ position: "absolute", inset: 16, border: "1px solid #111" }} />
-            <svg style={{ position: "absolute", left: 16.5, top: 16.5, width: "calc(100% - 33px)", height: "calc(100% - 33px)" }} viewBox="0 0 100 100" preserveAspectRatio="none">
-              <line x1="100" y1="0" x2="0" y2="100" stroke="#000" strokeWidth="1" vectorEffect="non-scaling-stroke" />
-            </svg>
-            {([["left", "top"], ["right", "top"], ["left", "bottom"], ["right", "bottom"]] as const).map(([hx, vy], ci) => (
-              <svg key={ci} style={{ position: "absolute", [hx]: 0, [vy]: 0, width: 33, height: 33 }} viewBox="0 0 33 33">
-                <line x1="16.5" y1="0.5" x2="16.5" y2="32.5" stroke="#000" strokeWidth="3" />
-                <line x1="0.5" y1="16.5" x2="32.5" y2="16.5" stroke="#000" strokeWidth="3" />
-              </svg>
-            ))}
-          </div>}
-          {/* Width/Height block right-aligned to the size box's right edge
-              (round 10 #1), all on Volume's baseline; caption, number and
-              unit share ONE baseline-aligned flex line; only the NUMBER
-              carries the underline, sized to its digits */}
-          <div style={{ position: "absolute", right: W - 1302.86, top: 611.27 - WH_BASE, display: "flex", alignItems: "baseline" }}>
+          <div style={{ ...px(BOX.x, BOX.y, BOX.w, BOX.h), border: "2px solid #111", boxSizing: "border-box", pointerEvents: "none" }} />
+          <textarea value={vision} onChange={(e) => setVision(e.target.value)} maxLength={2200}
+            style={{ ...px(BOX.x + 14, BOX.y + 12, BOX.w - 28, BOX.h - 40), ...inputStyle, fontStyle: "normal", fontSize: 14, textDecoration: "none", resize: "none", lineHeight: 1.5, overflow: "auto", background: "transparent", padding: 0 }} />
+          <span style={{ ...px(BOX.x + BOX.w - 174, baseTop(BOX.y + BOX.h - 13, 11), 160, 14), font: `11px ${HNW}`, lineHeight: "11px", color: "#8a8a8a", textAlign: "right" }}>{words} / 300 {t("words")}</span>
+          <span style={{ ...px(137.14, baseTop(650.8, 24), 400, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t("LABEL SIZE")}</span>
+          <div style={{ position: "absolute", right: W - 686.8, top: baseTop(650.8, 14), display: "flex", alignItems: "baseline" }}>
             {([["Width:", "width"], ["Height:", "height"]] as const).map(([cap, key2], gi) => (
-              <span key={key2} style={{ display: "flex", alignItems: "baseline", marginLeft: gi ? 24 : 0 }}>
-                <span style={{ font: `700 14px ${HNW}`, lineHeight: "15px" }}>{t(cap)}</span>
+              <span key={key2} style={{ display: "flex", alignItems: "baseline", marginLeft: gi ? 28 : 0 }}>
+                <span style={{ font: `700 14px ${HNW}`, lineHeight: "14px" }}>{t(cap)}</span>
                 <input value={f[key2]} onChange={(e) => setF((m) => ({ ...m, [key2]: e.target.value.replace(/[^\d.]/g, "") }))}
-                  style={{ width: Math.max(1, (f[key2] || "").length) * 8.2 + 4, font: `italic 14px ${HNW}`, lineHeight: "15px", border: "none", borderBottom: "1px solid #111", outline: "none", background: "transparent", padding: 0, textAlign: "center", marginLeft: 3 }} />
-                <span style={{ font: `italic 14px ${HNW}`, lineHeight: "15px", marginLeft: 4 }}>{t("mm")}</span>
+                  style={{ width: Math.max(1, (f[key2] || "").length) * 8.2 + 4, font: `italic 14px ${HNW}`, lineHeight: "14px", border: "none", borderBottom: "1px solid #111", outline: "none", background: "transparent", padding: 0, textAlign: "center", marginLeft: 4 }} />
+                <span style={{ font: `italic 14px ${HNW}`, lineHeight: "14px", marginLeft: 4 }}>{t("mm")}</span>
               </span>
             ))}
           </div>
+          {/* the dashed column rule */}
+          <div style={{ ...px(788, 133, 1, 522), background: `repeating-linear-gradient(180deg,${DASH})`, pointerEvents: "none" }} />
+          {/* ── right: the label's own details ── */}
+          <span style={{ ...px(891.8, baseTop(149.08, 24), 500, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t("FRONT LABEL DETAILS")}</span>
+          <span style={{ ...px(891.8, baseTop(183, 14), 400, 40), font: `italic 14px ${HNW}`, lineHeight: "18px", color: "#111" }}>
+            {t("Feel free to leave out fields you don't want on your front label.")}</span>
+          {FRONT_ROWS.map((k2, i) => {
+            const base = 284.5 + i * 30;
+            return (
+              <span key={k2}>
+                <span style={{ ...px(891.8, baseTop(base, 14), 130, 14), font: `700 ${lang === "ge" ? 13 : 14}px ${HNW}`, lineHeight: "14px", color: "#111", whiteSpace: "nowrap" }}>{t(FRONT_LABELS[i])}</span>
+                <input value={f[k2] || ""} placeholder={t(FRONT_PH[i])}
+                  onChange={(e) => setF((m) => ({ ...m, [k2]: e.target.value }))}
+                  style={{ ...px(1012, base - IN_BASE * (14 / 15), 288, 20), ...inputStyle, fontSize: 14 }} />
+                {rowLine(1013, base + 2.5, 1302.86 - 1013, `ln${i}`)}
+              </span>
+            );
+          })}
         </>);
       }
+
       case "loader": {
         /* round 19: VISIBLE, never-stalling movement — fast creep for the
            first ~25s (1.2%/s), then a slow trickle; monotonic via fillMax */
@@ -1492,162 +1474,152 @@ export default function NewUI() {
           })}
         </>);
       }
-      case "backdetails":
+      case "backdetails": {
+        /* ROUND 63 (owner's "Back Label Details@3x" mock): BACK LABEL
+           DETAILS and MARKET COMPLIANCE share one page, split by a dashed
+           band rule at y586. The market grid became a dropdown behind the
+           underlined word MARKET. */
+        const BOX = { x: 136, y: 208, w: 551, h: 208 };
+        const dwords = (b.description || "").trim() ? (b.description || "").trim().split(/\s+/).length : 0;
+        const FLAG_X = [317.7, 570.2, 822.6, 1075.0];      /* flag centres inside flags.png */
+        const PNG_ROW = [351.8, 403.5, 455.5, 505.8];
+        const NAMES: Record<string, string> = {
+          EU: "European Union", US: "United States", GB: "United Kingdom", JP: "Japan",
+          AU: "Australia", NZ: "New Zealand", CN: "China", KR: "South Korea",
+          BR: "Brazil", MX: "Mexico", IL: "Israel", GE: "Georgia", CA: "Canada",
+        };
+        const ROW_H = 26, PANEL_W = 300;
+        const panelH = COMP.length * ROW_H + ROW_H + 18;
+        const modeStyle = (active: boolean): React.CSSProperties => ({
+          /* classic theme's global CSS uppercases <label> — undo it */
+          cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, textTransform: "none", transition: `all 240ms ${EASE}`,
+          background: active ? "#111" : "#fff", color: active ? "#fff" : "#111",
+          border: "1px solid #111", boxSizing: "border-box",
+          display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4,
+        });
+        const summary = noComp
+          ? t("No compliance needed")
+          : COMP.filter((c) => markets.includes(c.code)).map((c) => t(NAMES[c.code])).join(", ");
         return (<>
-          {patch(560, 421, 122, 17, "cnt2")}
-          <span style={{ ...px(552, 422, 116, 15), font: `11px ${HNW}`, textAlign: "right" }}>{(b.description || "").trim() ? (b.description || "").trim().split(/\s+/).length : 0} / 300 {t("words")}</span>
-          {/* round 45: "Wine Description" lives INSIDE the box as a
-              placeholder; the baked heading above is covered */}
-          {patch(134, 168, 300, 44, "wdesc")}
-          <textarea value={b.description || ""} placeholder={t("Wine Description")}
+          {patch(0, HEADER_H, W, FOOTER_Y - HEADER_H, "bdwipe")}
+          <span style={{ ...px(139, baseTop(149.08, 24), 600, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t("BACK LABEL DETAILS")}</span>
+          {/* ── left: the wine description ── */}
+          <div style={{ ...px(BOX.x, BOX.y, BOX.w, BOX.h), border: "2px solid #111", boxSizing: "border-box", pointerEvents: "none" }} />
+          <span style={{ ...px(BOX.x + 17, baseTop(235, 15), 300, 16), font: `700 15px ${HNW}`, lineHeight: "15px", color: "#111" }}>{t("Wine Description")}</span>
+          <textarea value={b.description || ""}
             onChange={(e) => setB((m) => ({ ...m, description: e.target.value }))}
-            style={{ ...px(148, 251, 528, 168), ...inputStyle, fontStyle: "normal", textDecoration: "none", fontSize: 14, resize: "none", lineHeight: 1.45, overflow: "auto", background: "transparent" }} />
-          {/* cover baked E.g. column incl. its underlines (they overrun the
-              right margin in the artboard) */}
-          {patch(985, 228, 380, 242, "bpcol")}
+            style={{ ...px(BOX.x + 17, 246, BOX.w - 34, BOX.h - 78), ...inputStyle, fontStyle: "normal", textDecoration: "none", fontSize: 14, resize: "none", lineHeight: 1.45, overflow: "auto", background: "transparent", padding: 0 }} />
+          <span style={{ ...px(BOX.x + BOX.w - 174, baseTop(BOX.y + BOX.h - 11, 11), 160, 14), font: `11px ${HNW}`, lineHeight: "11px", color: "#8a8a8a", textAlign: "right" }}>{dwords} / 300 {t("words")}</span>
+          {/* ── right: the regulated fields ── */}
           {BACK_ROWS.map((k, i) => {
-            const base = 247.11 + i * 32;   /* design pitch 32 (round 8 #2) */
+            const base = 215.6 + i * 32;
             return (
               <span key={k}>
+                <span style={{ ...px(755.5, baseTop(base, 14), 230, 14), font: `700 ${lang === "ge" ? 13 : 14}px ${HNW}`, lineHeight: "14px", color: "#111", whiteSpace: "nowrap" }}>{t(BACK_LABELS[i])}</span>
                 <input value={b[k] || ""} placeholder={t(BACK_PH[i])}
                   onChange={(e) => setB((m) => ({ ...m, [k]: e.target.value }))}
-                  style={{ ...px(989.6, base - IN_BASE, 310, 20), ...inputStyle }} />
-                {rowLine(989.6, base + 2.5, 313.3, `bln${i}`)}
+                  style={{ ...px(989, base - IN_BASE * (14 / 15), 311, 20), ...inputStyle, fontSize: 14 }} />
+                {rowLine(990, base + 2.5, 1302.86 - 990, `bln${i}`)}
               </span>
             );
           })}
-          {/* ROUND 27: honest barcode. "Create Barcode" invented random
-              digits — gone. The winery types its own GS1 GTIN; we validate
-              the checksum live and draw a print-perfect EAN-13 on the back
-              label. The GS1 link is deliberately quiet (owner: don't
-              disturb the design). Baked button rects are covered white. */}
-          {patch(136, 476, 556, 44, "bcbtns")}
-          {patch(136, 542, 440, 66, "bcnote")}
-          {/* round 28 #1: "Barcode:" label — same 700 15px as the baked
-              form labels ("Producer Company:" is class st3) */}
-          <span style={{ ...px(138.04, 500 - 12.9, 112, 16), font: `700 15px ${HNW}`, lineHeight: "16px" }}>{t("Barcode:")}</span>
-          {/* input starts at 252 — the Georgian label is ~40px wider than
-              the English one and must never touch the placeholder */}
+          {/* ── barcode (ROUND 27's honest GTIN, in the mock's button row) ── */}
+          <span style={{ ...px(139, baseTop(472, 14), 112, 14), font: `700 14px ${HNW}`, lineHeight: "14px" }}>{t("Barcode:")}</span>
           <input value={gtin} onChange={(e) => setGtin(e.target.value)} placeholder="E.g. 4860012345676"
-            style={{ ...px(252, 500 - IN_BASE, 240, 20), ...inputStyle }} />
-          {rowLine(252, 502.5, 243.3, "gtln")}
+            style={{ ...px(232, 472 - IN_BASE * (14 / 15), 450, 20), ...inputStyle, fontSize: 14 }} />
+          {rowLine(233, 474.5, 686 - 233, "gtln")}
           {gtin.trim() && (
-            <span style={{ ...px(252, 518, 320, 16), font: `11px ${HNW}`, lineHeight: "16px", color: gtinValid ? "#3f6d2a" : "#8e2b2b" }}>
+            <span style={{ ...px(233, baseTop(492, 11), 320, 14), font: `11px ${HNW}`, lineHeight: "11px", color: gtinValid ? "#3f6d2a" : "#8e2b2b" }}>
               {gtinValid ? t("✓ barcode will be drawn") : t("needs 12 or 13 digits")}
             </span>
           )}
           {(lang === "ge"
             ? ["ჩაწერე შენი GS1 GTIN ნომერი და ბეჭდვისთვის", "მზა შტრიხკოდს უკანა ეტიკეტზე ჩვენ დავიტანთ."]
-            : ["Enter your GS1 GTIN number and we'll draw", "a print-perfect barcode into your back label."]
+            : ["If you don't have a barcode, we'll provide an official GTIN barcode", "and integrate it into your back label."]
           ).map((ln, i) => (
-            <span key={"bc" + i} style={{ ...px(138.7, 557.83 + i * 18 - 12.9, 440, 16), font: `13px ${HNW}`, color: "#111", lineHeight: "16px", whiteSpace: "nowrap" }}>{ln}</span>
+            <span key={"bc" + i} style={{ ...px(139.6, baseTop(527 + i * 18, 13), 560, 14), font: `13px ${HNW}`, color: "#111", lineHeight: "13px", whiteSpace: "nowrap" }}>{ln}</span>
           ))}
           <a href="https://www.gs1.org/standards/get-barcodes" target="_blank" rel="noreferrer"
-            style={{ ...px(138.7, 557.83 + 2 * 18 - 12.9, 320, 15), font: `italic 11px ${HNW}`, color: "#8a8a8a", textDecoration: "underline", lineHeight: "15px" }}>
+            style={{ ...px(139.6, baseTop(563, 11), 320, 14), font: `italic 11px ${HNW}`, color: "#8a8a8a", textDecoration: "underline", lineHeight: "11px" }}>
             {t("No GTIN yet? Register at gs1.org")}</a>
-          {/* round 22 #7: the QR note is OUTLINED in the artboard — covered
-              and rendered live so it translates, plus the price line */}
-          {patch(748, 542, 400, 64, "qrnote")}
+          {/* ── QR pair, exactly where the mock puts them ── */}
+          <button onClick={() => { setQrImg(""); setQrMode(qrMode === "create" ? "" : "create"); }} style={{ ...px(754, 450, 241, 34.3), ...modeStyle(qrMode === "create") }}>{t("Create QR Code")}</button>
+          <label style={{ ...px(1064, 450, 239, 34.3), ...modeStyle(qrMode === "upload") }}>
+            <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
+              const file = e.target.files?.[0]; if (!file) return;
+              const rd = new FileReader(); rd.onload = () => { setQrImg(String(rd.result)); setQrMode("upload"); }; rd.readAsDataURL(file);
+            }} />
+            {t("Upload QR Code")}
+            {qrImg && <span style={{ position: "absolute", left: 0, top: 38, width: 239, font: `11px ${HNW}`, color: "#3f6d2a", textAlign: "center" }}>{t("✓ QR uploaded")}</span>}
+          </label>
           {(lang === "ge"
-            ? ["უნიკალური QR კოდი და პროდუქტის", "ვებ-გვერდი ინგრედიენტებით."]
-            : ["If you don't have a QR code, we'll generate", "one and link it to a dedicated page with your wine's", "ingredients, nutrition, and product information."]
+            ? ["თუ QR კოდი არ გაქვთ, ჩვენ შევქმნით და მივაბამთ სპეციალურ", "გვერდს ინგრედიენტებით, კვებითი ღირებულებით და ინფორმაციით."]
+            : ["If you don't have a QR code, we'll generate one and link it to a dedicated page", "with your wine's ingredients, nutrition, and product information."]
           ).map((ln, i) => (
-            <span key={i} style={{ ...px(752.4, 557.83 + i * 18 - 12.9, 400, 16), font: `13px ${HNW}`, color: "#111", lineHeight: "16px", whiteSpace: "nowrap" }}>{ln}</span>
+            <span key={"qr" + i} style={{ ...px(752.5, baseTop(527 + i * 18, 13), 560, 14), font: `13px ${HNW}`, color: "#111", lineHeight: "13px", whiteSpace: "nowrap" }}>{ln}</span>
           ))}
-          {/* round 8 #5: all four buttons start WHITE; the clicked mode
-              (create, or upload once a file is picked) stays black */}
-          {(() => {
-            const modeStyle = (active: boolean): React.CSSProperties => ({
-              /* classic theme's global CSS uppercases <label> — undo it */
-              cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, textTransform: "none", transition: `all 240ms ${EASE}`,
-              background: active ? "#111" : "#fff", color: active ? "#fff" : "#111",
-              border: "1px solid #111", boxSizing: "border-box",
-              display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4,
-            });
-            return (<>
-              <button onClick={() => { setQrImg(""); setQrMode(qrMode === "create" ? "" : "create"); }} style={{ ...px(754.29, 480, 240.1, 34.3), ...modeStyle(qrMode === "create") }}>{t("Create QR Code")}</button>
-              {/* owner 2026-09-07 / round 28 #2: with Create QR active, the
-                  ingredients upload is an underlined TEXT line one empty row
-                  under the QR paragraph — no button shape */}
-              {qrMode === "create" && (
-                <label style={{ ...px(752.4, 557.83 + ((lang === "ge" ? 3 : 4) + 1) * 18 - 12.9, 300, 16), font: `13px ${HNW}`, lineHeight: "16px", color: "#111", textDecoration: "underline", textTransform: "none", cursor: "pointer", whiteSpace: "nowrap" }}>
-                  <input type="file" accept=".txt,.md,.csv,text/plain" style={{ display: "none" }} onChange={(e) => {
-                    const file = e.target.files?.[0]; if (!file) return;
-                    const rd = new FileReader(); rd.onload = () => setIngredients(String(rd.result).slice(0, 20000)); rd.readAsText(file);
-                  }} />
-                  {ingredients ? t("Ingredients uploaded ✓") : t("Upload Ingredients")}
-                </label>
-              )}
-              <label style={{ ...px(1063.99, 480, 238.4, 34.3), ...modeStyle(qrMode === "upload") }}>
-                <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
-                  const file = e.target.files?.[0]; if (!file) return;
-                  const rd = new FileReader(); rd.onload = () => { setQrImg(String(rd.result)); setQrMode("upload"); }; rd.readAsDataURL(file);
-                }} />
-                {t("Upload QR Code")}
-                {qrImg && <span style={{ position: "absolute", left: 0, top: 38, width: 238, font: `11px ${HNW}`, color: "#3f6d2a", textAlign: "center" }}>{t("✓ QR uploaded")}</span>}
-              </label>
-            </>);
-          })()}
-        </>);
-      case "compliance": {
-        /* round 7 #15-17: flags.png contains a RASTER copy of the country
-           names (old font) and rings — it used to cover the SVG's real
-           Helvetica names AND its perfectly-placed vector rings. Now only
-           small per-flag windows of the image are shown; the vector names
-           and rings show through; dots sit at the rings' exact centres. */
-        const RING_X = [282.87, 536.4, 788.92, 1045.54];   /* baked VECTOR ring centres (compliance.svg paths) */
-        const FLAG_X = [317.7, 570.2, 822.6, 1075.0];      /* flag centres inside flags.png */
-        const PNG_ROW = [351.8, 403.5, 455.5, 505.8];      /* flag row centres inside flags.png */
-        /* the VISIBLE baked rings are the r=9.06 st3 paths (there is a
-           second, hidden r=7.5 set 1.6px higher — round 9 trap). Their
-           row pitch is IRREGULAR — exact centres from the paths
-           (round 10 #3: the uniform +52 guess left a sliver of the
-           baked Japan ring peeking under the cover) */
-        const ROW_C = [352.87, 404.68, 457.29, 509.89];
-        const RC: { code: string; col: number; row: number }[] = [
-          { code: "EU", col: 0, row: 0 }, { code: "US", col: 0, row: 1 }, { code: "GB", col: 0, row: 2 }, { code: "JP", col: 0, row: 3 },
-          { code: "AU", col: 1, row: 0 }, { code: "NZ", col: 1, row: 1 }, { code: "CN", col: 1, row: 2 },
-          { code: "KR", col: 2, row: 0 }, { code: "BR", col: 2, row: 1 }, { code: "MX", col: 2, row: 2 },
-          { code: "IL", col: 3, row: 0 }, { code: "GE", col: 3, row: 1 }, { code: "CA", col: 3, row: 2 },
-        ];
-        return (<>
-          {/* Arabic Markets removed — cover the SVG name text + its baked ring */}
-          {patch(598, 500, 170, 20, "arab")}
-          {/* round 43 #2: match the flag rows' own ring size (r 7.5), not
-             the bottle page's r 9 */}
-          {dotBtn(536.4, 509.89, noComp, () => { if (noComp) setNoComp(false); else { setMarkets([]); setNoComp(true); } }, "nocomp", { cover: 26, ring: true, r: 7.5 })}
-          <button onClick={() => { if (noComp) setNoComp(false); else { setMarkets([]); setNoComp(true); } }}
-            style={{ ...px(557.2, 509.89 - 12, 200, 24), ...ghost, font: `700 15px ${HNW}`, color: "#111", textAlign: "left", textTransform: "none", lineHeight: "24px" }}>
-            {t("No compliance needed")}</button>
-          {RC.map(({ code, col, row }) => {
-            const on = markets.includes(code);
-            const cx0 = RING_X[col], cy0 = ROW_C[row];
-            const NAME_X = [347.05, 601.76, 851.43, 1107.64];
-            const toggle = () => setMarkets((ms) => {
-              const nxt = on ? ms.filter((m) => m !== code) : [...ms, code];
-              setNoComp(nxt.length === 0);
-              return nxt;
-            });
-            return (
-              <span key={code}>
-                {/* round 14 #1: the whole row (ring→flag→name) is clickable */}
-                <button onClick={toggle} aria-label={code}
-                  style={{ ...px(cx0 - 14, cy0 - 14, NAME_X[col] + 165 - (cx0 - 14), 28), ...ghost }} />
-                {/* flag window sliced from flags.png, centred on the row line */}
-                <div style={{
-                  ...px(FLAG_X[col] - 13, cy0 - 10, 26, 20),
-                  backgroundImage: "url(/newui/flags.png)", backgroundSize: "959.8px 261.1px",
-                  backgroundPosition: `${-(FLAG_X[col] - 13 - 250.9)}px ${-(PNG_ROW[row] - 10 - 289.8)}px`,
-                  pointerEvents: "none",
-                }} />
-                {/* round 9 #5: cover the baked ring, draw our own — the
-                    exact circles the final-pack page uses */}
-                {dotBtn(cx0, cy0, on, () => setMarkets((ms) => on ? ms.filter((m) => m !== code) : [...ms, code]), `d${code}`, { ring: true, cover: 23 })}
-              </span>
-            );
-          })}
+          {qrMode === "create" && (
+            <label style={{ ...px(752.5, baseTop(563, 13), 300, 14), font: `13px ${HNW}`, lineHeight: "13px", color: "#111", textDecoration: "underline", textTransform: "none", cursor: "pointer", whiteSpace: "nowrap" }}>
+              <input type="file" accept=".txt,.md,.csv,text/plain" style={{ display: "none" }} onChange={(e) => {
+                const file = e.target.files?.[0]; if (!file) return;
+                const rd = new FileReader(); rd.onload = () => setIngredients(String(rd.result).slice(0, 20000)); rd.readAsText(file);
+              }} />
+              {ingredients ? t("Ingredients uploaded ✓") : t("Upload Ingredients")}
+            </label>
+          )}
+          {/* ── the band rule, then market compliance ── */}
+          <div style={{ ...px(138, 586, 1301 - 138, 1), backgroundImage: `repeating-linear-gradient(90deg,${DASH})`, backgroundSize: "100% 1px", backgroundRepeat: "no-repeat", pointerEvents: "none" }} />
+          <span style={{ ...px(139, baseTop(655.2, 24), 500, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t("MARKET COMPLIANCE")}</span>
+          <span style={{ ...px(lang === "ge" ? 139 : 446.2, baseTop(lang === "ge" ? 685 : 655, 14), lang === "ge" ? 560 : 270, 60), font: `14px ${HNW}`, lineHeight: "18px", color: "#111" }}>
+            {t("Select the market(s) where your wine will be sold, and we’ll incorporate required regulatory information.")}</span>
+          {/* the trigger: Select MARKET ⌄ */}
+          <button onClick={() => setMarketOpen((o) => !o)}
+            style={{ ...px(754.2, baseTop(656.5, 21) - 4, 300, 30), ...ghost, display: "flex", alignItems: "baseline", columnGap: 8, textTransform: "none", cursor: "pointer" }}>
+            <span style={{ font: `21px ${HNW}`, lineHeight: "21px", color: "#111" }}>{t("Select")}</span>
+            <span style={{ font: `700 italic 21px ${HNW}`, lineHeight: "21px", color: "#111", textDecoration: "underline", whiteSpace: "nowrap" }}>{t("MARKET")}</span>
+            <svg viewBox="0 0 30 12" width="30" height="12" style={{ transform: marketOpen ? "rotate(180deg)" : "none", transition: `transform 200ms ${EASE}` }}>
+              <polyline points="2,2 15,10 28,2" fill="none" stroke="#111" strokeWidth="2" />
+            </svg>
+          </button>
+          <span style={{ ...px(754.2, baseTop(684, 12), 540, 16), font: `12px ${HNW}`, lineHeight: "12px", color: "#8a8a8a", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>{summary}</span>
+          {/* the dropdown — opens UPWARD (the trigger sits near the footer) */}
+          {marketOpen && (<>
+            <div style={{ ...px(0, HEADER_H, W, FOOTER_Y - HEADER_H), zIndex: 12 }} onClick={() => setMarketOpen(false)} />
+            <div style={{ ...px(754.2, 640 - panelH, PANEL_W, panelH), background: "#fff", border: "1px solid #111", boxSizing: "border-box", zIndex: 13, padding: "9px 0" }}>
+              {COMP.map(({ code, col, row }) => {
+                const on = markets.includes(code);
+                return (
+                  <button key={code} onClick={() => setMarkets((ms) => {
+                    const nxt = on ? ms.filter((m) => m !== code) : [...ms, code];
+                    setNoComp(nxt.length === 0);
+                    return nxt;
+                  })}
+                    style={{ position: "relative", display: "flex", alignItems: "center", width: "100%", height: ROW_H, padding: "0 14px", columnGap: 10, background: on ? "#F4F3EE" : "transparent", border: "none", cursor: "pointer", textTransform: "none" }}>
+                    <span style={{
+                      width: 26, height: 20, flex: "0 0 auto",
+                      backgroundImage: "url(/newui/flags.png)", backgroundSize: "959.8px 261.1px",
+                      backgroundPosition: `${-(FLAG_X[col] - 13 - 250.9)}px ${-(PNG_ROW[row] - 10 - 289.8)}px`,
+                    }} />
+                    <span style={{ font: `${on ? 700 : 400} 13px ${HNW}`, color: "#111", whiteSpace: "nowrap" }}>{t(NAMES[code])}</span>
+                    <span style={{ position: "absolute", right: 14, width: 13, height: 13, borderRadius: 7, border: "1.5px solid #111", background: "#fff", boxSizing: "border-box" }}>
+                      {on && <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 6.5, height: 6.5, borderRadius: 4, background: "#111" }} />}
+                    </span>
+                  </button>
+                );
+              })}
+              <div style={{ margin: "5px 14px", height: 1, backgroundImage: `repeating-linear-gradient(90deg,${DASH})`, backgroundSize: "100% 1px", backgroundRepeat: "no-repeat" }} />
+              <button onClick={() => { setMarkets([]); setNoComp(true); setMarketOpen(false); }}
+                style={{ position: "relative", display: "flex", alignItems: "center", width: "100%", height: ROW_H, padding: "0 14px", background: noComp ? "#F4F3EE" : "transparent", border: "none", cursor: "pointer", textTransform: "none" }}>
+                <span style={{ font: `${noComp ? 700 : 400} 13px ${HNW}`, color: "#111", whiteSpace: "nowrap" }}>{t("No compliance needed")}</span>
+                <span style={{ position: "absolute", right: 14, width: 13, height: 13, borderRadius: 7, border: "1.5px solid #111", background: "#fff", boxSizing: "border-box" }}>
+                  {noComp && <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 6.5, height: 6.5, borderRadius: 4, background: "#111" }} />}
+                </span>
+              </button>
+            </div>
+          </>)}
         </>);
       }
+
       case "backdesign": {
         const fit = fitIn(BD_AREA.w, BD_AREA.h, backDims.w, backDims.h);
         const lx = BD_AREA.x + fit.dx, ly = BD_AREA.y + fit.dy;
@@ -1835,7 +1807,7 @@ export default function NewUI() {
               const ly = clampY(anc.anchor === "top" ? topD + anc.pct * bhD : topD + bhD - anc.pct * bhD - lh, lh, topD, bhD);
               /* round 57 #4: the empty label slot INVITES — click → details */
               labelEl = (
-                <button onClick={() => go("front", -1)}
+                <button onClick={() => go("vision", -1)}
                   style={{ position: "absolute", left: xoff + scan.cx * s - lw / 2, top: ly, width: lw, height: lh, background: "#ECECEA", border: "none", cursor: "pointer", font: `11px ${HNW}`, color: "#8a887e", textTransform: "none", padding: 4, lineHeight: "14px" }}>
                   {t("Create front label")}</button>
               );
@@ -1941,7 +1913,7 @@ export default function NewUI() {
               </>) : quiet ? null : custom ? (
                 <span style={{ font: `12px ${HNW}`, color: "#8a887e" }}>{t("Not yet created")}</span>
               ) : (
-                <button onClick={() => go("front", -1)} style={{ ...ghost, position: "relative", width: "100%", height: "100%", font: `12px ${HNW}`, color: "#8a887e", textTransform: "none", cursor: "pointer" }}>{t("Create front label")}</button>
+                <button onClick={() => go("vision", -1)} style={{ ...ghost, position: "relative", width: "100%", height: "100%", font: `12px ${HNW}`, color: "#8a887e", textTransform: "none", cursor: "pointer" }}>{t("Create front label")}</button>
               )}
             </div>
           );
@@ -1999,7 +1971,7 @@ export default function NewUI() {
                   <div style={{ position: "absolute", inset: 0, background: assetsStage || ready ? "#F4F3EE" : "#ECECEA", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     {assetsStage || ready
                       ? miniGlass("landing", ready ? Math.max(ppFill, 0.55) : Math.min(0.9, assetFill("lifestyle 4/4")))
-                      : <button onClick={() => go("front", -1)} style={{ ...ghost, position: "relative", width: "100%", height: "100%", font: `12px ${HNW}`, color: "#8a887e", textTransform: "none", cursor: "pointer" }}>{t("Create front label")}</button>}
+                      : <button onClick={() => go("vision", -1)} style={{ ...ghost, position: "relative", width: "100%", height: "100%", font: `12px ${HNW}`, color: "#8a887e", textTransform: "none", cursor: "pointer" }}>{t("Create front label")}</button>}
                   </div>
                 )}
               </div>
@@ -2214,7 +2186,7 @@ export default function NewUI() {
   const step = STEP_OF[page];
   const thick = THICK[page];
   const bandBottom = BAND_BOTTOM[page];
-  const fullSlide = (page === "front" && prev === "welcome") || page === "welcome";
+  const fullSlide = (page === "vision" && prev === "welcome") || page === "welcome";
 
   return (
     <main style={{ background: "#000", minHeight: "100vh", margin: 0, padding: 0, maxWidth: "none", width: "100%" }}>
@@ -2240,7 +2212,7 @@ export default function NewUI() {
         @keyframes nuiOut { from { transform: translateX(0) } to { transform: translateX(${dir > 0 ? "-100%" : "100%"}) } }
         @keyframes nuiInPx { from { transform: translateX(${dir > 0 ? 1440 : -1440}px) } to { transform: translateX(0) } }
         @keyframes nuiOutPx { from { transform: translateX(0) } to { transform: translateX(${dir > 0 ? -1440 : 1440}px) } }
-        @keyframes arrowFly { from { left: 122px } to { left: 1324px } }
+        @keyframes btnFly { from { left: ${WELCOME_X - NEXT_R}px } to { left: ${NEXT_X - NEXT_R}px } }
         @keyframes nuiFadeIn { from { opacity: 0 } to { opacity: 1 } }
         @keyframes nuiFadeOut { from { opacity: 1 } to { opacity: 0 } }
         @keyframes szGrow { from { transform: scale(0) } to { transform: scale(1) } }`}</style>
@@ -2261,6 +2233,17 @@ export default function NewUI() {
             const pageSpace = (p: PageKey, inSlide: boolean) => (
               <>
                 <div style={{ position: "absolute", inset: 0, userSelect: "none" }} dangerouslySetInnerHTML={{ __html: (lang === "ge" ? boardsGe[p] : boards[p]) || boards[p] || "" }} />
+                {/* ROUND 63: the boards still carry the OLD baked progress bar
+                    (line at 685, words at 720) — wipe that strip, the new bar
+                    rides the band edge. The Final-Pack board has no bar, only
+                    a baked back arrow to hide. */}
+                {p === "checkout" ? patch(70, 664, 64, 42, "bawipe") : patch(0, 660, W, FOOTER_Y - 660, "barwipe")}
+                {/* ROUND 63 (owner): page titles grew with the merged pages —
+                    the baked 19px title is covered and redrawn live at 24 */}
+                {PAGE_TITLE[p] && (<>
+                  {patch(130, 126, 620, 32, "ttl" + p)}
+                  <span style={{ ...px(137.14, baseTop(p === "checkout" ? 151.8 : 149.08, 24), 620, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t(PAGE_TITLE[p]!)}</span>
+                </>)}
                 {renderOverlay(p, inSlide)}
               </>
             );
@@ -2308,10 +2291,33 @@ export default function NewUI() {
 
           {/* STATIC header (real fonts, extracted geometry) */}
           <div style={{ ...px(0, 0, W, HEADER_H), background: "#000" }}>
+            {/* round 56 #3 — TEMP DEV SWITCH (remove before launch); ROUND 63
+                moved out of the footer, to the left of the logo */}
+            <button aria-label="toggle live generation"
+              onClick={() => { const v = !liveGen; setLiveGen(v); liveGenRef.current = v; try { localStorage.setItem("nui-live-gen", v ? "1" : "0"); } catch { } }}
+              style={{ ...px(18, 26, 110, 16), ...ghost, display: "flex", alignItems: "center", columnGap: 6, textTransform: "none" }}>
+              <span style={{ width: 22, height: 12, borderRadius: 7, border: "1px solid #666", position: "relative", background: "#111", boxSizing: "border-box", flex: "0 0 auto" }}>
+                <span style={{ position: "absolute", top: 1.5, left: liveGen ? 11.5 : 1.5, width: 7, height: 7, borderRadius: 4, background: liveGen ? "#3fd05e" : "#666", transition: "left 160ms" }} />
+              </span>
+              <span style={{ font: `300 9px ${HNW}`, color: "#666", whiteSpace: "nowrap" }}>live gen</span>
+            </button>
             <button onClick={() => go("welcome", -1)} style={{ ...px(138.2, 25.5, 100, 20), ...ghost, font: `700 19px ${HNW}`, color: "#fff", textAlign: "left", textTransform: "none" }}>8K</button>
             {/* menu + ENG/GEO: one baseline, even gaps, right edge on the
                progress line's right edge x1303 (round 22 #11) */}
             <div style={{ position: "absolute", right: W - 1303, top: 27.5, display: "flex", alignItems: "baseline", columnGap: 44 }}>
+              {/* ROUND 63: the credit balance rides the header now (the
+                  footer holds nothing but the bar) */}
+              <span style={{ font: `700 13px ${HNW}`, color: "#fff", whiteSpace: "nowrap" }}>
+                {t("Credits available:")}{" "}
+                {spinning ? (
+                  <span style={{ color: BAR_RED }}>{spinDigit}</span>
+                ) : genCredits === 0 ? (
+                  <button onClick={() => { gensReturn.current = pageNow.current; setGensMode(true); setGensSel(0); go("checkout"); }}
+                    style={{ ...ghost, font: `700 13px ${HNW}`, color: BAR_RED, textDecoration: "underline", textTransform: "none", display: "inline" }}>{t("Add credit")}</button>
+                ) : (
+                  <span style={{ color: BAR_RED }}>{genCredits}</span>
+                )}
+              </span>
               <span style={{ font: `700 13px ${HNW}`, color: "#fff", whiteSpace: "nowrap" }}>{t("About Us")}</span>
               <span style={{ font: `700 13px ${HNW}`, color: "#fff", whiteSpace: "nowrap" }}>{t("Gallery")}</span>
               <span style={{ font: `700 13px ${HNW}`, color: "#fff", whiteSpace: "nowrap" }}>{t("Contact")}</span>
@@ -2323,42 +2329,40 @@ export default function NewUI() {
             </div>
           </div>
 
-          {/* STATIC progress bar (hidden on welcome & checkout); round 41
-              #13: while sliding INTO checkout the white zone stays, so the
-              outgoing board's baked OLD bar can never flash through */}
-          {(thick !== null || (page === "checkout" && prev !== null)) && (
-            <div style={{ ...px(0, 660, W, FOOTER_Y - 660), background: "#fff" }}>
-              {thick === null ? null : (<>
-              {/* round 46: baseline ends where the last circle ends */}
-              <div style={{ ...px(137.14, 685.09 - 660, 1302.86 - 137.14, 1), background: "#111" }} />
-              <div style={{ ...px(142.06, 684.09 - 660, thick - 142.06, 3), background: BAR_RED, transition: `width ${SLIDE_MS}ms ${EASE}` }} />
-              {STEPS.map((st, i) => {
-                const on = step >= i;
-                return (
-                  /* dots navigate (round 41 #10); reached dots are RED */
-                  <button key={"d" + i} onClick={() => { if (st.page !== page) { barJumped.current = true; go(st.page, ORDER.indexOf(st.page) > ORDER.indexOf(page) ? 1 : -1); } }}
-                    style={{ ...px(CIRCLE_X[i] - 12, 685.59 - 12 - 660, 24, 24), ...ghost }}>
-                    <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 9.8, height: 9.8, borderRadius: 5, border: on ? "none" : "1px solid #111", background: on ? BAR_RED : "#fff", transition: `background 300ms ${EASE}`, boxSizing: "border-box" }} />
-                  </button>
-                );
-              })}
+          {/* ROUND 63 PROGRESS BAR (owner's mocks): the line and its dots ride
+              the white/black boundary, the station labels sit in the black
+              footer, and the NEXT action is a big red round button — at the
+              right on working pages, at the left on the welcome page. */}
+          <div style={{ ...px(0, 0, W, H), pointerEvents: "none", zIndex: 8 }}>
+            {thick !== null && (<>
+              <div style={{ ...px(CIRCLE_X[0], PROG_Y - LINE_H / 2, Math.max(0, thick - CIRCLE_X[0]), LINE_H), background: BAR_RED, borderRadius: LINE_H / 2, transition: `width ${SLIDE_MS}ms ${EASE}` }} />
+              <div style={{ ...px(CIRCLE_X[0] - START_R, PROG_Y - START_R, START_R * 2, START_R * 2), background: BAR_RED, borderRadius: START_R }} />
+              {STEPS.map((st, i) => i === 0 ? null : (
+                <button key={"d" + i} aria-label={st.label}
+                  onClick={() => { if (st.page !== page) { barJumped.current = true; go(st.page, ORDER.indexOf(st.page) > ORDER.indexOf(page) ? 1 : -1); } }}
+                  style={{ ...px(CIRCLE_X[i] - 13, PROG_Y - 13, 26, 26), ...ghost, pointerEvents: "auto" }}>
+                  <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: DOT_R * 2, height: DOT_R * 2, borderRadius: DOT_R, background: step >= i ? BAR_RED : "#fff", border: step >= i ? "none" : "1px solid #111", boxSizing: "border-box", transition: `background 300ms ${EASE}` }} />
+                </button>
+              ))}
               {STEPS.map((st, i) => i > 0 && (
                 <button key={st.label} onClick={() => { if (st.page !== page) { barJumped.current = true; go(st.page, ORDER.indexOf(st.page) > ORDER.indexOf(page) ? 1 : -1); } }}
-                  style={{ position: "absolute", top: 708.5 - 660, height: 18, ...ghost, font: `700 15px ${HNW}`, color: "#111", lineHeight: "15px", textTransform: "none",
-                    ...(i === STEPS.length - 1 ? { left: 1303.41 - 260, width: 260, textAlign: "right" as const } : { left: CIRCLE_X[i] - 130, width: 260, textAlign: "center" as const }) }}>
+                  style={{ ...px(CIRCLE_X[i] - 130, baseTop(LABEL_BASE, 14), 260, 18), ...ghost, pointerEvents: "auto", font: `700 14px ${HNW}`, lineHeight: "14px", color: "#fff", textAlign: "center", textTransform: "none" }}>
                   {t(st.label)}</button>
               ))}
-              {/* back arrow — hidden while the loader runs (round 46) */}
+              {/* back — white, in the footer's empty left corner */}
               {page !== "loader" && (
-                <button aria-label="back" onClick={() => { barJumped.current = false; goBack(); }} style={{ ...px(56, 666 - 660, 60, 40), ...ghost }}>
-                  <svg viewBox="0 0 60 40" width="60" height="40"><line x1="47" y1="20" x2="13" y2="20" stroke="#000" strokeWidth="3" /><polyline points="23,9.5 12.5,20 23,30.5" fill="none" stroke="#000" strokeWidth="3" /></svg>
+                <button aria-label="back" onClick={() => { barJumped.current = false; goBack(); }}
+                  style={{ ...px(52, LABEL_BASE - 19, 56, 24), ...ghost, pointerEvents: "auto" }}>
+                  <svg viewBox="0 0 56 24" width="56" height="24"><line x1="52" y1="12" x2="17" y2="12" stroke="#fff" strokeWidth="2.6" /><polyline points="26,3 17,12 26,21" fill="none" stroke="#fff" strokeWidth="2.6" /></svg>
                 </button>
               )}
-              {/* forward arrow — RED, hidden while the loader runs */}
-              {page !== "loader" && <button aria-label="next"
+            </>)}
+            {/* the red round NEXT button */}
+            {page !== "loader" && (
+              <button aria-label={page === "welcome" ? "start" : "next"}
                 onClick={() => {
                   barJumped.current = false;
-                  if (page === "front") go("vision");
+                  if (page === "welcome") { setArrowFly(true); go("vision"); setTimeout(() => setArrowFly(false), SLIDE_MS + 80); }
                   else if (page === "vision") {
                     /* round 54 #2: a REAL generation asks for confirmation;
                        unchanged inputs just move along */
@@ -2370,8 +2374,7 @@ export default function NewUI() {
                     if (selected >= 0) go("backdetails");
                     else { setWarn(t("Select a label design to continue")); setTimeout(() => setWarn(""), 3200); }
                   }
-                  else if (page === "backdetails") go("compliance");
-                  else if (page === "compliance") {
+                  else if (page === "backdetails") {
                     if (markets.length || noComp) nextFromCompliance();
                     else { setWarn(t("Select at least one market to continue")); setTimeout(() => setWarn(""), 3200); }
                   }
@@ -2385,12 +2388,19 @@ export default function NewUI() {
                   }
                   else if (page === "assets") go("checkout");
                 }}
-                style={{ ...px(1324, 666 - 660, 60, 40), ...ghost }}>
-                <svg viewBox="0 0 60 40" width="60" height="40"><line x1="13" y1="20" x2="47" y2="20" stroke={BAR_RED} strokeWidth="3" /><polyline points="37,9.5 47.5,20 37,30.5" fill="none" stroke={BAR_RED} strokeWidth="3" /></svg>
-              </button>}
-              </>)}
-            </div>
-          )}
+                style={{
+                  position: "absolute", left: (page === "welcome" ? WELCOME_X : NEXT_X) - NEXT_R, top: PROG_Y - NEXT_R,
+                  width: NEXT_R * 2, height: NEXT_R * 2, borderRadius: NEXT_R, background: BAR_RED, border: "none",
+                  padding: 0, cursor: "pointer", pointerEvents: "auto", display: "flex", alignItems: "center", justifyContent: "center",
+                  animation: arrowFly ? `btnFly ${SLIDE_MS}ms ${EASE} both` : "none",
+                }}>
+                <svg viewBox="0 0 36 24" width="36" height="24">
+                  <line x1="1" y1="12" x2="33" y2="12" stroke="#fff" strokeWidth="3.3" />
+                  <polyline points="24,2.6 34,12 24,21.4" fill="none" stroke="#fff" strokeWidth="3.3" />
+                </svg>
+              </button>
+            )}
+          </div>
 
           {/* ROUND 59 #2: the gate message floats at ROOT level so it can
               sit truly midway between the selection row and the bar line */}
@@ -2398,43 +2408,9 @@ export default function NewUI() {
             <span style={{ ...px(0, 648, W, 16), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block", zIndex: 7, position: "absolute" }}>{warn}</span>
           )}
 
-          {/* welcome→vision: the arrow flies right while the page slides (owner #3) */}
-          {arrowFly && (
-            <div style={{ position: "absolute", top: 662, left: 122, width: 60, height: 48, animation: `arrowFly ${SLIDE_MS}ms ${EASE} forwards`, pointerEvents: "none", zIndex: 6 }}>
-              <svg viewBox="0 0 60 40" width="60" height="40"><line x1="13" y1="24" x2="47" y2="24" stroke={BAR_RED} strokeWidth="3" /><polyline points="37,13.5 47.5,24 37,34.5" fill="none" stroke={BAR_RED} strokeWidth="3" /></svg>
-            </div>
-          )}
-
-          {/* STATIC footer bar */}
-          <div style={{ ...px(0, FOOTER_Y, W, H - FOOTER_Y), background: "#000" }}>
-            <span style={{ ...px(138.4, 779.4 - FOOTER_Y, 700, 16), font: `300 11px ${HNW}`, color: "#fff" }}>{t("© 8K Labels — a demo interface built from your uploaded mockup")}</span>
-            {/* ROUND 60 #3 (owner): the credit balance lives HERE — white
-                text, red number, right edge flush with the bar's last dot */}
-            <div style={{ ...px(700, 779.4 - FOOTER_Y - 2, 602.86, 18), display: "flex", justifyContent: "flex-end", alignItems: "baseline", columnGap: 16 }}>
-              <span style={{ font: `700 13px ${HNW}`, color: "#fff", whiteSpace: "nowrap" }}>
-                {t("Credits available:")}{" "}
-                {spinning ? (
-                  <span style={{ color: BAR_RED }}>{spinDigit}</span>
-                ) : genCredits === 0 ? (
-                  <button onClick={() => { gensReturn.current = pageNow.current; setGensMode(true); setGensSel(0); go("checkout"); }}
-                    style={{ ...ghost, font: `700 13px ${HNW}`, color: BAR_RED, textDecoration: "underline", textTransform: "none", display: "inline" }}>{t("Add credit")}</button>
-                ) : (
-                  <span style={{ color: BAR_RED }}>{genCredits}</span>
-                )}
-              </span>
-            </div>
-            {/* round 56 #3 — TEMP DEV SWITCH (remove before launch): off =
-                every generation is faked with already-made images */}
-            <button aria-label="toggle live generation"
-              onClick={() => { const v = !liveGen; setLiveGen(v); liveGenRef.current = v; try { localStorage.setItem("nui-live-gen", v ? "1" : "0"); } catch { } }}
-              style={{ ...px(600, 779.4 - FOOTER_Y - 3, 130, 18), ...ghost, display: "flex", alignItems: "center", columnGap: 6, textTransform: "none" }}>
-              <span style={{ width: 22, height: 12, borderRadius: 7, border: "1px solid #666", position: "relative", background: "#111", boxSizing: "border-box", flex: "0 0 auto" }}>
-                <span style={{ position: "absolute", top: 1.5, left: liveGen ? 11.5 : 1.5, width: 7, height: 7, borderRadius: 4, background: liveGen ? "#3fd05e" : "#666", transition: "left 160ms" }} />
-              </span>
-              <span style={{ font: `300 9px ${HNW}`, color: "#666", whiteSpace: "nowrap" }}>live generation</span>
-            </button>
-
-          </div>
+          {/* STATIC footer bar — ROUND 63: empty; the progress bar (drawn
+              after it, so it paints on top) is the only thing down here */}
+          <div style={{ ...px(0, FOOTER_Y, W, H - FOOTER_Y + 4), background: "#000" }} />
 
           {busyMsg && <div style={{ ...px(1090, 78, 320, 20), font: `13px ${HNW}`, color: "#8a887e", textAlign: "right" }}>{busyMsg}</div>}
 
@@ -2479,7 +2455,7 @@ export default function NewUI() {
               if (isL) { if (requestCredit("vision", 3)) nextFromFront(); }
               else if (requestCredit("assets")) { confirmedAssetsSig.current = pendingAssetsSig.current; setAssetsTick((t2) => t2 + 1); }
             };
-            const onEdit = () => { setConfirmModal(""); go(isL ? "front" : "bottle", -1); };
+            const onEdit = () => { setConfirmModal(""); go(isL ? "vision" : "bottle", -1); };
             return (<>
               <div style={{ ...px(0, HEADER_H, W, FOOTER_Y - HEADER_H), background: "rgba(255,255,255,0.88)", zIndex: 40 }} onClick={() => setConfirmModal("")} />
               <div style={{ ...px(B.x, B.y, B.w, B.h), background: "#fff", border: "1px solid #111", zIndex: 41, boxSizing: "border-box" }}>
