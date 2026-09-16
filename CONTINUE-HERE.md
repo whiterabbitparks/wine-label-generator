@@ -1990,6 +1990,22 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 66 (owner, 3 items, 2026-09-16): (1) a SPARKLING bottle now
+  offers ONLY "Sparkling Cork" and "Crown Cap" in Closure Type (the
+  still-wine closures and No Capsule disappear), and switching TO
+  sparkling auto-moves a still closure to Sparkling Cork. (2) the
+  marketing confirmation box follows its own reference screen: the
+  bottle drawing (57,178,43x155), Front Label box (137.6,177.6,
+  160x155), Back Label box (323.7,…,159x155) and the Product Details
+  list at x500 (values 604, type one notch down at 14px so "Closure
+  Type: Sparkling Cork" never collides). (3) EMPTY MEANS ABSENT in
+  both boxes — no prompt → no "Prompt:" block, no sketch → no
+  "Sketch" block or dashed box, no back label → no "Back Label"
+  block, and the detail list carries only the rows that actually have
+  a value (title hidden when none). The box HEIGHT is computed from
+  what survives (buttons at contentBottom + 24/48, box = that + 76),
+  so a nearly-empty check is a small box, a full one matches the
+  reference's 740x560 / 740x455.
 - ROUND 65 (owner, 4 items + mid-round note, 2026-09-16): (1) the
   footer back arrow is GONE — the BROWSER's Back/Forward walks the
   wizard instead: go() pushes {page} history entries (?page=…) and a

@@ -1728,13 +1728,18 @@ export default function NewUI() {
             ...m, [key]: opt,
             ...(key === "type" && opt !== "Sparkling" && m.closure === "Sparkling Cork" ? { closure: "Cork" } : {}),
             ...(key === "type" && !CROWN_TYPES.includes(opt) && m.closure === "Crown Cap" ? { closure: "Cork" } : {}),
+            /* round 66: switching TO sparkling drops a still-wine closure */
+            ...(key === "type" && opt === "Sparkling" && m.closure !== "Sparkling Cork" && m.closure !== "Crown Cap" ? { closure: "Sparkling Cork" } : {}),
           }));
         };
-        /* round 17 #2 / round 38 #1 filters, then No Capsule always last */
-        const closures = ["Cork", "Screw Cap", "Wax Seal"]
-          .concat(CROWN_TYPES.includes(bottle.type) ? ["Crown Cap"] : [])
-          .concat(bottle.type === "Sparkling" ? ["Sparkling Cork"] : [])
-          .concat(["No Capsule"]);
+        /* round 17 #2 / round 38 #1 filters, then No Capsule always last.
+           ROUND 66 (owner): a Sparkling bottle takes ONLY its own two
+           closures — everything else disappears. */
+        const closures = bottle.type === "Sparkling"
+          ? ["Sparkling Cork", "Crown Cap"]
+          : ["Cork", "Screw Cap", "Wax Seal"]
+            .concat(CROWN_TYPES.includes(bottle.type) ? ["Crown Cap"] : [])
+            .concat(["No Capsule"]);
         return (<>
           {/* wipe the baked column content (frame lines stay) */}
           {patch(344.4, 173.3, 956.5, 408.5, "bzone")}
@@ -2455,34 +2460,81 @@ export default function NewUI() {
             </div>
           </>)}
 
-          {/* ROUND 54 #2: pre-generation confirmation popups — every
-              detail that shapes the result, laid out clean, with Create /
-              Edit Details / ✕ in the house style */}
           {confirmModal && (() => {
-            /* ROUND 65 (owner's "Check your details" reference, measured on
-               its own 740x560 proportions): title + a credits line, a dashed
-               rule, then two columns — prompt/sketch (or the two labels) on
-               the left, the detail list on the right — and the two buttons
-               with Create on the right. The box is centred in the white
-               band and blocks everything behind it. */
-            const B = { x: 350, y: (HEADER_H + FOOTER_Y) / 2 - 280, w: 740, h: 560 };
+            /* ROUND 65/66 (owner's two reference screens): one chrome —
+               uppercase title, credits line, dashed rule, Edit/Create —
+               with a layout per kind. LABELS: prompt + sketch on the left,
+               the typed fields on the right. ASSETS: the bottle drawing,
+               the two label boxes and the product list. ROUND 66 #3:
+               nothing empty is ever announced — a block whose content is
+               missing (and its title) simply isn't there, and the box
+               shrinks to fit what remains. */
             const isL = confirmModal === "labels";
             const cost = isL ? 3 : 1;
-            const cap = (txt: string) => <span style={{ font: `700 ${lang === "ge" ? 13 : 15}px ${HNW}`, lineHeight: "15px", whiteSpace: "nowrap" }}>{txt}</span>;
-            const val = (txt: string) => <span style={{ font: `italic 15px ${HNW}`, lineHeight: "15px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{txt || "—"}</span>;
-            const FR_CAPS = FRONT_LABELS;
+            /* the assets column is narrower (three blocks sit left of it),
+               so its type steps down a notch */
+            const fs = isL ? 15 : 14;
+            const cap = (txt: string) => <span style={{ font: `700 ${lang === "ge" ? fs - 2 : fs}px ${HNW}`, lineHeight: "15px", whiteSpace: "nowrap" }}>{txt}</span>;
+            const val = (txt: string) => <span style={{ font: `italic ${fs}px ${HNW}`, lineHeight: "15px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{txt}</span>;
+            const colTitle = (x: number, txt: string) => (
+              <span style={{ position: "absolute", left: x, top: baseTop(162.8, 21), font: `700 21px ${HNW}`, lineHeight: "21px", whiteSpace: "nowrap" }}>{txt}</span>
+            );
+            const dashBox = (x: number, y: number, w2: number, h2: number, img?: string) => (
+              <div style={{ position: "absolute", left: x, top: y, width: w2, height: h2, backgroundImage: `repeating-linear-gradient(90deg,${DASH}),repeating-linear-gradient(90deg,${DASH}),repeating-linear-gradient(180deg,${DASH}),repeating-linear-gradient(180deg,${DASH})`, backgroundPosition: "0 0, 0 100%, 0 0, 100% 0", backgroundSize: "100% 1px, 100% 1px, 1px 100%, 1px 100%", backgroundRepeat: "no-repeat" }}>
+                {img && (/* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={img} alt="" style={{ position: "absolute", inset: 8, width: "calc(100% - 16px)", height: "calc(100% - 16px)", objectFit: "contain" }} />)}
+              </div>
+            );
             const frontThumb = customLabel || viewedDream(selected)?.preview || viewedDream(selected)?.dream || "";
-            const rows: [string, string][] = isL
-              ? FR_CAPS.map((c, i) => [c, f[FRONT_ROWS[i]] || ""] as [string, string])
+            const backThumb = !customLabel && backPng ? backPng : "";
+            const prompt = vision.trim();
+            /* only what the customer actually gave us */
+            const rows: [string, string][] = (isL
+              ? (FRONT_LABELS.map((c, i) => [c, (f[FRONT_ROWS[i]] || "").trim()] as [string, string])
+                .concat([["Label size:", `${f.width || 110} × ${f.height || 80} ${t("mm")}`]]))
               : ([
-                ["Wine Name:", f.wine || (customLabel ? "" : DEMO_FRONT.wine)],
+                ["Wine Name:", (f.wine || "").trim()],
                 ["Wine Color", wineColor],
                 ["Bottle Type", bottle.type],
                 ["Bottle Color", bottle.color],
                 ["Closure Type", bottle.closure],
                 ["Closure Color", bottle.closure === "No Capsule" ? "" : bottle.finish],
                 ["Label size:", `${customLabel ? customDims.w : f.width || 110} × ${customLabel ? customDims.h : f.height || 80} ${t("mm")}`],
-              ] as [string, string][]);
+              ] as [string, string][])
+            ).filter(([, v]) => !!v);
+            /* ── the columns, then the height that fits them ── */
+            const left: React.ReactNode[] = [];
+            let leftBottom = 140;
+            if (isL) {
+              let y = 162.8;
+              if (prompt) {
+                left.push(<span key="pt">{colTitle(32, t("Prompt:"))}</span>);
+                left.push(<span key="pv" style={{ position: "absolute", left: 32, top: baseTop(y + 43, 15), width: 329, maxHeight: 68, font: `15px ${HNW}`, lineHeight: "17px", overflow: "hidden" }}>{prompt}</span>);
+                y += 127;
+                leftBottom = y - 4;
+              }
+              if (sketch) {
+                const ty = prompt ? y : 162.8;
+                left.push(<span key="st" style={{ position: "absolute", left: 32, top: baseTop(ty, 21), font: `700 21px ${HNW}`, lineHeight: "21px" }}>{t("Sketch")}</span>);
+                left.push(<span key="sb">{dashBox(32, ty + 13, 329, 158, sketch)}</span>);
+                leftBottom = ty + 171;
+              }
+            } else {
+              left.push(
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img key="bt" src={bottleSrc()} alt="" style={{ position: "absolute", left: 57, top: 178, width: 43, height: 155, objectFit: "contain" }} />
+              );
+              leftBottom = 333;
+              if (frontThumb) left.push(<span key="fl">{colTitle(137.6, t("Front Label"))}{dashBox(137.6, 177.6, 160, 155, frontThumb)}</span>);
+              if (backThumb) left.push(<span key="bl">{colTitle(323.7, t("Back Label"))}{dashBox(323.7, 177.6, 159, 155, backThumb)}</span>);
+            }
+            const detX = isL ? 385.5 : 500;
+            const valX = isL ? (lang === "ge" ? 530 : 500) : (lang === "ge" ? 612 : 604);
+            const rowsBottom = rows.length ? 212 + (rows.length - 1) * 19.2 + 6 : 140;
+            const contentBottom = Math.max(leftBottom, rowsBottom);
+            const btnTop = contentBottom + (isL ? 24 : 48);
+            const H2 = btnTop + 30 + 46;
+            const B = { x: 350, w: 740, h: H2, y: (HEADER_H + FOOTER_Y) / 2 - H2 / 2 };
             const onCreate = () => {
               /* round 56 #7: creating SPENDS credits (or routes to the gift
                  modal / purchase page) */
@@ -2504,46 +2556,24 @@ export default function NewUI() {
                 <span style={{ position: "absolute", left: 300, top: baseTop(104, 13), width: B.w - 332, textAlign: "right", font: `italic 13px ${HNW}`, lineHeight: "13px" }}>
                   {t("You have")} <span style={{ fontWeight: 700, fontStyle: "normal", color: BAR_RED }}>{genCredits}</span> {t("Credits")}</span>
                 <div style={{ position: "absolute", left: 32, top: 120, width: B.w - 64, height: 1, backgroundImage: `repeating-linear-gradient(90deg,${DASH})`, backgroundSize: "100% 1px", backgroundRepeat: "no-repeat" }} />
-                {/* ── left column ── */}
-                {isL ? (<>
-                  <span style={{ position: "absolute", left: 32, top: baseTop(163, 21), font: `700 21px ${HNW}`, lineHeight: "21px" }}>{t("Prompt:")}</span>
-                  <span style={{ position: "absolute", left: 32, top: baseTop(206, 15), width: 329, height: 68, font: `15px ${HNW}`, lineHeight: "17px", overflow: "hidden" }}>{vision.trim() || "—"}</span>
-                  <span style={{ position: "absolute", left: 32, top: baseTop(290, 21), font: `700 21px ${HNW}`, lineHeight: "21px" }}>{t("Sketch")}</span>
-                  <div style={{ position: "absolute", left: 32, top: 303, width: 329, height: 158, backgroundImage: `repeating-linear-gradient(90deg,${DASH}),repeating-linear-gradient(90deg,${DASH}),repeating-linear-gradient(180deg,${DASH}),repeating-linear-gradient(180deg,${DASH})`, backgroundPosition: "0 0, 0 100%, 0 0, 100% 0", backgroundSize: "100% 1px, 100% 1px, 1px 100%, 1px 100%", backgroundRepeat: "no-repeat" }}>
-                    {sketch && (/* eslint-disable-next-line @next/next/no-img-element */
-                      <img src={sketch} alt="" style={{ position: "absolute", inset: 8, width: "calc(100% - 16px)", height: "calc(100% - 16px)", objectFit: "contain" }} />)}
-                  </div>
-                </>) : (<>
-                  <span style={{ position: "absolute", left: 32, top: baseTop(163, 21), font: `700 21px ${HNW}`, lineHeight: "21px" }}>{t("Front Label")}</span>
-                  <div style={{ position: "absolute", left: 32, top: 176, width: 329, height: 132, backgroundImage: `repeating-linear-gradient(90deg,${DASH}),repeating-linear-gradient(90deg,${DASH}),repeating-linear-gradient(180deg,${DASH}),repeating-linear-gradient(180deg,${DASH})`, backgroundPosition: "0 0, 0 100%, 0 0, 100% 0", backgroundSize: "100% 1px, 100% 1px, 1px 100%, 1px 100%", backgroundRepeat: "no-repeat" }}>
-                    {frontThumb && (/* eslint-disable-next-line @next/next/no-img-element */
-                      <img src={frontThumb} alt="" style={{ position: "absolute", inset: 8, width: "calc(100% - 16px)", height: "calc(100% - 16px)", objectFit: "contain" }} />)}
-                  </div>
-                  <span style={{ position: "absolute", left: 32, top: baseTop(345, 21), font: `700 21px ${HNW}`, lineHeight: "21px" }}>{t("Back Label")}</span>
-                  <div style={{ position: "absolute", left: 32, top: 358, width: 329, height: 103, backgroundImage: `repeating-linear-gradient(90deg,${DASH}),repeating-linear-gradient(90deg,${DASH}),repeating-linear-gradient(180deg,${DASH}),repeating-linear-gradient(180deg,${DASH})`, backgroundPosition: "0 0, 0 100%, 0 0, 100% 0", backgroundSize: "100% 1px, 100% 1px, 1px 100%, 1px 100%", backgroundRepeat: "no-repeat" }}>
-                    {backPng && !customLabel && (/* eslint-disable-next-line @next/next/no-img-element */
-                      <img src={backPng} alt="" style={{ position: "absolute", inset: 8, width: "calc(100% - 16px)", height: "calc(100% - 16px)", objectFit: "contain" }} />)}
-                  </div>
-                </>)}
-                {/* ── right column ── */}
-                <span style={{ position: "absolute", left: 385.5, top: baseTop(163, 21), font: `700 21px ${HNW}`, lineHeight: "21px" }}>{t(isL ? "Label Details" : "Product Details")}</span>
+                {left}
+                {rows.length > 0 && colTitle(detX, t(isL ? "Label Details" : "Product Details"))}
                 {rows.map(([c, v], i) => (
                   <span key={c}>
-                    <span style={{ position: "absolute", left: 385.5, top: baseTop(212 + i * 19.2, 15), width: 140 }}>{cap(t(c).endsWith(":") ? t(c) : t(c) + ":")}</span>
-                    <span style={{ position: "absolute", left: lang === "ge" ? 530 : 500, top: baseTop(212 + i * 19.2, 15), width: B.w - (lang === "ge" ? 562 : 532), display: "flex", alignItems: "center", columnGap: 6 }}>
-                      {val(v ? t(v) : "")}
-                      {c === "Closure Color" && bottle.closure !== "No Capsule" && bottle.finish && (
+                    <span style={{ position: "absolute", left: detX, top: baseTop(212 + i * 19.2, 15), width: 150 }}>{cap(t(c).endsWith(":") ? t(c) : t(c) + ":")}</span>
+                    <span style={{ position: "absolute", left: valX, top: baseTop(212 + i * 19.2, 15), width: B.w - valX - 32, display: "flex", alignItems: "center", columnGap: 6 }}>
+                      {val(t(v))}
+                      {c === "Closure Color" && (
                         <span style={{ width: 13, height: 13, background: shadeRgb(), border: "1px solid #111", flex: "0 0 auto" }} />
                       )}
                     </span>
                   </span>
                 ))}
-                {/* ── the two actions ── */}
                 <button onClick={onEdit}
-                  style={{ position: "absolute", left: 32, top: 485, width: 329, height: 30, cursor: "pointer", font: `13px ${HNW}`, letterSpacing: 0.3, background: "#fff", color: "#111", border: "1px solid #111", boxSizing: "border-box", paddingBottom: 3, textTransform: "none" }}>
+                  style={{ position: "absolute", left: 32, top: btnTop, width: 329, height: 30, cursor: "pointer", font: `13px ${HNW}`, letterSpacing: 0.3, background: "#fff", color: "#111", border: "1px solid #111", boxSizing: "border-box", paddingBottom: 3, textTransform: "none" }}>
                   {t("Edit Details")}</button>
                 <button onClick={onCreate}
-                  style={{ position: "absolute", left: 385.5, top: 485, width: 328.5, height: 30, cursor: "pointer", font: `700 13px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", paddingBottom: 3, textTransform: "none" }}>
+                  style={{ position: "absolute", left: 385.5, top: btnTop, width: 328.5, height: 30, cursor: "pointer", font: `700 13px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", paddingBottom: 3, textTransform: "none" }}>
                   {t("Create")} <span style={{ fontWeight: 400, fontStyle: "italic" }}>({cost} {cost === 1 ? t("Credit") : t("Credits")})</span></button>
               </div>
             </>);
