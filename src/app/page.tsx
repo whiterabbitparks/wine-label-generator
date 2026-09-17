@@ -384,21 +384,21 @@ export default function NewUI() {
    subject — in both cases the edit call hands the picture back instead of
    photographing a bottle with it. Every upload is therefore re-baked into
    the same shape our own labels have: flattened onto white, capped at
-   1400px on its long side, plain JPEG. */
-async function normalizeLabel(dataUrl: string): Promise<string> {
+   1400px on its long side, plain JPEG. ROUND 70: this runs on the image
+   the handler has ALREADY decoded — the first cut decoded the file twice,
+   and a file the browser cannot decode (HEIC, PDF, a damaged export) then
+   failed in silence. */
+function flattenLabel(im: HTMLImageElement, fallback: string): string {
   try {
-    const im = await new Promise<HTMLImageElement>((res, rej) => {
-      const el = new Image(); el.onload = () => res(el); el.onerror = rej; el.src = dataUrl;
-    });
-    const k = Math.min(1, 1400 / Math.max(1, im.width, im.height));
-    const w = Math.max(1, Math.round(im.width * k)), h = Math.max(1, Math.round(im.height * k));
+    const k = Math.min(1, 1400 / Math.max(1, im.naturalWidth, im.naturalHeight));
+    const w = Math.max(1, Math.round(im.naturalWidth * k)), h = Math.max(1, Math.round(im.naturalHeight * k));
     const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
-    const cx = cv.getContext("2d"); if (!cx) return dataUrl;
+    const cx = cv.getContext("2d"); if (!cx) return fallback;
     cx.fillStyle = "#fff"; cx.fillRect(0, 0, w, h);
     cx.drawImage(im, 0, 0, w, h);
     const out = cv.toDataURL("image/jpeg", 0.92);
-    return out.startsWith("data:image/jpeg") ? out : dataUrl;
-  } catch { return dataUrl; }
+    return out.startsWith("data:image/jpeg") ? out : fallback;
+  } catch { return fallback; }
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -1337,8 +1337,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           </span>
           <label style={{ ...px(138, 275, 240, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, textTransform: "none" }}>
             <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
-              const file = e.target.files?.[0]; if (!file) { setSketch(null); return; }
-              const rd = new FileReader(); rd.onload = () => setSketch(String(rd.result)); rd.readAsDataURL(file);
+              const input = e.currentTarget;
+              const file = input.files?.[0]; if (!file) { setSketch(null); return; }
+              /* round 70: cleared so the same file can be picked again */
+              const rd = new FileReader();
+              rd.onload = () => { setSketch(String(rd.result)); input.value = ""; };
+              rd.onerror = () => { input.value = ""; };
+              rd.readAsDataURL(file);
             }} />
             {t("Upload a sketch or a reference photo")}
             {sketch && <span style={{ position: "absolute", left: 0, top: 38, width: 240, font: `12px ${HNW}`, color: "#3f6d2a", textAlign: "center" }}>{t("✓ sketch attached")}</span>}
@@ -1934,30 +1939,43 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               a fresh upload UNSELECTS every section — the customer picks
               each one before the next arrow lets them through. */}
           <label style={{ ...px(137.14, 596, 205.7, 18), font: `13px ${HNW}`, color: customLabel ? "#3f6d2a" : "#111", textDecoration: "underline", textTransform: "none", textAlign: "center", cursor: "pointer", display: "block", lineHeight: "18px" }}>
-            <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
-              const file = e.target.files?.[0]; if (!file) return;
+            <input type="file" accept="image/png,image/jpeg,image/webp,image/*" style={{ display: "none" }} onChange={(e) => {
+              const input = e.currentTarget;
+              const file = input.files?.[0]; if (!file) return;
+              /* ROUND 70 (owner: "upload label is not working"): the input
+                 is CLEARED at the end of every attempt — a file input fires
+                 no change event when the same file is picked twice, so a
+                 second try with the same label used to do nothing at all. */
+              const fail = () => {
+                input.value = "";
+                setWarn(t("That file could not be read — please use a PNG or JPEG"));
+                setTimeout(() => setWarn(""), 5000);
+              };
               const rd = new FileReader();
-              rd.onload = async () => {
-                const url = await normalizeLabel(String(rd.result));
+              rd.onerror = fail;
+              rd.onload = () => {
+                const raw = String(rd.result);
                 const im = new Image();
+                im.onerror = fail;
                 im.onload = () => {
                   /* round 57 #5: BEST-GUESS real size — fit the image's
                      aspect inside a typical 110×120mm label window and
                      round to 5mm, so an oversized file can never claim
                      half the bottle */
-                  const ar = im.width / Math.max(1, im.height);
+                  const ar = im.naturalWidth / Math.max(1, im.naturalHeight);
                   let wmm = Math.min(110, 120 * ar);
                   let hmm = wmm / ar;
                   wmm = Math.max(40, Math.round(wmm / 5) * 5);
                   hmm = Math.max(30, Math.round(hmm / 5) * 5);
                   setCustomDims({ w: wmm, h: hmm });
-                  setCustomLabel(url);
+                  setCustomLabel(flattenLabel(im, raw));
                   setAssets({ life: [] }); setAssetsSig("");
                   setBottle({ type: "", color: "", closure: "", finish: "" });
                   setWineColor("");
                   bottleTouched.current = true;
+                  input.value = "";
                 };
-                im.src = url;
+                im.src = raw;
               };
               rd.readAsDataURL(file);
             }} />

@@ -217,6 +217,7 @@ export const UI_GE: Record<string, string> = {
   "Select a label design to continue": "გასაგრძელებლად აირჩიეთ ეტიკეტის დიზაინი",
   "Select at least one market to continue": "გასაგრძელებლად აირჩიეთ ერთი ბაზარი მაინც",
   "Generation failed — please try again": "გენერაცია ვერ შესრულდა — სცადეთ თავიდან",
+  "That file could not be read — please use a PNG or JPEG": "ფაილი ვერ წაიკითხა — გამოიყენეთ PNG ან JPEG",
   "Edit": "რედაქტირება",
   "Create QR Code": "QR კოდის შექმნა",
   "Upload QR Code": "QR კოდის ატვირთვა",

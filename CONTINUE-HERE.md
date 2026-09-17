@@ -1990,6 +1990,20 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 70 (owner: "Upload label is not working", 2026-09-16): the
+  bottle-page label upload was rewritten. THREE faults, all of them
+  silent: (a) a file input fires NO change event when the same file is
+  picked twice, so a second attempt with the same label did nothing —
+  the input is now cleared at the end of every attempt (the Vision
+  sketch upload had the same trap and got the same fix); (b) round 68's
+  normalizeLabel decoded the file a SECOND time, and a file the browser
+  cannot decode (HEIC, PDF, a damaged export) fell through both decodes
+  without a word — the handler now decodes ONCE and flattenLabel() works
+  on the image it already has; (c) any failure now says "That file could
+  not be read — please use a PNG or JPEG" instead of nothing. Verified
+  on four cases: fresh upload, the SAME file again, a 3000x2200 PNG
+  (arrives as a 12KB JPEG), and a non-image — warning shown, the
+  previously good label left untouched.
 - ROUND 69 (owner, 3 items, 2026-09-16):
   (1) the three variation buttons read "<Style> Variation (1 Credit)" —
   singular, with the price that requestCredit actually charges.
