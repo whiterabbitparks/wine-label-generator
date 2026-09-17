@@ -452,8 +452,8 @@ export async function generateMarketingAssets(
     }
   }
 
-  /* round 59 #5: FOUR lifestyle images per set/batch */
-  const scenarios = dealScenarios(b.seed, scenes, 4 * (batch + 1)).slice(batch * 4);
+  /* round 71 #3 (owner went back to FIVE): five lifestyle images per set/batch */
+  const scenarios = dealScenarios(b.seed, scenes, 5 * (batch + 1)).slice(batch * 5);
   for (let i = 0; i < scenarios.length; i++) {
     send({ type: "progress", stage: `lifestyle ${i + 1}/${scenarios.length}` });
     try {

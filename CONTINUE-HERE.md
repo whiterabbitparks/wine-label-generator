@@ -1990,6 +1990,58 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 71 (owner, 4 items, 2026-09-17):
+  (1) NEW PROGRESS BAR, read straight out of the owner's
+  New_Progress-Bar artboards (their viewBox IS our 1440x822.86, so the
+  SVG numbers are page units — no measuring needed). Six labelled stops
+  instead of three, one per wizard page, alternating: a 3.15 dot under a
+  300-weight label for the pages you FILL IN (Front Label Details, Back
+  Label Details, Bottle Details) and a 4.92 dot under a 700 caps label
+  for the ones that hand you a RESULT (FRONT LABEL, BACK LABEL,
+  MARKETING ASSETS). Stops at 303.38 / 469.98 / 636.58 / 803.18 /
+  969.79 / 1136.39, line y 754.18 at 4px from the red start dot at
+  142.06, labels on baseline 788.6, button r34 at 1302.86 with the
+  artboard's own 34.3-long 3px arrow. A future big dot is white with a
+  black ring, a future small dot is solid black. THICK now lands ON the
+  current page's stop (no more half-way). NOTE: the artboard labels stop
+  5 "Back Label Details" a second time — a copy/paste slip; it is the
+  BOTTLE page, as that step's own card says. GEO drops to 11px or six
+  Mtavruli labels collide.
+  (2) FOLDER MARK traced verbatim from the artboard (two paths, white
+  fill + 0.75 black stroke) at 1233.31,34.67 — it straddles the header
+  edge on purpose. The header menu row's right edge moved 1303 -> 1200
+  to clear it; the owner's artboard header carries only "8K", so the
+  collision with ENG/GEO was not visible there.
+  (3) MARKETING ASSETS rebuilt from the new Assets pair: FIVE images
+  again (engine, fake path, checkout carousel and stage labels all went
+  back to 5), a 274-square HERO plus four thumbs, and the whole block
+  ~31px lower. The thumbs take one of the owner's two shapes — a 2x2 of
+  122s (no product page) or a single column of four 62s (with it).
+  Frame y 274.6 h 342.8, rules 274 / 411.5 / 891.25, right edge 1062.5
+  or 1302.5. Headings: bold title on baseline 184, two 12px lines on
+  213 and 227. The page column now carries the browser at 921.5,310.5
+  (350.8 wide) with the QR at 925.5,548.5 and its italic caption.
+  (4) THE WALKTHROUGH. A first-time visitor's press of the red arrow
+  plays the whole job through on a finished sample instead of dropping
+  them in an empty form. It runs the REAL pages driven by demo state —
+  the fields type themselves in, the three designs arrive one by one and
+  one is picked, the market picker opens and chooses, the bottle
+  sections tick on, the asset run plays its stages — so the walkthrough
+  can never drift from the product. The black card above the arrow is
+  the artboard's (191.2 wide, foot on 685.72, 20.6 pointer to 706.31)
+  and travels with the button, which rides the stop being explained.
+  Seven cards; the last is the short one with "Let's build your pack!"
+  and the arrow back home, which wipes the demo state, sets
+  nui-tutorial-seen and starts the real thing from the top. While it
+  plays, a transparent sheet over the content band swallows clicks so
+  nothing can derail the story, and the assets + bottle-autodetect
+  effects are held back so it can never reach the paid generator.
+  SAMPLE ASSETS in public/newui/demo: three engine-built label designs
+  and a back label pulled from a real mock-mode run, and the product
+  shots / five marketing images / product page cropped out of the
+  owner's own Assets artboards. The labels (mandolin player) and the
+  photographed bottles (deer) are from DIFFERENT runs — the owner said
+  "pick any, we can update it later".
 - ROUND 70 (owner: "Upload label is not working", 2026-09-16): the
   bottle-page label upload was rewritten. THREE faults, all of them
   silent: (a) a file input fires NO change event when the same file is

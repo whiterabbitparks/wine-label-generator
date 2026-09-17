@@ -75,44 +75,55 @@ type PageKey = (typeof ORDER)[number];
    dots (labels below them in the black footer) and a big round red NEXT
    button at the right. Nothing else lives in the footer. */
 const BAR_RED = "#B71318";
-const PROG_Y = 753.7;          /* dot + line centre = the band edge */
-const DOT_R = 4.35;            /* station dot */
-const START_R = 5.2;           /* the filled red start dot */
-const LINE_H = 3.6;
-const LABEL_BASE = 788.2;      /* white station labels' baseline */
-const NEXT_R = 27.2;           /* red round button (round 65: −20%) */
-const NEXT_X = 1268.4;         /* its centre on working pages … */
+/* ROUND 71 (owner's New_Progress-Bar artboards, read straight out of the
+   SVG — its viewBox is our 1440x822.86, so these ARE page units): every
+   wizard page now owns a labelled stop. The stops alternate — a small dot
+   under a light label for the pages you FILL IN, a big dot under a bold
+   caps label for the pages that hand you a RESULT. */
+const PROG_Y = 754.18;         /* dot + line centre = the band edge */
+const BAR_X0 = 142.06;         /* the filled red start dot */
+const START_R = 4.92;
+const DOT_BIG = 4.92;
+const DOT_SMALL = 3.15;
+const LINE_H = 4;
+const LABEL_BASE = 788.6;      /* white station labels' baseline */
+const NEXT_R = 34;             /* red round button */
+const NEXT_X = 1302.86;        /* its centre on working pages … */
 const WELCOME_X = 168.1;       /* … and on the welcome page */
-const CIRCLE_X = [142.06, 428.7, 720.2, 1011.8];
-/* round 53 #8 (owner): the bar words jump to the RESULT pages */
-const STEPS: { label: string; page: PageKey }[] = [
-  { label: "", page: "vision" },
-  { label: "Front Label", page: "options" },
-  { label: "Back Label", page: "backdesign" },
-  { label: "Marketing Assets", page: "bottle" },   /* round 57 #4 */
+const STEPS: { x: number; label: string; page: PageKey; big: boolean }[] = [
+  { x: 303.38, label: "Front Label Details", page: "vision", big: false },
+  { x: 469.98, label: "FRONT LABEL", page: "options", big: true },
+  { x: 636.58, label: "Back Label Details", page: "backdetails", big: false },
+  { x: 803.18, label: "BACK LABEL", page: "backdesign", big: true },
+  /* the artboard repeats "Back Label Details" here — a copy/paste slip in
+     the mock; the stop is the BOTTLE page, as its own STEP 5 card says */
+  { x: 969.79, label: "Bottle Details", page: "bottle", big: false },
+  { x: 1136.39, label: "MARKETING ASSETS", page: "assets", big: true },
 ];
+const CIRCLE_X = STEPS.map((s2) => s2.x);
 /* ROUND 63 (owner): the red line stops HALFWAY to the next station while
    its details are being filled in, and lands ON the station when that
    step's result exists. On checkout it runs up to the red button. */
-const MID = (a: number, b: number) => (a + b) / 2;
 /* the boards whose baked title is covered and redrawn bigger (round 63) */
 const PAGE_TITLE: Partial<Record<PageKey, string>> = {
   options: "FRONT LABEL OPTIONS", backdesign: "BACK LABEL DESIGN",
   bottle: "BOTTLE", assets: "MARKETING ASSETS", checkout: "FINAL PACK",
 };
+/* ROUND 71: one stop per page, so the red line lands exactly ON the
+   current page's stop instead of stopping half way. */
 const THICK: Record<PageKey, number | null> = {
   welcome: null,
-  vision: MID(CIRCLE_X[0], CIRCLE_X[1]),        /* half way to Front Label */
-  loader: MID(CIRCLE_X[0], CIRCLE_X[1]),
-  options: CIRCLE_X[1],                          /* Front Label */
-  backdetails: MID(CIRCLE_X[1], CIRCLE_X[2]),    /* half way to Back Label */
-  backdesign: CIRCLE_X[2],                       /* Back Label */
-  bottle: MID(CIRCLE_X[2], CIRCLE_X[3]),         /* half way to Marketing */
-  assets: CIRCLE_X[3],                           /* Marketing Assets */
+  vision: CIRCLE_X[0],
+  loader: CIRCLE_X[0],
+  options: CIRCLE_X[1],
+  backdetails: CIRCLE_X[2],
+  backdesign: CIRCLE_X[3],
+  bottle: CIRCLE_X[4],
+  assets: CIRCLE_X[5],
   checkout: NEXT_X - NEXT_R,                     /* up to the red button */
 };
 /* highest station index REACHED — that dot (and earlier ones) turn red */
-const STEP_OF: Record<PageKey, number> = { welcome: 0, vision: 0, loader: 0, options: 1, backdetails: 1, backdesign: 2, bottle: 2, assets: 3, checkout: 3 };
+const STEP_OF: Record<PageKey, number> = { welcome: -1, vision: 0, loader: 0, options: 1, backdetails: 2, backdesign: 3, bottle: 4, assets: 5, checkout: 5 };
 
 /* ROUND 63: the bar no longer eats a white strip — every page's content
    band runs to the footer edge and the bar paints on top of it. */
@@ -206,6 +217,44 @@ const DEMO_FRONT: Record<string, string> = {
   classification: "Grand Cru Classé", vintage: "2018", grape: "Cabernet Sauvignon",
   regionCountry: "Bordeaux, France", special: "Vieilles Vignes", sweetness: "Dry",
   colour: "Red", wineType: "Still Wine", alcohol: "12.5", volume: "750",
+};
+
+/* ================= ROUND 71 #4: the first-run WALKTHROUGH =============
+   A visitor's first press of the red arrow does NOT drop them into an
+   empty form — it plays the whole job through on a finished sample
+   project, one bar stop at a time, with the fields typing themselves in.
+   It runs on the REAL pages driven by demo state, so the walkthrough can
+   never drift away from the product. "Let's build your pack!" wipes it
+   and starts the real thing from the top.
+   The sample is one of the owner's own runs: three engine-built label
+   designs, its back label, and the product shots / marketing images /
+   product page lifted from their Assets artboards. */
+const TUT_D = "/newui/demo/";
+const TUT_LABELS = [TUT_D + "label1.jpg", TUT_D + "label2.jpg", TUT_D + "label3.jpg"];
+const TUT_LIFE = [1, 2, 3, 4, 5].map((n) => `${TUT_D}life${n}.jpg`);
+const TUT_PAGES: PageKey[] = ["vision", "options", "backdetails", "backdesign", "bottle", "assets", "checkout"];
+/* the black card above the arrow — copy as approved, typos fixed */
+const TUT_CARDS: { step: string; title: string[]; body: string[] }[] = [
+  { step: "STEP 1", title: ["Your Vision &", "Front Label Details"], body: ["Tell me what you picture,", "and the details that belong", "on your front label."] },
+  { step: "STEP 2", title: ["Front Label"], body: ["Voilà — three designs to", "choose from.", "Pick your favourite."] },
+  { step: "STEP 3", title: ["Back Label Details,", "Barcode & QR Code"], body: ["A few more details, and I'll", "build a back label that meets", "your market's rules."] },
+  { step: "STEP 4", title: ["Back Label"], body: ["Done. Print-ready, and", "compliant with the markets", "you chose."] },
+  { step: "STEP 5", title: ["Bottle Details"], body: ["Tell me about the bottle and", "the closure, so I can", "photograph your wine exactly", "as it will look on the shelf."] },
+  { step: "STEP 6", title: ["Marketing Assets"], body: ["Two product shots, five", "marketing images, and your", "product page if you asked", "for one."] },
+  { step: "", title: ["Let's build", "your pack!"], body: [] },
+];
+const DEMO_VISION = "An old winemaker resting under a fig tree with his mandolin, a rooster at his feet — warm, rustic, Georgian.";
+const DEMO_DESC = "A dry red wine from old Saperavi vines. Deep garnet colour; dark berries, tobacco leaf and warm spice on the nose; firm but polished tannins carry a long mineral finish. Eight months in traditional qvevri.";
+const DEMO_BACK: Record<string, string> = {
+  producerCompany: '"Popiashvili Cellars" LLC', producerAddress: "#36 S. Chikovani st. 0171 Tbilisi, Georgia",
+  importer: '"Teller Wines" LLC', importerAddress: "148 W 68 st. 10023 NYC, USA",
+  bottlingDate: "28/04/2026", lot: "L2606242", web: "www.popiashvili.com",
+};
+const DEMO_BOTTLE = { type: "Bordeaux", color: "Olive Green", closure: "Cork", finish: "Matte" };
+/* the card's own geometry, straight off the artboard */
+const TB = {
+  w: 191.2, bottom: 685.72, pad: 16.4, full: 171.43, short: 102.86,
+  tipY: 706.31, tipW: 20.6, rule: 155.5,
 };
 
 /* round 52 #3: placeholder terms text — long enough to need the scroll */
@@ -552,6 +601,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
   /* round 17 #2: the front label's wording suggests the bottle type */
   useEffect(() => {
+    if (tutRef.current >= 0) return;          /* round 71 #4 */
     if (page !== "bottle" || bottleTouched.current) return;
     const txt = [f.wineType, f.grape, f.wine, f.appellation, f.regionCountry, f.special, f.classification].filter(Boolean).join(" ").toLowerCase();
     let type = "";
@@ -567,6 +617,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
+  /* ---- ROUND 71 #4: walkthrough state ---- */
+  const [tut, setTut] = useState(-1);          /* -1 = off, else 0..6 */
+  const tutRef = useRef(-1);
+  useEffect(() => { tutRef.current = tut; }, [tut]);
+  const tutTok = useRef(0);                    /* cancels a half-played step */
+
   const [packSel, setPackSel] = useState<boolean[]>([true, true, true, false]);
   const [agree, setAgree] = useState(false);
   const [warn, setWarn] = useState("");
@@ -616,6 +672,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
      generation run (2 product shots + 5 lifestyle) unless the same brief
      is already generated. Sequential on the server (~5 imgs/min cap). */
   useEffect(() => {
+    /* round 71 #4: the walkthrough paints its own sample set — it must
+       never reach the paid generator */
+    if (tutRef.current >= 0) return;
     if (page !== "assets" || assetsRunning.current) return;
     /* ROUND 47: an uploaded own label stands in for the generated front —
        otherwise a selected dream is still required */
@@ -647,7 +706,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       /* round 56 #3 (TEMP dev switch): fake the whole run with whatever
          art already exists — same stages, no API, no cost */
       if (!liveGenRef.current) {
-        setAssets({ life: [] }); setLifeTarget(4);
+        setAssets({ life: [] }); setLifeTarget(5);
         assetT.current = { run: Date.now(), stage: Date.now() };
         const lab = sel.preview || sel.dream;
         setAssetsStage("front shot"); await sleep(700);
@@ -656,8 +715,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           setAssetsStage("back shot"); await sleep(550);
           setAssets((a2) => ({ ...a2, back: { full: backPng, prev: backPng } }));
         }
-        for (let i = 0; i < 4; i++) {
-          setAssetsStage(`lifestyle ${i + 1}/4`); await sleep(420);
+        for (let i = 0; i < 5; i++) {
+          setAssetsStage(`lifestyle ${i + 1}/5`); await sleep(420);
           setAssets((a2) => { const life = [...a2.life]; life[i] = { full: lab, prev: lab }; return { ...a2, life }; });
         }
         setAssetsSig(sig);
@@ -667,7 +726,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       }
       const got = { front: "", back: "", life: [] as string[] };
       try {
-        setAssets({ life: [] }); setLifeTarget(4);
+        setAssets({ life: [] }); setLifeTarget(5);
         assetT.current = { run: Date.now(), stage: Date.now() };
         setAssetsStage("preparing");
         let backData: string | null = null;
@@ -764,14 +823,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     if (!sel) return;
     if (!requestCredit("assets")) return;
     const base = lifeTarget;
-    const batch = Math.floor(base / 4);
-    setLifeTarget(base + 4);
+    const batch = Math.floor(base / 5);
+    setLifeTarget(base + 5);
     moreRunning.current = true;
     assetT.current = { run: Date.now(), stage: Date.now() };
     try {
       if (!liveGenRef.current) {
-        for (let i = 0; i < 4; i++) {
-          setAssetsStage(`lifestyle ${i + 1}/4`); await sleep(450);
+        for (let i = 0; i < 5; i++) {
+          setAssetsStage(`lifestyle ${i + 1}/5`); await sleep(450);
           setAssets((a2) => { const life = [...a2.life]; const src = a2.life[i]?.prev || sel.preview || sel.dream; life[base + i] = { full: src, prev: src }; return { ...a2, life }; });
         }
       } else {
@@ -918,6 +977,168 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const i = ORDER.indexOf(page);
     if (i > 0) go(ORDER[i - 1] === "loader" ? "vision" : ORDER[i - 1], -1);
   }, [page, go]);
+
+  /* ================= ROUND 71 #4: the walkthrough driver ==============
+     Each step plays a short script against the REAL page state, so what
+     the visitor watches is the actual product filling itself in. Every
+     script is cancellable: bumping the token abandons the one in flight
+     (they can press the arrow faster than the typing). */
+  const tutReset = useCallback(() => {
+    setVision(""); setSketch(null); setF({ width: "110", height: "80" }); setB({});
+    setDreams([]); setStyleVars([[], [], []]); setSelected(-1); setFrontSig("");
+    setBackPng(""); setBackSig(""); setBackDims({ w: 1, h: 1 });
+    setMarkets([]); setNoComp(true); setGtin(""); setQrMode(""); setIngredients("");
+    setBottle({ type: "Bordeaux", color: "Olive Green", closure: "Cork", finish: "Matte" });
+    setWineColor(""); bottleTouched.current = false;
+    setAssets({ life: [] }); setAssetsSig(""); setAssetsStage("");
+    setCarIdx(0); setAgree(false); setProductUrl("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const startTutorial = useCallback(() => {
+    tutTok.current++;
+    tutReset();
+    tutRef.current = 0; setTut(0);
+    go("vision");
+  }, [go, tutReset]);
+
+  const endTutorial = useCallback(() => {
+    tutTok.current++;
+    tutRef.current = -1; setTut(-1);
+    tutReset();
+    try { localStorage.setItem("nui-tutorial-seen", "1"); } catch { }
+    go("welcome", -1);
+  }, [go, tutReset]);
+
+  useEffect(() => {
+    if (tut < 0) return;
+    const tok = ++tutTok.current;
+    const live = () => tok === tutTok.current;
+    const hold = (ms: number) => new Promise<boolean>((r) => setTimeout(() => r(live()), ms));
+    const type = async (text: string, put: (v: string) => void, ms = 14) => {
+      for (let i = 1; i <= text.length; i++) { put(text.slice(0, i)); if (!(await hold(ms))) return false; }
+      return true;
+    };
+    const field = async (k: string, v: string) => type(v, (x) => setF((m) => ({ ...m, [k]: x })), 18);
+    const backField = async (k: string, v: string) => type(v, (x) => setB((m) => ({ ...m, [k]: x })), 10);
+
+    /* anything the visitor jumped over is filled in at once, so each step
+       stands on its own however they got there */
+    const seed = () => {
+      if (tut > 0) { setVision(DEMO_VISION); setF((m) => ({ ...m, ...DEMO_FRONT })); }
+      if (tut > 1) {
+        setDreams(["traditional", "contemporary", "punk"].map((st2, i) => ({ style: st2, dream: TUT_LABELS[i], preview: TUT_LABELS[i] })));
+        setSelected(1);
+      }
+      if (tut > 2) {
+        setB({ description: DEMO_DESC, ...DEMO_BACK });
+        setGtin("4860012345676"); setQrMode("create"); setMarkets(["EU"]); setNoComp(false);
+      }
+      if (tut > 3) {
+        const pr = new Image();
+        pr.onload = () => { setBackDims({ w: pr.width, h: pr.height }); setBackPng(pr.src); };
+        pr.src = TUT_D + "back-label.png";
+      }
+      if (tut > 4) { bottleTouched.current = true; setBottle({ ...DEMO_BOTTLE }); setWineColor("Red"); }
+      if (tut > 5) {
+        setLifeTarget(5); setAssetsStage("");
+        setAssets({
+          front: { full: TUT_D + "shot-front.jpg", prev: TUT_D + "shot-front.jpg" },
+          back: { full: TUT_D + "shot-back.jpg", prev: TUT_D + "shot-back.jpg" },
+          life: TUT_LIFE.map((u) => ({ full: u, prev: u })),
+        });
+      }
+    };
+    seed();
+
+    (async () => {
+      /* let the page slide land before anything starts moving */
+      if (!(await hold(SLIDE_MS + 260))) return;
+      switch (tut) {
+        case 0: {
+          if (!(await type(DEMO_VISION, setVision, 13))) return;
+          if (!(await hold(420))) return;
+          for (const k of ["producer", "wine", "appellation", "classification", "vintage", "grape", "regionCountry", "special", "sweetness", "colour", "wineType", "alcohol", "volume"]) {
+            if (!(await field(k, DEMO_FRONT[k] || ""))) return;
+            if (!(await hold(90))) return;
+          }
+          break;
+        }
+        case 1: {
+          /* the three designs arrive one after the other, then one is picked */
+          setDreams([]); setSelected(-1);
+          for (let i = 0; i < 3; i++) {
+            if (!(await hold(i ? 560 : 260))) return;
+            setDreams((d) => [...d.slice(0, i), { style: ["traditional", "contemporary", "punk"][i], dream: TUT_LABELS[i], preview: TUT_LABELS[i] }, ...d.slice(i + 1)]);
+          }
+          if (!(await hold(900))) return;
+          setSelected(1);
+          break;
+        }
+        case 2: {
+          if (!(await type(DEMO_DESC, (v) => setB((m) => ({ ...m, description: v })), 8))) return;
+          if (!(await hold(320))) return;
+          if (!(await type("4860012345676", setGtin, 55))) return;
+          if (!(await hold(240))) return;
+          setQrMode("create");
+          if (!(await hold(420))) return;
+          for (const k of ["producerCompany", "producerAddress", "importer", "importerAddress", "bottlingDate", "lot", "web"]) {
+            if (!(await backField(k, DEMO_BACK[k]))) return;
+            if (!(await hold(80))) return;
+          }
+          /* the market picker opens, takes its pick and closes again */
+          if (!(await hold(360))) return;
+          setMarketOpen(true);
+          if (!(await hold(900))) return;
+          setMarkets(["EU"]); setNoComp(false);
+          if (!(await hold(800))) return;
+          setMarketOpen(false);
+          break;
+        }
+        case 3: {
+          setBackPng("");
+          if (!(await hold(520))) return;
+          const probe = new Image();
+          probe.onload = () => { if (live()) { setBackDims({ w: probe.width, h: probe.height }); setBackPng(probe.src); } };
+          probe.src = TUT_D + "back-label.png";
+          break;
+        }
+        case 4: {
+          /* every section ticks itself on, in the order a customer would */
+          bottleTouched.current = true;
+          setWineColor(""); setBottle({ type: "", color: "", closure: "", finish: "" });
+          const picks: [string, string][] = [["wineColor", "Red"], ["type", DEMO_BOTTLE.type], ["color", DEMO_BOTTLE.color], ["closure", DEMO_BOTTLE.closure], ["finish", DEMO_BOTTLE.finish]];
+          for (const [k, v] of picks) {
+            if (!(await hold(620))) return;
+            if (k === "wineColor") setWineColor(v);
+            else setBottle((m) => ({ ...m, [k]: v }));
+          }
+          break;
+        }
+        case 5: {
+          /* the real run's stages, on the sample images */
+          setAssets({ life: [] }); setLifeTarget(5);
+          assetT.current = { run: Date.now(), stage: Date.now() };
+          setAssetsStage("front shot");
+          if (!(await hold(1500))) return;
+          setAssets((a) => ({ ...a, front: { full: TUT_D + "shot-front.jpg", prev: TUT_D + "shot-front.jpg" } }));
+          setAssetsStage("back shot");
+          if (!(await hold(1200))) return;
+          setAssets((a) => ({ ...a, back: { full: TUT_D + "shot-back.jpg", prev: TUT_D + "shot-back.jpg" } }));
+          for (let i = 0; i < 5; i++) {
+            setAssetsStage(`lifestyle ${i + 1}/5`);
+            if (!(await hold(950))) return;
+            setAssets((a) => { const life = [...a.life]; life[i] = { full: TUT_LIFE[i], prev: TUT_LIFE[i] }; return { ...a, life }; });
+          }
+          setAssetsStage("");
+          break;
+        }
+        default: break;   /* the Final Pack needs no script — it is already built */
+      }
+    })();
+    return () => { /* the token bump in the next run cancels this one */ };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tut]);
 
   const sigFront = () => JSON.stringify({ vision, sketch: !!sketch, f });
   /* round 60 #4: qrMode AND the viewed variation are part of the brief —
@@ -1984,28 +2205,27 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         </>);
       }
       case "assets": {
-        /* ROUND 59 #5 (owner's Assets@3x mocks, rebuilt 1:1): FOUR equal
-           marketing images in a 2×2 grid (densifying 3×3/4×4 with More
-           Variations), the two shots in a SPLIT first column, and the
-           Product-Landing-Page column (browser 340 + QR under it) ONLY
-           when a page was requested — or on an empty preview jump.
-           Otherwise the dashed frame simply ENDS after the grid.
-           Geometry from the mock: frame y 243.5 h 343.5; dividers 273.5 /
-           410 / 821; grid box 273² at (479, 278.75), cells 122 + 29 gaps;
-           browser at (892, 279); QR 36² at (892, 522). */
+        /* ROUND 71 #3 (owner's new Assets@3x pair, measured off the 3x
+           artboards): FIVE marketing images — a 274-square HERO plus four
+           thumbs — and the whole block sits ~31px lower than before.
+           The thumbs take one of two shapes, exactly as the owner drew
+           them: a 2x2 grid of 122s when there is no product page, or a
+           single 62-wide column of four when the page column is present.
+           Frame y 274.6 h 342.8; rules at 274 / 411.5 (+891.25 with the
+           page column); right edge 1062.5, or 1302.5 with it. */
         const custom = !!customLabel;
         const emptyJump = !custom && selected < 0;
         const landingCol = !custom && (qrMode === "create" || emptyJump);
-        const BOX = { x: 137.5, y: 243.5, w: landingCol ? 1165.5 : 683.5, h: 343.5 };
-        const GRID = 273, G2 = 29, GX = 479, GY = 278.75;
-        const N = Math.max(4, lifeTarget);
-        const cols = N <= 4 ? 2 : N <= 9 ? 3 : 4;
-        const T = (GRID - (cols - 1) * G2) / cols;
+        const BOX = { x: 137.14, y: 274.6, w: (landingCol ? 1302.5 : 1062.5) - 137.14, h: 342.8 };
+        const R1 = 274, R2 = 411.5, R3 = 891.25;   /* the dashed column rules */
+        const Y0 = 307.75, CH = 274.5;             /* the content band */
+        const HERO = { x: 446, w: 274 };
+        const N = Math.max(5, lifeTarget);
         const head = (x: number, title: string, sub: string, spec: string) => (
           <span key={"h" + x}>
-            <span style={{ ...px(x, 180 - 13, 320, 16), font: `700 15px ${HNW}`, lineHeight: "16px" }}>{t(title)}</span>
-            <span style={{ ...px(x, 198 - 12, 320, 30), font: `12px ${HNW}`, color: "#111", lineHeight: "15px", whiteSpace: "pre-line" }}>{t(sub)}</span>
-            <span style={{ ...px(x, 232 - 12, 320, 16), font: `12px ${HNW}`, color: "#111", lineHeight: "15px" }}>{spec}</span>
+            <span style={{ ...px(x, baseTop(184, 15), 400, 18), font: `700 15px ${HNW}`, lineHeight: "15px", whiteSpace: "nowrap" }}>{t(title)}</span>
+            <span style={{ ...px(x, baseTop(213, 12), 400, 32), font: `12px ${HNW}`, color: "#111", lineHeight: "14px", whiteSpace: "pre-line" }}>{t(sub)}</span>
+            <span style={{ ...px(x, baseTop(227, 12), 400, 16), font: `12px ${HNW}`, color: "#111", lineHeight: "14px" }}>{spec}</span>
           </span>
         );
         /* round 57 #3: `quiet` cells show NO message — just the grey box */
@@ -2027,69 +2247,86 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               )}
             </div>
           );
+        /* the four thumbs, in whichever shape this layout calls for */
+        const thumbs = landingCol
+          ? Array.from({ length: 4 }, (_, k) => ({ x: 757.5, y: Y0 + k * 70.83, s: 62 }))
+          : Array.from({ length: 4 }, (_, k) => ({ x: 754 + (k % 2) * 152, y: Y0 + Math.floor(k / 2) * 152, s: 122 }));
+        const vrule = (x: number, key: string) => (
+          <span key={key}>
+            <div style={{ ...px(x, BOX.y, 1, BOX.h), background: `repeating-linear-gradient(180deg,${DASH})`, pointerEvents: "none" }} />
+            {cross(x, BOX.y, key + "a")}{cross(x, BOX.y + BOX.h, key + "b")}
+          </span>
+        );
         return (<>
           {patch(0, 160, W, 500, "aswipe")}
           {custom
-            ? head(137.5, "Product Shot", "Face", "Transparent PNG / 700x2500px / 72dpi")
-            : head(137.5, "Two Product Shots", "Face & Back", "Transparent PNG / 700x2500px / 72dpi")}
-          {head(411, "Four Marketing Images", "Product placed in contextual environments", "JPEG / 2500x2500px / 72dpi")}
-          {landingCol && head(857, "Product Landing Page", "You will be provided with the link\nto your product page.", "")}
+            ? head(137.14, "Product Shot", "Face", "Transparent PNG / 700x2500px / 72dpi")
+            : head(137.14, "Two Product Shots", "Face & Back", "Transparent PNG / 700x2500px / 72dpi")}
+          {head(R2 + 0.3, "Five Marketing Images", "Product placed in contextual environments", "JPEG / 2500x2500px / 72dpi")}
+          {landingCol && head(R3 + 0.3, "Product Landing Page", "You will be provided with the link\nto your product page.", "")}
           {/* status line above the progress bar (round 47) */}
           {assetsStage && (
-            <span style={{ ...px(0, 634, W, 16), font: `italic 12px ${HNW}`, color: "#BA141A", lineHeight: "15px", textAlign: "center", display: "block" }}>
+            <span style={{ ...px(0, 646, W, 16), font: `italic 12px ${HNW}`, color: "#BA141A", lineHeight: "15px", textAlign: "center", display: "block" }}>
               {t("Creating your marketing assets")} — {tStage(assetsStage)}…</span>
           )}
           {dashedBox(BOX.x, BOX.y, BOX.w, BOX.h, "asd1")}
-          {!custom && <div style={{ ...px(273.5, BOX.y, 1, BOX.h), background: `repeating-linear-gradient(180deg,${DASH})`, pointerEvents: "none" }} />}
-          <div style={{ ...px(410, BOX.y, 1, BOX.h), background: `repeating-linear-gradient(180deg,${DASH})`, pointerEvents: "none" }} />
-          {landingCol && <div style={{ ...px(821, BOX.y, 1, BOX.h), background: `repeating-linear-gradient(180deg,${DASH})`, pointerEvents: "none" }} />}
+          {!custom && vrule(R1, "asr1")}
+          {vrule(R2, "asr2")}
+          {landingCol && vrule(R3, "asr3")}
           {cross(BOX.x, BOX.y, "as1")}{cross(BOX.x, BOX.y + BOX.h, "as2")}
           {cross(BOX.x + BOX.w, BOX.y, "as3")}{cross(BOX.x + BOX.w, BOX.y + BOX.h, "as4")}
-          {!custom && (<>{cross(273.5, BOX.y, "as5")}{cross(273.5, BOX.y + BOX.h, "as6")}</>)}
-          {cross(410, BOX.y, "as7")}{cross(410, BOX.y + BOX.h, "as8")}
-          {landingCol && (<>{cross(821, BOX.y, "as9")}{cross(821, BOX.y + BOX.h, "as10")}</>)}
-          {/* product shots — split col 1, centered per half */}
+          {/* product shots — split col 1, centred in each half */}
           {custom
-            ? slot(213.75, 277, 120, 274, assets.front, "front shot", "contain")
+            ? slot((BOX.x + R2) / 2 - 60, Y0, 120, CH, assets.front, "front shot", "contain")
             : (<>
-              {slot(145.5, 277, 120, 274, assets.front, "front shot", "contain")}
-              {slot(281.75, 277, 120, 274, assets.back, "back shot", "contain")}
+              {slot((BOX.x + R1) / 2 - 60, Y0, 120, CH, assets.front, "front shot", "contain")}
+              {slot((R1 + R2) / 2 - 60, Y0, 120, CH, assets.back, "back shot", "contain")}
             </>)}
-          {/* the marketing grid — equal squares, no hero */}
-          {Array.from({ length: N }, (_, k) => {
-            const x = GX + (k % cols) * (T + G2);
-            const y = GY + Math.floor(k / cols) * (T + G2);
-            return <span key={"mi" + k}>{slot(x, y, T, T, assets.life[k], `lifestyle ${(k % 4) + 1}/4`, "cover", k > 0)}</span>;
-          })}
-          {/* landing column: browser + QR under it (mock) */}
+          {/* the hero, then its four thumbs */}
+          {slot(HERO.x, Y0, HERO.w, CH, assets.life[0], "lifestyle 1/5", "cover")}
+          {thumbs.map((th, k) => (
+            <span key={"mi" + k}>{slot(th.x, th.y, th.s, th.s, assets.life[k + 1], `lifestyle ${((k + 1) % N) + 1}/5`, "cover", true)}</span>
+          ))}
+          {/* landing column: browser + QR and its caption underneath */}
           {landingCol && (() => {
             /* round 60 #2 (owner: "two loaders"): ONE box, ONE glass —
                the same loader carries from generation into the iframe
                load; only then the page appears */
             const ready = !!productUrl && selected >= 0;
-            const BH = 340 / W * 823 + 13;
+            const BW = 350.8, BH = BW / W * 823 + 13;
+            /* round 71 #4: the walkthrough has no published page to frame —
+               it shows the sample one, and its QR, as a picture */
+            if (tut >= 0) return (<>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`${TUT_D}landing.jpg`} alt="product page"
+                style={{ ...px(921.5, 310.5, BW, BH), objectFit: "cover", borderRadius: 5, boxShadow: "0 8px 22px rgba(0,0,0,0.2)", animation: `nuiFadeIn ${FADE_MS}ms ${EASE}` }} />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`/api/qr?u=${encodeURIComponent("https://8klabels.com/p/demo")}`} alt="QR" style={{ ...px(925.5, 548.5, 34.3, 34.3) }} />
+              <span style={{ ...px(975, baseTop(582.5, 12), 300, 16), font: `italic 12px ${HNW}`, color: "#111", lineHeight: "12px", whiteSpace: "nowrap" }}>{t("Product landing page")}</span>
+            </>);
             return (<>
-              <div style={{ ...px(892, 279, 340, BH), background: "#fff", borderRadius: ready ? 5 : 0, boxShadow: ready ? "0 8px 22px rgba(0,0,0,0.2)" : "none", overflow: "hidden" }}>
+              <div style={{ ...px(921.5, 310.5, BW, BH), background: "#fff", borderRadius: ready ? 5 : 0, boxShadow: ready ? "0 8px 22px rgba(0,0,0,0.2)" : "none", overflow: "hidden" }}>
                 {ready && (<>
                   <div style={{ height: 13, background: "#E8E8E6", display: "flex", alignItems: "center", gap: 3, padding: "0 6px" }}>
                     {["#FF5F57", "#FEBC2E", "#28C840"].map((c) => <span key={c} style={{ width: 4.5, height: 4.5, borderRadius: 3, background: c }} />)}
                     <span style={{ flex: 1, margin: "0 8px", height: 7, background: "#fff", borderRadius: 3, font: `5px ${HNW}`, color: "#999", paddingLeft: 4, lineHeight: "7px" }}>8klabels.com{productUrl}</span>
                   </div>
-                  <iframe src={productUrl} title="product page" onLoad={() => setPpLoaded(true)} style={{ width: W, height: 823, transform: `scale(${340 / W})`, transformOrigin: "0 0", border: 0, pointerEvents: "none" }} />
+                  <iframe src={productUrl} title="product page" onLoad={() => setPpLoaded(true)} style={{ width: W, height: 823, transform: `scale(${BW / W})`, transformOrigin: "0 0", border: 0, pointerEvents: "none" }} />
                 </>)}
                 {(!ready || !ppLoaded) && (
                   <div style={{ position: "absolute", inset: 0, background: assetsStage || ready ? "#F4F3EE" : "#ECECEA", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     {assetsStage || ready
-                      ? miniGlass("landing", ready ? Math.max(ppFill, 0.55) : Math.min(0.9, assetFill("lifestyle 4/4")))
+                      ? miniGlass("landing", ready ? Math.max(ppFill, 0.55) : Math.min(0.9, assetFill("lifestyle 5/5")))
                       : <button onClick={() => go("vision", -1)} style={{ ...ghost, position: "relative", width: "100%", height: "100%", font: `12px ${HNW}`, color: "#8a887e", textTransform: "none", cursor: "pointer" }}>{t("Create front label")}</button>}
                   </div>
                 )}
               </div>
-              {ready && ppLoaded && (
-                /* eslint-disable-next-line @next/next/no-img-element */
+              {ready && ppLoaded && (<>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={`/api/qr?u=${encodeURIComponent("https://8klabels.com" + productUrl)}`} alt="QR"
-                  style={{ ...px(892, 522, 36, 36) }} />
-              )}
+                  style={{ ...px(925.5, 548.5, 34.3, 34.3) }} />
+                <span style={{ ...px(975, baseTop(582.5, 12), 300, 16), font: `italic 12px ${HNW}`, color: "#111", lineHeight: "12px", whiteSpace: "nowrap" }}>{t("Product landing page")}</span>
+              </>)}
             </>);
           })()}
         </>);
@@ -2112,13 +2349,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         /* ROUND 47: own-label orders deliver ONLY the marketing assets */
         const slides: Slide[] = customLabel ? [
           { name: "Product_Shot_Front.png", img: assets.front?.prev, kind: "front" },
-          ...Array.from({ length: Math.max(4, assets.life.length) }, (_, i) => ({ name: `Marketing_Image_${i + 1}.jpg`, img: assets.life[i]?.prev, kind: "front" as const })),
+          ...Array.from({ length: Math.max(5, assets.life.length) }, (_, i) => ({ name: `Marketing_Image_${i + 1}.jpg`, img: assets.life[i]?.prev, kind: "front" as const })),
         ] : [
           { name: "Front_Label.svg", img: viewedDream(selected)?.preview || viewedDream(selected)?.dream || undefined, kind: "front" },
           { name: "Back_Label.svg", img: backPng || undefined, kind: "back" },
           { name: "Product_Shot_Front.png", img: assets.front?.prev, kind: "front" },
           { name: "Product_Shot_Back.png", img: assets.back?.prev, kind: "front" },
-          ...Array.from({ length: Math.max(4, assets.life.length) }, (_, i) => ({ name: `Marketing_Image_${i + 1}.jpg`, img: assets.life[i]?.prev, kind: "front" as const })),
+          ...Array.from({ length: Math.max(5, assets.life.length) }, (_, i) => ({ name: `Marketing_Image_${i + 1}.jpg`, img: assets.life[i]?.prev, kind: "front" as const })),
           /* round 53 #7: no requested QR/page → no landing slide */
           ...(qrMode === "create" ? [{ name: "Product_Page", landing: true, kind: "front" as const }] : []),
         ];
@@ -2296,8 +2533,15 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
   /* round 68 #1: any open modal freezes the bar (it still paints on top) */
   const modalOpen = !!confirmModal || !!emailModal || termsOpen || marketOpen;
-  const step = STEP_OF[page];
-  const thick = THICK[page];
+  const step = tut >= 0 ? tut : STEP_OF[page];
+  /* round 71: Mtavruli runs much wider than Latin — six stops 166.6 apart
+     only clear each other in Georgian at a smaller size */
+  const BAR_FS = lang === "ge" ? 11 : 15;
+  /* round 71 #4: while the walkthrough runs, the bar follows IT — the
+     button rides the stop being explained and the line follows it home */
+  const tutLast = TUT_CARDS.length - 1;
+  const tutX = tut < 0 ? null : tut < STEPS.length ? STEPS[tut].x : NEXT_X;
+  const thick = tut >= 0 ? (tut < STEPS.length ? STEPS[tut].x : CIRCLE_X[CIRCLE_X.length - 1]) : THICK[page];
   const bandBottom = BAND_BOTTOM[page];
   const fullSlide = (page === "vision" && prev === "welcome") || page === "welcome";
 
@@ -2405,6 +2649,15 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             );
           })()}
 
+          {/* ROUND 71 #2 (owner): the folder mark, traced verbatim out of the
+              artboard (two st4 paths: white fill, 0.75 black stroke) and
+              placed at its own coordinates — it straddles the header edge,
+              reading as a white shape on the black and as an outline on the
+              white below. Functionality still to come from the owner. */}
+          <svg viewBox="1232.5 33.9 85.1 70" style={{ ...px(1232.5, 33.9, 85.1, 70), zIndex: 6, pointerEvents: "none" }}>
+            <path d="M1233.31,103.1V38.26c0-1.98,1.34-3.59,2.99-3.59h25.27c.79,0,1.55.38,2.11,1.05l7.74,9.3c.56.67,1.32,1.05,2.11,1.05h25.27c1.65,0,2.99,1.61,2.99,3.59v7.81" fill="#fff" stroke="#000" strokeWidth="0.75" strokeMiterlimit="10" />
+            <path d="M1233.31,103.1h68.49l15.03-40.57c.88-2.38-.57-5.05-2.73-5.05h-61.95c-1.18,0-2.25.84-2.73,2.13l-16.11,43.49" fill="#fff" stroke="#000" strokeWidth="0.75" strokeMiterlimit="10" />
+          </svg>
           {/* STATIC header (real fonts, extracted geometry) */}
           <div style={{ ...px(0, 0, W, HEADER_H), background: "#000" }}>
             {/* round 56 #3 — TEMP DEV SWITCH (remove before launch); ROUND 63
@@ -2420,7 +2673,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             <button onClick={() => go("welcome", -1)} style={{ ...px(138.2, 25.5, 100, 20), ...ghost, font: `700 19px ${HNW}`, color: "#fff", textAlign: "left", textTransform: "none" }}>8K</button>
             {/* menu + ENG/GEO: one baseline, even gaps, right edge on the
                progress line's right edge x1303 (round 22 #11) */}
-            <div style={{ position: "absolute", right: W - 1303, top: 27.5, display: "flex", alignItems: "baseline", columnGap: 44 }}>
+            <div style={{ position: "absolute", right: W - 1200, top: 27.5, display: "flex", alignItems: "baseline", columnGap: 44 }}>
               {/* ROUND 63: the credit balance rides the header now (the
                   footer holds nothing but the bar) */}
               <span style={{ font: `700 13px ${HNW}`, color: "#fff", whiteSpace: "nowrap" }}>
@@ -2453,27 +2706,90 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               it just stops taking clicks while one is open */}
           <div style={{ ...px(0, 0, W, H), pointerEvents: "none", zIndex: 45 }}>
             {thick !== null && (<>
-              <div style={{ ...px(CIRCLE_X[0], PROG_Y - LINE_H / 2, Math.max(0, thick - CIRCLE_X[0]), LINE_H), background: BAR_RED, borderRadius: LINE_H / 2, transition: `width ${SLIDE_MS}ms ${EASE}` }} />
-              <div style={{ ...px(CIRCLE_X[0] - START_R, PROG_Y - START_R, START_R * 2, START_R * 2), background: BAR_RED, borderRadius: START_R }} />
-              {STEPS.map((st, i) => i === 0 ? null : (
-                <button key={"d" + i} aria-label={st.label}
-                  onClick={() => { if (st.page !== page) { barJumped.current = true; go(st.page, ORDER.indexOf(st.page) > ORDER.indexOf(page) ? 1 : -1); } }}
-                  style={{ ...px(CIRCLE_X[i] - 13, PROG_Y - 13, 26, 26), ...ghost, pointerEvents: modalOpen ? "none" : "auto" }}>
-                  <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: DOT_R * 2, height: DOT_R * 2, borderRadius: DOT_R, background: step >= i ? BAR_RED : "#fff", border: step >= i ? "none" : "1px solid #111", boxSizing: "border-box", transition: `background 300ms ${EASE}` }} />
-                </button>
-              ))}
-              {STEPS.map((st, i) => i > 0 && (
-                <button key={st.label} onClick={() => { if (st.page !== page) { barJumped.current = true; go(st.page, ORDER.indexOf(st.page) > ORDER.indexOf(page) ? 1 : -1); } }}
-                  style={{ ...px(CIRCLE_X[i] - 130, baseTop(LABEL_BASE, 14), 260, 18), ...ghost, pointerEvents: modalOpen ? "none" : "auto", font: `700 14px ${HNW}`, lineHeight: "14px", color: "#fff", textAlign: "center", textTransform: "none" }}>
+              <div style={{ ...px(BAR_X0, PROG_Y - LINE_H / 2, Math.max(0, thick - BAR_X0), LINE_H), background: BAR_RED, borderRadius: LINE_H / 2, transition: `width ${SLIDE_MS}ms ${EASE}` }} />
+              <div style={{ ...px(BAR_X0 - START_R, PROG_Y - START_R, START_R * 2, START_R * 2), background: BAR_RED, borderRadius: START_R }} />
+              {STEPS.map((st, i) => {
+                /* round 71: big dot = a result page, small dot = a page you
+                   fill in; a future big dot is white with a black ring, a
+                   future small dot is solid black */
+                const r = st.big ? DOT_BIG : DOT_SMALL;
+                const done = step >= i;
+                return (
+                  <button key={"d" + i} aria-label={st.label}
+                    onClick={() => { if (tut >= 0) { if (i !== tut) { setTut(i); go(TUT_PAGES[i], i > tut ? 1 : -1); } } else if (st.page !== page) { barJumped.current = true; go(st.page, ORDER.indexOf(st.page) > ORDER.indexOf(page) ? 1 : -1); } }}
+                    style={{ ...px(st.x - 13, PROG_Y - 13, 26, 26), ...ghost, pointerEvents: modalOpen ? "none" : "auto" }}>
+                    <span style={{
+                      position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)",
+                      width: r * 2, height: r * 2, borderRadius: r, boxSizing: "border-box",
+                      background: done ? BAR_RED : st.big ? "#fff" : "#111",
+                      border: !done && st.big ? "1px solid #111" : "none",
+                      transition: `background 300ms ${EASE}`,
+                    }} />
+                  </button>
+                );
+              })}
+              {STEPS.map((st, i) => (
+                <button key={st.label + i} onClick={() => { if (tut >= 0) { if (i !== tut) { setTut(i); go(TUT_PAGES[i], i > tut ? 1 : -1); } } else if (st.page !== page) { barJumped.current = true; go(st.page, ORDER.indexOf(st.page) > ORDER.indexOf(page) ? 1 : -1); } }}
+                  style={{ ...px(st.x - 130, baseTop(LABEL_BASE, BAR_FS), 260, 20), ...ghost, pointerEvents: modalOpen ? "none" : "auto", font: `${st.big ? 700 : 300} ${BAR_FS}px ${HNW}`, lineHeight: `${BAR_FS}px`, color: "#fff", textAlign: "center", textTransform: "none", whiteSpace: "nowrap" }}>
                   {t(st.label)}</button>
               ))}
             </>)}
+            {/* ROUND 71 #4: the walkthrough's black card — geometry lifted
+                straight off the artboard (191.2 wide, its foot on 685.72,
+                a 20.6 pointer down to 706.31), centred on the arrow and
+                travelling with it. */}
+            {tut >= 0 && tutX !== null && (() => {
+              const card = TUT_CARDS[Math.min(tut, TUT_CARDS.length - 1)];
+              const solo = card.body.length === 0;          /* the closing card */
+              const h = solo ? TB.short : TB.full;
+              const top = TB.bottom - h;
+              const L = tutX - TB.w / 2;
+              return (
+                <div key={"tut" + tut} style={{ ...px(L, top, TB.w, TB.bottom + (TB.tipY - TB.bottom) - top), pointerEvents: "none", animation: `nuiFadeIn 320ms ${EASE} both`, transition: `left ${SLIDE_MS}ms ${EASE}` }}>
+                  <div style={{ position: "absolute", left: 0, top: 0, width: TB.w, height: h, background: "#111" }} />
+                  {/* the pointer, a triangle hanging off the card's foot */}
+                  <div style={{
+                    position: "absolute", left: TB.w / 2 - TB.tipW, top: h, width: 0, height: 0,
+                    borderLeft: `${TB.tipW}px solid transparent`, borderRight: `${TB.tipW}px solid transparent`,
+                    borderTop: `${TB.tipY - TB.bottom}px solid #111`,
+                  }} />
+                  {solo ? (
+                    card.title.map((ln, i) => (
+                      <span key={i} style={{ position: "absolute", left: TB.pad, top: baseTop(34.71 + i * 27.6, 23), width: TB.w - TB.pad, font: `700 23px ${HNW}`, lineHeight: "23px", color: "#fff", whiteSpace: "nowrap" }}>{t(ln)}</span>
+                    ))
+                  ) : (<>
+                    <span style={{ position: "absolute", left: TB.pad, top: baseTop(32.06, 23), width: TB.w - TB.pad, font: `700 23px ${HNW}`, lineHeight: "23px", color: "#fff" }}>{t(card.step)}</span>
+                    {card.title.map((ln, i) => (
+                      <span key={"t" + i} style={{ position: "absolute", left: TB.pad, top: baseTop(58.06 + i * 18, 15), width: TB.w - TB.pad, font: `700 15px ${HNW}`, lineHeight: "15px", color: "#fff", whiteSpace: "nowrap" }}>{t(ln)}</span>
+                    ))}
+                    <div style={{ position: "absolute", left: TB.pad + 0.63, top: 93.67, width: TB.rule, height: 1, backgroundImage: "repeating-linear-gradient(90deg,#fff 0 5px,transparent 5px 10px)" }} />
+                    {card.body.map((ln, i) => (
+                      <span key={"b" + i} style={{ position: "absolute", left: TB.pad, top: baseTop(118.57 + i * 14.4, 12), width: TB.w - TB.pad + 6, font: `italic 12px ${HNW}`, lineHeight: "12px", color: "#fff", whiteSpace: "nowrap" }}>{t(ln)}</span>
+                    ))}
+                  </>)}
+                </div>
+              );
+            })()}
             {/* the red round NEXT button */}
             {page !== "loader" && (
               <button aria-label={page === "welcome" ? "start" : "next"} className="nui-next"
                 onClick={() => {
                   barJumped.current = false;
-                  if (page === "welcome") { setArrowFly(true); go("vision"); setTimeout(() => setArrowFly(false), SLIDE_MS + 80); }
+                  /* round 71 #4: inside the walkthrough the arrow only ever
+                     turns the page of the story */
+                  if (tut >= 0) {
+                    if (tut >= tutLast) endTutorial();
+                    else { setTut(tut + 1); go(TUT_PAGES[tut + 1]); }
+                    return;
+                  }
+                  if (page === "welcome") {
+                    /* a first-time visitor is walked through the whole job
+                       before being asked to fill anything in */
+                    let seen = true;
+                    try { seen = localStorage.getItem("nui-tutorial-seen") === "1"; } catch { }
+                    if (!seen) { startTutorial(); return; }
+                    setArrowFly(true); go("vision"); setTimeout(() => setArrowFly(false), SLIDE_MS + 80);
+                  }
                   else if (page === "vision") {
                     /* round 54 #2: a REAL generation asks for confirmation;
                        unchanged inputs just move along */
@@ -2500,19 +2816,26 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   else if (page === "assets") go("checkout");
                 }}
                 style={{
-                  position: "absolute", left: (page === "welcome" ? WELCOME_X : NEXT_X) - NEXT_R, top: PROG_Y - NEXT_R,
+                  position: "absolute", left: (tutX !== null ? tutX : page === "welcome" ? WELCOME_X : NEXT_X) - NEXT_R, top: PROG_Y - NEXT_R,
+                  transition: arrowFly ? "none" : `left ${SLIDE_MS}ms ${EASE}`,
                   width: NEXT_R * 2, height: NEXT_R * 2, borderRadius: NEXT_R, background: BAR_RED, border: "none",
                   padding: 0, cursor: "pointer", pointerEvents: modalOpen ? "none" : "auto", display: "flex", alignItems: "center", justifyContent: "center",
                   animation: arrowFly ? `btnFly ${SLIDE_MS}ms ${EASE} both` : "none",
                 }}>
-                <svg viewBox="0 0 36 24" width="28.8" height="19.2">
-                  <line x1="1" y1="12" x2="33" y2="12" stroke="#fff" strokeWidth="3.3" />
-                  <polyline points="24,2.6 34,12 24,21.4" fill="none" stroke="#fff" strokeWidth="3.3" />
+                {/* round 71: the artboard's arrow — 34.3 long, 3px stroke,
+                    its head 10.52 deep */}
+                <svg viewBox="-1.5 -12.02 37.3 24.04" width="37.3" height="24.04">
+                  <line x1="0" y1="0" x2="34.3" y2="0" stroke="#fff" strokeWidth="3" />
+                  <polyline points="23.78,-10.52 34.3,0 23.78,10.52" fill="none" stroke="#fff" strokeWidth="3" />
                 </svg>
               </button>
             )}
           </div>
 
+          {/* ROUND 71 #4: while the walkthrough plays, the page is a film —
+              it swallows clicks so nothing the visitor prods can derail the
+              story. The bar (z45) still takes its own. */}
+          {tut >= 0 && <div style={{ ...px(0, HEADER_H, W, FOOTER_Y - HEADER_H), zIndex: 12, background: "transparent" }} />}
           {/* ROUND 59 #2: the gate message floats at ROOT level so it can
               sit truly midway between the selection row and the bar line */}
           {warn && thick !== null && (
