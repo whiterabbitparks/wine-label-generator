@@ -232,7 +232,9 @@ const DEMO_FRONT: Record<string, string> = {
 const TUT_D = "/newui/demo/";
 const TUT_LABELS = [TUT_D + "label1.jpg", TUT_D + "label2.jpg", TUT_D + "label3.jpg"];
 const TUT_LIFE = [1, 2, 3, 4, 5].map((n) => `${TUT_D}life${n}.jpg`);
-const TUT_PAGES: PageKey[] = ["vision", "options", "backdetails", "backdesign", "bottle", "assets", "checkout"];
+/* round 72 #1: the closing card sits on a BLANK page — the walkthrough
+   stays on the assets page and a white sheet covers the band */
+const TUT_PAGES: PageKey[] = ["vision", "options", "backdetails", "backdesign", "bottle", "assets", "assets"];
 /* the black card above the arrow — copy as approved, typos fixed */
 const TUT_CARDS: { step: string; title: string[]; body: string[] }[] = [
   { step: "STEP 1", title: ["Your Vision &", "Front Label Details"], body: ["Tell me what you picture,", "and the details that belong", "on your front label."] },
@@ -251,6 +253,20 @@ const DEMO_BACK: Record<string, string> = {
   bottlingDate: "28/04/2026", lot: "L2606242", web: "www.popiashvili.com",
 };
 const DEMO_BOTTLE = { type: "Bordeaux", color: "Olive Green", closure: "Cork", finish: "Matte" };
+/* round 72 #8: the ghost taps — a red ring blooms where a hand would be */
+const TAP = {
+  visionBox: [250, 400], width: [476, 645], height: [650, 645],
+  firstField: [1050, 219],
+  optSelect: [692.5, 634],
+  descBox: [250, 265], barcode: [360, 468], qrBtn: [874.5, 467],
+  market: [873.5, 670], eu: [873, 330],
+  bottleRings: [[386.06, 283.57], [577.98, 283.57], [769.9, 283.57], [961.82, 283.57], [1153.74, 283.57]],
+} as const;
+/* the bottle page's option rows and the lightness knob, from its own code:
+   ring cx = COLS_X[ci] + 43.2, cy = 283.57 + row * 29.8;
+   knob cx = 1144.83 + shade * 121.64 on y 532.5 */
+const BRING = (ci: number, row: number) => [[342.86, 534.78, 726.7, 918.62, 1110.54][ci] + 43.2, 283.57 + row * 29.8] as [number, number];
+const SHADE_X = (v: number) => 1144.83 + v * 121.64;
 /* the card's own geometry, straight off the artboard */
 const TB = {
   w: 191.2, bottom: 685.72, pad: 16.4, full: 171.43, short: 102.86,
@@ -333,7 +349,7 @@ export default function NewUI() {
   useEffect(() => { try { const l = localStorage.getItem("nui-lang"); if (l === "ge") setLang("ge"); } catch { } }, []);
   const pickLang = (l: "en" | "ge") => { setLang(l); try { localStorage.setItem("nui-lang", l); } catch { } };
   const t = (s: string) => (lang === "ge" ? UI_GE[s] || SVG_GE[s] || s : s);
-  const tStage = (s: string) => (lang === "ge" ? s.replace("front shot", "წინა ფოტო").replace("back shot", "უკანა ფოტო").replace("lifestyle", "სურათი").replace("preparing", "მზადდება") : s);
+  const tStage = (s: string) => (lang === "ge" ? s.replace("front shot", "წინა ფოტო").replace("back shot", "უკანა ფოტო").replace("lifestyle", "სურათი").replace("preparing", "მზადდება").replace("publishing", "ქვეყნდება") : s);
   const [dir, setDir] = useState(1);
   const [scale, setScale] = useState(1);
   const [arrowFly, setArrowFly] = useState(false);
@@ -622,6 +638,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const tutRef = useRef(-1);
   useEffect(() => { tutRef.current = tut; }, [tut]);
   const tutTok = useRef(0);                    /* cancels a half-played step */
+  const [ripple, setRipple] = useState<{ x: number; y: number; n: number } | null>(null);
+  const rippleN = useRef(0);
+  /* round 72 #11: a visible pointer travels to whatever it is about to
+     click — without it things simply happened on their own and read as a
+     glitch rather than as somebody working */
+  const [cursor, setCursor] = useState<{ x: number; y: number; ms: number } | null>(null);
+  /* round 72 #14: the product page publishes AFTER the images are in */
+  const [tutLanding, setTutLanding] = useState(false);
 
   const [packSel, setPackSel] = useState<boolean[]>([true, true, true, false]);
   const [agree, setAgree] = useState(false);
@@ -999,15 +1023,21 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     tutTok.current++;
     tutReset();
     tutRef.current = 0; setTut(0);
+    setTutLanding(false);
+    setCursor({ x: WELCOME_X, y: PROG_Y, ms: 0 });
+    /* round 72 #12: the sample back label is fetched now, so the step that
+       shows it never flashes an empty slot */
+    new Image().src = TUT_D + "back-label.png";
     go("vision");
   }, [go, tutReset]);
 
   const endTutorial = useCallback(() => {
     tutTok.current++;
     tutRef.current = -1; setTut(-1);
-    tutReset();
-    try { localStorage.setItem("nui-tutorial-seen", "1"); } catch { }
-    go("welcome", -1);
+    tutReset(); setRipple(null); setCursor(null); setTutLanding(false);
+    /* round 72 #2: straight into the real Your Vision page, not the home
+       page — they have just watched the whole story, so they start work */
+    go("vision");
   }, [go, tutReset]);
 
   useEffect(() => {
@@ -1015,12 +1045,48 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const tok = ++tutTok.current;
     const live = () => tok === tutTok.current;
     const hold = (ms: number) => new Promise<boolean>((r) => setTimeout(() => r(live()), ms));
+    /* round 72 #10: nobody works to a metronome — every pause is nudged
+       off the beat, and typing slows at spaces and stops at punctuation */
+    let beatN = 0;
+    const beat = (base: number) => hold(Math.round(base * (0.72 + ((beatN++ * 37) % 13) / 22)));
     const type = async (text: string, put: (v: string) => void, ms = 14) => {
-      for (let i = 1; i <= text.length; i++) { put(text.slice(0, i)); if (!(await hold(ms))) return false; }
+      for (let i = 1; i <= text.length; i++) {
+        put(text.slice(0, i));
+        const ch = text[i - 1];
+        let d = ms * (0.65 + ((i * 13) % 8) / 10);
+        if (ch === " ") d *= 1.6;
+        if (".,;—!?".includes(ch)) d *= 4.5;
+        if (!(await hold(d))) return false;
+      }
       return true;
     };
     const field = async (k: string, v: string) => type(v, (x) => setF((m) => ({ ...m, [k]: x })), 18);
     const backField = async (k: string, v: string) => type(v, (x) => setB((m) => ({ ...m, [k]: x })), 10);
+    /* round 72 #8/#11: the pointer travels there, then a red ring blooms */
+    const move = async (at: readonly number[], ms = 520) => {
+      if (!live()) return false;
+      setCursor({ x: at[0], y: at[1], ms });
+      return hold(ms + 40);
+    };
+    const tap = async (at: readonly number[], after = 340, ms = 520) => {
+      if (!(await move(at, ms))) return false;
+      setRipple({ x: at[0], y: at[1], n: ++rippleN.current });
+      return beat(after);
+    };
+    /* a slow drag along the lightness bar */
+    const dragShade = async (from: number, to: number) => {
+      if (!(await move([SHADE_X(from), 532.5], 560))) return false;
+      setRipple({ x: SHADE_X(from), y: 532.5, n: ++rippleN.current });
+      if (!(await hold(240))) return false;
+      const N2 = 16;
+      for (let i = 1; i <= N2; i++) {
+        const v = from + (to - from) * (i / N2);
+        setShade(v);
+        setCursor({ x: SHADE_X(v), y: 532.5, ms: 60 });
+        if (!(await hold(52))) return false;
+      }
+      return beat(420);
+    };
 
     /* anything the visitor jumped over is filled in at once, so each step
        stands on its own however they got there */
@@ -1034,14 +1100,17 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         setB({ description: DEMO_DESC, ...DEMO_BACK });
         setGtin("4860012345676"); setQrMode("create"); setMarkets(["EU"]); setNoComp(false);
       }
-      if (tut > 3) {
+      /* round 72 #12: the back label is set the instant the step begins —
+         the image is preloaded when the walkthrough starts, so its empty
+         "not yet created" slot is never on screen */
+      if (tut >= 3) {
         const pr = new Image();
         pr.onload = () => { setBackDims({ w: pr.width, h: pr.height }); setBackPng(pr.src); };
         pr.src = TUT_D + "back-label.png";
       }
       if (tut > 4) { bottleTouched.current = true; setBottle({ ...DEMO_BOTTLE }); setWineColor("Red"); }
       if (tut > 5) {
-        setLifeTarget(5); setAssetsStage("");
+        setLifeTarget(5); setAssetsStage(""); setTutLanding(true);
         setAssets({
           front: { full: TUT_D + "shot-front.jpg", prev: TUT_D + "shot-front.jpg" },
           back: { full: TUT_D + "shot-back.jpg", prev: TUT_D + "shot-back.jpg" },
@@ -1056,8 +1125,17 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       if (!(await hold(SLIDE_MS + 260))) return;
       switch (tut) {
         case 0: {
+          if (!(await tap(TAP.visionBox))) return;
           if (!(await type(DEMO_VISION, setVision, 13))) return;
+          if (!(await hold(520))) return;
+          /* round 72 #5: the label's own size gets set before the details */
+          if (!(await tap(TAP.width, 300))) return;
+          if (!(await type("120", (v) => setF((m) => ({ ...m, width: v })), 150))) return;
+          if (!(await hold(260))) return;
+          if (!(await tap(TAP.height, 300))) return;
+          if (!(await type("95", (v) => setF((m) => ({ ...m, height: v })), 150))) return;
           if (!(await hold(420))) return;
+          if (!(await tap(TAP.firstField, 300))) return;
           for (const k of ["producer", "wine", "appellation", "classification", "vintage", "grape", "regionCountry", "special", "sweetness", "colour", "wineType", "alcohol", "volume"]) {
             if (!(await field(k, DEMO_FRONT[k] || ""))) return;
             if (!(await hold(90))) return;
@@ -1065,21 +1143,30 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           break;
         }
         case 1: {
-          /* the three designs arrive one after the other, then one is picked */
+          /* round 72 #9: the real loader plays first — just quicker — and
+             the finished designs land straight after it, no grey slots */
           setDreams([]); setSelected(-1);
-          for (let i = 0; i < 3; i++) {
-            if (!(await hold(i ? 560 : 260))) return;
-            setDreams((d) => [...d.slice(0, i), { style: ["traditional", "contemporary", "punk"][i], dream: TUT_LABELS[i], preview: TUT_LABELS[i] }, ...d.slice(i + 1)]);
+          for (const g of [0.2, 0.45, 0.68, 0.88, 0.97]) {
+            setGenProgress(g);
+            if (!(await hold(420))) return;
           }
-          if (!(await hold(900))) return;
+          if (!(await hold(260))) return;
+          setDreams(["traditional", "contemporary", "punk"].map((st2, i) => ({ style: st2, dream: TUT_LABELS[i], preview: TUT_LABELS[i] })));
+          go("options");
+          setGenProgress(0);
+          if (!(await hold(SLIDE_MS + 900))) return;
+          if (!(await tap(TAP.optSelect))) return;
           setSelected(1);
           break;
         }
         case 2: {
+          if (!(await tap(TAP.descBox))) return;
           if (!(await type(DEMO_DESC, (v) => setB((m) => ({ ...m, description: v })), 8))) return;
           if (!(await hold(320))) return;
+          if (!(await tap(TAP.barcode, 300))) return;
           if (!(await type("4860012345676", setGtin, 55))) return;
           if (!(await hold(240))) return;
+          if (!(await tap(TAP.qrBtn, 300))) return;
           setQrMode("create");
           if (!(await hold(420))) return;
           for (const k of ["producerCompany", "producerAddress", "importer", "importerAddress", "bottlingDate", "lot", "web"]) {
@@ -1088,35 +1175,49 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           }
           /* the market picker opens, takes its pick and closes again */
           if (!(await hold(360))) return;
+          if (!(await tap(TAP.market, 320))) return;
           setMarketOpen(true);
-          if (!(await hold(900))) return;
-          setMarkets(["EU"]); setNoComp(false);
           if (!(await hold(800))) return;
+          if (!(await tap(TAP.eu, 320))) return;
+          setMarkets(["EU"]); setNoComp(false);
+          if (!(await hold(700))) return;
+          if (!(await tap(TAP.market, 320))) return;
           setMarketOpen(false);
           break;
         }
         case 3: {
-          setBackPng("");
-          if (!(await hold(520))) return;
-          const probe = new Image();
-          probe.onload = () => { if (live()) { setBackDims({ w: probe.width, h: probe.height }); setBackPng(probe.src); } };
-          probe.src = TUT_D + "back-label.png";
+          /* round 72 #12: seed() already put it there — nothing to play */
           break;
         }
         case 4: {
           /* every section ticks itself on, in the order a customer would */
           bottleTouched.current = true;
           setWineColor(""); setBottle({ type: "", color: "", closure: "", finish: "" });
-          const picks: [string, string][] = [["wineColor", "Red"], ["type", DEMO_BOTTLE.type], ["color", DEMO_BOTTLE.color], ["closure", DEMO_BOTTLE.closure], ["finish", DEMO_BOTTLE.finish]];
-          for (const [k, v] of picks) {
-            if (!(await hold(620))) return;
-            if (k === "wineColor") setWineColor(v);
-            else setBottle((m) => ({ ...m, [k]: v }));
-          }
+          setShade(0.5);
+          /* round 72 #13: a customer tries one, changes their mind, then
+             nudges the capsule's lightness — Matte stays chosen throughout */
+          if (!(await tap(BRING(0, 0), 460))) return; setWineColor("Red");
+          if (!(await beat(260))) return;
+          if (!(await tap(BRING(1, 1), 420))) return; setBottle((m) => ({ ...m, type: "Bordeaux Prestige" }));
+          if (!(await beat(560))) return;
+          if (!(await tap(BRING(1, 0), 420))) return; setBottle((m) => ({ ...m, type: "Bordeaux" }));
+          if (!(await beat(300))) return;
+          if (!(await tap(BRING(2, 1), 420))) return; setBottle((m) => ({ ...m, color: "Transparent" }));
+          if (!(await beat(520))) return;
+          if (!(await tap(BRING(2, 0), 420))) return; setBottle((m) => ({ ...m, color: "Olive Green" }));
+          if (!(await beat(300))) return;
+          if (!(await tap(BRING(3, 1), 420))) return; setBottle((m) => ({ ...m, closure: "Screw Cap" }));
+          if (!(await beat(560))) return;
+          if (!(await tap(BRING(3, 0), 420))) return; setBottle((m) => ({ ...m, closure: "Cork" }));
+          if (!(await beat(320))) return;
+          if (!(await tap(BRING(4, 0), 380))) return; setBottle((m) => ({ ...m, finish: "Matte" }));
+          if (!(await beat(300))) return;
+          if (!(await dragShade(0.5, 0.79))) return;
           break;
         }
         case 5: {
           /* the real run's stages, on the sample images */
+          setTutLanding(false);
           setAssets({ life: [] }); setLifeTarget(5);
           assetT.current = { run: Date.now(), stage: Date.now() };
           setAssetsStage("front shot");
@@ -1127,9 +1228,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           setAssets((a) => ({ ...a, back: { full: TUT_D + "shot-back.jpg", prev: TUT_D + "shot-back.jpg" } }));
           for (let i = 0; i < 5; i++) {
             setAssetsStage(`lifestyle ${i + 1}/5`);
-            if (!(await hold(950))) return;
+            if (!(await beat(900))) return;
             setAssets((a) => { const life = [...a.life]; life[i] = { full: TUT_LIFE[i], prev: TUT_LIFE[i] }; return { ...a, life }; });
           }
+          /* round 72 #14: only now does the product page get published */
+          setAssetsStage("publishing");
+          if (!(await hold(1400))) return;
+          setTutLanding(true);
           setAssetsStage("");
           break;
         }
@@ -1638,7 +1743,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               <span key={d} style={{ animation: `nuiDot 1.2s ${d * 0.2}s infinite` }}>.</span>
             ))}
           </span>
-          <span style={{ ...px(0, 522, W, 18), font: `italic 13px ${HNW}`, color: "#555", textAlign: "center", display: "block" }}>
+          {/* round 72 #9: the walkthrough's loader is over in seconds — the
+              real wait note would be a lie there */}
+          <span style={{ ...px(0, 522, W, 18), font: `italic 13px ${HNW}`, color: "#555", textAlign: "center", display: "block", opacity: tut >= 0 ? 0 : 1 }}>
             {(() => {
               /* round 46 (owner: "calculate real average"): once real runs
                  exist, the estimate is their measured average */
@@ -2296,6 +2403,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             const BW = 350.8, BH = BW / W * 823 + 13;
             /* round 71 #4: the walkthrough has no published page to frame —
                it shows the sample one, and its QR, as a picture */
+            if (tut >= 0 && !tutLanding) return (
+              <div style={{ ...px(921.5, 310.5, BW, BH), background: "#F4F3EE", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {miniGlass("landing", Math.min(0.92, 0.2 + assets.life.filter(Boolean).length * 0.16))}
+              </div>
+            );
             if (tut >= 0) return (<>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={`${TUT_D}landing.jpg`} alt="product page"
@@ -2536,7 +2648,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const step = tut >= 0 ? tut : STEP_OF[page];
   /* round 71: Mtavruli runs much wider than Latin — six stops 166.6 apart
      only clear each other in Georgian at a smaller size */
-  const BAR_FS = lang === "ge" ? 11 : 15;
+  const BAR_FS = lang === "ge" ? 11 : 13;
   /* round 71 #4: while the walkthrough runs, the bar follows IT — the
      button rides the stop being explained and the line follows it home */
   const tutLast = TUT_CARDS.length - 1;
@@ -2572,6 +2684,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         @keyframes nuiOut { from { transform: translateX(0) } to { transform: translateX(${dir > 0 ? "-100%" : "100%"}) } }
         @keyframes nuiInPx { from { transform: translateX(${dir > 0 ? 1440 : -1440}px) } to { transform: translateX(0) } }
         @keyframes nuiOutPx { from { transform: translateX(0) } to { transform: translateX(${dir > 0 ? -1440 : 1440}px) } }
+        @keyframes nuiTap { 0% { transform: scale(0.3); opacity: 0 } 22% { opacity: 1 } 100% { transform: scale(1.3); opacity: 0 } }
         @keyframes btnFly { from { left: ${WELCOME_X - NEXT_R}px } to { left: ${NEXT_X - NEXT_R}px } }
         @keyframes nuiFadeIn { from { opacity: 0 } to { opacity: 1 } }
         @keyframes nuiFadeOut { from { opacity: 1 } to { opacity: 0 } }
@@ -2654,7 +2767,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               placed at its own coordinates — it straddles the header edge,
               reading as a white shape on the black and as an outline on the
               white below. Functionality still to come from the owner. */}
-          <svg viewBox="1232.5 33.9 85.1 70" style={{ ...px(1232.5, 33.9, 85.1, 70), zIndex: 6, pointerEvents: "none" }}>
+          <svg viewBox="1232.5 33.9 85.1 70" style={{ ...px(1232.5, 33.9, 85.1, 70), zIndex: 13, pointerEvents: "none" }}>
             <path d="M1233.31,103.1V38.26c0-1.98,1.34-3.59,2.99-3.59h25.27c.79,0,1.55.38,2.11,1.05l7.74,9.3c.56.67,1.32,1.05,2.11,1.05h25.27c1.65,0,2.99,1.61,2.99,3.59v7.81" fill="#fff" stroke="#000" strokeWidth="0.75" strokeMiterlimit="10" />
             <path d="M1233.31,103.1h68.49l15.03-40.57c.88-2.38-.57-5.05-2.73-5.05h-61.95c-1.18,0-2.25.84-2.73,2.13l-16.11,43.49" fill="#fff" stroke="#000" strokeWidth="0.75" strokeMiterlimit="10" />
           </svg>
@@ -2730,7 +2843,17 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               })}
               {STEPS.map((st, i) => (
                 <button key={st.label + i} onClick={() => { if (tut >= 0) { if (i !== tut) { setTut(i); go(TUT_PAGES[i], i > tut ? 1 : -1); } } else if (st.page !== page) { barJumped.current = true; go(st.page, ORDER.indexOf(st.page) > ORDER.indexOf(page) ? 1 : -1); } }}
-                  style={{ ...px(st.x - 130, baseTop(LABEL_BASE, BAR_FS), 260, 20), ...ghost, pointerEvents: modalOpen ? "none" : "auto", font: `${st.big ? 700 : 300} ${BAR_FS}px ${HNW}`, lineHeight: `${BAR_FS}px`, color: "#fff", textAlign: "center", textTransform: "none", whiteSpace: "nowrap" }}>
+                  style={{
+                    ...px(st.x - 130, baseTop(LABEL_BASE, BAR_FS), 260, 20), ...ghost,
+                    pointerEvents: modalOpen ? "none" : "auto",
+                    font: `${st.big ? 700 : 300} ${BAR_FS}px ${HNW}`, lineHeight: `${BAR_FS}px`,
+                    color: "#fff", textAlign: "center", textTransform: "none", whiteSpace: "nowrap",
+                    /* round 72 #6: in the walkthrough a stop stays unnamed
+                       until the button moves OFF it — the name fades in as
+                       the button travels on. Outside it, every name shows. */
+                    opacity: tut >= 0 && i >= tut ? 0 : 1,
+                    transition: `opacity ${SLIDE_MS}ms ${EASE}`,
+                  }}>
                   {t(st.label)}</button>
               ))}
             </>)}
@@ -2753,6 +2876,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     borderLeft: `${TB.tipW}px solid transparent`, borderRight: `${TB.tipW}px solid transparent`,
                     borderTop: `${TB.tipY - TB.bottom}px solid #111`,
                   }} />
+                  {/* round 72 #4: a way out at any point */}
+                  <button onClick={endTutorial}
+                    style={{ position: "absolute", right: TB.pad, top: baseTop(solo ? 22 : 26, 12), ...ghost, pointerEvents: "auto", font: `12px ${HNW}`, color: BAR_RED, textDecoration: "underline", textTransform: "none", cursor: "pointer", lineHeight: "12px" }}>
+                    {t("Skip")}</button>
                   {solo ? (
                     card.title.map((ln, i) => (
                       <span key={i} style={{ position: "absolute", left: TB.pad, top: baseTop(34.71 + i * 27.6, 23), width: TB.w - TB.pad, font: `700 23px ${HNW}`, lineHeight: "23px", color: "#fff", whiteSpace: "nowrap" }}>{t(ln)}</span>
@@ -2771,24 +2898,26 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               );
             })()}
             {/* the red round NEXT button */}
-            {page !== "loader" && (
+            {(page !== "loader" || tut >= 0) && (
               <button aria-label={page === "welcome" ? "start" : "next"} className="nui-next"
                 onClick={() => {
                   barJumped.current = false;
                   /* round 71 #4: inside the walkthrough the arrow only ever
                      turns the page of the story */
                   if (tut >= 0) {
-                    if (tut >= tutLast) endTutorial();
-                    else { setTut(tut + 1); go(TUT_PAGES[tut + 1]); }
+                    if (tut >= tutLast) { endTutorial(); return; }
+                    const nx = tut + 1;
+                    setTut(nx);
+                    /* round 72 #9: FRONT LABEL opens on the loader */
+                    const pg: PageKey = nx === 1 ? "loader" : TUT_PAGES[nx];
+                    if (pg !== page) go(pg);
                     return;
                   }
                   if (page === "welcome") {
-                    /* a first-time visitor is walked through the whole job
-                       before being asked to fill anything in */
-                    let seen = true;
-                    try { seen = localStorage.getItem("nui-tutorial-seen") === "1"; } catch { }
-                    if (!seen) { startTutorial(); return; }
-                    setArrowFly(true); go("vision"); setTimeout(() => setArrowFly(false), SLIDE_MS + 80);
+                    /* round 72 #3 (owner, TEMP while we test): EVERY arrival
+                       gets the walkthrough, refresh included. Later this
+                       wants to be per-visitor, not per-load. */
+                    startTutorial(); return;
                   }
                   else if (page === "vision") {
                     /* round 54 #2: a REAL generation asks for confirmation;
@@ -2832,6 +2961,29 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             )}
           </div>
 
+          {/* ROUND 72 #1: the closing card stands on a clean white page */}
+          {tut === TUT_CARDS.length - 1 && (
+            <div style={{ ...px(0, HEADER_H, W, FOOTER_Y - HEADER_H), background: "#fff", zIndex: 11, animation: `nuiFadeIn 280ms ${EASE} both` }} />
+          )}
+          {/* ROUND 72 #11: the pointer doing the work */}
+          {tut >= 0 && cursor && (
+            <svg viewBox="0 0 24 24" width="21" height="21" style={{
+              position: "absolute", left: cursor.x - 2, top: cursor.y - 1, zIndex: 14, pointerEvents: "none",
+              transition: `left ${cursor.ms}ms cubic-bezier(.33,0,.2,1), top ${cursor.ms}ms cubic-bezier(.33,0,.2,1)`,
+              filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.35))",
+            }}>
+              <path d="M3 2 L3 18.2 L7.3 14.2 L10 20.6 L12.9 19.3 L10.3 13.1 L16.2 12.9 Z"
+                fill="#111" stroke="#fff" strokeWidth="1.4" strokeLinejoin="round" />
+            </svg>
+          )}
+          {/* ROUND 72 #8: the ghost tap */}
+          {tut >= 0 && ripple && (
+            <div key={ripple.n} style={{
+              position: "absolute", left: ripple.x - 19, top: ripple.y - 19, width: 38, height: 38,
+              borderRadius: 19, border: `2px solid ${BAR_RED}`, boxSizing: "border-box",
+              pointerEvents: "none", zIndex: 13, animation: `nuiTap 700ms ${EASE} both`,
+            }} />
+          )}
           {/* ROUND 71 #4: while the walkthrough plays, the page is a film —
               it swallows clicks so nothing the visitor prods can derail the
               story. The bar (z45) still takes its own. */}

@@ -1990,6 +1990,33 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 72 (owner, 14 items on the walkthrough, 2026-09-17):
+  (1) the closing card stands on a BLANK page — the walkthrough stays on
+  the assets page and a white sheet covers the band (the folder mark had
+  to climb to z13 to stay above it). (2) its arrow hands over to Your
+  Vision, not the home page. (3) TEMP while testing: EVERY arrival gets
+  the walkthrough, refresh included — nui-tutorial-seen is no longer
+  read or written; this wants to be per-visitor later. (4) a red
+  underlined "Skip" sits top-right in the card. (5) the vision step now
+  sets the LABEL SIZE (120 x 95) before moving to the details. (6) in
+  the walkthrough a stop stays UNNAMED until the button leaves it — the
+  name fades in over the travel; outside it every name shows as before.
+  (7) bar labels dropped 15px -> 13px to match the header menu (GEO
+  stays 11px or six Mtavruli names collide). (8) a red ring blooms at
+  every scripted click. (9) FRONT LABEL opens on the real loader, run
+  fast, and the finished designs land straight after it — no grey slots
+  (the "15-35 seconds" note is hidden there, it would be a lie).
+  (10) the rhythm is off the metronome: every pause is nudged 0.72-1.3x
+  and typing slows at spaces, stops at punctuation. (11) a POINTER
+  travels to whatever it is about to click — without it things simply
+  happened on their own and read as a glitch. (12) the back label is
+  seeded synchronously (and preloaded at start), so its empty slot is
+  never on screen. (13) the bottle step now changes its mind — Bordeaux
+  Prestige -> Bordeaux, Transparent -> Olive Green, Screw Cap -> Cork —
+  keeps Matte, and drags the lightness knob 0.5 -> 0.79 (knob cx =
+  1144.83 + shade * 121.64 on y 532.5). (14) the product page publishes
+  only after the five marketing images are in; until then its column
+  runs the loader glass.
 - ROUND 71 (owner, 4 items, 2026-09-17):
   (1) NEW PROGRESS BAR, read straight out of the owner's
   New_Progress-Bar artboards (their viewBox IS our 1440x822.86, so the
