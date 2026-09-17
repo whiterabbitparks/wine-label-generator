@@ -1497,7 +1497,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {dreams.length === 0 && OPT_FRAMES.map((fr, fi) => (
             <span key={"grey" + fi}>
               <div style={{ ...px(fr.x + 0.2, 565, OPT_W, 34.3), background: "#ECECEA", color: "#B3B1A8", font: `12px ${HNW}`, letterSpacing: 0.3, display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
-                {t(STYLE_NAMES[fi] + " Variations")}</div>
+                {t(STYLE_NAMES[fi] + " Variation") + " " + t("(1 Credit)")}</div>
               <div style={{ ...px(fr.x, 634 - 13, OPT_W, 26), display: "flex", alignItems: "center", justifyContent: "center", columnGap: 10 }}>
                 <span style={{ width: 15, height: 15, borderRadius: "50%", border: "2px solid #C9C7BF", background: "#fff", boxSizing: "border-box" }} />
                 <span style={{ font: `700 15px ${HNW}`, color: "#C9C7BF", lineHeight: `${fm.a + fm.d}px`, transform: `translateY(${(17 - ((26 - (fm.a + fm.d)) / 2 + fm.a)).toFixed(2)}px)` }}>{t("Select")}</span>
@@ -1508,7 +1508,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {dreams.length > 0 && OPT_FRAMES.map((fr, fi) => (
             <button key={"cv" + fi} onClick={() => requestVariations(fi)}
               style={{ ...px(fr.x + 0.2, 565, OPT_W, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
-              {t(STYLE_NAMES[fi] + " Variations")}</button>
+              {t(STYLE_NAMES[fi] + " Variation") + " " + t("(1 Credit)")}</button>
           ))}
           {/* Select radios — one per column, marking the VIEWED version */}
           {dreams.length > 0 && OPT_FRAMES.map((fr, fi) => {
@@ -1617,8 +1617,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           )}
           {/* ── the band rule, then market compliance ── */}
           <div style={{ ...px(138, 586, 1301 - 138, 1), backgroundImage: `repeating-linear-gradient(90deg,${DASH})`, backgroundSize: "100% 1px", backgroundRepeat: "no-repeat", pointerEvents: "none" }} />
-          <span style={{ ...px(139, baseTop(655.2, 24), 500, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t("MARKET COMPLIANCE")}</span>
-          <span style={{ ...px(lang === "ge" ? 139 : 446.2, baseTop(lang === "ge" ? 685 : 655, 14), lang === "ge" ? 560 : 270, 60), font: `14px ${HNW}`, lineHeight: "18px", color: "#111" }}>
+          {/* round 69 #3: title + paragraph start on the SAME horizontal line as
+              the Select Market button's top edge (653) — cap ascents measured
+              live: 17.54 at 700 24px, 10.23 at 14px (+2px of the 18px line
+              box, which baseTop does not know about) */}
+          <span style={{ ...px(139, baseTop(670.54, 24), 500, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t("MARKET COMPLIANCE")}</span>
+          <span style={{ ...px(lang === "ge" ? 139 : 446.2, baseTop(lang === "ge" ? 700.34 : 661.23, 14), lang === "ge" ? 560 : 270, 60), font: `14px ${HNW}`, lineHeight: "18px", color: "#111" }}>
             {t("Select the market(s) where your wine will be sold, and we’ll incorporate required regulatory information.")}</span>
           {/* ROUND 67 (owner's Unclicked / Opened / Selected references):
               the market picker is a BLACK button the size of the QR ones —
@@ -1631,7 +1635,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             const panelH = PAD + HEAD_H + 8 + COMP.length * ROW_H + PAD;
             const picked = COMP.filter((c) => markets.includes(c.code));
             const label = marketOpen ? t("Select") : picked.length ? t("Selected") : t("Select Market");
-            const up = !marketOpen && picked.length === 0;
+            /* round 69 #2: the chevron follows the PANEL — up whenever the
+               menu is closed (picked or not), down while it is open */
+            const up = !marketOpen;
             /* round 68 #2: white like the QR buttons until it is used —
                black once the panel opens and from then on */
             const dark = marketOpen || picked.length > 0;

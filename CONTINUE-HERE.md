@@ -1990,6 +1990,17 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 69 (owner, 3 items, 2026-09-16):
+  (1) the three variation buttons read "<Style> Variation (1 Credit)" —
+  singular, with the price that requestCredit actually charges.
+  (2) the market chevron follows the PANEL, not the picks: up whenever
+  the menu is closed (chosen markets or not), down while it is open.
+  (3) MARKET COMPLIANCE and its paragraph now start on the same
+  horizontal line as the Select Market button's top edge (653). Cap
+  ascents measured live in the browser (17.54 at 700 24px HNW, 10.23
+  at 14px) — note baseTop() assumes lineHeight == size, so the 18px
+  line box adds 2px the helper does not know about. Verified: all
+  three ink tops land on page row 652.5.
 - ROUND 68 (owner, 6 items, 2026-09-16):
   (1) the PROGRESS BAR now paints ABOVE a modal's veil (container z45,
   was z8) so the red line, dots and round next button stay crisp while

@@ -181,6 +181,11 @@ export const UI_GE: Record<string, string> = {
   "Traditional Variations": "ტრადიციულის ვარიაციები",
   "Contemporary Variations": "თანამედროვეს ვარიაციები",
   "Punk Variations": "პანკის ვარიაციები",
+  /* round 69 #1: singular + its price */
+  "Traditional Variation": "ტრადიციულის ვარიაცია",
+  "Contemporary Variation": "თანამედროვეს ვარიაცია",
+  "Punk Variation": "პანკის ვარიაცია",
+  "(1 Credit)": "(1 კრედიტი)",
   /* round 48 #1: correct declension */
   "Create Contemporary Variations": "თანამედროვეს ვარიაციები",
   "Create Punk Variations": "პანკის ვარიაციები",
