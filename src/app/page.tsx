@@ -241,8 +241,9 @@ const TUT_CARDS: { step: string; title: string[]; body: string[] }[] = [
   { step: "STEP 2", title: ["Front Label"], body: ["Voilà — three designs to", "choose from.", "Pick your favourite."] },
   { step: "STEP 3", title: ["Back Label Details,", "Barcode & QR Code"], body: ["A few more details, and I'll", "build a back label that meets", "your market's rules."] },
   { step: "STEP 4", title: ["Back Label"], body: ["Done. Print-ready, and", "compliant with the markets", "you chose."] },
-  { step: "STEP 5", title: ["Bottle Details"], body: ["Tell me about the bottle and", "the closure, so I can", "photograph your wine exactly", "as it will look on the shelf."] },
-  { step: "STEP 6", title: ["Marketing Assets"], body: ["Two product shots, five", "marketing images, and your", "product page if you asked", "for one."] },
+  /* round 73 #5: three lines each — a fourth line crowded the card's foot */
+  { step: "STEP 5", title: ["Bottle Details"], body: ["Tell me about the bottle and", "the closure — I'll shoot it", "as it will look on the shelf."] },
+  { step: "STEP 6", title: ["Marketing Assets"], body: ["Two product shots, five", "marketing images, and your", "product page if you asked."] },
   { step: "", title: ["Let's build", "your pack!"], body: [] },
 ];
 const DEMO_VISION = "An old winemaker resting under a fig tree with his mandolin, a rooster at his feet — warm, rustic, Georgian.";
@@ -252,7 +253,11 @@ const DEMO_BACK: Record<string, string> = {
   importer: '"Teller Wines" LLC', importerAddress: "148 W 68 st. 10023 NYC, USA",
   bottlingDate: "28/04/2026", lot: "L2606242", web: "www.popiashvili.com",
 };
-const DEMO_BOTTLE = { type: "Bordeaux", color: "Olive Green", closure: "Cork", finish: "Matte" };
+/* round 73 #4: where the bottle step ENDS (it starts on Bordeaux / Amber /
+   Wax Seal and is changed on camera) */
+const DEMO_BOTTLE = { type: "Burgundy", color: "Olive Green", closure: "Cork", finish: "Matte" };
+const DEMO_BOTTLE_0 = { type: "Bordeaux", color: "Amber", closure: "Wax Seal", finish: "Matte" };
+const DEMO_WHEEL = { x: 0.44, y: 0.1, rgb: [250, 27, 31] };   /* a capsule red */
 /* round 72 #8: the ghost taps — a red ring blooms where a hand would be */
 const TAP = {
   visionBox: [250, 400], width: [476, 645], height: [650, 645],
@@ -260,6 +265,9 @@ const TAP = {
   optSelect: [692.5, 634],
   descBox: [250, 265], barcode: [360, 468], qrBtn: [874.5, 467],
   market: [873.5, 670], eu: [873, 330],
+  backFirst: [1050, 212],            /* round 73 #1: up to the details */
+  varBtn: [720.15, 582], dot0: [708.95, 516.85], dot1: [730.95, 516.85],
+  wheel: [1137.89 + 0.44 * 137.2, 368 + 0.1 * 137.2],
   bottleRings: [[386.06, 283.57], [577.98, 283.57], [769.9, 283.57], [961.82, 283.57], [1153.74, 283.57]],
 } as const;
 /* the bottle page's option rows and the lightness knob, from its own code:
@@ -646,6 +654,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const [cursor, setCursor] = useState<{ x: number; y: number; ms: number } | null>(null);
   /* round 72 #14: the product page publishes AFTER the images are in */
   const [tutLanding, setTutLanding] = useState(false);
+  /* round 73 #2: when a step's script ends the arrow inflates twice, so
+     they know the turn is theirs */
+  const [nudge, setNudge] = useState(0);
 
   const [packSel, setPackSel] = useState<boolean[]>([true, true, true, false]);
   const [agree, setAgree] = useState(false);
@@ -1073,6 +1084,17 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       setRipple({ x: at[0], y: at[1], n: ++rippleN.current });
       return beat(after);
     };
+    /* round 73 #4: a pick on the colour wheel, sampled the same way the
+       real pointer handler samples it */
+    const pickWheel = (fx: number, fy: number) => {
+      let rgb = DEMO_WHEEL.rgb as number[];
+      const c = wheelCanvas.current;
+      if (c) {
+        const d = c.getContext("2d")!.getImageData(Math.round(fx * 136), Math.round(fy * 136), 1, 1).data;
+        if (d[3] > 40) rgb = [d[0], d[1], d[2]];
+      }
+      setWheel({ x: fx, y: fy, rgb });
+    };
     /* a slow drag along the lightness bar */
     const dragShade = async (from: number, to: number) => {
       if (!(await move([SHADE_X(from), 532.5], 560))) return false;
@@ -1108,7 +1130,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         pr.onload = () => { setBackDims({ w: pr.width, h: pr.height }); setBackPng(pr.src); };
         pr.src = TUT_D + "back-label.png";
       }
-      if (tut > 4) { bottleTouched.current = true; setBottle({ ...DEMO_BOTTLE }); setWineColor("Red"); }
+      if (tut > 4) {
+        bottleTouched.current = true; setBottle({ ...DEMO_BOTTLE }); setWineColor("Red");
+        setWheel({ ...DEMO_WHEEL }); setShade(0.79);
+      }
       if (tut > 5) {
         setLifeTarget(5); setAssetsStage(""); setTutLanding(true);
         setAssets({
@@ -1154,7 +1179,22 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           setDreams(["traditional", "contemporary", "punk"].map((st2, i) => ({ style: st2, dream: TUT_LABELS[i], preview: TUT_LABELS[i] })));
           go("options");
           setGenProgress(0);
-          if (!(await hold(SLIDE_MS + 900))) return;
+          if (!(await hold(SLIDE_MS + 800))) return;
+          /* round 73 #7: a variation is made first, so they can see that
+             every design can be re-rolled, and the dots flick between them */
+          if (!(await tap(TAP.varBtn, 260))) return;
+          setStyleVars((v) => { const n = v.map((x) => [...x]); n[1] = [null]; return n; });
+          setStyleView((v) => { const n = [...v]; n[1] = 1; return n; });
+          varT.current = Date.now();
+          if (!(await hold(2100))) return;
+          setStyleVars((v) => { const n = v.map((x) => [...x]); n[1] = [{ style: "contemporary", dream: TUT_D + "label2b.jpg", preview: TUT_D + "label2b.jpg" }]; return n; });
+          if (!(await beat(1100))) return;
+          if (!(await tap(TAP.dot0, 260))) return;
+          setStyleView((v) => { const n = [...v]; n[1] = 0; return n; });
+          if (!(await beat(820))) return;
+          if (!(await tap(TAP.dot1, 260))) return;
+          setStyleView((v) => { const n = [...v]; n[1] = 1; return n; });
+          if (!(await beat(760))) return;
           if (!(await tap(TAP.optSelect))) return;
           setSelected(1);
           break;
@@ -1168,7 +1208,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           if (!(await hold(240))) return;
           if (!(await tap(TAP.qrBtn, 300))) return;
           setQrMode("create");
-          if (!(await hold(420))) return;
+          if (!(await beat(560))) return;
+          /* round 73 #1: up to the details column, and a click, before a
+             single character of it is typed */
+          if (!(await tap(TAP.backFirst, 340, 620))) return;
           for (const k of ["producerCompany", "producerAddress", "importer", "importerAddress", "bottlingDate", "lot", "web"]) {
             if (!(await backField(k, DEMO_BACK[k]))) return;
             if (!(await hold(80))) return;
@@ -1190,28 +1233,27 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           break;
         }
         case 4: {
-          /* every section ticks itself on, in the order a customer would */
+          /* round 73 #4: it opens already filled in — only the changes play */
           bottleTouched.current = true;
-          setWineColor(""); setBottle({ type: "", color: "", closure: "", finish: "" });
-          setShade(0.5);
-          /* round 72 #13: a customer tries one, changes their mind, then
-             nudges the capsule's lightness — Matte stays chosen throughout */
-          if (!(await tap(BRING(0, 0), 460))) return; setWineColor("Red");
-          if (!(await beat(260))) return;
-          if (!(await tap(BRING(1, 1), 420))) return; setBottle((m) => ({ ...m, type: "Bordeaux Prestige" }));
+          setWineColor("Red"); setBottle({ ...DEMO_BOTTLE_0 });
+          setWheel({ x: 0.5, y: 0.5, rgb: [255, 255, 255] }); setShade(0.5);
+          /* ROUND 73 #4 (owner's exact order): the page OPENS already set
+             to Red / Bordeaux / Amber / Wax Seal / Matte. The pointer then
+             changes the bottle type, the glass colour and the closure,
+             picks a colour off the wheel and finally darkens it. */
+          if (!(await beat(700))) return;
+          /* Bordeaux -> Burgundy */
+          if (!(await tap(BRING(1, 2), 560))) return; setBottle((m) => ({ ...m, type: "Burgundy" }));
+          if (!(await beat(620))) return;
+          /* Amber -> Olive Green */
+          if (!(await tap(BRING(2, 0), 480))) return; setBottle((m) => ({ ...m, color: "Olive Green" }));
+          if (!(await beat(620))) return;
+          /* Wax Seal -> Cork */
+          if (!(await tap(BRING(3, 0), 480))) return; setBottle((m) => ({ ...m, closure: "Cork" }));
+          if (!(await beat(680))) return;
+          /* the capsule's colour, then its lightness */
+          if (!(await tap(TAP.wheel, 420, 560))) return; pickWheel(DEMO_WHEEL.x, DEMO_WHEEL.y);
           if (!(await beat(560))) return;
-          if (!(await tap(BRING(1, 0), 420))) return; setBottle((m) => ({ ...m, type: "Bordeaux" }));
-          if (!(await beat(300))) return;
-          if (!(await tap(BRING(2, 1), 420))) return; setBottle((m) => ({ ...m, color: "Transparent" }));
-          if (!(await beat(520))) return;
-          if (!(await tap(BRING(2, 0), 420))) return; setBottle((m) => ({ ...m, color: "Olive Green" }));
-          if (!(await beat(300))) return;
-          if (!(await tap(BRING(3, 1), 420))) return; setBottle((m) => ({ ...m, closure: "Screw Cap" }));
-          if (!(await beat(560))) return;
-          if (!(await tap(BRING(3, 0), 420))) return; setBottle((m) => ({ ...m, closure: "Cork" }));
-          if (!(await beat(320))) return;
-          if (!(await tap(BRING(4, 0), 380))) return; setBottle((m) => ({ ...m, finish: "Matte" }));
-          if (!(await beat(300))) return;
           if (!(await dragShade(0.5, 0.79))) return;
           break;
         }
@@ -1238,8 +1280,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           setAssetsStage("");
           break;
         }
-        default: break;   /* the Final Pack needs no script — it is already built */
+        default:
+          /* nothing left to point at on the closing card */
+          setCursor(null);
+          break;
       }
+      /* round 73 #2: the step has played out — invite the next press */
+      if (live()) setNudge((n) => n + 1);
     })();
     return () => { /* the token bump in the next run cancels this one */ };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2685,6 +2732,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         @keyframes nuiInPx { from { transform: translateX(${dir > 0 ? 1440 : -1440}px) } to { transform: translateX(0) } }
         @keyframes nuiOutPx { from { transform: translateX(0) } to { transform: translateX(${dir > 0 ? -1440 : 1440}px) } }
         @keyframes nuiTap { 0% { transform: scale(0.3); opacity: 0 } 22% { opacity: 1 } 100% { transform: scale(1.3); opacity: 0 } }
+        @keyframes nuiNudge { 0%, 100% { transform: scale(1) } 22% { transform: scale(1.14) } 44% { transform: scale(1) } 66% { transform: scale(1.14) } 88% { transform: scale(1) } }
         @keyframes btnFly { from { left: ${WELCOME_X - NEXT_R}px } to { left: ${NEXT_X - NEXT_R}px } }
         @keyframes nuiFadeIn { from { opacity: 0 } to { opacity: 1 } }
         @keyframes nuiFadeOut { from { opacity: 1 } to { opacity: 0 } }
@@ -2864,7 +2912,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             {tut >= 0 && tutX !== null && (() => {
               const card = TUT_CARDS[Math.min(tut, TUT_CARDS.length - 1)];
               const solo = card.body.length === 0;          /* the closing card */
-              const h = solo ? TB.short : TB.full;
+              /* round 73 #6: same box as every other card, text still
+                 sitting in its top-left corner */
+              const h = TB.full;
               const top = TB.bottom - h;
               const L = tutX - TB.w / 2;
               return (
@@ -2876,10 +2926,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     borderLeft: `${TB.tipW}px solid transparent`, borderRight: `${TB.tipW}px solid transparent`,
                     borderTop: `${TB.tipY - TB.bottom}px solid #111`,
                   }} />
-                  {/* round 72 #4: a way out at any point */}
-                  <button onClick={endTutorial}
+                  {/* round 72 #4: a way out at any point — but not on the
+                      closing card, whose own arrow does exactly that */}
+                  {!solo && <button onClick={endTutorial}
                     style={{ position: "absolute", right: TB.pad, top: baseTop(solo ? 22 : 26, 12), ...ghost, pointerEvents: "auto", font: `12px ${HNW}`, color: BAR_RED, textDecoration: "underline", textTransform: "none", cursor: "pointer", lineHeight: "12px" }}>
-                    {t("Skip")}</button>
+                    {t("Skip")}</button>}
                   {solo ? (
                     card.title.map((ln, i) => (
                       <span key={i} style={{ position: "absolute", left: TB.pad, top: baseTop(34.71 + i * 27.6, 23), width: TB.w - TB.pad, font: `700 23px ${HNW}`, lineHeight: "23px", color: "#fff", whiteSpace: "nowrap" }}>{t(ln)}</span>
@@ -2899,7 +2950,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             })()}
             {/* the red round NEXT button */}
             {(page !== "loader" || tut >= 0) && (
-              <button aria-label={page === "welcome" ? "start" : "next"} className="nui-next"
+              <button key={"next" + nudge} aria-label={page === "welcome" ? "start" : "next"} className="nui-next"
                 onClick={() => {
                   barJumped.current = false;
                   /* round 71 #4: inside the walkthrough the arrow only ever
@@ -2949,7 +3000,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   transition: arrowFly ? "none" : `left ${SLIDE_MS}ms ${EASE}`,
                   width: NEXT_R * 2, height: NEXT_R * 2, borderRadius: NEXT_R, background: BAR_RED, border: "none",
                   padding: 0, cursor: "pointer", pointerEvents: modalOpen ? "none" : "auto", display: "flex", alignItems: "center", justifyContent: "center",
-                  animation: arrowFly ? `btnFly ${SLIDE_MS}ms ${EASE} both` : "none",
+                  animation: arrowFly ? `btnFly ${SLIDE_MS}ms ${EASE} both`
+                    : tut >= 0 && nudge > 0 ? `nuiNudge 1200ms ${EASE} both` : "none",
                 }}>
                 {/* round 71: the artboard's arrow — 34.3 long, 3px stroke,
                     its head 10.52 deep */}

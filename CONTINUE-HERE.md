@@ -1990,6 +1990,29 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 73 (owner, 8 more on the walkthrough, 2026-09-17):
+  (1) after the QR button the pointer climbs to the back-details column
+  and clicks BEFORE a character of it is typed. (2) when a step's script
+  finishes the arrow inflates twice (nuiNudge, replayed by keying the
+  button on a counter) so the turn visibly passes to the visitor.
+  (3) the doubled dashed outline on the back label was the DEMO IMAGE —
+  it had been screenshotted WITH the page's dashed overlay baked in;
+  re-grabbed through fetch(img.src) -> data URL, so it is now the real
+  984x984 PNG. (4) the bottle step opens already set to Red / Bordeaux /
+  Amber / Wax Seal / Matte and then changes type -> Burgundy, colour ->
+  Olive Green, closure -> Cork, picks a red off the wheel (0.44,0.10,
+  sampled through the same canvas the real handler uses) and drags the
+  lightness to 0.79 — the owner's exact order. (5) step 5 and step 6
+  bodies cut to THREE lines; a fourth sat 6.7px off the card's foot
+  where three sit 21px off. (6) the closing card is the same box as
+  every other (171.43, not 102.86) with its text still top-left, and it
+  carries no Skip — its own arrow does that. (7) step 2 now MAKES a
+  variation first: it presses "Contemporary Variation", the slot runs
+  its label-shaped loader, the second design lands, the dots under the
+  label flick between the two, and only then is one selected. The
+  variation is a real second contemporary design (demo/label2b.jpg).
+  (8) the pointer is hidden on the closing card, which has nothing to
+  point at.
 - ROUND 72 (owner, 14 items on the walkthrough, 2026-09-17):
   (1) the closing card stands on a BLANK page — the walkthrough stays on
   the assets page and a white sheet covers the band (the folder mark had
