@@ -1990,6 +1990,33 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 68 (owner, 6 items, 2026-09-16):
+  (1) the PROGRESS BAR now paints ABOVE a modal's veil (container z45,
+  was z8) so the red line, dots and round next button stay crisp while
+  a pop-up is open; every one of its click zones goes pointerEvents
+  "none" while `modalOpen` (confirm / email / terms / market) is true,
+  so it looks live but cannot be used until the box is closed.
+  (2) SELECT MARKET now matches the QR buttons above it: 12px roman
+  black text on WHITE with a 1px black outline and a black chevron
+  30% smaller (22x11 viewBox rendered at 15.4x7.7). It turns BLACK
+  the moment the panel opens and STAYS black once markets are picked
+  (`dark = marketOpen || picked.length > 0`).
+  (3) the barcode / QR explanation lines moved up 10px (baselines
+  517/535, GS1 link 553).
+  (4) UPLOADED-LABEL BUG ("no bottle, no marketing images, just the
+  label back"): a customer's file went to /images/edits raw — a
+  12-megapixel phone photo, or a PNG whose alpha the model reads as
+  the subject, makes the edit call hand the picture straight back.
+  Every upload is now re-baked by `normalizeLabel()` into the shape
+  our own labels have (flattened onto white, capped at 1400px on the
+  long side, plain JPEG 0.92) before it becomes `customLabel`. Two
+  companions: the multipart FILENAME now carries the real extension
+  (`input-0.jpg`, not `.png` for a JPEG — the API validates it), and
+  a failed asset run no longer dies in a bare `catch {}`; it logs and
+  shows "Generation failed — please try again".
+  (5) the credit number in the header bar is explicitly 700.
+  (6) the Vision and Back-Label description boxes got their weighted
+  frame back — 2px top+left, 1px right+bottom.
 - ROUND 67 (owner, 2 items + two mid-round notes, 2026-09-16):
   (1) the modal veil no longer washes over the black bars — each modal
   now paints a TRANSPARENT full-page blocker (clicks) plus a white

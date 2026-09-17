@@ -24,6 +24,14 @@ function dataUrlToBlob(dataUrl: string): Blob {
   return new Blob([Buffer.from(b64, "base64")], { type: mime });
 }
 
+/* the Images API validates the multipart FILENAME's extension as well as
+   the part's content type — a customer's JPEG sent as "input-0.png" is
+   rejected outright (round 68 #4) */
+function extOf(dataUrl: string): string {
+  const mime = dataUrl.match(/data:image\/([a-z]+)/)?.[1] || "png";
+  return mime === "jpeg" ? "jpg" : mime === "webp" ? "webp" : "png";
+}
+
 export async function generateOpenAIImage(job: GenerationJob): Promise<string> {
   const key = process.env.OPENAI_API_KEY;
   if (!key) throw new Error("OPENAI_API_KEY is not set (put it in .env.local, server-side only)");
@@ -41,9 +49,9 @@ export async function generateOpenAIImage(job: GenerationJob): Promise<string> {
   // artwork. The owner's style-reference boards deliberately never reach
   // the image model (rule 2026-08-13: image inputs made the model copy
   // their shapes and subjects).
-  if (job.reference) imageInputs.push({ blob: dataUrlToBlob(job.reference), name: "reference.png" });
+  if (job.reference) imageInputs.push({ blob: dataUrlToBlob(job.reference), name: `reference.${extOf(job.reference)}` });
   for (let i = 0; i < (job.references?.length || 0); i++)
-    imageInputs.push({ blob: dataUrlToBlob(job.references![i]), name: `input-${i}.png` });
+    imageInputs.push({ blob: dataUrlToBlob(job.references![i]), name: `input-${i}.${extOf(job.references![i])}` });
   if (imageInputs.length) {
     const form = new FormData();
     form.append("model", model);

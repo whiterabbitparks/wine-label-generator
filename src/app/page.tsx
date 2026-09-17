@@ -377,7 +377,31 @@ export default function NewUI() {
   useEffect(() => { try { if (localStorage.getItem("nui-live-gen") === "0") { setLiveGen(false); liveGenRef.current = false; } } catch { } }, []);
   /* round 57 #2: the stand-in is a REAL generated label, not a bottle */
   const FAKE_IMG = "/newui/sample-label.jpg";
-  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  /* ROUND 68 #4 (owner: "an uploaded label generates only the label back —
+   no bottle, no marketing images"). A generated label reaches the image
+   model as a modest flat PNG; a customer's file can be a 12-megapixel
+   phone photo, or a PNG whose transparency the model reads as the whole
+   subject — in both cases the edit call hands the picture back instead of
+   photographing a bottle with it. Every upload is therefore re-baked into
+   the same shape our own labels have: flattened onto white, capped at
+   1400px on its long side, plain JPEG. */
+async function normalizeLabel(dataUrl: string): Promise<string> {
+  try {
+    const im = await new Promise<HTMLImageElement>((res, rej) => {
+      const el = new Image(); el.onload = () => res(el); el.onerror = rej; el.src = dataUrl;
+    });
+    const k = Math.min(1, 1400 / Math.max(1, im.width, im.height));
+    const w = Math.max(1, Math.round(im.width * k)), h = Math.max(1, Math.round(im.height * k));
+    const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+    const cx = cv.getContext("2d"); if (!cx) return dataUrl;
+    cx.fillStyle = "#fff"; cx.fillRect(0, 0, w, h);
+    cx.drawImage(im, 0, 0, w, h);
+    const out = cv.toDataURL("image/jpeg", 0.92);
+    return out.startsWith("data:image/jpeg") ? out : dataUrl;
+  } catch { return dataUrl; }
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const [selected, setSelected] = useState(-1);
   const [genProgress, setGenProgress] = useState(0);
   const [frontSig, setFrontSig] = useState("");
@@ -718,7 +742,13 @@ export default function NewUI() {
             }
           } catch { /* page can be published on a later pass */ }
         }
-      } catch { /* placeholders remain; revisiting the page retries */ }
+      } catch (e) {
+        /* round 68 #4: a failed run used to vanish silently and leave the
+           page looking half-generated — say so, and let a revisit retry */
+        console.error("[assets]", e);
+        setWarn(t("Generation failed — please try again"));
+        setTimeout(() => setWarn(""), 5000);
+      }
       setAssetsStage("");
       assetsRunning.current = false;
     })();
@@ -1317,7 +1347,7 @@ export default function NewUI() {
             style={{ ...px(412, 275, 274, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
             {t("Give me an idea")}
           </button>
-          <div style={{ ...px(BOX.x, BOX.y, BOX.w, BOX.h), border: "2px solid #111", boxSizing: "border-box", pointerEvents: "none" }} />
+          <div style={{ ...px(BOX.x, BOX.y, BOX.w, BOX.h), border: "1px solid #111", borderTopWidth: 2, borderLeftWidth: 2, boxSizing: "border-box", pointerEvents: "none" }} />
           <textarea value={vision} onChange={(e) => setVision(e.target.value)} maxLength={2200}
             style={{ ...px(BOX.x + 14, BOX.y + 12, BOX.w - 28, BOX.h - 40), ...inputStyle, fontStyle: "normal", fontSize: 14, textDecoration: "none", resize: "none", lineHeight: 1.5, overflow: "auto", background: "transparent", padding: 0 }} />
           <span style={{ ...px(BOX.x + BOX.w - 174, baseTop(BOX.y + BOX.h - 13, 11), 160, 14), font: `11px ${HNW}`, lineHeight: "11px", color: "#8a8a8a", textAlign: "right" }}>{words} / 300 {t("words")}</span>
@@ -1522,7 +1552,7 @@ export default function NewUI() {
           {patch(0, HEADER_H, W, FOOTER_Y - HEADER_H, "bdwipe")}
           <span style={{ ...px(139, baseTop(149.08, 24), 600, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t("BACK LABEL DETAILS")}</span>
           {/* ── left: the wine description ── */}
-          <div style={{ ...px(BOX.x, BOX.y, BOX.w, BOX.h), border: "2px solid #111", boxSizing: "border-box", pointerEvents: "none" }} />
+          <div style={{ ...px(BOX.x, BOX.y, BOX.w, BOX.h), border: "1px solid #111", borderTopWidth: 2, borderLeftWidth: 2, boxSizing: "border-box", pointerEvents: "none" }} />
           <span style={{ ...px(BOX.x + 17, baseTop(235, 15), 300, 16), font: `700 15px ${HNW}`, lineHeight: "15px", color: "#111" }}>{t("Wine Description")}</span>
           <textarea value={b.description || ""}
             onChange={(e) => setB((m) => ({ ...m, description: e.target.value }))}
@@ -1555,10 +1585,10 @@ export default function NewUI() {
             ? ["ჩაწერე შენი GS1 GTIN ნომერი და ბეჭდვისთვის", "მზა შტრიხკოდს უკანა ეტიკეტზე ჩვენ დავიტანთ."]
             : ["If you don't have a barcode, we'll provide an official GTIN barcode", "and integrate it into your back label."]
           ).map((ln, i) => (
-            <span key={"bc" + i} style={{ ...px(139.6, baseTop(527 + i * 18, 13), 560, 14), font: `13px ${HNW}`, color: "#111", lineHeight: "13px", whiteSpace: "nowrap" }}>{ln}</span>
+            <span key={"bc" + i} style={{ ...px(139.6, baseTop(517 + i * 18, 13), 560, 14), font: `13px ${HNW}`, color: "#111", lineHeight: "13px", whiteSpace: "nowrap" }}>{ln}</span>
           ))}
           <a href="https://www.gs1.org/standards/get-barcodes" target="_blank" rel="noreferrer"
-            style={{ ...px(139.6, baseTop(563, 11), 320, 14), font: `italic 11px ${HNW}`, color: "#8a8a8a", textDecoration: "underline", lineHeight: "11px" }}>
+            style={{ ...px(139.6, baseTop(553, 11), 320, 14), font: `italic 11px ${HNW}`, color: "#8a8a8a", textDecoration: "underline", lineHeight: "11px" }}>
             {t("No GTIN yet? Register at gs1.org")}</a>
           {/* ── QR pair, exactly where the mock puts them ── */}
           <button onClick={() => { setQrImg(""); setQrMode(qrMode === "create" ? "" : "create"); }} style={{ ...px(754, 450, 241, 34.3), ...modeStyle(qrMode === "create") }}>{t("Create QR Code")}</button>
@@ -1574,10 +1604,10 @@ export default function NewUI() {
             ? ["თუ QR კოდი არ გაქვთ, ჩვენ შევქმნით და მივაბამთ სპეციალურ", "გვერდს ინგრედიენტებით, კვებითი ღირებულებით და ინფორმაციით."]
             : ["If you don't have a QR code, we'll generate one and link it to a dedicated page", "with your wine's ingredients, nutrition, and product information."]
           ).map((ln, i) => (
-            <span key={"qr" + i} style={{ ...px(752.5, baseTop(527 + i * 18, 13), 560, 14), font: `13px ${HNW}`, color: "#111", lineHeight: "13px", whiteSpace: "nowrap" }}>{ln}</span>
+            <span key={"qr" + i} style={{ ...px(752.5, baseTop(517 + i * 18, 13), 560, 14), font: `13px ${HNW}`, color: "#111", lineHeight: "13px", whiteSpace: "nowrap" }}>{ln}</span>
           ))}
           {qrMode === "create" && (
-            <label style={{ ...px(752.5, baseTop(563, 13), 300, 14), font: `13px ${HNW}`, lineHeight: "13px", color: "#111", textDecoration: "underline", textTransform: "none", cursor: "pointer", whiteSpace: "nowrap" }}>
+            <label style={{ ...px(752.5, baseTop(553, 13), 300, 14), font: `13px ${HNW}`, lineHeight: "13px", color: "#111", textDecoration: "underline", textTransform: "none", cursor: "pointer", whiteSpace: "nowrap" }}>
               <input type="file" accept=".txt,.md,.csv,text/plain" style={{ display: "none" }} onChange={(e) => {
                 const file = e.target.files?.[0]; if (!file) return;
                 const rd = new FileReader(); rd.onload = () => setIngredients(String(rd.result).slice(0, 20000)); rd.readAsText(file);
@@ -1602,6 +1632,11 @@ export default function NewUI() {
             const picked = COMP.filter((c) => markets.includes(c.code));
             const label = marketOpen ? t("Select") : picked.length ? t("Selected") : t("Select Market");
             const up = !marketOpen && picked.length === 0;
+            /* round 68 #2: white like the QR buttons until it is used —
+               black once the panel opens and from then on */
+            const dark = marketOpen || picked.length > 0;
+            const ink = dark ? "#fff" : "#111";
+            const AW = 15.4, AH = 7.7;   // the reference arrow, 30% smaller
             const flag = (col: number, row: number, w2 = 22) => (
               <span style={{
                 width: w2, height: w2 * 20 / 26, flex: "0 0 auto",
@@ -1618,10 +1653,10 @@ export default function NewUI() {
               <button onClick={() => setMarketOpen((o) => !o)}
                 /* while the panel is open the button rides ABOVE its
                    click-blocker, so pressing it closes the menu */
-                style={{ ...px(MB.x, MB.y, MB.w, MB.h), background: "#111", border: "none", cursor: "pointer", padding: 0, textTransform: "none", zIndex: marketOpen ? 13 : undefined }}>
-                <span style={{ position: "absolute", left: 0, top: baseTop(MB.h / 2 + 5, 15), width: MB.w, textAlign: "center", font: `italic 15px ${HNW}`, lineHeight: "15px", color: "#fff" }}>{label}</span>
-                <svg viewBox="0 0 22 11" width="22" height="11" style={{ position: "absolute", right: 8, top: (MB.h - 11) / 2 }}>
-                  <polyline points={up ? "1,10 11,1 21,10" : "1,1 11,10 21,1"} fill="none" stroke="#fff" strokeWidth="2" />
+                style={{ ...px(MB.x, MB.y, MB.w, MB.h), background: dark ? "#111" : "#fff", border: "1px solid #111", cursor: "pointer", padding: 0, textTransform: "none", boxSizing: "border-box", transition: `all 240ms ${EASE}`, zIndex: marketOpen ? 13 : undefined }}>
+                <span style={{ position: "absolute", left: 0, top: baseTop(MB.h / 2 + 4.5, 12), width: MB.w, textAlign: "center", font: `12px ${HNW}`, letterSpacing: 0.3, lineHeight: "12px", color: ink }}>{label}</span>
+                <svg viewBox="0 0 22 11" width={AW} height={AH} style={{ position: "absolute", right: 11, top: (MB.h - AH) / 2 }}>
+                  <polyline points={up ? "1,10 11,1 21,10" : "1,1 11,10 21,1"} fill="none" stroke={ink} strokeWidth="2" />
                 </svg>
               </button>
               {/* the chosen markets, listed beside the button */}
@@ -1896,8 +1931,8 @@ export default function NewUI() {
             <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
               const file = e.target.files?.[0]; if (!file) return;
               const rd = new FileReader();
-              rd.onload = () => {
-                const url = String(rd.result);
+              rd.onload = async () => {
+                const url = await normalizeLabel(String(rd.result));
                 const im = new Image();
                 im.onload = () => {
                   /* round 57 #5: BEST-GUESS real size — fit the image's
@@ -2235,6 +2270,8 @@ export default function NewUI() {
     }
   };
 
+  /* round 68 #1: any open modal freezes the bar (it still paints on top) */
+  const modalOpen = !!confirmModal || !!emailModal || termsOpen || marketOpen;
   const step = STEP_OF[page];
   const thick = THICK[page];
   const bandBottom = BAND_BOTTOM[page];
@@ -2365,12 +2402,12 @@ export default function NewUI() {
               <span style={{ font: `700 13px ${HNW}`, color: "#fff", whiteSpace: "nowrap" }}>
                 {t("Credits available:")}{" "}
                 {spinning ? (
-                  <span style={{ color: BAR_RED }}>{spinDigit}</span>
+                  <span style={{ color: BAR_RED, fontWeight: 700 }}>{spinDigit}</span>
                 ) : genCredits === 0 ? (
                   <button onClick={() => { gensReturn.current = pageNow.current; setGensMode(true); setGensSel(0); go("checkout"); }}
                     style={{ ...ghost, font: `700 13px ${HNW}`, color: BAR_RED, textDecoration: "underline", textTransform: "none", display: "inline" }}>{t("Add credit")}</button>
                 ) : (
-                  <span style={{ color: BAR_RED }}>{genCredits}</span>
+                  <span style={{ color: BAR_RED, fontWeight: 700 }}>{genCredits}</span>
                 )}
               </span>
               <span style={{ font: `700 13px ${HNW}`, color: "#fff", whiteSpace: "nowrap" }}>{t("About Us")}</span>
@@ -2388,20 +2425,22 @@ export default function NewUI() {
               the white/black boundary, the station labels sit in the black
               footer, and the NEXT action is a big red round button — at the
               right on working pages, at the left on the welcome page. */}
-          <div style={{ ...px(0, 0, W, H), pointerEvents: "none", zIndex: 8 }}>
+          {/* ROUND 68 #1 (owner): the bar stays crisp ABOVE a modal's veil —
+              it just stops taking clicks while one is open */}
+          <div style={{ ...px(0, 0, W, H), pointerEvents: "none", zIndex: 45 }}>
             {thick !== null && (<>
               <div style={{ ...px(CIRCLE_X[0], PROG_Y - LINE_H / 2, Math.max(0, thick - CIRCLE_X[0]), LINE_H), background: BAR_RED, borderRadius: LINE_H / 2, transition: `width ${SLIDE_MS}ms ${EASE}` }} />
               <div style={{ ...px(CIRCLE_X[0] - START_R, PROG_Y - START_R, START_R * 2, START_R * 2), background: BAR_RED, borderRadius: START_R }} />
               {STEPS.map((st, i) => i === 0 ? null : (
                 <button key={"d" + i} aria-label={st.label}
                   onClick={() => { if (st.page !== page) { barJumped.current = true; go(st.page, ORDER.indexOf(st.page) > ORDER.indexOf(page) ? 1 : -1); } }}
-                  style={{ ...px(CIRCLE_X[i] - 13, PROG_Y - 13, 26, 26), ...ghost, pointerEvents: "auto" }}>
+                  style={{ ...px(CIRCLE_X[i] - 13, PROG_Y - 13, 26, 26), ...ghost, pointerEvents: modalOpen ? "none" : "auto" }}>
                   <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: DOT_R * 2, height: DOT_R * 2, borderRadius: DOT_R, background: step >= i ? BAR_RED : "#fff", border: step >= i ? "none" : "1px solid #111", boxSizing: "border-box", transition: `background 300ms ${EASE}` }} />
                 </button>
               ))}
               {STEPS.map((st, i) => i > 0 && (
                 <button key={st.label} onClick={() => { if (st.page !== page) { barJumped.current = true; go(st.page, ORDER.indexOf(st.page) > ORDER.indexOf(page) ? 1 : -1); } }}
-                  style={{ ...px(CIRCLE_X[i] - 130, baseTop(LABEL_BASE, 14), 260, 18), ...ghost, pointerEvents: "auto", font: `700 14px ${HNW}`, lineHeight: "14px", color: "#fff", textAlign: "center", textTransform: "none" }}>
+                  style={{ ...px(CIRCLE_X[i] - 130, baseTop(LABEL_BASE, 14), 260, 18), ...ghost, pointerEvents: modalOpen ? "none" : "auto", font: `700 14px ${HNW}`, lineHeight: "14px", color: "#fff", textAlign: "center", textTransform: "none" }}>
                   {t(st.label)}</button>
               ))}
             </>)}
@@ -2439,7 +2478,7 @@ export default function NewUI() {
                 style={{
                   position: "absolute", left: (page === "welcome" ? WELCOME_X : NEXT_X) - NEXT_R, top: PROG_Y - NEXT_R,
                   width: NEXT_R * 2, height: NEXT_R * 2, borderRadius: NEXT_R, background: BAR_RED, border: "none",
-                  padding: 0, cursor: "pointer", pointerEvents: "auto", display: "flex", alignItems: "center", justifyContent: "center",
+                  padding: 0, cursor: "pointer", pointerEvents: modalOpen ? "none" : "auto", display: "flex", alignItems: "center", justifyContent: "center",
                   animation: arrowFly ? `btnFly ${SLIDE_MS}ms ${EASE} both` : "none",
                 }}>
                 <svg viewBox="0 0 36 24" width="28.8" height="19.2">
