@@ -660,6 +660,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
   const [packSel, setPackSel] = useState<boolean[]>([true, true, true, false]);
   const [agree, setAgree] = useState(false);
+  /* ROUND 75 (owner): the new Final Pack has TWO buttons — Download stays
+     grey and dead until "Proceed to payment" has gone through */
+  const [paid, setPaid] = useState(false);
   const [warn, setWarn] = useState("");
   /* ROUND 27: honest barcode — we never invent digits; the winery types its
      own number. ROUND 29 #1/#7: any 12- or 13-digit number is ACCEPTED and
@@ -698,7 +701,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   useEffect(() => {
     if (page !== "checkout") return;
     /* ROUND 53 #6 (owner): the T&C ring starts UNCHECKED — always */
-    setAgree(false);
+    setAgree(false); setPaid(false);
     if (customLabel) setPackSel([false, false, true, false]);
     else setPackSel((ps) => [ps[0], qrMode !== "upload", ps[2], false]);
   }, [page, qrMode, customLabel]);
@@ -2507,18 +2510,28 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       }
 
       case "checkout": {
-        /* ROUND 50 #13 (owner's Check Out copy 2 mock, rebuilt 1:1): the
-           BOARD carries the whole layout — left folder-tree diagram +
-           paragraph, right carousel frame with thin baked arrows, T&C
-           row, four dashed pricing rows, black Pay bar, back arrow. The
-           mock label raster, its caption and the five price texts were
-           stripped from the SVG at build time; the overlay adds ONLY the
-           live parts: slide image, caption, ring dots, prices, total and
-           ghost click zones. Geometry from the SVG: frame 822.86,137.14
-           480x274.29; rings cx 857.14 cy 497.28+34.43k (T&C 859.38,
-           445.71); text baselines 502.2+; prices right-aligned to 1234;
-           button rect 822.86,651.43,480x34.29. */
-        const FR = { x: 822.86, y: 137.14, w: 480, h: 274.29 };
+        /* ROUND 75 (owner's new Final Pack artboard, rebuilt 1:1): the page
+           turned around. LEFT is the order — carousel, T&C, the four priced
+           rows and "Proceed to payment". RIGHT is what you are buying — the
+           folder tree hanging off the header's own folder mark, the
+           explanation, and a "Download" that stays grey until the payment
+           goes through. A dashed rule at x720 separates them.
+           The BOARD carries the layout; the mock label raster and the five
+           prices were stripped at build time. Geometry read straight out of
+           the artboard (its viewBox IS our 1440x822.86):
+           rows on baselines 468.28 / 502.2 / 536.49 / 570.64 / 605.06 and
+           Total 639.48; rings cx 171.15, centre = baseline − 6.13; prices
+           right-aligned to 617.14; buttons y651.43 h34.29, 480 wide at
+           137.14 and 822.86; carousel arrows centred on y308.57. */
+        const COL_L = 137.14, COL_R = 822.86, COL_W = 480;
+        const CAR = { x: 160, y: 205.71, w: 434.28, h: 205.71 };   /* the slide's own space */
+        const CAR_MID = 308.57;
+        const TC_B = 468.28;
+        const ROWB = [502.2, 536.49, 570.64, 605.06];
+        const TOT_B = 639.48;
+        const RING_X = 171.15, RING_DY = 6.13, LBL_X = 205.71;
+        const PRICE_R = 617.14;
+        const BTN = { y: 651.43, h: 34.29 };
         type Slide = { name: string; img?: string; landing?: boolean; kind?: "front" | "back" };
         /* ROUND 47: own-label orders deliver ONLY the marketing assets */
         const slides: Slide[] = customLabel ? [
@@ -2534,127 +2547,121 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           ...(qrMode === "create" ? [{ name: "Product_Page", landing: true, kind: "front" as const }] : []),
         ];
         const sl = slides[carIdx % slides.length];
-        const ROWC = [497.28, 531.29, 565.71, 600.14];   // baked ring centres
-        const priceAtX = (right: number, baseline: number, v: string, bold = false) => (
-          <span key={"prx" + right + baseline} style={{ ...px(right - 140, baseline - (bold ? 14 : 13.5), 140, 16), font: `${bold ? 700 : 400} ${bold ? 16 : 15}px ${HNW}`, lineHeight: "16px", textAlign: "right", display: "block" }}>{v}</span>
+        const ringY = (baseline: number) => baseline - RING_DY;
+        /* a price, right-aligned on the column's own edge */
+        const priceAt = (baseline: number, v: string, bold = false, right = PRICE_R) => (
+          <span key={"pr" + baseline + right} style={{ ...px(right - 160, baseTop(baseline, 15), 160, 18), font: `${bold ? 700 : 400} 15px ${HNW}`, lineHeight: "15px", textAlign: "right", display: "block" }}>{v}</span>
         );
-        const priceAt = (baseline: number, v: string, bold = false) => (
-          /* the span's own baseline lands exactly on the baked row's */
-          <span key={"pr" + baseline} style={{ ...px(1234 - 140, baseline - (bold ? 14 : 13.5), 140, 16), font: `${bold ? 700 : 400} ${bold ? 16 : 15}px ${HNW}`, lineHeight: "16px", textAlign: "right", display: "block" }}>{v}</span>
+        const rowLabel = (baseline: number, text: string, click: () => void, key: string) => (
+          <button key={key} onClick={click}
+            style={{ ...px(LBL_X, baseline - 17, 360, 24), ...ghost, textAlign: "left", textTransform: "none", font: `15px ${HNW}`, color: "#111", display: "flex", alignItems: "center" }}>{text}</button>
         );
         return (<>
-          {/* ROUND 50 (owner follow-up): the folder tree + paragraph
-              describe the FULL pack — an own-label (assets-only) order
-              hides that whole left block */}
-          {customLabel && !gensMode && patch(126, 158, 706, 470, "notree")}
-          {/* owner (New folder): unselected rows prune their tree branch —
-              row 1 (labels) removes the LABELS folder+files and its arm of
-              the connector; row 3 removes the MARKETING ASSETS branch */}
-          {!customLabel && !gensMode && !packSel[0] && (<>
-            {patch(262, 344, 104, 232, "nolabels")}
-            {patch(306, 339, 138, 7, "nolabelsline")}
+          {/* ── the right-hand column: what the pack contains ───────────── */}
+          {/* the artboard's paragraph is OUTLINED, so it cannot follow the
+              language switch — it is covered and redrawn as live text */}
+          {!gensMode && patch(COL_R, 542, COL_W, 82, "parawipe")}
+          {!gensMode && ["After payment, you’ll be able to download your", "Final Pack with high-resolution, print-ready files,", "instructions, and a Read Me containing", "the link to your published product page."].map((ln, i) => (
+            <span key={"pp" + i} style={{ ...px(COL_R, baseTop(559.8 + i * 18, 15), COL_W, 20), font: `italic 15px ${HNW}`, lineHeight: "15px", color: "#111", whiteSpace: "nowrap" }}>{t(ln)}</span>
+          ))}
+          {/* an own-label (assets-only) order buys no labels, so the whole
+              tree and its paragraph go (round 50) */}
+          {customLabel && !gensMode && (<>
+            {patch(760, 92, 600, 540, "notree")}
+            {patch(1225, 108, 120, 40, "nofpcap")}
           </>)}
-          {!customLabel && !gensMode && !packSel[2] && patch(396, 344, 104, 275, "nomarketing")}
-          {/* round 56 #6: no QR/page row → the domain line leaves the
-              READ ME file list */}
-          {!customLabel && !gensMode && !packSel[1] && patch(521, 566, 175, 13, "noqrfile")}
-          {/* live slide inside the baked dashed frame (hidden entirely on
-              the round-52 centered top-up card) */}
+          {/* unselected rows prune their own branch of the tree */}
+          {!customLabel && !gensMode && !packSel[0] && patch(1218, 232, 118, 230, "nolabels")}
+          {!customLabel && !gensMode && !packSel[2] && (<>
+            {patch(995, 232, 122, 275, "nomarketing")}
+            {patch(1046, 200, 20, 44, "nomarketingarm")}
+          </>)}
+          {/* round 56 #6: no QR/page row → the domain line leaves READ ME */}
+          {!customLabel && !gensMode && !packSel[1] && patch(795, 447, 130, 13, "noqrfile")}
+          {/* the Download button: grey and dead until the payment lands */}
+          {!gensMode && (<>
+            {patch(COL_R - 2, BTN.y - 2, COL_W + 4, BTN.h + 4, "dlwipe")}
+            <button onClick={() => { if (paid) proceedToPayment(); }} disabled={!paid}
+              style={{ ...px(COL_R, BTN.y, COL_W, BTN.h), background: paid ? "#111" : "#C2C2C2", border: "none", color: "#fff", font: `12px ${HNW}`, letterSpacing: 0.3, textTransform: "none", cursor: paid ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, transition: `background 240ms ${EASE}` }}>
+              {t("Download")}</button>
+          </>)}
+          {/* ── the left-hand column: the order ─────────────────────────── */}
+          {/* the live slide, centred between the baked chevrons */}
           {gensMode ? null : sl.landing ? (
             productUrl && selected >= 0 ? (
-              <div style={{ ...px(FR.x + (FR.w - 340) / 2, FR.y + 16, 340, 340 / W * 823 + 13), background: "#fff", borderRadius: 5, boxShadow: "0 8px 22px rgba(0,0,0,0.2)", overflow: "hidden" }}>
+              <div style={{ ...px(CAR.x + (CAR.w - 320) / 2, CAR.y, 320, 320 / W * 823 + 13), background: "#fff", borderRadius: 5, boxShadow: "0 8px 22px rgba(0,0,0,0.2)", overflow: "hidden" }}>
                 <div style={{ height: 13, background: "#E8E8E6", display: "flex", alignItems: "center", gap: 3, padding: "0 6px" }}>
                   {["#FF5F57", "#FEBC2E", "#28C840"].map((c) => <span key={c} style={{ width: 4.5, height: 4.5, borderRadius: 3, background: c }} />)}
                   <span style={{ flex: 1, margin: "0 8px", height: 7, background: "#fff", borderRadius: 3, font: `5px ${HNW}`, color: "#999", paddingLeft: 4, lineHeight: "7px" }}>8klabels.com{productUrl}</span>
                 </div>
-                <iframe src={productUrl} title="product page" style={{ width: W, height: 823, transform: `scale(${340 / W})`, transformOrigin: "0 0", border: 0, pointerEvents: "none" }} />
+                <iframe src={productUrl} title="product page" style={{ width: W, height: 823, transform: `scale(${320 / W})`, transformOrigin: "0 0", border: 0, pointerEvents: "none" }} />
               </div>
-            ) : notMade(FR.x + 20, FR.y + 16, FR.w - 40, FR.h - 66, "front", "nmCar")
+            ) : notMade(CAR.x + 40, CAR.y, CAR.w - 80, CAR.h, "front", "nmCar")
           ) : sl.img ? (
             /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={sl.img} alt={sl.name} style={{ ...px(FR.x + 20, FR.y + 15, FR.w - 40, 226), objectFit: "contain" }} />
-          ) : notMade(FR.x + 20, FR.y + 16, FR.w - 40, FR.h - 66, sl.kind || "front", "nmCar")}
+            <img src={sl.img} alt={sl.name} style={{ ...px(CAR.x, CAR.y, CAR.w, CAR.h), objectFit: "contain" }} />
+          ) : notMade(CAR.x + 40, CAR.y, CAR.w - 80, CAR.h, sl.kind || "front", "nmCar")}
           {!gensMode && (<>
-            {/* caption (stripped from the board, drawn live at its spot) */}
-            <span style={{ ...px(FR.x, 396.04 - 12, FR.w, 16), font: `12px ${HNW}`, color: "#111", textAlign: "center", display: "block" }}>{sl.name}</span>
-            {/* baked thin chevrons get ghost click zones */}
+            {/* the baked chevrons get their click zones */}
             <button aria-label="prev slide" onClick={() => setCarIdx((c) => (c + slides.length - 1) % slides.length)}
-              style={{ ...px(834, 252, 36, 44), ...ghost }} />
+              style={{ ...px(COL_L - 8, CAR_MID - 22, 44, 44), ...ghost }} />
             <button aria-label="next slide" onClick={() => setCarIdx((c) => (c + 1) % slides.length)}
-              style={{ ...px(1256, 252, 36, 44), ...ghost }} />
-          </>)}
-          {/* T&C — baked ring + underlined text; the dot and toggle are
-              live, the underlined words open the terms modal (round 52) */}
-          {!gensMode && (<>
-            {dotBtn(859.38, 445.71, agree, () => setAgree((a) => !a), "agree")}
-            <button onClick={() => setAgree((a) => !a)} style={{ ...px(880, 436, 96, 20), ...ghost }} />
-            <button aria-label="terms" onClick={() => { setTermsOpen(true); setTermsPos(0); }} style={{ ...px(977, 436, 122, 20), ...ghost, cursor: "pointer" }} />
+              style={{ ...px(PRICE_R - 36, CAR_MID - 22, 44, 44), ...ghost }} />
+            {/* T&C — the ring's dot and both click zones are live */}
+            {dotBtn(RING_X, ringY(TC_B), agree, () => setAgree((a) => !a), "agree")}
+            <button onClick={() => setAgree((a) => !a)} style={{ ...px(206, TC_B - 15, 94, 20), ...ghost }} />
+            <button aria-label="terms" onClick={() => { setTermsOpen(true); setTermsPos(0); }} style={{ ...px(298, TC_B - 15, 130, 20), ...ghost, cursor: "pointer" }} />
           </>)}
           {gensMode ? (<>
-            {/* ROUND 52 #2 / ROUND 53 #1 (owner): the top-up card keeps
-                the thumbnail box (empty for now — image arrives later),
-                same rhythm as the standard pack, centered on the page:
-                everything at baked y, shifted dx -342.86. */}
-            {patch(126, 158, 706, 470, "notreeg")}
-            {patch(818, 128, 494, 565, "nocarg")}
-            {/* owner (New folder): the top-up page is titled CREDITS */}
-            {patch(130, 132, 260, 28, "gtitle")}
-            <span style={{ ...px(137.15, 151.8 - 16, 300, 22), font: `700 19px ${HNW}`, lineHeight: "22px" }}>{t("CREDITS")}</span>
-            {dashedBox(480, 137.14, 480, 274.29, "genFrame")}
-            {cross(480, 137.14, "gf1")}{cross(960, 137.14, "gf2")}
-            {cross(480, 411.43, "gf3")}{cross(960, 411.43, "gf4")}
-            {dotBtn(516.52, 445.71, agree, () => setAgree((a) => !a), "agreeg", { ring: true, r: 7.5 })}
-            <span style={{ ...px(542.9, 445.71 - 8.1, 340, 16), font: `15px ${HNW}`, lineHeight: "16px" }}>
-              <span onClick={() => setAgree((a) => !a)} style={{ cursor: "pointer" }}>{t("I agree to the")} </span>
-              <span onClick={() => { setTermsOpen(true); setTermsPos(0); }} style={{ textDecoration: "underline", cursor: "pointer" }}>{t("Terms & Conditions")}</span>
-            </span>
-            {[480, 514.56, 548.57, 582.86, 617.41].map((ly) => (
-              <div key={"gl" + ly} style={{ ...px(480, ly, 480, 1), backgroundImage: `repeating-linear-gradient(90deg,${DASH})`, backgroundSize: "100% 1px", backgroundRepeat: "no-repeat" }} />
-            ))}
+            {/* ROUND 52 #2 / 53 #1: the credit top-up borrows the same order
+                column — the right half and the divider come off entirely. */}
+            {patch(700, 92, 660, 600, "notreeg")}
+            {patch(130, 126, 620, 32, "gtitle")}
+            <span style={{ ...px(COL_L, baseTop(149.02, 23), 300, 26), font: `700 23px ${HNW}`, lineHeight: "23px" }}>{t("CREDITS")}</span>
+            {dashedBox(CAR.x, CAR.y, CAR.w, CAR.h, "genFrame")}
+            {cross(CAR.x, CAR.y, "gf1")}{cross(CAR.x + CAR.w, CAR.y, "gf2")}
+            {cross(CAR.x, CAR.y + CAR.h, "gf3")}{cross(CAR.x + CAR.w, CAR.y + CAR.h, "gf4")}
+            {/* the four baked product rows become the four credit bundles */}
+            {patch(LBL_X - 2, 486, 380, 134, "growwipe")}
             {GENS.map((g, i) => (
               <span key={g.name}>
-                {dotBtn(514.28, ROWC[i], gensSel === i, () => setGensSel(i), "gen" + i, { ring: true, r: 7.5 })}
-                <button onClick={() => setGensSel(i)} style={{ ...px(537, ROWC[i] - 12, 340, 24), ...ghost, textAlign: "left", textTransform: "none", font: `15px ${HNW}`, color: "#111" }}>{t(g.name)}</button>
-                {priceAtX(891.14, ROWC[i] + 4.9, "$" + g.price.toFixed(2))}
+                {dotBtn(RING_X, ringY(ROWB[i]), gensSel === i, () => setGensSel(i), "gen" + i)}
+                {rowLabel(ROWB[i], t(g.name), () => setGensSel(i), "gr" + i)}
+                {priceAt(ROWB[i], "$" + g.price.toFixed(2))}
               </span>
             ))}
-            <span style={{ ...px(548.54, 639.48 - 14, 200, 18), font: `700 16px ${HNW}`, lineHeight: "18px" }}>{t("Total:")}</span>
-            {priceAtX(891.14, 639.48, "$" + GENS[gensSel].price.toFixed(2), true)}
-            <div style={{ ...px(480, 651.43, 480, 34.29), background: "#111", display: "flex", alignItems: "center", justifyContent: "center", font: `12px ${HNW}`, letterSpacing: 0.3, color: "#fff", paddingBottom: 4 }}>{t("Proceed to Payment")}</div>
-            <button aria-label="pay" onClick={() => { if (requireAgree()) payForGenerations(); }} style={{ ...px(480, 651.43, 480, 34.29), ...ghost }} />
+            {priceAt(TOT_B, "$" + GENS[gensSel].price.toFixed(2), true)}
+            <button aria-label="pay" onClick={() => { if (requireAgree()) payForGenerations(); }}
+              style={{ ...px(COL_L, BTN.y, COL_W, BTN.h), ...ghost }} />
           </>) : customLabel ? (<>
             {/* own-label order: only Marketing Assets and its price */}
-            {patch(822.5, 469, 481, 150, "custrows")}
-            {[480, 514.56].map((ly) => (
-              <div key={"cl" + ly} style={{ ...px(822.86, ly, 480, 1), backgroundImage: `repeating-linear-gradient(90deg,${DASH})`, backgroundSize: "100% 1px", backgroundRepeat: "no-repeat" }} />
-            ))}
-            {dotBtn(857.14, ROWC[0], !!packSel[2], () => setPackSel((ps) => ps.map((v, k) => (k === 2 ? !v : v))), "pkc", { ring: true, r: 7.5 })}
-            <button onClick={() => setPackSel((ps) => ps.map((v, k) => (k === 2 ? !v : v)))}
-              style={{ ...px(880, ROWC[0] - 12, 340, 24), ...ghost, textAlign: "left", textTransform: "none", font: `15px ${HNW}`, color: "#111" }}>{t("Marketing Assets")}</button>
-            {priceAt(ROWC[0] + 4.9, "$" + PACK[2].price)}
-            {priceAt(639.48, "$" + total, true)}
-            <button aria-label="pay" onClick={() => { if (requireAgree()) proceedToPayment(); }} style={{ ...px(822.86, 651.43, 480, 34.29), ...ghost }} />
+            {patch(LBL_X - 2, 486, 380, 134, "custrows")}
+            {patch(PRICE_R - 160, 486, 160, 134, "custprices")}
+            {dotBtn(RING_X, ringY(ROWB[0]), !!packSel[2], () => setPackSel((ps) => ps.map((v, k) => (k === 2 ? !v : v))), "pkc")}
+            {[1, 2, 3].map((i) => <span key={"nr" + i} style={{ ...px(RING_X - 13, ringY(ROWB[i]) - 13, 26, 26), background: "#fff" }} />)}
+            {rowLabel(ROWB[0], t("Marketing Assets"), () => setPackSel((ps) => ps.map((v, k) => (k === 2 ? !v : v))), "clm")}
+            {priceAt(ROWB[0], "$" + PACK[2].price)}
+            {priceAt(TOT_B, "$" + total, true)}
+            <button aria-label="pay" onClick={() => { if (requireAgree()) setPaid(true); }}
+              style={{ ...px(COL_L, BTN.y, COL_W, BTN.h), ...ghost }} />
           </>) : (<>
-            {/* live dots on the baked rings + row click zones */}
+            {/* live dots on the baked rings + the row click zones */}
             {PACK.map((it, i) => (
               <span key={it.name}>
-                {dotBtn(857.14, ROWC[i], !!packSel[i], () => setPackSel((ps) => ps.map((v, k) => (k === i ? !v : v))), "pk" + i)}
+                {dotBtn(RING_X, ringY(ROWB[i]), !!packSel[i], () => setPackSel((ps) => ps.map((v, k) => (k === i ? !v : v))), "pk" + i)}
                 <button onClick={() => setPackSel((ps) => ps.map((v, k) => (k === i ? !v : v)))}
-                  style={{ ...px(880, ROWC[i] - 12, 340, 24), ...ghost }} />
-                {priceAt(ROWC[i] + 4.9, "$" + it.price)}
+                  style={{ ...px(LBL_X, ROWB[i] - 17, 360, 24), ...ghost }} />
+                {priceAt(ROWB[i], "$" + it.price)}
               </span>
             ))}
-            {priceAt(639.48, "$" + total, true)}
-            <button aria-label="pay" onClick={() => { if (requireAgree()) proceedToPayment(); }} style={{ ...px(822.86, 651.43, 480, 34.29), ...ghost }} />
+            {priceAt(TOT_B, "$" + total, true)}
+            <button aria-label="pay" onClick={() => { if (requireAgree()) setPaid(true); }}
+              style={{ ...px(COL_L, BTN.y, COL_W, BTN.h), ...ghost }} />
           </>)}
           {/* round 52 #1: the agree gate message under the Pay bar */}
           {warn && (
-            <span style={{ ...px(gensMode ? 480 : 822.86, 694, 480, 16), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block" }}>{warn}</span>
+            <span style={{ ...px(137.14, 694, 480, 16), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block" }}>{warn}</span>
           )}
-          {/* back arrow is baked — ghost zone; a gens visit returns to the
-              options page it came from */}
-          <button aria-label="back" onClick={() => { if (gensMode) { setGensMode(false); go(gensReturn.current || "options", -1); } else goBack(); }}
-            style={{ ...px(72, 666, 52, 40), ...ghost }} />
           {/* ROUND 52 #3: Terms & Conditions modal — lorem body behind the
               house-style scroll (1px track + black dot, draggable), black
               Agree / Disagree bar and a ✕ */}
@@ -2773,12 +2780,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     (line at 685, words at 720) — wipe that strip, the new bar
                     rides the band edge. The Final-Pack board has no bar, only
                     a baked back arrow to hide. */}
-                {p === "checkout" ? patch(70, 664, 64, 42, "bawipe") : patch(0, 660, W, FOOTER_Y - 660, "barwipe")}
+                {p === "checkout" ? null : patch(0, 660, W, FOOTER_Y - 660, "barwipe")}
                 {/* ROUND 63 (owner): page titles grew with the merged pages —
                     the baked 19px title is covered and redrawn live at 24 */}
                 {PAGE_TITLE[p] && (<>
                   {patch(130, 126, 620, 32, "ttl" + p)}
-                  <span style={{ ...px(137.14, baseTop(p === "checkout" ? 151.8 : 149.08, 24), 620, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t(PAGE_TITLE[p]!)}</span>
+                  <span style={{ ...px(137.14, baseTop(149.08, 24), 620, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t(PAGE_TITLE[p]!)}</span>
                 </>)}
                 {renderOverlay(p, inSlide)}
               </>

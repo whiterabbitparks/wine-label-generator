@@ -1990,6 +1990,30 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 75 (owner's new Final Pack artboard, 2026-09-17): the page turned
+  around. LEFT is the ORDER — the carousel between its two chevrons, the
+  T&C row, four priced rows and "Proceed to payment". RIGHT is WHAT YOU
+  BUY — the folder tree hanging off the header's own folder mark (that is
+  what the round-71 mark is for), the explanation, and a "Download" that
+  stays grey and disabled until the payment goes through. A dashed rule at
+  x720 divides them. Geometry straight out of the artboard (viewBox IS our
+  1440x822.86): rows on 468.28 / 502.2 / 536.49 / 570.64 / 605.06, Total
+  639.48, rings cx 171.15 with centre = baseline − 6.13, prices
+  right-aligned to 617.14, buttons y651.43 h34.29 480 wide at 137.14 and
+  822.86, carousel arrows centred on y308.57, tree axes 857.14 / 1055.24 /
+  1267.6 (READ ME / MARKETING ASSETS / LABELS — the order changed).
+  BOARD REBUILD: the export's <metadata> was malformed (a stray ]]> that
+  broke every SVG parser) — strip it, strip the 15MB embedded label
+  raster and the five prices, and it drops 17MB -> 67KB.
+  OWNER'S ANSWERS: Marketing Assets stays at $9 (the board's $19 and its
+  $296 total predate round 48 #7); Download unlocks only after Proceed to
+  payment; the paragraph — which is OUTLINED on the board and so cannot
+  follow the language switch — is covered and redrawn as live text.
+  The board carries no back arrow any more, so checkout's "bawipe" and the
+  ghost back button are gone, and its title joins every other page on
+  baseline 149.08. The credits top-up view now borrows the same order
+  column instead of its own centred card. NOTE: the artboard has no slide
+  caption and no carousel ring dots, so neither is drawn.
 - ROUND 74 (owner, 2 items, 2026-09-17):
   (1) the two label previews in CHECK YOUR DETAILS now stand the SAME
   height. Their dashed boxes were always equal — object-fit was sizing

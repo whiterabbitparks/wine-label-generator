@@ -112,11 +112,16 @@ export const SVG_GE: Record<string, string> = {
   "No cap": "თავსახურის გარეშე",
   /* assets */
   "MARKETING ASSETS": "ᲡᲐᲛᲐᲠᲙᲔᲢᲘᲜᲒᲝ ᲛᲐᲡᲐᲚᲐ",
+  "Marketing Assets": "სამარკეტინგო მასალა",
   "Face &amp; Back": "წინა და უკანა",
   "Product placed in contextual environments": "პროდუქტი კონტექსტურ გარემოში",
   /* checkout — round 50: the owner's new Final Pack board (folder tree +
      T&C + baked rows; file names stay untranslated on purpose) */
   "FINAL PACK": "ᲡᲐᲑᲝᲚᲝᲝ ᲞᲐᲙᲔᲢᲘ",
+  /* round 75: the rebuilt Final Pack board */
+  "READ ME": "წამიკითხე",
+  "Proceed to payment": "გადახდაზე გადასვლა",
+  "Download": "ჩამოტვირთვა",
   "After payment, you’ll be able to download": "გადახდის შემდეგ შეძლებთ ჩამოტვირთოთ",
   "your Final Pack, including high-resolution,": "თქვენი საბოლოო პაკეტი — მაღალი გარჩევადობის,",
   "print-ready files and all necessary": "საბეჭდად მზა ფაილები და ყველა საჭირო",
@@ -146,6 +151,11 @@ export const SVG_GE: Record<string, string> = {
 
 export const UI_GE: Record<string, string> = {
   "Skip": "გამოტოვება",
+  /* round 75: the Final Pack paragraph (outlined on the board, drawn live) */
+  "After payment, you\u2019ll be able to download your": "გადახდის შემდეგ შეძლებთ ჩამოტვირთოთ თქვენი",
+  "Final Pack with high-resolution, print-ready files,": "საბოლოო პაკეტი — მაღალი გარჩევადობის, საბეჭდად მზა",
+  "instructions, and a Read Me containing": "ფაილები, ინსტრუქცია და Read Me ფაილი",
+  "the link to your published product page.": "თქვენი პროდუქტის გვერდის ბმულით.",
   "Show this one big": "დიდად ჩვენება",
   /* round 71 #4: the walkthrough cards (GEO copy to be reviewed by the owner) */
   "STEP 1": "ნაბიჯი 1", "STEP 2": "ნაბიჯი 2", "STEP 3": "ნაბიჯი 3",
