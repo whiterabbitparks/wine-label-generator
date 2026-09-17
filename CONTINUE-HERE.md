@@ -1990,6 +1990,16 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 74 (owner, 2 items, 2026-09-17):
+  (1) the two label previews in CHECK YOUR DETAILS now stand the SAME
+  height. Their dashed boxes were always equal — object-fit was sizing
+  each image by its own aspect, so a square back label came out half
+  again as tall as a landscape front one. dashBox() takes an optional
+  imgH and both are given the tallest height at which BOTH still fit
+  (min of the box height and inW/aspect for each), widths following.
+  (2) clicking a marketing thumb swaps it into the big slot again —
+  lifeOrder[] holds the running order (index 0 is whatever shows big),
+  swapHero() exchanges a thumb with it, and a fresh run resets it.
 - ROUND 73 (owner, 8 more on the walkthrough, 2026-09-17):
   (1) after the QR button the pointer climbs to the back-details column
   and clicks BEFORE a character of it is typed. (2) when a step's script

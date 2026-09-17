@@ -741,7 +741,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       /* round 56 #3 (TEMP dev switch): fake the whole run with whatever
          art already exists — same stages, no API, no cost */
       if (!liveGenRef.current) {
-        setAssets({ life: [] }); setLifeTarget(5);
+        setAssets({ life: [] }); setLifeTarget(5); setLifeOrder([0, 1, 2, 3, 4]);
         assetT.current = { run: Date.now(), stage: Date.now() };
         const lab = sel.preview || sel.dream;
         setAssetsStage("front shot"); await sleep(700);
@@ -761,7 +761,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       }
       const got = { front: "", back: "", life: [] as string[] };
       try {
-        setAssets({ life: [] }); setLifeTarget(5);
+        setAssets({ life: [] }); setLifeTarget(5); setLifeOrder([0, 1, 2, 3, 4]);
         assetT.current = { run: Date.now(), stage: Date.now() };
         setAssetsStage("preparing");
         let backData: string | null = null;
@@ -850,7 +850,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   }, [page, assetsTick]);
   /* ROUND 56 (owner's PSD): "More Variations" — each press buys 5 more
      lifestyle images; the thumbs grid densifies to fit them all */
-  const [lifeTarget, setLifeTarget] = useState(4);
+  const [lifeTarget, setLifeTarget] = useState(5);
+  /* ROUND 74 #2 (owner): the marketing images can be re-ordered by hand —
+     lifeOrder[0] is whatever is showing big, the rest are the thumbs, and
+     clicking a thumb swaps it with the hero */
+  const [lifeOrder, setLifeOrder] = useState([0, 1, 2, 3, 4]);
+  const swapHero = (slotIdx: number) => setLifeOrder((o) => {
+    const n = [...o]; [n[0], n[slotIdx]] = [n[slotIdx], n[0]]; return n;
+  });
   const moreRunning = useRef(false);
   async function moreVariations() {
     if (assetsRunning.current || moreRunning.current || assetsStage) return;
@@ -1260,7 +1267,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         case 5: {
           /* the real run's stages, on the sample images */
           setTutLanding(false);
-          setAssets({ life: [] }); setLifeTarget(5);
+          setAssets({ life: [] }); setLifeTarget(5); setLifeOrder([0, 1, 2, 3, 4]);
           assetT.current = { run: Date.now(), stage: Date.now() };
           setAssetsStage("front shot");
           if (!(await hold(1500))) return;
@@ -2383,10 +2390,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           </span>
         );
         /* round 57 #3: `quiet` cells show NO message — just the grey box */
-        const slot = (x: number, y: number, w2: number, h2: number, it: { full: string; prev: string } | undefined, loadKey: string, fit: "cover" | "contain", quiet = false) =>
+        const slot = (x: number, y: number, w2: number, h2: number, it: { full: string; prev: string } | undefined, loadKey: string, fit: "cover" | "contain", quiet = false, onPick?: () => void) =>
           it ? (
             /* eslint-disable-next-line @next/next/no-img-element */
-            <img key={loadKey} src={it.prev} alt="" style={{ ...px(x, y, w2, h2), objectFit: fit, animation: `nuiFadeIn ${FADE_MS}ms ${EASE}` }} />
+            <img key={loadKey} src={it.prev} alt="" onClick={onPick}
+              title={onPick ? t("Show this one big") : undefined}
+              style={{ ...px(x, y, w2, h2), objectFit: fit, animation: `nuiFadeIn ${FADE_MS}ms ${EASE}`, cursor: onPick ? "pointer" : undefined }} />
           ) : (
             <div key={loadKey} style={{ ...px(x, y, w2, h2), background: assetsStage ? "#F4F3EE" : "#ECECEA", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
               {assetsStage ? (<>
@@ -2437,10 +2446,16 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               {slot((R1 + R2) / 2 - 60, Y0, 120, CH, assets.back, "back shot", "contain")}
             </>)}
           {/* the hero, then its four thumbs */}
-          {slot(HERO.x, Y0, HERO.w, CH, assets.life[0], "lifestyle 1/5", "cover")}
-          {thumbs.map((th, k) => (
-            <span key={"mi" + k}>{slot(th.x, th.y, th.s, th.s, assets.life[k + 1], `lifestyle ${((k + 1) % N) + 1}/5`, "cover", true)}</span>
-          ))}
+          {slot(HERO.x, Y0, HERO.w, CH, assets.life[lifeOrder[0]], `lifestyle ${lifeOrder[0] + 1}/5`, "cover")}
+          {thumbs.map((th, k) => {
+            const idx = lifeOrder[k + 1];
+            return (
+              <span key={"mi" + k}>
+                {slot(th.x, th.y, th.s, th.s, assets.life[idx], `lifestyle ${(idx % N) + 1}/5`, "cover", true,
+                  assets.life[idx] ? () => swapHero(k + 1) : undefined)}
+              </span>
+            );
+          })}
           {/* landing column: browser + QR and its caption underneath */}
           {landingCol && (() => {
             /* round 60 #2 (owner: "two loaders"): ONE box, ONE glass —
@@ -3094,10 +3109,18 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             const colTitle = (x: number, txt: string) => (
               <span style={{ position: "absolute", left: x, top: baseTop(162.8, 21), font: `700 21px ${HNW}`, lineHeight: "21px", whiteSpace: "nowrap" }}>{txt}</span>
             );
-            const dashBox = (x: number, y: number, w2: number, h2: number, img?: string) => (
+            /* ROUND 74 #1 (owner): the two label previews must stand the
+               SAME height — they are the same physical height on the bottle,
+               and object-fit sized each by its own aspect (a square back
+               label came out half again as tall as a landscape front one).
+               `imgH` forces a shared height and lets the widths follow. */
+            const dashBox = (x: number, y: number, w2: number, h2: number, img?: string, imgH?: number) => (
               <div style={{ position: "absolute", left: x, top: y, width: w2, height: h2, backgroundImage: `repeating-linear-gradient(90deg,${DASH}),repeating-linear-gradient(90deg,${DASH}),repeating-linear-gradient(180deg,${DASH}),repeating-linear-gradient(180deg,${DASH})`, backgroundPosition: "0 0, 0 100%, 0 0, 100% 0", backgroundSize: "100% 1px, 100% 1px, 1px 100%, 1px 100%", backgroundRepeat: "no-repeat" }}>
-                {img && (/* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={img} alt="" style={{ position: "absolute", inset: 8, width: "calc(100% - 16px)", height: "calc(100% - 16px)", objectFit: "contain" }} />)}
+                {img && (imgH
+                  ? (/* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={img} alt="" style={{ position: "absolute", left: 8, right: 8, top: (h2 - imgH) / 2, height: imgH, width: "calc(100% - 16px)", objectFit: "contain" }} />)
+                  : (/* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={img} alt="" style={{ position: "absolute", inset: 8, width: "calc(100% - 16px)", height: "calc(100% - 16px)", objectFit: "contain" }} />))}
               </div>
             );
             const frontThumb = customLabel || viewedDream(selected)?.preview || viewedDream(selected)?.dream || "";
@@ -3147,8 +3170,15 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 <img key="bt" src={bottleSrc()} alt="" style={{ position: "absolute", left: 22, top: 140, width: 112.7, height: 225.3 }} />
               );
               leftBottom = 333;
-              if (frontThumb) left.push(<span key="fl">{colTitle(137.6, t("Front Label"))}{dashBox(137.6, 177.6, 160, 155, frontThumb)}</span>);
-              if (backThumb) left.push(<span key="bl">{colTitle(323.7, t("Back Label"))}{dashBox(323.7, 177.6, 159, 155, backThumb)}</span>);
+              /* the tallest height at which BOTH labels still fit their box */
+              const inW = 160 - 16, inH = 155 - 16;
+              const fAr = (imgDims[selected]?.w && imgDims[selected]?.h)
+                ? imgDims[selected]!.w / imgDims[selected]!.h
+                : (Number(f.width) || 110) / (Number(f.height) || 80);
+              const bAr = backDims.h > 1 ? backDims.w / backDims.h : fAr;
+              const shared = Math.min(inH, inW / fAr, backThumb ? inW / bAr : inH);
+              if (frontThumb) left.push(<span key="fl">{colTitle(137.6, t("Front Label"))}{dashBox(137.6, 177.6, 160, 155, frontThumb, shared)}</span>);
+              if (backThumb) left.push(<span key="bl">{colTitle(323.7, t("Back Label"))}{dashBox(323.7, 177.6, 159, 155, backThumb, shared)}</span>);
             }
             const detX = isL ? 385.5 : 500;
             const valX = isL ? (lang === "ge" ? 530 : 500) : (lang === "ge" ? 612 : 604);

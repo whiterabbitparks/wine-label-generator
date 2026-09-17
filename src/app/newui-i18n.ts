@@ -146,6 +146,7 @@ export const SVG_GE: Record<string, string> = {
 
 export const UI_GE: Record<string, string> = {
   "Skip": "გამოტოვება",
+  "Show this one big": "დიდად ჩვენება",
   /* round 71 #4: the walkthrough cards (GEO copy to be reviewed by the owner) */
   "STEP 1": "ნაბიჯი 1", "STEP 2": "ნაბიჯი 2", "STEP 3": "ნაბიჯი 3",
   "STEP 4": "ნაბიჯი 4", "STEP 5": "ნაბიჯი 5", "STEP 6": "ნაბიჯი 6",
