@@ -14,12 +14,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { LoginForm, AdminStyles as S } from "../legacy/LegacyAdmin";
-import type { EvalBrief, EvalItem, EvalRating, EvalRun, EvalFault } from "@/lib/eval/briefs";
+import type { EvalBrief, EvalItem, EvalRating, EvalRun, EvalFault, EvalMode } from "@/lib/eval/briefs";
 
 type RunWithRatings = EvalRun & { ratings: Record<string, EvalRating> };
 interface Ref { id: string; name: string; url: string }
 interface Payload {
   briefs: EvalBrief[]; styles: readonly string[]; faults: readonly EvalFault[];
+  models: { id: string; name: string }[];
   runs: RunWithRatings[]; refs: Record<string, Ref[]>;
 }
 
@@ -38,6 +39,11 @@ export default function EvalPage() {
   const [name, setName] = useState("");
   const [note, setNote] = useState("");
   const [perBrief, setPerBrief] = useState(1);
+  const [mode, setMode] = useState<EvalMode>("artwork");
+  const [model, setModel] = useState("gpt-image");
+  /* BLIND: run names and painters hidden — runs are "#1, #2…" in the order
+     they were made, so the marks are about the pictures, not the brand */
+  const [blind, setBlind] = useState(false);
   const [pickRefFor, setPickRefFor] = useState<string | null>(null);   /* item id awaiting a reference click */
   const [showPrompt, setShowPrompt] = useState<string | null>(null);
 
@@ -59,7 +65,7 @@ export default function EvalPage() {
     if (busy) return;
     if (!confirm(`Dream ${(data?.briefs.length || 6) * 3 * perBrief} labels with the LIVE model? This spends real credits.`)) return;
     setBusy({ done: 0, total: 0, run: "" });
-    const r = await fetch("/api/eval", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "generate", name: name || "run", note, perBrief }) });
+    const r = await fetch("/api/eval", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "generate", name: name || "run", note, perBrief, mode, model }) });
     if (!r.ok || !r.body) { setBusy(null); alert(`generation failed (${r.status})`); return; }
     const reader = r.body.getReader(); const dec = new TextDecoder(); let buf = "";
     for (;;) {
@@ -92,6 +98,10 @@ export default function EvalPage() {
   if (!data) return <main style={S.page}>Loading…</main>;
 
   const refs = data.refs[style] || [];
+  const byAge = [...data.runs].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  const runLabel = (r: RunWithRatings) => blind
+    ? `#${byAge.findIndex((x) => x.id === r.id) + 1} · ${r.createdAt.slice(0, 16).replace("T", " ")}`
+    : `${r.name} · ${r.mode} · ${data.models.find((m) => m.id === r.model)?.name || r.model} · ${r.createdAt.slice(0, 16).replace("T", " ")} · ${r.commit}`;
   const summary = (run: RunWithRatings | null) => {
     if (!run) return null;
     const items = run.items.filter((i) => i.style === style && !i.error);
@@ -141,7 +151,7 @@ export default function EvalPage() {
         <input value={rt?.note || ""} placeholder="note…" onChange={(e) => rate(run, item, { note: e.target.value })}
           style={{ ...S.input, marginTop: 6, fontSize: 12, padding: "4px 7px" }} />
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-          <button onClick={() => setShowPrompt(showPrompt === item.id ? null : item.id)} style={{ ...S.linkBtn, fontSize: 11 }}>{showPrompt === item.id ? "hide prompt" : "prompt"}</button>
+          {!blind && <button onClick={() => setShowPrompt(showPrompt === item.id ? null : item.id)} style={{ ...S.linkBtn, fontSize: 11 }}>{showPrompt === item.id ? "hide prompt" : "prompt"}</button>}
           <span style={{ fontSize: 11, color: "#8a887e" }}>{(item.ms / 1000).toFixed(0)}s{rt ? " · marked" : ""}</span>
         </div>
         {showPrompt === item.id && <pre style={{ ...S.mono, fontSize: 10, maxHeight: 220, overflow: "auto", marginTop: 6 }}>{item.prompt}</pre>}
@@ -169,6 +179,19 @@ export default function EvalPage() {
             <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="engine notes for the record" style={S.input} />
           </div>
           <div>
+            <label style={{ ...S.label, marginTop: 0 }}>Mode</label>
+            <select value={mode} onChange={(e) => setMode(e.target.value as EvalMode)} style={{ ...S.input, width: 150 }}>
+              <option value="artwork">artwork only</option>
+              <option value="label">whole label</option>
+            </select>
+          </div>
+          <div>
+            <label style={{ ...S.label, marginTop: 0 }}>Painter</label>
+            <select value={mode === "label" ? "gpt-image" : model} disabled={mode === "label"} onChange={(e) => setModel(e.target.value)} style={{ ...S.input, width: 230 }}>
+              {data.models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+            </select>
+          </div>
+          <div>
             <label style={{ ...S.label, marginTop: 0 }}>Per brief</label>
             <select value={perBrief} onChange={(e) => setPerBrief(Number(e.target.value))} style={{ ...S.input, width: 70 }}>
               {[1, 2, 3].map((n) => <option key={n} value={n}>{n}</option>)}
@@ -186,16 +209,19 @@ export default function EvalPage() {
           <label style={{ ...S.label, marginTop: 0 }}>Run A</label>
           <select value={runA} onChange={(e) => setRunA(e.target.value)} style={{ ...S.input, width: 300 }}>
             <option value="">—</option>
-            {data.runs.map((r) => <option key={r.id} value={r.id}>{r.name} · {r.createdAt.slice(0, 16).replace("T", " ")} · {r.commit}</option>)}
+            {data.runs.map((r) => <option key={r.id} value={r.id}>{runLabel(r)}</option>)}
           </select>
         </div>
         <div>
           <label style={{ ...S.label, marginTop: 0 }}>Run B (compare)</label>
           <select value={runB} onChange={(e) => setRunB(e.target.value)} style={{ ...S.input, width: 300 }}>
             <option value="">—</option>
-            {data.runs.filter((r) => r.id !== runA).map((r) => <option key={r.id} value={r.id}>{r.name} · {r.createdAt.slice(0, 16).replace("T", " ")} · {r.commit}</option>)}
+            {data.runs.filter((r) => r.id !== runA).map((r) => <option key={r.id} value={r.id}>{runLabel(r)}</option>)}
           </select>
         </div>
+        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#5a5a52", cursor: "pointer" }}>
+          <input type="checkbox" checked={blind} onChange={(e) => setBlind(e.target.checked)} /> blind
+        </label>
         <div style={{ display: "flex", gap: 2, marginLeft: "auto" }}>
           {data.styles.map((st) => (
             <button key={st} onClick={() => setStyle(st)} style={{ ...S.tab, ...(style === st ? S.tabActive : {}), fontSize: 12 }}>{STYLE_TITLE[st] || st}</button>
@@ -222,9 +248,9 @@ export default function EvalPage() {
         <div style={{ ...S.card, display: "flex", gap: 24, fontSize: 12, flexWrap: "wrap" }}>
           {([["A", A, sumA], ["B", B, sumB]] as [string, RunWithRatings | null, ReturnType<typeof summary>][]).map(([k, run, sm]) => sm && run ? (
             <div key={k}>
-              <b>{k} · {run.name}</b> — {sm.rated}/{sm.n} marked · overall <b>{sm.avg}</b>
+              <b>{k} · {runLabel(run)}</b> — {sm.rated}/{sm.n} marked · overall <b>{sm.avg}</b>
               {Object.keys(sm.faultCount).length > 0 && <> · faults: {Object.entries(sm.faultCount).sort((a, b) => b[1] - a[1]).map(([f, c]) => `${FAULT_LABEL[f as EvalFault]} ${c}`).join(", ")}</>}
-              {run.note && <div style={{ color: "#6b6a60", marginTop: 2 }}>{run.note}</div>}
+              {run.note && !blind && <div style={{ color: "#6b6a60", marginTop: 2 }}>{run.note}</div>}
             </div>
           ) : null)}
         </div>

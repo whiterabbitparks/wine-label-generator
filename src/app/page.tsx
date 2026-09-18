@@ -1310,7 +1310,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const buildDreamPayload = () => {
     const aspect = (Number(f.width) || 110) / (Number(f.height) || 80);
     const aspectKey = aspect > 1.15 ? "landscape" : aspect < 0.87 ? "portrait" : "square";
-    const fx = (k: string) => f[k]?.trim() || DEMO_FRONT[k] || "";
+    /* ROUND 78 (found through the evaluation set): an EMPTY field used to be
+       replaced by the Château Margaux demo value on its way to the engine —
+       a customer who left Classification blank got "Grand Cru Classé"
+       printed, and every label carried all thirteen lines, French data on
+       Georgian wines. The form shows the field empty; the label honours it.
+       (The engine keeps its own minimal fallbacks: "Wine", 12.5%, 750 mL.) */
+    const fx = (k: string) => f[k]?.trim() || "";
     return {
       aspectKey,
       data: {

@@ -100,6 +100,38 @@ function archivePair(dream: string, result: unknown) {
   } catch {}
 }
 
+/* ARTWORK GUIDANCE (branch POPIKA_Back_To_Vector, 2026-09-18): the same
+   house illustration language the dream uses — the style's charter, the
+   sub-style card dealt from the shuffled bag, the owner's praise/complaints
+   — exposed on its own, so an artwork-only generation (the coming hybrid
+   engine, and the model bake-off that chooses its painter) is steered
+   exactly as today's whole-label dream is. Same deck, same bag. */
+export async function artworkGuidance(style: string): Promise<{ text: string; card: string | null }> {
+  let text = "";
+  let card: string | null = null;
+  try {
+    const prof = (await getProfiles())[style];
+    const aggD = (await feedbackAggregates())[style];
+    const liveCards = (prof?.variants || []).filter((c) => (aggD?.weights?.[c.key] ?? 1) >= 0.5);
+    const dealtI = liveCards.length
+      ? dealCompositionCard(`ill-${style}`, liveCards.map((c) => ({ key: c.key, arrangement: c.key })))
+      : null;
+    const cardI = dealtI ? liveCards.find((c) => c.key === dealtI.key) || null : null;
+    card = cardI?.key || null;
+    const lang = cardI ? ((cardI as { language?: string }).language || [cardI.medium, cardI.mood].filter(Boolean).join("; ")) : prof?.charter?.slice(0, 400);
+    if (lang) text += ` The illustration is executed in the house illustration style: ${lang}.`;
+    const db = await getDb();
+    const rows = (await db.collection("dream_feedback")
+      .find({ comment: { $ne: "" }, style }, { projection: { _id: 0, verdict: 1, comment: 1 } })
+      .sort({ at: -1 }).limit(12).toArray()) as unknown as { verdict: string; comment: string }[];
+    const like = rows.filter((r) => r.verdict === "approve").map((r) => r.comment);
+    const avoid = rows.filter((r) => r.verdict === "reject").map((r) => r.comment);
+    if (like.length) text += ` The art director praised in past designs: ${like.join("; ")}.`;
+    if (avoid.length) text += ` The art director criticised in past designs: ${avoid.join("; ")} — avoid these.`;
+  } catch {}
+  return { text, card };
+}
+
 export interface DreamParams { vision: string; style?: string; data: Record<string, string>; sketch?: string | null; aspect?: string }
 export interface RebuildParams { dream: string; vision: string; data: Record<string, string>; style?: string; reuseArtwork?: string | null }
 

@@ -2007,6 +2007,39 @@ composition-contract tightening, then customer wiring.
   Roman). Curation = ~20 VALUES per style across 5-6 axes, not 30 parts.
   FONT LICENSING flagged: live type in a delivered PDF means the font
   travels — commercial faces (Helvetica Neue World) may not permit it.
+- ROUND 78 — THE PAINTERS' BAKE-OFF (2026-09-18). The owner's baseline
+  marks (18/18): traditional 3.67, punk 2.60, contemporary 2.50; faults
+  composition 10, type 7, technique 6, colour 5, subject 4. Notes that
+  matter: "looks AI — wants roughness", "group alcohol with volume",
+  GEOGRAPHY (Svaneti towers on a Racha label — regions are sacred in
+  wine), "image good, composition terrible". We agree: composition is
+  the #1 fault, contemporary is the weakest style, the drawing itself is
+  competent. → Confirms the hybrid direction: code owns composition/
+  type/ground, the model paints.
+  DEMO-FILL BUG (found through the eval, fixed here): buildDreamPayload
+  replaced every EMPTY form field with the Château Margaux demo value —
+  a blank Classification printed "Grand Cru Classé", French data on
+  Georgian wines, thirteen lines on every label. Now empty stays empty
+  (the engine keeps its own "Wine" / 12.5% / 750 mL fallbacks). This
+  explains why the site's labels looked worse than the eval's.
+  THE BAKE-OFF: mode A ("whole label", model paints type) was DROPPED —
+  pointless once code sets the type. Mode B ("artwork only, a zone left
+  empty for type") is the hybrid engine's own first building block, put
+  to five painters with the SAME words: gpt-image (OpenAI), FLUX 1.1
+  Pro, Ideogram 3, Recraft V3, Nano Banana (Gemini 2.5 Flash Image) —
+  the last four via fal.ai (FAL_KEY; blocking endpoint like the LoRA
+  path). Imagen 4 is no longer on fal (404 on every id). Recraft caps
+  prompts at 1000 chars → a `short` form without the house-feedback
+  tail. engine.ts exports artworkGuidance(style) so the artwork ask is
+  steered by the same charter / sub-style deck / owner feedback as the
+  dream. /eval gained mode + painter selects and a BLIND toggle (runs
+  become "#1, #2…", painter and prompt hidden).
+  SMOKE (one picture each): all five painted WITHOUT text. The reserved
+  zone was honoured only by Nano Banana; FLUX lost the subject entirely
+  (no winemaker); gpt-image and Ideogram filled the frame. LESSON for
+  the hybrid: the empty zone cannot be trusted to the prompt — code must
+  measure the artwork's ink and place type where the art is not (the
+  candidate-scoring step in the plan is not optional).
 - ROUND 77 — THE EVALUATION LOOP (2026-09-18): /eval (separate from
   /admin on purpose; behind the same session). src/lib/eval/briefs.ts
   holds SIX FROZEN briefs (3 wine colours + rosé + sparkling, 5 regions,

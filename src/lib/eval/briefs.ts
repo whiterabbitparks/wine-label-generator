@@ -117,9 +117,14 @@ export interface EvalItem {
   n: number;
   file: string;          /* png filename inside the run folder */
   prompt: string;        /* the full prompt as sent — traceability */
+  card?: string | null;  /* which illustration sub-style card was dealt */
   ms: number;
   error?: string;
 }
+
+/* "label" = today's whole-label dream (type painted by the model);
+   "artwork" = the hybrid's ask — illustration only, a zone left for type */
+export type EvalMode = "label" | "artwork";
 
 export interface EvalRun {
   id: string;
@@ -128,5 +133,7 @@ export interface EvalRun {
   commit: string;
   branch: string;
   note?: string;
+  mode: EvalMode;
+  model: string;         /* EVAL_MODELS id; "gpt-image" for label mode */
   items: EvalItem[];
 }
