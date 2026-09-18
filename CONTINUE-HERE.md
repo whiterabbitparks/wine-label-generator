@@ -1990,6 +1990,39 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- BRANCH POPIKA_Back_To_Vector (2026-09-18) — the strategic turn. After
+  the MVP milestone the owner raised four concerns (label art quality and
+  sameness, no editable file, diversity vs control, "rules define
+  everything but the result isn't there"). Diagnosis agreed: rules living
+  in PROMPTS are suggestions, not rules; type and layout must come back
+  into code (as the back label already is), with AI painting artwork that
+  is designed to receive the type. Agreed order: (4) evaluation set first,
+  (3) blind model bake-off, (1) hybrid engine, (2) trait system.
+  Owner's answers on record: editable = PDF with live type + placed image
+  (the print-shop standard), NO in-app editor; Marketing Assets price
+  stays $9; references are NOT to be re-curated until the baseline exists
+  (one variable at a time); "subject" comes from the customer's story and
+  is constant across variations — technique / palette / type / layout are
+  what vary, with a MINIMUM-DISTANCE rule (no Times next to Times New
+  Roman). Curation = ~20 VALUES per style across 5-6 axes, not 30 parts.
+  FONT LICENSING flagged: live type in a delivered PDF means the font
+  travels — commercial faces (Helvetica Neue World) may not permit it.
+- ROUND 77 — THE EVALUATION LOOP (2026-09-18): /eval (separate from
+  /admin on purpose; behind the same session). src/lib/eval/briefs.ts
+  holds SIX FROZEN briefs (3 wine colours + rosé + sparkling, 5 regions,
+  all 3 label proportions, with/without producer, long and one-word
+  visions) — change the engine, never the questions. /api/eval generates
+  a RUN: every brief through every style with today's runDreamPhase (real
+  model calls, 3 styles of a brief in parallel, briefs sequential), files
+  PNGs + the full prompt per output + git commit under data/eval/<run>/.
+  The page lays the style's reference board above the outputs; per
+  output the owner marks the FIRST fault (subject / technique /
+  composition / type / colour), an overall 1-5, the reference it should
+  have resembled (click), a note; two runs compare side by side, brief
+  by brief, with a tally. NOTE: gpt-image has no seed — a run is a
+  sample, not a replay; the value is many samples of identical briefs
+  across engine versions. Boards today: traditional 5 refs (small!),
+  contemporary 11, punk 14. First run "baseline" = untouched engine.
 - ROUND 76 (owner, 5 items, 2026-09-18):
   (1) the "Composing back label…" status line in the top-right corner is
   gone — the back-label page runs its own loader, that only added noise.
