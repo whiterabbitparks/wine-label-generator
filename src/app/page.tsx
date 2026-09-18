@@ -261,7 +261,7 @@ const DEMO_WHEEL = { x: 0.44, y: 0.1, rgb: [250, 27, 31] };   /* a capsule red *
 /* round 72 #8: the ghost taps — a red ring blooms where a hand would be */
 const TAP = {
   visionBox: [250, 400], width: [476, 645], height: [650, 645],
-  firstField: [1050, 219],
+  firstField: [1060, 279],          /* round 76 #3: on "GRAND VIN" itself */
   optSelect: [692.5, 634],
   descBox: [250, 265], barcode: [360, 468], qrBtn: [874.5, 467],
   market: [873.5, 670], eu: [873, 330],
@@ -1499,7 +1499,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
   async function nextFromCompliance() {
     if (backPng && backSig === sigBack()) { go("backdesign"); return; }
-    setBusyMsg("Composing back label…");
+    /* round 76 #1 (owner): no status line in the corner — the back-label
+       page shows its own loader, this only added noise */
     const sel = viewedDream(selected);
     const bg = sel ? await groundOf(sel.preview || sel.dream) : "#FFFFFF";
     const payload = {
@@ -1943,10 +1944,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           <span style={{ ...px(139, baseTop(149.08, 24), 600, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t("BACK LABEL DETAILS")}</span>
           {/* ── left: the wine description ── */}
           <div style={{ ...px(BOX.x, BOX.y, BOX.w, BOX.h), border: "1px solid #111", borderTopWidth: 2, borderLeftWidth: 2, boxSizing: "border-box", pointerEvents: "none" }} />
-          <span style={{ ...px(BOX.x + 17, baseTop(235, 15), 300, 16), font: `700 15px ${HNW}`, lineHeight: "15px", color: "#111" }}>{t("Wine Description")}</span>
+          {/* ROUND 76 #5 (owner): the caption sits ABOVE the box now, on its
+              left edge and close to it — the whole box is writing space */}
+          <span style={{ ...px(BOX.x, baseTop(196, 15), 300, 16), font: `700 15px ${HNW}`, lineHeight: "15px", color: "#111" }}>{t("Wine Description")}</span>
           <textarea value={b.description || ""}
             onChange={(e) => setB((m) => ({ ...m, description: e.target.value }))}
-            style={{ ...px(BOX.x + 17, 246, BOX.w - 34, BOX.h - 78), ...inputStyle, fontStyle: "normal", textDecoration: "none", fontSize: 14, resize: "none", lineHeight: 1.45, overflow: "auto", background: "transparent", padding: 0 }} />
+            style={{ ...px(BOX.x + 17, BOX.y + 16, BOX.w - 34, BOX.h - 48), ...inputStyle, fontStyle: "normal", textDecoration: "none", fontSize: 14, resize: "none", lineHeight: 1.45, overflow: "auto", background: "transparent", padding: 0 }} />
           <span style={{ ...px(BOX.x + BOX.w - 174, baseTop(BOX.y + BOX.h - 11, 11), 160, 14), font: `11px ${HNW}`, lineHeight: "11px", color: "#8a8a8a", textAlign: "right" }}>{dwords} / 300 {t("words")}</span>
           {/* ── right: the regulated fields ── */}
           {BACK_ROWS.map((k, i) => {
@@ -2942,12 +2945,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               return (
                 <div key={"tut" + tut} style={{ ...px(L, top, TB.w, TB.bottom + (TB.tipY - TB.bottom) - top), pointerEvents: "none", animation: `nuiFadeIn 320ms ${EASE} both`, transition: `left ${SLIDE_MS}ms ${EASE}` }}>
                   <div style={{ position: "absolute", left: 0, top: 0, width: TB.w, height: h, background: "#111" }} />
-                  {/* the pointer, a triangle hanging off the card's foot */}
-                  <div style={{
-                    position: "absolute", left: TB.w / 2 - TB.tipW, top: h, width: 0, height: 0,
-                    borderLeft: `${TB.tipW}px solid transparent`, borderRight: `${TB.tipW}px solid transparent`,
-                    borderTop: `${TB.tipY - TB.bottom}px solid #111`,
-                  }} />
+                  {/* the pointer. ROUND 76 #4: it used to be a CSS triangle
+                      butted against the card, and at fractional page scales
+                      the two shapes left a hairline between them — one SVG
+                      path, overlapping the card by a pixel, cannot. */}
+                  <svg width={TB.w} height={TB.tipY - TB.bottom + 2} viewBox={`0 0 ${TB.w} ${TB.tipY - TB.bottom + 2}`}
+                    style={{ position: "absolute", left: 0, top: h - 1, display: "block" }}>
+                    <path d={`M${TB.w / 2 - TB.tipW} 0 H${TB.w / 2 + TB.tipW} L${TB.w / 2} ${TB.tipY - TB.bottom + 1} Z`} fill="#111" />
+                  </svg>
                   {/* round 72 #4: a way out at any point — but not on the
                       closing card, whose own arrow does exactly that */}
                   {!solo && <button onClick={endTutorial}
@@ -3064,7 +3069,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {tut >= 0 && <div style={{ ...px(0, HEADER_H, W, FOOTER_Y - HEADER_H), zIndex: 12, background: "transparent" }} />}
           {/* ROUND 59 #2: the gate message floats at ROOT level so it can
               sit truly midway between the selection row and the bar line */}
-          {warn && thick !== null && (
+          {/* round 76 #2: checkout prints its own gate message under the
+              payment button — this one would be the second copy */}
+          {warn && thick !== null && page !== "checkout" && (
             <span style={{ ...px(0, 648, W, 16), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block", zIndex: 7, position: "absolute" }}>{warn}</span>
           )}
 

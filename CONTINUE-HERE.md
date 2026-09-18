@@ -1990,6 +1990,20 @@ composition-contract tightening, then customer wiring.
   2.5px low (HNW's tall ascent vs naive flex centring) —
   paddingBottom 5 measured in: ink centre now within 0.5px of the
   button centre.
+- ROUND 76 (owner, 5 items, 2026-09-18):
+  (1) the "Composing back label…" status line in the top-right corner is
+  gone — the back-label page runs its own loader, that only added noise.
+  (2) the T&C gate printed TWICE on checkout: the root-level bar message
+  (round 59 #2, y648) and checkout's own under the payment button (round
+  52 #1). The root one now skips the checkout page.
+  (3) the walkthrough's click before the front details lands ON the
+  Producer field (1060,279 — row baseline 284.5) instead of 60px above it.
+  (4) the card's pointer was a CSS triangle butted against the card, and
+  at fractional page scales the two shapes left a hairline between them.
+  It is one SVG path now, overlapping the card by a pixel.
+  (5) "Wine Description" moved OUT of its box — baseline 196 on the box's
+  own left edge (136), between the title and the box and close to it —
+  and the textarea took back the space it used to occupy.
 - ROUND 75 (owner's new Final Pack artboard, 2026-09-17): the page turned
   around. LEFT is the ORDER — the carousel between its two chevrons, the
   T&C row, four priced rows and "Proceed to payment". RIGHT is WHAT YOU
