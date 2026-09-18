@@ -2007,6 +2007,28 @@ composition-contract tightening, then customer wiring.
   Roman). Curation = ~20 VALUES per style across 5-6 axes, not 30 parts.
   FONT LICENSING flagged: live type in a delivered PDF means the font
   travels — commercial faces (Helvetica Neue World) may not permit it.
+- ROUND 78c — BAKE-OFF RESULTS, Claude's read (2026-09-18; the owner's
+  BLIND marks are the verdict, this is the pre-read). Five painters ×
+  18 artwork-only asks, all complete (16 rate-limit 429s from running
+  five at once, all recovered by /api/eval retry one at a time).
+  gpt-image: reserved zone honoured ~16/18, no text, every subject
+  right (the qvevri cross-sections are the best of anyone), strong
+  style separation, the most label-ready compositions; clean, "AI-tidy"
+  line. nano-banana: zone honoured ~17/18, no text, subjects right,
+  real style separation (blue linocut punk, flat-sun contemporary),
+  slightly flatter engraving; 9s. ideogram-3: the STRONGEST style
+  separation and the most hand-made feel (pencil/etching, screenprint
+  misregistration), subjects right — but fills the frame, zone mostly
+  ignored; 20s. flux-pro: gorgeous surfaces, DOES NOT LISTEN — lost the
+  subject in ~16/18, draws bottles and frames we forbade. recraft-3:
+  writes garbled text on ~8/18 despite the ban, adds cartouches, three
+  styles look like one storybook. GEOGRAPHY fails on EVERY painter
+  (tower villages for Racha) — a region name in the prompt is not
+  enough; the trait system needs a gazetteer of what each region LOOKS
+  like. Shortlist for the hybrid's painter: gpt-image / nano-banana /
+  ideogram — zone discipline vs hand feel is the trade the owner must
+  call. Page blind mapping (do not reveal until marked): #1 baseline,
+  #2 flux, #3 recraft, #4 nano-banana, #5 ideogram, #6 gpt-image.
 - ROUND 78 — THE PAINTERS' BAKE-OFF (2026-09-18). The owner's baseline
   marks (18/18): traditional 3.67, punk 2.60, contemporary 2.50; faults
   composition 10, type 7, technique 6, colour 5, subject 4. Notes that
