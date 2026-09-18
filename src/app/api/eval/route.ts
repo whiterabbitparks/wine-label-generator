@@ -61,6 +61,53 @@ export async function POST(req: Request) {
     return NextResponse.json({ ratings: writeRating(run.id, String(body.item || ""), rating) });
   }
 
+  /* RETRY (2026-09-18): five painters at once tripped every provider's
+     concurrency limit (429s) — the asks were fine. This re-attempts ONLY
+     the failed items of a run, one at a time, so a run can be completed
+     without repainting what already landed. */
+  if (body.action === "retry") {
+    const run = readRun(String(body.run || ""));
+    if (!run) return NextResponse.json({ error: "no such run" }, { status: 404 });
+    const model = evalModel(run.model || "gpt-image");
+    if (!model) return NextResponse.json({ error: "unknown model" }, { status: 400 });
+    const enc = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        const send = (o: unknown) => controller.enqueue(enc.encode(JSON.stringify(o) + "\n"));
+        const failed = run.items.filter((i) => i.error);
+        send({ type: "start", run: run.id, total: failed.length });
+        let done = 0;
+        for (const item of failed) {
+          const brief = EVAL_BRIEFS.find((b) => b.id === item.briefId);
+          if (!brief) continue;
+          const t0 = Date.now();
+          try {
+            if ((run.mode || "label") === "label") {
+              const d = await runDreamPhase({ vision: brief.vision, style: item.style, data: brief.data, sketch: null, aspect: aspectOf(brief) });
+              item.file = saveImage(run.id, item.id, d.dream); item.prompt = d.prompt;
+            } else {
+              const ap = await buildArtworkPrompt(brief, item.style);
+              item.prompt = ap.prompt; item.card = ap.card;
+              item.file = saveImage(run.id, item.id, await generateArtwork(model, ap));
+            }
+            delete item.error;
+          } catch (e) {
+            item.error = e instanceof Error ? e.message : String(e);
+          }
+          item.ms = Date.now() - t0;
+          writeRun(run);
+          done++;
+          send({ type: "item", done, total: failed.length, item: { ...item, prompt: undefined } });
+          /* breathe between calls — this is what the limits asked for */
+          await new Promise((r) => setTimeout(r, 4000));
+        }
+        send({ type: "done", run: run.id });
+        controller.close();
+      },
+    });
+    return new Response(stream, { headers: { "Content-Type": "application/x-ndjson; charset=utf-8", "Cache-Control": "no-store" } });
+  }
+
   if (body.action !== "generate") return NextResponse.json({ error: "unknown action" }, { status: 400 });
 
   const mode: EvalMode = body.mode === "artwork" ? "artwork" : "label";
