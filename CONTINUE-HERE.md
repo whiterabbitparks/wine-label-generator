@@ -2007,6 +2007,23 @@ composition-contract tightening, then customer wiring.
   Roman). Curation = ~20 VALUES per style across 5-6 axes, not 30 parts.
   FONT LICENSING flagged: live type in a delivered PDF means the font
   travels — commercial faces (Helvetica Neue World) may not permit it.
+- ROUND 79 — THE FREE-SPACE EXPERIMENTS (2026-09-18). The owner's
+  reminder: "generate with text then erase" was tried before and failed
+  (inpaint ghosts; the hole is the MODEL's type shape, not ours; nothing
+  to re-typeset). Everything here decides the type's space BEFORE the
+  model paints, or owns it outright. Two new ways of asking the same
+  painter, both as EVAL_MODELS so they land on /eval as ordinary runs:
+  gpt-image-cutout — the illustration alone on a TRANSPARENT ground
+  (background:transparent), so the layout engine owns the paper and
+  places art and type itself; gpt-image-masked — the edits endpoint
+  with a paper canvas + a MASK that opens only the art window (top 60%,
+  65% portrait, 4% margins): the type band comes back untouched by
+  construction (GenerationJob.mask → form "mask"). Smoke: both accepted
+  first try; the cut-out is a true alpha PNG of the subject only, the
+  masked one has an untouched cream band. Full runs 2x18, sequential
+  (both hit OpenAI). Plan of record: cutout = backbone (code owns the
+  ground), zone-ask + ink measurement = safety net, masked = API-level
+  guarantee if it holds up across briefs.
 - ROUND 78c — BAKE-OFF RESULTS, Claude's read (2026-09-18; the owner's
   BLIND marks are the verdict, this is the pre-read). Five painters ×
   18 artwork-only asks, all complete (16 rate-limit 429s from running

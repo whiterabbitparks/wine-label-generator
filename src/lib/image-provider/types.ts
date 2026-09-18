@@ -23,6 +23,11 @@ export interface GenerationJob {
   references?: string[];
   /** request a transparent-background PNG (product-shot cutouts) */
   transparent?: boolean;
+  /** edits only: a PNG mask the size of `reference` — TRANSPARENT pixels are
+      the region the model may paint, opaque pixels are kept as they are
+      (branch POPIKA_Back_To_Vector: the type zone stays paper by
+      construction, not by request) */
+  mask?: string;
   /** per-job quality override; otherwise the IMAGE_QUALITY env tier */
   quality?: "low" | "medium" | "high";
 }

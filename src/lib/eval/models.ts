@@ -25,6 +25,14 @@ export interface EvalModel {
 
 export const EVAL_MODELS: EvalModel[] = [
   { id: "gpt-image", name: "OpenAI gpt-image", via: "openai" },
+  /* two ways of ASKING the same painter, both aimed at the free-space
+     problem (owner 2026-09-18: "the problem is the free space for text"):
+     cutout — the illustration alone on a transparent ground, so the
+     layout engine owns the paper and places art and type itself;
+     masked — a paper canvas with the type zone masked OFF, so the model
+     physically cannot paint there. */
+  { id: "gpt-image-cutout", name: "gpt-image · cut-out on transparent", via: "openai" },
+  { id: "gpt-image-masked", name: "gpt-image · type zone masked off", via: "openai" },
   { id: "flux-pro", name: "FLUX 1.1 Pro", via: "fal", endpoint: "fal-ai/flux-pro/v1.1" },
   { id: "ideogram-3", name: "Ideogram 3", via: "fal", endpoint: "fal-ai/ideogram/v3" },
   { id: "recraft-3", name: "Recraft V3", via: "fal", endpoint: "fal-ai/recraft/v3/text-to-image" },
@@ -89,9 +97,40 @@ const FAL_SIZE: Record<ArtworkPrompt["aspect"], string> = { landscape: "landscap
 const FAL_RATIO: Record<ArtworkPrompt["aspect"], string> = { landscape: "4:3", portrait: "3:4", square: "1:1" };
 
 /* one painting from one model — a data URL, like every provider here */
+/* a plain paper canvas and a mask that opens ONLY the art region — the
+   type zone (the same bottom band the prompt asks for) stays opaque, so
+   the edit endpoint hands it back untouched */
+async function paperAndMask(aspect: ArtworkPrompt["aspect"]): Promise<{ paper: string; mask: string }> {
+  const sharp = (await import("sharp")).default;
+  const W = aspect === "portrait" ? 1024 : aspect === "square" ? 1024 : 1536;
+  const H = aspect === "portrait" ? 1536 : aspect === "square" ? 1024 : 1024;
+  const paper = await sharp({ create: { width: W, height: H, channels: 4, background: { r: 244, g: 239, b: 227, alpha: 1 } } }).png().toBuffer();
+  /* the open (transparent) window: top ~60% for landscape/square, ~65% for
+     portrait, with a 4% margin at the top and sides */
+  const m = Math.round(W * 0.04);
+  const openH = Math.round(H * (aspect === "portrait" ? 0.65 : 0.6)) - m;
+  const window = await sharp({ create: { width: W - 2 * m, height: openH, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } }).png().toBuffer();
+  const mask = await sharp({ create: { width: W, height: H, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 1 } } })
+    .composite([{ input: window, left: m, top: m, blend: "dest-out" }]).png().toBuffer();
+  return { paper: `data:image/png;base64,${paper.toString("base64")}`, mask: `data:image/png;base64,${mask.toString("base64")}` };
+}
+
 export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt): Promise<string> {
   if (model.via === "openai") {
     const size = ap.aspect === "portrait" ? { w: 1024, h: 1536 } : ap.aspect === "square" ? { w: 1024, h: 1024 } : { w: 1536, h: 1024 };
+    if (model.id === "gpt-image-cutout") {
+      return generateOpenAIImage({
+        prompt: ap.prompt + " Deliver the illustration as a CUT-OUT on a fully transparent background — nothing but the drawn subject, no paper, no ground, no vignette.",
+        size, transparent: true,
+      } as never);
+    }
+    if (model.id === "gpt-image-masked") {
+      const { paper, mask } = await paperAndMask(ap.aspect);
+      return generateOpenAIImage({
+        prompt: ap.prompt + " Paint the illustration into the open area of the canvas; the rest of the canvas is finished paper and must stay exactly as it is.",
+        size, reference: paper, mask,
+      } as never);
+    }
     return generateOpenAIImage({ prompt: ap.prompt, size } as never);
   }
   const key = process.env.FAL_KEY;

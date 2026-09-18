@@ -60,6 +60,9 @@ export async function generateOpenAIImage(job: GenerationJob): Promise<string> {
     form.append("quality", quality);
     if (job.transparent) form.append("background", "transparent");
     for (const inp of imageInputs) form.append("image[]", inp.blob, inp.name);
+    /* a mask turns the ask into a constraint: the model paints ONLY where
+       the mask is transparent, everything else comes back untouched */
+    if (job.mask) form.append("mask", dataUrlToBlob(job.mask), "mask.png");
     res = await fetch(`${API}/images/edits`, {
       method: "POST",
       headers: { Authorization: `Bearer ${key}` },
