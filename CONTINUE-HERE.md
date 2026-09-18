@@ -2007,6 +2007,28 @@ composition-contract tightening, then customer wiring.
   Roman). Curation = ~20 VALUES per style across 5-6 axes, not 30 parts.
   FONT LICENSING flagged: live type in a delivered PDF means the font
   travels — commercial faces (Helvetica Neue World) may not permit it.
+- ROUND 79b — FREE-SPACE RESULTS (2026-09-18, both runs 18/18 after
+  one-at-a-time retries; OpenAI's per-minute image quota is the wall —
+  even ONE run with 3 styles in parallel trips it, so /api/eval retry
+  with 4s breathing and a 70s cool-down between passes is the pattern).
+  MASKED: the type band is untouched paper in 18/18 — the free-space
+  problem is CLOSED by construction. Artwork quality high, style range
+  real (single-ink blue screenprint punk, collage towers, a horizontal
+  bubble smear); the illustration composes itself into the open window
+  and vignettes into the paper. Paper colour is fixed at request time
+  (the engine picks it BEFORE asking). CUT-OUT: 18/18 true alpha PNGs of
+  the subject alone — maximum freedom (engine owns paper, position,
+  scale, ground colour); needs placement logic since some pieces (the
+  stag) run to the frame. Either kills the free-space problem; masked
+  is the more "designed" result out of the box, cut-out the more
+  flexible input. Recommendation: masked as the default ask, cut-out
+  kept for layouts that need the art moved or scaled.
+  NOTE: two runs named "run" (flux-pro 23:32, ideogram-3 23:40) were
+  started by the OWNER from the /eval page — the button spends real
+  money; harmless here (extra samples of the same painters).
+  Blind mapping now: #1 baseline, #2 flux, #3 recraft, #4 nano-banana,
+  #5 ideogram, #6 gpt-image, #7 flux (owner), #8 ideogram (owner),
+  #9 cut-out, #10 masked.
 - ROUND 79 — THE FREE-SPACE EXPERIMENTS (2026-09-18). The owner's
   reminder: "generate with text then erase" was tried before and failed
   (inpaint ghosts; the hole is the MODEL's type shape, not ours; nothing
