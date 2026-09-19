@@ -93,7 +93,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   if (!(await requestIsAuthenticated())) return NextResponse.json({ error: "not authenticated" }, { status: 401 });
-  let body: { action?: string; name?: string; note?: string; run?: string; item?: string; rating?: EvalRating | null; perBrief?: number; mode?: string; model?: string; smoke?: boolean };
+  let body: { action?: string; name?: string; note?: string; run?: string; item?: string; rating?: EvalRating | null; perBrief?: number; mode?: string; model?: string; smoke?: boolean; styles?: string[] };
   try { body = await req.json(); } catch { return NextResponse.json({ error: "invalid JSON" }, { status: 400 }); }
 
   if (body.action === "rate") {
@@ -166,7 +166,9 @@ export async function POST(req: Request) {
 
   return ndjson(async (send) => {
     const briefs = body.smoke ? EVAL_BRIEFS.slice(0, 1) : EVAL_BRIEFS;
-    const styles = body.smoke ? EVAL_STYLES.slice(0, 1) : EVAL_STYLES;
+    /* `styles` narrows a run to the styles under test (e.g. punk + contemporary) */
+    const asked = Array.isArray(body.styles) ? EVAL_STYLES.filter((s) => (body.styles as string[]).includes(s)) : [];
+    const styles = body.smoke ? EVAL_STYLES.slice(0, 1) : asked.length ? asked : EVAL_STYLES;
     const total = briefs.length * styles.length * perBrief;
     let done = 0;
     send({ type: "start", run: run.id, total });

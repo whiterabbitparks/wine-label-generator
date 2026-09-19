@@ -82,6 +82,13 @@ const GROUNDS: Record<string, string[]> = {
   contemporary: ["#F4EFE3", "#FAF7F1", "#E9E4D6", "#DCE3DA", "#E8DFD0", "#F2E7D8"],
   punk: ["#1E2A44", "#B71318", "#D9A400", "#0F0F0F", "#2E6B4F", "#E85D2C", "#F4EFE3", "#7A2E8E"],
 };
+/* way 1, second pass: left entirely free, gpt-image went back to cream on
+   four punk labels of six (run #14). The painter still chooses the colour,
+   but is told what KIND of ground the style wants. */
+const OWN_GROUND_KIND: Record<string, string> = {
+  punk: "For this style the ground is a BOLD, saturated or deep colour — a loud flat ink, never paper, never cream, never white, never beige; the drawing sits on it in one or two contrasting inks. ",
+  contemporary: "For this style the ground is either clean paper-white or ONE quiet tint (a pale or mid tone — dusty, chalky, mineral); never a busy or dark colour. ",
+};
 export function groundFor(style: string, seed: number): string {
   const list = GROUNDS[style] || GROUNDS.traditional;
   /* salt 7: the ground must not move in lockstep with the faces (1–3) */
@@ -132,7 +139,7 @@ export async function buildArtworkPrompt(brief: EvalBrief, style: string, seed =
     `A ${[d.sweetness, d.wineColorName].filter(Boolean).join(" ").toLowerCase()} ${(d.wineType || "wine").toLowerCase()}. `;
   const finish = paper
     ? `FINISH: handmade print on paper, not a photograph, not 3D, not airbrushed; discrete inks, honest imperfection; the ground is the plain ${dark ? "dark coloured" : "paper-coloured"} canvas you are given (${paper}) — keep it flat and untouched around the drawing.`
-    : `FINISH: handmade print, not a photograph, not 3D, not airbrushed; discrete inks, honest imperfection. THE GROUND: choose ONE flat, solid, even colour that belongs to this illustration — the colour it is printed on — and fill the whole picture with it edge to edge, so that it continues unchanged into the empty type zone. Absolutely no gradient, no texture, no vignette, no paper grain, no second colour in the ground; the type zone is nothing but that one flat colour.`;
+    : `FINISH: handmade print, not a photograph, not 3D, not airbrushed; discrete inks, honest imperfection. THE GROUND: choose ONE flat, solid, even colour that belongs to this illustration — the colour it is printed on — and fill the whole picture with it edge to edge, so that it continues unchanged into the empty type zone. ${OWN_GROUND_KIND[style] || ""}Absolutely no gradient, no texture, no vignette, no paper grain, no second colour in the ground; the type zone is nothing but that one flat colour.`;
   const prompt = head + styleLine + g.text + subject + finish;
   /* the short form keeps the ask, the style and the subject; the house
      feedback goes first, then the finish line, then the geography note */
