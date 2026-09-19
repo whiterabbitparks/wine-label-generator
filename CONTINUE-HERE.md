@@ -2007,6 +2007,16 @@ composition-contract tightening, then customer wiring.
   Roman). Curation = ~20 VALUES per style across 5-6 axes, not 30 parts.
   FONT LICENSING flagged: live type in a delivered PDF means the font
   travels — commercial faces (Helvetica Neue World) may not permit it.
+- ROUND 82b — THE SEED THAT NEVER MOVED (2026-09-19). Every punk label in
+  the v1.2 set (#12) had the same navy ground #1E2A44, and the faces
+  repeated too. Cause: `seed * 2246822519` (groundFor) and `seed *
+  2654435761` (pickRoles) — a 32-bit seed times a 32-bit constant
+  overflows the double, so the residue was the same for every seed.
+  Fix: one exported `mix(seed, salt)` in src/lib/typeset/fonts.ts (murmur
+  finaliser on Math.imul); faces use salts 1–3, the ground salt 7, so
+  they don't move in lockstep. Verified the spread on the real item-id
+  seeds before rebuilding. Run "hybrid-v1_3" (#13 in blind order) is the
+  same v1.2 rules with the spread working — compare against #12.
 - ROUND 82 — COMPOSER v1.2 + THE GAZETTEER (2026-09-19). Owner's rules
   after seeing hybrid v1: (1) GROUP the lines into logical blocks —
   producer + name, appellation + vintage, grape + origin, alcohol +

@@ -89,9 +89,21 @@ export const ROLE_POOLS: Record<string, { hero: Pick[]; secondary: Pick[]; small
   },
 };
 
+/* ONE mixer for every "deterministic pick from a seed" (faces, grounds).
+   Murmur-style finaliser on 32-bit ints via Math.imul — a plain `*`
+   overflowed the double and every seed landed on the same choice (six
+   punk labels, one navy ground). The salt keeps the hero, the secondary
+   and the ground from moving in lockstep. */
+export function mix(seed: number, salt: number): number {
+  let x = Math.imul((seed | 0) ^ Math.imul(salt | 0, 0x9e3779b9), 0x85ebca6b);
+  x ^= x >>> 13;
+  x = Math.imul(x, 0xc2b2ae35);
+  return (x ^ (x >>> 16)) >>> 0;
+}
+
 /* deterministic pick — the same seed always sets the same faces */
 export function pickRoles(style: string, seed: number): { hero: Pick; secondary: Pick; small: Pick; align: "center" | "left" } {
   const pool = ROLE_POOLS[style] || ROLE_POOLS.traditional;
-  const at = <T,>(list: T[], salt: number) => list[Math.abs((seed * 2654435761 + salt * 40503) >>> 0) % list.length];
+  const at = <T,>(list: T[], salt: number) => list[mix(seed, salt) % list.length];
   return { hero: at(pool.hero, 1), secondary: at(pool.secondary, 2), small: at(pool.small, 3), align: pool.align };
 }

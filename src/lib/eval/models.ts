@@ -4,6 +4,7 @@ import { getDb } from "@/lib/db";
 import { DEFAULT_REGIONS } from "./regions";
 import type { EvalBrief } from "./briefs";
 import { aspectOf } from "./briefs";
+import { mix } from "@/lib/typeset/fonts";
 
 /* THE PAINTERS (branch POPIKA_Back_To_Vector, 2026-09-18).
 
@@ -78,7 +79,8 @@ const GROUNDS: Record<string, string[]> = {
 };
 export function groundFor(style: string, seed: number): string {
   const list = GROUNDS[style] || GROUNDS.traditional;
-  return list[Math.abs((seed * 2246822519 + 7) >>> 0) % list.length];
+  /* salt 7: the ground must not move in lockstep with the faces (1–3) */
+  return list[mix(seed, 7) % list.length];
 }
 
 /* THE GAZETTEER (owner 2026-09-19: Svaneti towers on a Racha label — a
