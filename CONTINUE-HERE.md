@@ -2007,6 +2007,32 @@ composition-contract tightening, then customer wiring.
   Roman). Curation = ~20 VALUES per style across 5-6 axes, not 30 parts.
   FONT LICENSING flagged: live type in a delivered PDF means the font
   travels — commercial faces (Helvetica Neue World) may not permit it.
+- ROUND 83 — WAY 1: THE PAINTER CHOOSES THE GROUND (owner 2026-09-19:
+  "a list of colours limits variety; every illustration has its own
+  background colour — read it off the picture and the ground will be
+  organic"). The mask can't coexist with a painter-chosen ground (we hand
+  the canvas), so for contemporary + punk the painter goes UNMASKED with
+  the reserved-zone ask + "ONE flat solid colour, edge to edge, into the
+  type zone", and flatGroundOf() (palette.ts) reads the colour off the
+  bottom fifth (mode colour, coverage, `flat` when ≥55% / last rows ≥80%);
+  the composer draws the band in it. Traditional keeps paper tones + the
+  mask (owner: monochrome on warm paper is right there). Painter id
+  `gpt-image-own`; `styles: [...]` narrows a run. Findings: pass 1 (#14):
+  18/18, every ground 100% flat, the seam/"frame" gone — but freed, gpt-
+  image drifted back to cream (punk 4/6, contemporary 5/6) and one punk
+  became a traditional drawing: the dark canvas had been carrying the
+  punk-ness. Pass 2 (#15, punk + contemporary): the painter is told the
+  KIND of ground per style (OWN_GROUND_KIND: punk bold/saturated never
+  paper; contemporary paper-white or one quiet tint), still no list →
+  punk red/blue/orange/blue/red/blue with two-ink art that belongs to the
+  ground (the best punk set so far); contemporary warm papers + one pale
+  pink Racha whose art and ground are one. Detector proven on old runs
+  too: masked pictures read back within ~5 units of the given colour;
+  Ideogram fills the band (not flat) — for such painters the ink-foot
+  rule carries. Ground policy going into the wizard: traditional = paper
+  pool + mask; contemporary/punk = own ground by kind, read off the art.
+  Open: Caveat as a punk hero is weak (move to secondary); punk colours
+  cluster on blue/red — the trait system can steer later.
 - ROUND 82b — THE SEED THAT NEVER MOVED (2026-09-19). Every punk label in
   the v1.2 set (#12) had the same navy ground #1E2A44, and the faces
   repeated too. Cause: `seed * 2246822519` (groundFor) and `seed *
