@@ -51,6 +51,7 @@ export const SVG_GE: Record<string, string> = {
   "Traditional": "ტრადიციული",
   "Contemporary": "თანამედროვე",
   "Punk": "პანკი",
+  "Funky": "ფანკი",
   /* backdetails */
   "BACK LABEL DETAILS": "ᲣᲙᲐᲜᲐ ᲔᲢᲘᲙᲔᲢᲘᲡ ᲓᲔᲢᲐᲚᲔᲑᲘ",
   "Wine Description": "ღვინის აღწერა",

@@ -30,7 +30,7 @@ const HNW = "'HNW', 'Helvetica Neue', Helvetica, sans-serif";
    Your Vision second — generation fires from the vision page now */
 /* ROUND 63 (owner's new mocks): Your Vision + Front Label Details are ONE
    page, and Back Label Details + Market Compliance are ONE page. */
-const ORDER = ["welcome", "vision", "loader", "options", "backdetails", "backdesign", "bottle", "assets", "checkout"] as const;
+const ORDER = ["welcome", "vision", "loader", "options", "backdetails", "backdesign", "bottle", "assets", "checkout", "blank"] as const;
 /* round 38 #1: crown caps exist only on these bottles */
 const CROWN_TYPES = ["Burgundy", "Sparkling", "Alsace / Rhine"];
 /* round 38 #2: label anchors from the owner's positioning charts (same
@@ -121,9 +121,10 @@ const THICK: Record<PageKey, number | null> = {
   bottle: CIRCLE_X[4],
   assets: CIRCLE_X[5],
   checkout: CIRCLE_X[5],                         /* round 93 #7: to the last station, not into the button */
+  blank: null,                                    /* round 94 #2: takes the page it stands in for */
 };
 /* highest station index REACHED — that dot (and earlier ones) turn red */
-const STEP_OF: Record<PageKey, number> = { welcome: -1, vision: 0, loader: 0, options: 1, backdetails: 2, backdesign: 3, bottle: 4, assets: 5, checkout: 5 };
+const STEP_OF: Record<PageKey, number> = { welcome: -1, vision: 0, loader: 0, options: 1, backdetails: 2, backdesign: 3, bottle: 4, assets: 5, checkout: 5, blank: 0 };
 
 /* ROUND 63: the bar no longer eats a white strip — every page's content
    band runs to the footer edge and the bar paints on top of it. */
@@ -135,7 +136,7 @@ const BAND_BOTTOM: Record<PageKey, number> = Object.fromEntries(ORDER.map((p) =>
 const STRIP_BOUNDS: Record<PageKey, [number, number]> = {
   welcome: [360, 560], vision: [225, 460], loader: [225, 460],
   options: [225, 543], backdetails: [225, 468],
-  backdesign: [165, 540], bottle: [225, 515], assets: [165, 540], checkout: [250, 500],
+  backdesign: [165, 540], bottle: [225, 515], assets: [165, 540], checkout: [250, 500], blank: [225, 460],
 };
 
 /* CONTENT-AWARE PARALLAX (owner round 16 #3): these pages slice by their
@@ -166,13 +167,11 @@ const PAGE_SLICES: Partial<Record<PageKey, Slice[]>> = {
     { x0: 1110.5, delay: 300 },
   ],
 };
-/* ROUND 93 #4 (owner: "the old page's pieces reappear and slide off"):
-   the content-aware slice cascade (round 16) is retired — every page now
-   leaves as ONE sheet and the next arrives as ONE sheet, after it */
+/* ROUND 94 #2 (owner missed the parallax): the slice cascade is BACK. The
+   "old page reappears" glitch was never the cascade — it was the confirm
+   popup sitting on the still-present page; now the page leaves before the
+   popup opens (the BLANK page) */
 const sliceDefs = (p: PageKey): Slice[] => {
-  void p;
-  return [{ delay: 0 }];
-  // eslint-disable-next-line no-unreachable
   if (PAGE_SLICES[p]) return PAGE_SLICES[p]!;
   const [b1, b2] = STRIP_BOUNDS[p];
   return [{ y1: b1, delay: STRIP_DELAYS[0] }, { y0: b1, y1: b2, delay: STRIP_DELAYS[1] }, { y0: b2, delay: STRIP_DELAYS[2] }];
@@ -274,7 +273,8 @@ const DEMO_SHADE = 0.97;
 const TAP = {
   visionBox: [250, 400], width: [476, 645], height: [650, 645],
   firstField: [1060, 279],          /* round 76 #3: on "GRAND VIN" itself */
-  optSelect: [720, 627],            /* round 88 #9: the Save button, column 2 */
+  optSelect: [720, 654],            /* round 94 #1: ON the Save button, column 2 */
+  bdSave: [719.3, 674.8],           /* round 94 #7: the back label's Save */
   descBox: [250, 265], barcode: [360, 468], qrBtn: [874.5, 467],
   market: [873.5, 670], eu: [873, 330],
   backFirst: [1050, 212],            /* round 73 #1: up to the details */
@@ -302,7 +302,7 @@ const TERMS_TEXT = Array.from({ length: 9 }, (_, i) => (
 
 /* round 84: `id` names the label on the server — its SVG with live type
    waits there for the delivery package */
-interface Dream { style: string; dream: string; preview: string | null; id?: string }
+interface Dream { style: string; dream: string; preview: string | null; id?: string; variants?: Dream[] }
 
 /* ground colour of a label image — MEDIAN of many border samples
    (round 10 #4: the old 5-corner AVERAGE went dark whenever artwork or
@@ -350,7 +350,7 @@ export default function NewUI() {
   useEffect(() => {
     const sp = new URLSearchParams(window.location.search);
     const q = sp.get("page");
-    if (q && (ORDER as readonly string[]).includes(q)) { pageNow.current = q as PageKey; setPage(q as PageKey); }
+    if (q && q !== "blank" && (ORDER as readonly string[]).includes(q)) { pageNow.current = q as PageKey; setPage(q as PageKey); }
     /* round 65: seed the history so the FIRST Back has somewhere to land */
     try { window.history.replaceState({ page: pageNow.current }, "", `?page=${pageNow.current}`); } catch { }
     /* dev aid: &pp=<code> previews the final-pack product-page slot */
@@ -393,28 +393,24 @@ export default function NewUI() {
   /* ROUND 88 #6/#7/#10 (owner): "saving" is a little film — the image
      shrinks and glides up into the header's folder mark, which bumps as
      it lands. Several images go in sequence. */
-  const [flights, setFlights] = useState<{ id: number; src: string; x: number; y: number; w: number; h: number; delay: number }[]>([]);
+  const [flights, setFlights] = useState<{ id: number; src: string; x: number; y: number; w: number; h: number; delay: number; back?: boolean }[]>([]);
   const flightN = useRef(0);
   const [folderBump, setFolderBump] = useState(0);
   const FOLDER_C = { x: 1275, y: 66 };
-  const flyToFolder = (items: { src: string; x: number; y: number; w: number; h: number }[]) => {
-    const batch = items.filter((it) => it.src).map((it, i) => ({ ...it, id: ++flightN.current, delay: i * 150 }));
+  /* round 94 (owner): `back` plays the film in REVERSE — the thing leaves
+     the folder and glides back to its place on the page (a second press
+     of Save un-saves; a third saves again) */
+  const flyToFolder = (items: { src: string; x: number; y: number; w: number; h: number }[], back = false) => {
+    const batch = items.filter((it) => it.src).map((it, i) => ({ ...it, id: ++flightN.current, delay: i * 150, back }));
     if (!batch.length) return;
     const last = batch[batch.length - 1].delay;
     setFlights((fl) => [...fl, ...batch]);
-    setTimeout(() => setFolderBump((n) => n + 1), last + 760);
+    setTimeout(() => setFolderBump((n) => n + 1), back ? 0 : last + 760);
     setTimeout(() => setFlights((fl) => fl.filter((x) => !batch.some((b2) => b2.id === x.id))), last + 1500);
   };
   const [backSaved, setBackSaved] = useState(false);
   const [assetsSaved, setAssetsSaved] = useState(false);
   const [treeN, setTreeN] = useState(0);        /* round 88 #1: replays the tree reveal */
-  /* round 93 #20: what peeks out of the folder — the saved front label,
-     the saved back label, the saved product shot */
-  const savedThumbs = () => [
-    selected >= 0 ? (viewedDream(selected)?.preview || viewedDream(selected)?.dream || "") : "",
-    backSaved ? backPng : "",
-    assetsSaved ? (assets.front?.prev || "") : "",
-  ].filter(Boolean) as string[];
   const [styleView, setStyleView] = useState<number[]>([0, 0, 0]);
   const [varBusyCol, setVarBusyCol] = useState(-1);
   const STYLES3 = ["traditional", "contemporary", "punk"];
@@ -452,6 +448,16 @@ export default function NewUI() {
   const [gallery, setGallery] = useState<{ items: string[]; index: number; save?: () => void; saved?: boolean } | null>(null);
   /* round 93 #8: "every field is empty — really?" before moving on */
   const [emptyWarn, setEmptyWarn] = useState<"" | "front" | "back">("");
+  /* round 94 #2: the page the confirm popup stands in for — it slides out
+     BEFORE the popup opens, the loader fades in on Create, and Edit
+     slides it back in */
+  const blankFrom = useRef<PageKey>("vision");
+  const openConfirm = (kind: "labels" | "assets", from: PageKey) => {
+    blankFrom.current = from;
+    go("blank", 1, false);
+    setConfirmModal(kind);
+  };
+  const closeConfirm = () => { setConfirmModal(""); if (pageNow.current === "blank") go(blankFrom.current, -1, false); };
   const [assetsTick, setAssetsTick] = useState(0);
   const pendingAssetsSig = useRef("");
   const confirmedAssetsSig = useRef("");
@@ -1060,7 +1066,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     /* into the loader the fade starts only after the slide-out (round 9 #1);
        out of the loader the fade completes before the slide (round 21 #1);
        slice cascades extend the settle per page (round 16 #3) */
-    const md = SLIDE_MS * 2 + Math.max(maxSliceDelay(cur), maxSliceDelay(next));
+    const md = SLIDE_MS + Math.max(maxSliceDelay(cur), maxSliceDelay(next));
     const extra = next === "loader" || cur === "loader" ? FADE_MS : 0;
     setTimeout(() => setPrev(null), md + extra + 60);
   }, []);
@@ -1128,7 +1134,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const tok = ++tutTok.current;
     const live = () => tok === tutTok.current;
     /* round 88 #3 (owner: "feels rushed"): every pause runs at 1.45× */
-    const TUT_PACE = 1.45;
+    const TUT_PACE = 1.2;                     /* round 94 #11: a touch quicker again */
     const hold = (ms: number) => new Promise<boolean>((r) => setTimeout(() => r(live()), ms * TUT_PACE));
     /* round 72 #10: nobody works to a metronome — every pause is nudged
        off the beat, and typing slows at spaces and stops at punctuation */
@@ -1256,23 +1262,24 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           /* round 72 #9: the real loader plays first — just quicker — and
              the finished designs land straight after it, no grey slots */
           setDreams([]); setSelected(-1);
-          for (const g of [0.2, 0.45, 0.68, 0.88, 0.97]) {
+          /* round 94 #10: a second of loader is enough for a demo */
+          for (const g of [0.5, 0.97]) {
             setGenProgress(g);
-            if (!(await hold(420))) return;
+            if (!(await hold(320))) return;
           }
-          if (!(await hold(260))) return;
+          if (!(await hold(200))) return;
           setDreams(["traditional", "contemporary", "punk"].map((st2, i) => ({ style: st2, dream: TUT_LABELS[i], preview: TUT_LABELS[i] })));
           go("options");
           setGenProgress(0);
-          if (!(await hold(SLIDE_MS + 1200))) return;
+          if (!(await hold(SLIDE_MS + 900))) return;
           /* round 89 #1 (owner): no variation play — the pointer goes
              straight to Save on the favourite, and the label flies into
              the folder (round 73 #7's re-roll demo retired) */
           /* not saveFront(): this closure was made before the demo labels
              existed, so its `dreams` is empty — set and fly directly (the
              sample labels are 1024×683 → 342.9×228.6 in column 2) */
-          if (!(await tap(TAP.optSelect, 200, 520, () => { setSelected(1); flyToFolder([{ src: TUT_LABELS[1], x: 548.5, y: 240, w: 342.9, h: 228.6 }]); }))) return;
-          if (!(await hold(1900))) return;
+          if (!(await tap(TAP.optSelect, 200, 520, () => { setSelected(1); flyToFolder([{ src: TUT_LABELS[1], x: 548.5, y: 290, w: 342.9, h: 228.6 }]); }))) return;
+          if (!(await hold(900))) return;
           break;
         }
         case 2: {
@@ -1301,7 +1308,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           break;
         }
         case 3: {
-          /* round 72 #12: seed() already put it there — nothing to play */
+          /* round 72 #12: seed() already put it there. Round 94 #7: the
+             pointer presses Save and the back label flies into the folder
+             (the demo back label is square, 984 × 984) */
+          if (!(await beat(900))) return;
+          const fit3 = fitIn(BD_AREA.w, BD_AREA.h, 984, 984);
+          if (!(await tap(TAP.bdSave, 200, 520, () => { setBackSaved(true); flyToFolder([{ src: TUT_D + "back-label.png", x: BD_AREA.x + fit3.dx, y: BD_AREA.y + fit3.dy, w: fit3.w, h: fit3.h }]); }))) return;
+          if (!(await hold(700))) return;
           break;
         }
         case 4: {
@@ -1336,19 +1349,19 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           setAssets({ life: [] }); setLifeTarget(5); setLifeOrder([0, 1, 2, 3, 4]);
           assetT.current = { run: Date.now(), stage: Date.now() };
           setAssetsStage("front shot");
-          if (!(await hold(1500))) return;
+          if (!(await hold(600))) return;
           setAssets((a) => ({ ...a, front: { full: TUT_D + "shot-front.jpg", prev: TUT_D + "shot-front.jpg" } }));
           setAssetsStage("back shot");
-          if (!(await hold(1200))) return;
+          if (!(await hold(500))) return;
           setAssets((a) => ({ ...a, back: { full: TUT_D + "shot-back.jpg", prev: TUT_D + "shot-back.jpg" } }));
           for (let i = 0; i < 5; i++) {
             setAssetsStage(`lifestyle ${i + 1}/5`);
-            if (!(await beat(900))) return;
+            if (!(await beat(340))) return;
             setAssets((a) => { const life = [...a.life]; life[i] = { full: TUT_LIFE[i], prev: TUT_LIFE[i] }; return { ...a, life }; });
           }
           /* round 72 #14: only now does the product page get published */
           setAssetsStage("publishing");
-          if (!(await hold(1400))) return;
+          if (!(await hold(600))) return;
           setTutLanding(true);
           setAssetsStage("");
           break;
@@ -1364,7 +1377,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
          waits, and only there the button keeps its double pulse. */
       if (!live()) return;
       if (tut >= TUT_CARDS.length - 1) { setNudge((n) => n + 1); return; }
-      if (!(await hold(1900))) return;
+      if (!(await hold(1400))) return;
       setPressed((n) => n + 1);
       if (!(await hold(260))) return;
       const nx = tut + 1;
@@ -1472,7 +1485,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const optGeom = (fi: number) => {
     const nat = imgDims[fi];
     const ar = nat ? nat.w / nat.h : (Number(f.width) || 110) / (Number(f.height) || 80);
-    const CUBE = 34.3, AREA_TOP = 240, AREA_BOT = 519;
+    const CUBE = 34.3, AREA_TOP = 290, AREA_BOT = 540;
     let lw: number, lh: number;
     if (ar >= 1) { lw = OPT_W; lh = OPT_W / ar; if (lh > AREA_BOT - AREA_TOP) { lh = AREA_BOT - AREA_TOP; lw = lh * ar; } }
     else { lh = AREA_BOT - AREA_TOP; lw = lh * ar; if (lw > OPT_W - 2 * CUBE) { lw = OPT_W - 2 * CUBE; lh = lw / ar; } }
@@ -1482,10 +1495,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
      variations; saving marks the column and flies the label into the folder */
   const saveFront = (fi: number) => {
     if (!dreams[fi]) return;
-    setSelected(fi); setWarn("");
     const dv = viewedDream(fi);
     const g = optGeom(fi);
-    if (dv) flyToFolder([{ src: dv.preview || dv.dream, x: g.lx, y: g.ly, w: g.lw, h: g.lh }]);
+    const unsave = selected === fi;
+    setSelected(unsave ? -1 : fi); setWarn("");
+    if (dv) flyToFolder([{ src: dv.preview || dv.dream, x: g.lx, y: g.ly, w: g.lw, h: g.lh }], unsave);
   };
   /* round 52 #1 (owner: "it let me download without agreeing!"):
      every pay path checks the T&C ring first */
@@ -1529,15 +1543,17 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         await sleep(500);
         setGenProgress((p) => p + 1 / 3);
         const d0 = dreams.find(Boolean);
-        return { style, dream: d0?.dream || FAKE_IMG, preview: d0?.preview || FAKE_IMG };
+        const fake = { style, dream: d0?.dream || FAKE_IMG, preview: d0?.preview || FAKE_IMG };
+        /* the dev switch fakes the three layouts too, so the dots show */
+        return { ...fake, variants: [fake, fake] };
       }
       const r = await fetch("/api/dream-label", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ vision, style, data, sketch, aspect: aspectKey, width, height }),
+        body: JSON.stringify({ vision, style, data, sketch, aspect: aspectKey, width, height, variants: 3 }),
       });
       if (!r.ok || !r.body) throw new Error(`generation failed (${r.status})`);
       const reader = r.body.getReader(); const dec = new TextDecoder();
-      let buf = ""; let res: { dream?: string; preview?: string | null; id?: string } = {};
+      let buf = ""; let res: { dream?: string; preview?: string | null; id?: string; variants?: { dream: string; preview: string | null; id: string }[] } = {};
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -1552,7 +1568,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         }
       }
       setGenProgress((p) => p + 1 / 3);
-      return { style, dream: res.dream || "", preview: res.preview || null, id: res.id };
+      /* round 94 #6: two contrasting re-layouts of the same painting ride along */
+      return { style, dream: res.dream || "", preview: res.preview || null, id: res.id, variants: (res.variants || []).map((v) => ({ style, dream: v.dream, preview: v.preview, id: v.id })) };
     };
     try {
       const styles3 = ["traditional", "contemporary", "punk"];
@@ -1569,7 +1586,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       if (!ok.length) throw new Error("all generations failed — try again");
       ok.sort((a, b2) => styles3.indexOf(a.style) - styles3.indexOf(b2.style));
       setDreams(ok); setSelected(-1); setFrontSig(sigFront()); setBackSig("");
-      setStyleVars([[], [], []]); setStyleView([0, 0, 0]); setVarBusyCol(-1);
+      setStyleVars(styles3.map((st) => ok.find((d) => d.style === st)?.variants || [])); setStyleView([0, 0, 0]); setVarBusyCol(-1);
       /* round 43 #3 (owner: "landing page thumb shows the previous bottle"):
          a freshly generated wine invalidates any earlier published page —
          the restored productUrl (round 28b, meant to survive a reload of
@@ -1966,16 +1983,23 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           for (const fy0 of [240, 468.6]) covers.push(patch(fx0 - 11, fy0 - 11, 22, 22, `c${fx0}-${fy0}`));
         /* round 50 #1: portrait labels stop at 519 so the dot rows keep
            air above the buttons */
-        const CUBE = 34.3, AREA_TOP = 240, AREA_BOT = 519;
-        const STYLE_NAMES = ["Traditional", "Contemporary", "Punk"];
-        const anyVars = styleVars.some((v) => v.length > 0);
+        const CUBE = 34.3, AREA_TOP = 290, AREA_BOT = 540;
+        /* ROUND 94 #5 (owner): "Punk" is FUNKY everywhere the customer reads */
+        const STYLE_NAMES = ["Traditional", "Contemporary", "Funky"];
+        /* ROUND 94 #6 (owner's Front_Label_UI reference): the style's NAME
+           over each column with a dashed rule, the label with its crosses,
+           three dots (the three layouts of one painting), then SAVE. No
+           variation buttons, no subtitle. */
+        const styleHead = (fi: number) => (
+          <span key={"sh" + fi}>
+            <span style={{ ...px(OPT_FRAMES[fi].x, baseTop(221, 21), OPT_W, 24), font: `700 21px ${HNW}`, lineHeight: "21px", textAlign: "center", display: "block", whiteSpace: "nowrap" }}>{t(STYLE_NAMES[fi]).toUpperCase()}</span>
+            {dashRule(OPT_FRAMES[fi].x - 12, 242, OPT_W + 24, false, "shr" + fi)}
+          </span>
+        );
         return (<>
           {covers}
           {patch(135, 164, 1170, 26, "stynames")}
-          {!anyVars && (
-            <span style={{ ...px(136.97, 183.62 - 15.5, 500, 20), font: `15px ${HNW}`, color: "#111", lineHeight: "20px" }}>
-              {t("Variations are limited, so choose wisely.")}</span>
-          )}
+          {OPT_FRAMES.map((_, fi) => styleHead(fi))}
           {OPT_FRAMES.map((fr, fi) => {
             const orig = dreams[fi];
             if (!orig?.preview && !orig?.dream) return null;
@@ -2012,16 +2036,15 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     88 #9: up to two rows of 15, the rows centred on the
                     midline between label and button */}
                 {nDots > 1 && Array.from({ length: nDots }, (_, k) => {
-                  const rows = Math.ceil(nDots / DOTS_PER_ROW), row = Math.floor(k / DOTS_PER_ROW), col = k % DOTS_PER_ROW;
-                  const inRow = Math.min(nDots - row * DOTS_PER_ROW, DOTS_PER_ROW);
-                  const dx = lx + lw / 2 + (col - (inRow - 1) / 2) * 22 - 9;
-                  const dy = (ly + lh + 565) / 2 - 9 + (row - (rows - 1) / 2) * 17;
+                  /* round 94 #6: one row of up to three, 36 px apart, on y 584 */
+                  const dx = lx + lw / 2 + (k - (nDots - 1) / 2) * 36 - 9;
+                  const dy = 584 - 9;
                   return (
                   <button key={"vd" + fi + k} onClick={() => setStyleView((p) => { const n = [...p]; n[fi] = k; return n; })}
                     aria-label={`view ${fi}-${k}`}
                     style={{ ...px(dx, dy, 18, 18), ...ghost }}>
                     <svg width="18" height="18" viewBox="0 0 18 18" style={{ position: "absolute", left: 0, top: 0, display: "block" }}>
-                      <circle cx="9" cy="9" r="4" fill={(styleView[fi] || 0) === k ? "#111" : "#fff"} stroke="#111" strokeWidth="1" />
+                      <circle cx="9" cy="9" r="5.5" fill={(styleView[fi] || 0) === k ? "#111" : "#fff"} stroke="#111" strokeWidth="1.4" />
                     </svg>
                   </button>
                   );
@@ -2034,23 +2057,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {/* ROUND 53 #8: a bar-jump before generation shows the REAL page
               furniture, deactivated and grey */}
           {dreams.length === 0 && OPT_FRAMES.map((fr, fi) => (
-            <span key={"grey" + fi}>
-              <div style={{ ...px(fr.x + 0.2, 565, OPT_W, 34.3), background: "#ECECEA", color: "#B3B1A8", font: `12px ${HNW}`, letterSpacing: 0.3, display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
-                {t(STYLE_NAMES[fi] + " Variation")}</div>
-              <div style={{ ...px(fr.x + 0.2, 633.6, OPT_W, 34.3), background: "#ECECEA", color: "#B3B1A8", font: `12px ${HNW}`, letterSpacing: 0.3, display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
-                {t("Save")}</div>
-            </span>
+            <div key={"grey" + fi} style={{ ...px(fr.x + 0.2, 637, OPT_W, 34.3), background: "#ECECEA", color: "#B3B1A8", font: `12px ${HNW}`, letterSpacing: 0.3, display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
+              {t("Save")}</div>
           ))}
-          {/* the buttons live on every state (round 51 #4); round 88 #9: the
-              variations button greys out once its two rows of dots are full */}
-          {dreams.length > 0 && OPT_FRAMES.map((fr, fi) => {
-            const full = (styleVars[fi]?.length || 0) >= MAX_VARS;
-            return (
-              <button key={"cv" + fi} onClick={() => requestVariations(fi)} disabled={full}
-                style={{ ...px(fr.x + 0.2, 565, OPT_W, 34.3), cursor: full ? "default" : "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: full ? "#ECECEA" : "#111", color: full ? "#B3B1A8" : "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, transition: `background 240ms ${EASE}` }}>
-                {t(STYLE_NAMES[fi] + " Variation")}</button>
-            );
-          })}
           {/* ROUND 88 #9 (owner): SAVE — a black button under the variations,
               in place of the "Select" ring; it marks the column and flies the
               label into the folder */}
@@ -2058,7 +2067,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             const on = selected === fi;
             return (
               <button key={"sv" + fi} onClick={() => saveFront(fi)}
-                style={{ ...px(fr.x + 0.2, 633.6, OPT_W, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: on ? "#fff" : "#111", color: "#111", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, transition: `background 240ms ${EASE}, color 240ms ${EASE}`, ...(on ? {} : { color: "#fff" }) }}>
+                style={{ ...px(fr.x + 0.2, 637, OPT_W, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: on ? "#fff" : "#111", color: "#111", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, transition: `background 240ms ${EASE}, color 240ms ${EASE}`, ...(on ? {} : { color: "#fff" }) }}>
                 {on ? t("Saved") : t("Save")}</button>
             );
           })}
@@ -2273,7 +2282,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {backPng && (<>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={backPng} alt="back label" title={t("Show this one big")}
-              onClick={() => setGallery({ items: [backPng], index: 0, save: () => { setBackSaved(true); flyToFolder([{ src: backPng, x: lx, y: ly, w: fit.w, h: fit.h }]); }, saved: backSaved })}
+              onClick={() => setGallery({ items: [backPng], index: 0, save: () => { setBackSaved((v) => { flyToFolder([{ src: backPng, x: lx, y: ly, w: fit.w, h: fit.h }], v); return !v; }); }, saved: backSaved })}
               style={{ ...px(lx, ly, fit.w, fit.h), objectFit: "fill", cursor: "pointer" }} />
             {/* round 88 #8: the frame stands 10px off the label, crosses on its corners */}
             {cross(lx - 10, ly - 10, "b1")}{cross(lx + fit.w + 10, ly - 10, "b2")}{cross(lx - 10, ly + fit.h + 10, "b3")}{cross(lx + fit.w + 10, ly + fit.h + 10, "b4")}
@@ -2281,7 +2290,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             <button onClick={() => go("backdetails", -1)}
               style={{ ...px(548.6, 589, 341.4, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>{t("Edit")}</button>
             {/* round 88 #7 (owner): SAVE under Edit — flies the back label into the folder */}
-            <button onClick={() => { setBackSaved(true); flyToFolder([{ src: backPng, x: lx, y: ly, w: fit.w, h: fit.h }]); }}
+            <button onClick={() => { setBackSaved(!backSaved); flyToFolder([{ src: backPng, x: lx, y: ly, w: fit.w, h: fit.h }], backSaved); }}
               style={{ ...px(548.6, 657.6, 341.4, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: backSaved ? "#fff" : "#111", color: backSaved ? "#111" : "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, transition: `background 240ms ${EASE}, color 240ms ${EASE}` }}>{backSaved ? t("Saved") : t("Save")}</button>
             {/* ROUND 51 #7/#8 (owner): informational size caption — same
                 type as the front page's Width/Height, no input, no
@@ -2633,7 +2642,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               folder in sequence */}
           {!assetsStage && assets.front && (
             <button onClick={() => {
-              setAssetsSaved(true);
+              const unsave = assetsSaved;
+              setAssetsSaved(!unsave);
               const items: { src: string; x: number; y: number; w: number; h: number }[] = [];
               /* the shots fly from their zoomed box */
               const zw = 120 * SHOT_ZOOM, zh = CH * SHOT_ZOOM, zdx = (zw - 120) / 2, zdy = (zh - CH) / 2;
@@ -2642,7 +2652,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               const hero = assets.life[lifeOrder[0]];
               if (hero) items.push({ src: hero.prev, x: HERO.x, y: Y0, w: HERO.w, h: CH });
               thumbs.forEach((th, k) => { const it = assets.life[lifeOrder[k + 1]]; if (it) items.push({ src: it.prev, x: th.x, y: th.y, w: th.s, h: th.s }); });
-              flyToFolder(items);
+              flyToFolder(unsave ? [...items].reverse() : items, unsave);
             }}
               style={{ ...px(BOX.x + BOX.w - 274, 657.6, 274, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: assetsSaved ? "#fff" : "#111", color: assetsSaved ? "#111" : "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, transition: `background 240ms ${EASE}, color 240ms ${EASE}` }}>
               {assetsSaved ? t("Saved") : t("Save")}</button>
@@ -2818,12 +2828,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                       {b2.kind === "folder"
                         ? <svg viewBox="1232.5 33.9 85.1 70" width="85" height="70" style={{ display: "block" }}>{folderPath}</svg>
                         : <svg viewBox="0 0 85 70" width="85" height="70" style={{ display: "block" }}>
-                            {/* round 93 #21 (owner's drawing): a sheet whose foot rolls
-                                into a scroll that runs out past the page's right edge */}
-                            <path d="M20 4 H67 V46 H28 Q20 46 20 54 Z" fill="#fff" stroke="#000" strokeWidth="0.9" strokeLinejoin="round" />
-                            <path d="M20 54 Q20 62 28 62 H70 Q78 62 78 54 Q78 46 70 46 H28 Q20 46 20 54 Z" fill="#fff" stroke="#000" strokeWidth="0.9" />
-                            <path d="M20 4 V54" fill="none" stroke="#000" strokeWidth="0.9" />
-                            {[15, 21, 27, 33].map((yy) => <line key={yy} x1="29" y1={yy} x2="59" y2={yy} stroke="#000" strokeWidth="0.9" />)}
+                            {/* round 94 #13 (owner's drawing, traced): a straight sheet
+                                whose left edge curls at the foot into a rolled band that
+                                runs out to the right, past the sheet's edge */}
+                            <path d="M19 9.4 H65.6 V44.4" fill="none" stroke="#000" strokeWidth="0.9" strokeLinejoin="round" />
+                            <path d="M19 9.4 V50 Q19 55.6 24.6 55.6 H68.8 A5.6 5.6 0 0 0 68.8 44.4 H28.5 Q23.5 44.4 21 49" fill="#fff" stroke="#000" strokeWidth="0.9" strokeLinejoin="round" />
+                            <path d="M19 9.4 H65.6 V44.4 H28.5" fill="#fff" stroke="none" />
+                            <path d="M19 9.4 H65.6 V44.4" fill="none" stroke="#000" strokeWidth="0.9" />
+                            {[18, 24, 30, 36].map((yy) => <line key={yy} x1="27.5" y1={yy} x2="57.5" y2={yy} stroke="#000" strokeWidth="0.9" />)}
                           </svg>}
                     </div>
                     {/* the name */}
@@ -2890,6 +2902,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             return (<>
               {patch(0, 92, W, FOOTER_Y - 92, "gwipe")}
               <span style={{ ...px(GX, baseTop(230, 24), GW, 26), font: `700 24px ${HNW}`, lineHeight: "24px", textAlign: "center" }}>{t("CREDITS")}</span>
+              {/* round 94 #14: the gate message sits centred BEFORE the list */}
+              {warn && <span style={{ ...px(GX, baseTop(y0 - 60, 13), GW, 16), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block" }}>{warn}</span>}
+              {/* the T&C row, back (owner) */}
+              {dashRule(GX, y0 - 62, GW, false, "gr-tc0")}
+              {dotBtn(GX + 16, y0 - 46, agree, () => setAgree((a) => !a), "gagree", { ring: true, r: 9 })}
+              <button onClick={() => setAgree((a) => !a)} style={{ ...px(GX + 40, y0 - 57, 90, 24), ...ghost, textAlign: "left", textTransform: "none", font: `italic 15px ${HNW}`, color: "#111", display: "flex", alignItems: "center", whiteSpace: "nowrap" }}>{t("I agree to the")}</button>
+              <button aria-label="terms" onClick={() => { setTermsOpen(true); setTermsPos(0); }} style={{ ...px(GX + 40 + (lang === "ge" ? 118 : 96), y0 - 57, 220, 24), ...ghost, textAlign: "left", textTransform: "none", font: `italic 15px ${HNW}`, color: "#111", textDecoration: "underline", display: "flex", alignItems: "center", whiteSpace: "nowrap" }}>{t("Terms & Conditions")}</button>
               {dashRule(GX, y0 - 22, GW, false, "gr-top")}
               {GENS.map((g, i) => {
                 const by = y0 + i * pitch;
@@ -2928,7 +2947,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           </>)}
           {/* round 52 #1: the agree gate message under the Pay bar */}
           {warn && (
-            <span style={{ ...px(137.14, 694, 480, 16), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block" }}>{warn}</span>
+            !gensMode && <span style={{ ...px(137.14, 694, 480, 16), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block" }}>{warn}</span>
           )}
           {/* ROUND 52 #3: Terms & Conditions modal — lorem body behind the
               house-style scroll (1px track + black dot, draggable), black
@@ -2982,7 +3001,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
   /* round 68 #1: any open modal freezes the bar (it still paints on top) */
   const modalOpen = !!confirmModal || !!emailModal || termsOpen || marketOpen;
-  const step = tut >= 0 ? tut : STEP_OF[page];
+  const barPage: PageKey = page === "blank" ? blankFrom.current : page;
+  const step = tut >= 0 ? tut : STEP_OF[barPage];
   /* round 71: Mtavruli runs much wider than Latin — six stops 166.6 apart
      only clear each other in Georgian at a smaller size */
   const BAR_FS = lang === "ge" ? 11 : 13;
@@ -2990,7 +3010,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
      button rides the stop being explained and the line follows it home */
   const tutLast = TUT_CARDS.length - 1;
   const tutX = tut < 0 ? null : tut < STEPS.length ? STEPS[tut].x : NEXT_X;
-  const thick = tut >= 0 ? (tut < STEPS.length ? STEPS[tut].x : CIRCLE_X[CIRCLE_X.length - 1]) : THICK[page];
+  const thick = tut >= 0 ? (tut < STEPS.length ? STEPS[tut].x : CIRCLE_X[CIRCLE_X.length - 1]) : THICK[barPage];
   const bandBottom = BAND_BOTTOM[page];
   const fullSlide = (page === "vision" && prev === "welcome") || page === "welcome";
 
@@ -3013,6 +3033,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         .nui-next { transition: transform 200ms cubic-bezier(0.33, 1, 0.68, 1); }
         .nui-next:hover { transform: scale(1.09); }
         .nui-next:active { transform: scale(1.02); }
+        .nui-folder { transition: transform 180ms cubic-bezier(0.33, 1, 0.68, 1); }
+        .nui-folder:hover { transform: scale(1.08); }
         .nui-noscroll { scrollbar-width: none; -ms-overflow-style: none; }
         .nui-noscroll::-webkit-scrollbar { display: none; }
         @keyframes nuiDot { 0% { opacity: 0.15 } 30% { opacity: 1 } 60%, 100% { opacity: 0.15 } }
@@ -3029,6 +3051,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         @keyframes nuiPop { from { opacity: 0; transform: scale(0.82) } 70% { transform: scale(1.03) } to { opacity: 1; transform: scale(1) } }
         @keyframes nuiFadeUp { from { opacity: 0; transform: translateY(5px) } to { opacity: 1; transform: translateY(0) } }
         @keyframes nuiFly { 0% { transform: translate(0,0) scale(1) rotate(0deg); opacity: 1 } 28% { transform: translate(calc(var(--dx) * 0.14), calc(var(--dy) * 0.3 - 26px)) scale(0.86) rotate(-3deg); opacity: 1 } 100% { transform: translate(var(--dx), var(--dy)) scale(var(--s)) rotate(5deg); opacity: 0.2 } }
+        @keyframes nuiFlyBack { 0% { transform: translate(var(--dx), var(--dy)) scale(var(--s)) rotate(5deg); opacity: 0.2 } 72% { transform: translate(calc(var(--dx) * 0.14), calc(var(--dy) * 0.3 - 26px)) scale(0.86) rotate(-3deg); opacity: 1 } 100% { transform: translate(0,0) scale(1) rotate(0deg); opacity: 1 } }
         @keyframes nuiFolderBump { 0%, 100% { transform: scale(1) } 40% { transform: scale(1.14) } 72% { transform: scale(0.97) } }
         @keyframes btnFly { from { left: ${WELCOME_X - NEXT_R}px } to { left: ${NEXT_X - NEXT_R}px } }
         @keyframes nuiFadeIn { from { opacity: 0 } to { opacity: 1 } }
@@ -3074,8 +3097,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               const zy0 = Math.max(0, Math.min(zoneH, py0 + pageTop));
               const zy1 = Math.max(0, Math.min(zoneH, py1 + pageTop));
               if (zy1 <= zy0 || x1 <= x0) return null;
-              /* the arriving sheet waits for the leaving one (or the loader's fade) */
-              const d0 = dirIn ? (prev === "loader" ? outBase : SLIDE_MS) : 0;
+              const d0 = s.delay + (dirIn ? outBase : 0);
               const anim = s.mode === "fade"
                 ? `${dirIn ? "nuiFadeIn" : "nuiFadeOut"} ${FADE_MS}ms ${EASE} ${d0}ms both`
                 : `${dirIn ? "nuiInPx" : "nuiOutPx"} ${SLIDE_MS}ms ${EASE} ${d0}ms both`;
@@ -3119,22 +3141,17 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             /* eslint-disable-next-line @next/next/no-img-element */
             <img key={"fly" + fl.id} src={fl.src} alt=""
               style={{ ...px(fl.x, fl.y, fl.w, fl.h), objectFit: "contain", zIndex: 60, pointerEvents: "none", transformOrigin: "center",
-                animation: `nuiFly 1150ms cubic-bezier(.5,.02,.18,1) ${fl.delay}ms both`,
+                animation: `${fl.back ? "nuiFlyBack" : "nuiFly"} 1150ms cubic-bezier(.5,.02,.18,1) ${fl.delay}ms both`,
                 ...({ "--dx": `${FOLDER_C.x - (fl.x + fl.w / 2)}px`, "--dy": `${FOLDER_C.y - (fl.y + fl.h / 2)}px`, "--s": `${Math.min(0.14, 52 / Math.max(fl.w, fl.h)).toFixed(3)}` } as React.CSSProperties) }} />
           ))}
           {/* ROUND 93 #11/#20 (owner): the folder mark is a BUTTON to the Final
               Pack, and what has been saved peeks out of it as a little deck
               of thumbnails between the folder's back and its front flap */}
-          <button key={"fm" + folderBump} aria-label="final pack" onClick={() => { if (tut < 0 && page !== "checkout" && dreams.length) go("checkout"); }}
-            style={{ ...px(1232.5, 33.9, 85.1, 70), zIndex: 50, ...ghost, cursor: dreams.length ? "pointer" : "default", transformOrigin: "50% 62%", animation: folderBump > 0 ? `nuiFolderBump 560ms ${EASE} both` : "none", overflow: "visible" }}>
-            <svg viewBox="1232.5 33.9 85.1 70" style={{ position: "absolute", left: 0, top: 0, width: 85.1, height: 70 }}>
+          <button key={"fm" + folderBump} aria-label="final pack" className="nui-folder" onClick={() => { if (tut < 0 && pageNow.current !== "checkout" && dreams.length) go("checkout"); }}
+            style={{ ...px(1232.5, 33.9, 85.1, 70), zIndex: 55, ...ghost, cursor: "pointer", transformOrigin: "50% 62%", animation: folderBump > 0 ? `nuiFolderBump 560ms ${EASE} both` : "none", overflow: "visible" }}>
+            {/* round 94 #15: no thumbnails inside — the mark stays clean */}
+            <svg viewBox="1232.5 33.9 85.1 70" style={{ position: "absolute", left: 0, top: 0, width: 85.1, height: 70, pointerEvents: "none" }}>
               <path d="M1233.31,103.1V38.26c0-1.98,1.34-3.59,2.99-3.59h25.27c.79,0,1.55.38,2.11,1.05l7.74,9.3c.56.67,1.32,1.05,2.11,1.05h25.27c1.65,0,2.99,1.61,2.99,3.59v7.81" fill="#fff" stroke="#000" strokeWidth="0.75" strokeMiterlimit="10" />
-            </svg>
-            {savedThumbs().map((src, i) => (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img key={"st" + i} src={src} alt="" style={{ position: "absolute", left: 30 + i * 9, top: 14 - i * 3, width: 34, height: 24, objectFit: "cover", background: "#fff", border: "0.75px solid #000", boxShadow: "0 1px 2px rgba(0,0,0,0.25)", transform: `rotate(${-7 + i * 6}deg)`, transformOrigin: "50% 100%", animation: `nuiFadeUp 320ms ${EASE} both` }} />
-            ))}
-            <svg viewBox="1232.5 33.9 85.1 70" style={{ position: "absolute", left: 0, top: 0, width: 85.1, height: 70 }}>
               <path d="M1233.31,103.1h68.49l15.03-40.57c.88-2.38-.57-5.05-2.73-5.05h-61.95c-1.18,0-2.25.84-2.73,2.13l-16.11,43.49" fill="#fff" stroke="#000" strokeWidth="0.75" strokeMiterlimit="10" />
             </svg>
           </button>
@@ -3259,11 +3276,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   ) : (<>
                     <span style={{ position: "absolute", left: TB.pad, top: baseTop(32.06, 23), width: TB.w - TB.pad, font: `700 ${lang === "ge" ? 19 : 23}px ${HNW}`, lineHeight: "23px", color: "#fff" }}>{t(card.step)}</span>
                     {card.title.map((ln, i) => (
-                      <span key={"t" + i} style={{ position: "absolute", left: TB.pad, top: baseTop(58.06 + i * 18, 15), width: TB.w - TB.pad, font: `700 ${lang === "ge" ? 12.5 : 15}px ${HNW}`, lineHeight: "15px", color: "#fff", whiteSpace: "nowrap" }}>{t(ln)}</span>
+                      <span key={"t" + i} style={{ position: "absolute", left: TB.pad, top: baseTop(58.06 + i * 18, 15), width: TB.w - TB.pad, font: `700 ${lang === "ge" ? 11 : 15}px ${HNW}`, lineHeight: "15px", color: "#fff", whiteSpace: "nowrap" }}>{t(ln)}</span>
                     ))}
                     <div style={{ position: "absolute", left: TB.pad + 0.63, top: 93.67, width: TB.rule, height: 1, backgroundImage: "repeating-linear-gradient(90deg,#fff 0 5px,transparent 5px 10px)" }} />
                     {card.body.map((ln, i) => (
-                      <span key={"b" + i} style={{ position: "absolute", left: TB.pad, top: baseTop(118.57 + i * 14.4, 12), width: TB.w - TB.pad + 6, font: `italic ${lang === "ge" ? 10 : 12}px ${HNW}`, lineHeight: "12px", color: "#fff", whiteSpace: "nowrap" }}>{t(ln)}</span>
+                      <span key={"b" + i} style={{ position: "absolute", left: TB.pad, top: baseTop(118.57 + i * 14.4, 12), width: TB.w - TB.pad + 6, font: `italic ${lang === "ge" ? 9 : 12}px ${HNW}`, lineHeight: "12px", color: "#fff", whiteSpace: "nowrap" }}>{t(ln)}</span>
                     ))}
                   </>)}
                 </div>
@@ -3296,7 +3313,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                        unchanged inputs just move along */
                     if (dreams.length && frontSig === sigFront()) nextFromFront();
                     else if (!FRONT_ROWS.some((k2) => (f[k2] || "").trim())) setEmptyWarn("front");
-                    else setConfirmModal("labels");
+                    else openConfirm("labels", "vision");
                   }
                   else if (page === "options") {
                     /* round 7 #12: warn instead of silently ignoring */
@@ -3369,7 +3386,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             <svg viewBox="0 0 24 24" width="21" height="21" style={{
               position: "absolute", left: cursor.x - 2, top: cursor.y - 1, zIndex: 14, pointerEvents: "none",
               transition: `left ${cursor.ms}ms cubic-bezier(.33,0,.2,1), top ${cursor.ms}ms cubic-bezier(.33,0,.2,1)`,
-              filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.35))",
+              willChange: "left, top",
             }}>
               <path d="M3 2 L3 18.2 L7.3 14.2 L10 20.6 L12.9 19.3 L10.3 13.1 L16.2 12.9 Z"
                 fill="#111" stroke="#fff" strokeWidth="1.4" strokeLinejoin="round" />
@@ -3392,7 +3409,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {/* round 76 #2: checkout prints its own gate message under the
               payment button — this one would be the second copy */}
           {warn && thick !== null && page !== "checkout" && (
-            <span style={{ ...px(0, 648, W, 16), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block", zIndex: 7, position: "absolute" }}>{warn}</span>
+            <span style={{ ...px(0, 700, W, 16), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block", zIndex: 7, position: "absolute" }}>{warn}</span>
           )}
 
           {/* STATIC footer bar — ROUND 63: empty; the progress bar (drawn
@@ -3420,7 +3437,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               </>)}
               <button aria-label="close gallery" onClick={() => setGallery(null)} style={{ ...px(1180, 96, 30, 30), ...ghost, zIndex: 46, cursor: "pointer", font: `20px ${HNW}`, color: "#111" }}>✕</button>
               {gallery.save && (
-                <button onClick={() => { gallery.save?.(); setGallery((g) => g ? { ...g, saved: true } : g); }}
+                <button onClick={() => { gallery.save?.(); setGallery((g) => g ? { ...g, saved: !g.saved } : g); }}
                   style={{ ...px(W / 2 - 120, 664, 240, 34.3), zIndex: 46, cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: gallery.saved ? "#fff" : "#111", color: gallery.saved ? "#111" : "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
                   {gallery.saved ? t("Saved") : t("Save")}</button>
               )}
@@ -3430,7 +3447,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               confirmation or the next page */}
           {emptyWarn && (() => {
             const front = emptyWarn === "front";
-            const proceed = () => { setEmptyWarn(""); if (front) setConfirmModal("labels"); else nextFromCompliance(); };
+            const proceed = () => { setEmptyWarn(""); if (front) openConfirm("labels", "vision"); else nextFromCompliance(); };
             const edit = () => { setEmptyWarn(""); if (!front) go("backdetails", -1); };
             const B2 = { x: 420, y: 250, w: 600, h: 250 };
             return (<>
@@ -3576,16 +3593,20 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               /* round 56 #7: creating SPENDS credits (or routes to the gift
                  modal / purchase page) */
               setConfirmModal("");
-              if (isL) { if (requestCredit("vision", 3)) nextFromFront(); }
+              if (isL) {
+                if (requestCredit("vision", 3)) nextFromFront();
+                /* no credit: the gift modal or the checkout took over — never leave a blank page behind */
+                else if (pageNow.current === "blank") go(blankFrom.current, -1, false);
+              }
               else if (requestCredit("assets")) { confirmedAssetsSig.current = pendingAssetsSig.current; setAssetsTick((t2) => t2 + 1); }
             };
-            const onEdit = () => { setConfirmModal(""); go(isL ? "vision" : "bottle", -1); };
+            const onEdit = () => { setConfirmModal(""); if (isL) go("vision", -1, false); else go("bottle", -1); };
             return (<>
-              <div style={{ ...px(0, 0, W, H), zIndex: 40 }} onClick={() => setConfirmModal("")} />
+              <div style={{ ...px(0, 0, W, H), zIndex: 40 }} onClick={closeConfirm} />
               <div style={{ ...px(0, HEADER_H, W, FOOTER_Y - HEADER_H), background: "rgba(255,255,255,0.88)", zIndex: 40, pointerEvents: "none" }} />
               <div style={{ ...px(B.x, B.y, B.w, B.h), background: "#fff", border: "1px solid #111", zIndex: 41, boxSizing: "border-box" }}>
                 <span style={{ position: "absolute", left: 32, top: baseTop(52, 23), font: `700 23px ${HNW}`, lineHeight: "23px", whiteSpace: "nowrap" }}>{t("CHECK YOUR DETAILS")}</span>
-                <button aria-label="close confirm" onClick={() => setConfirmModal("")}
+                <button aria-label="close confirm" onClick={closeConfirm}
                   style={{ position: "absolute", right: 24, top: 28, ...ghost, width: 26, height: 26 }}>
                   <svg viewBox="0 0 20 20" width="20" height="20"><line x1="2" y1="2" x2="18" y2="18" stroke="#111" strokeWidth="2" /><line x1="18" y1="2" x2="2" y2="18" stroke="#111" strokeWidth="2" /></svg>
                 </button>

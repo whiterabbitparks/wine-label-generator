@@ -33,6 +33,7 @@ export interface ComposeInput {
   seed: number;
   paper?: string;                  /* the ground the painter was given; sampled when absent */
   wineColour?: string;             /* "Red" / "White" / "Amber" / "Rosé" … — round 85 #10 */
+  align?: "center" | "left";       /* round 94 #6: a layout variant may flip the style's alignment */
 }
 /* every set line, in label pixels — what the PDF is drawn from */
 export interface LaidLine { text: string; x: number; y: number; size: number; tracking: number; family: string; weight: number; italic: boolean; anchor: "start" | "middle"; colour: string }
@@ -187,8 +188,9 @@ export async function composeLabel(inp: ComposeInput): Promise<ComposeOutput> {
 
   /* ---- place: blocks from the band's top with their air; the legal block
           pinned to the foot ---- */
-  const x = roles.align === "center" ? W / 2 : M;
-  const anchor: "start" | "middle" = roles.align === "center" ? "middle" : "start";
+  const align = inp.align || roles.align;
+  const x = align === "center" ? W / 2 : M;
+  const anchor: "start" | "middle" = align === "center" ? "middle" : "start";
   const laid: LaidLine[] = [];
   const blockEl = (b: Block, top: number) => {
     let y = top;

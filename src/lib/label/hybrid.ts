@@ -1,7 +1,7 @@
 import { buildArtworkPrompt, evalModel, generateArtworkChecked } from "@/lib/eval/models";
 import { composeLabel } from "@/lib/typeset/compose";
 import { flatGroundOf } from "@/lib/typeset/palette";
-import { faceFile } from "@/lib/typeset/fonts";
+import { faceFile, pickRoles, mix } from "@/lib/typeset/fonts";
 import type { Layout } from "@/lib/typeset/compose";
 import { gen429 } from "@/lib/dream/engine";
 import { painterFor } from "./painters";
@@ -49,7 +49,7 @@ export function textsOf(d: Record<string, string>) {
   };
 }
 
-export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput> {
+export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput & { tag: string }> {
   const style = ["traditional", "contemporary", "punk"].includes(inp.style) ? inp.style : "traditional";
   const seed = inp.seed ?? (Math.random() * 0xffffffff) >>> 0;
   const widthMm = Math.min(300, Math.max(30, inp.widthMm || 110));
@@ -64,19 +64,39 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput> 
   /* no paper given (contemporary / punk): the ground is read off the picture */
   const ground = ap.paper || (await flatGroundOf(art)).colour;
   const out = await composeLabel({ artwork: art, style, texts: textsOf(inp.data), widthMm, heightMm, seed, paper: ground, wineColour: inp.data.wineColorName });
-  return { png: out.png, svg: out.svg, art, faces: out.faces, ink: out.ink, ground, prompt: ap.prompt, layout: out.layout };
+  return { png: out.png, svg: out.svg, art, faces: out.faces, ink: out.ink, ground, prompt: ap.prompt, layout: out.layout, tag: layoutTag(style, seed) };
 }
 
 /* ROUND 86 #3 (owner: "keep the image, just change the layout — tons of
    variations without burning generations"). A variation re-sets the type
    on the SAME painting with a fresh seed: new faces, hero size, wine-ink
    role, air — no model call, no credit. */
-export async function relayoutLabel(stored: { art: Buffer; meta: { style: string; widthMm: number; heightMm: number; ground: string } }, data: Record<string, string>): Promise<HybridOutput> {
-  const seed = (Math.random() * 0xffffffff) >>> 0;
-  const art = `data:image/png;base64,${stored.art.toString("base64")}`;
+/* ROUND 94 #6 (owner): every painting ships with THREE layouts that read
+   clearly different — a different hero face AND a different hero size
+   from every earlier layout of the same painting (`avoid` = the tags of
+   those). A tag is "family|sizeBucket"; the seed is re-drawn until both
+   differ (20 tries; then only the face has to differ). */
+export function layoutTag(style: string, seed: number): string {
+  return `${pickRoles(style, seed).hero.face.family}|${mix(seed, 16) % 5}`;
+}
+/* recipes for real contrast (owner: "enough contrast between fonts and
+   arrangements"): `big` insists on the largest hero sizes; `flip` sets
+   the type on the OTHER alignment (a centred style goes left, a left one
+   goes centred) */
+export async function relayoutLabel(stored: { art: Buffer; meta: { style: string; widthMm: number; heightMm: number; ground: string } }, data: Record<string, string>, avoid: string[] = [], recipe: { big?: boolean; flip?: boolean } = {}): Promise<HybridOutput & { tag: string }> {
   const { style, widthMm, heightMm, ground } = stored.meta;
-  const out = await composeLabel({ artwork: art, style, texts: textsOf(data), widthMm, heightMm, seed, paper: ground, wineColour: data.wineColorName });
-  return { png: out.png, svg: out.svg, art, faces: out.faces, ink: out.ink, ground, prompt: "(re-layout of an existing painting)", layout: out.layout };
+  const fams = new Set(avoid.map((a) => a.split("|")[0])), buckets = new Set(avoid.map((a) => a.split("|")[1]));
+  let seed = (Math.random() * 0xffffffff) >>> 0;
+  for (let i = 0; i < 60; i++) {
+    const [fam, b] = layoutTag(style, seed).split("|");
+    const bigOk = !recipe.big || i >= 30 || Number(b) >= 3;
+    if (!fams.has(fam) && (i >= 20 || !buckets.has(b)) && bigOk) break;
+    seed = (Math.random() * 0xffffffff) >>> 0;
+  }
+  const art = `data:image/png;base64,${stored.art.toString("base64")}`;
+  const align = recipe.flip ? (pickRoles(style, seed).align === "center" ? "left" : "center") : undefined;
+  const out = await composeLabel({ artwork: art, style, texts: textsOf(data), widthMm, heightMm, seed, paper: ground, wineColour: data.wineColorName, align });
+  return { png: out.png, svg: out.svg, art, faces: out.faces, ink: out.ink, ground, prompt: "(re-layout of an existing painting)", layout: out.layout, tag: layoutTag(style, seed) };
 }
 
 /* the TTFs a label's SVG sets its type in — shipped beside the SVG so

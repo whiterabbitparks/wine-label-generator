@@ -20,7 +20,7 @@ const DATA_KEYS = [
 ] as const;
 
 export async function POST(req: Request) {
-  let body: { vision?: string; style?: string; data?: Record<string, string>; sketch?: string | null; width?: number; height?: number; relayout?: string };
+  let body: { vision?: string; style?: string; data?: Record<string, string>; sketch?: string | null; width?: number; height?: number; relayout?: string; variants?: number };
   try {
     body = await req.json();
   } catch {
@@ -56,7 +56,25 @@ export async function POST(req: Request) {
           const jb = await sharp(Buffer.from(out.png.slice(out.png.indexOf(",") + 1), "base64")).resize(1024).jpeg({ quality: 82 }).toBuffer();
           preview = "data:image/jpeg;base64," + jb.toString("base64");
         } catch {}
-        send({ type: "result", dream: out.png, preview, id });
+        /* round 94 #6: the wizard asks for THREE layouts of a fresh painting
+           in one call — two contrasting re-layouts ride along as `variants` */
+        const variants: { dream: string; preview: string | null; id: string }[] = [];
+        const want = Math.min(3, Math.max(1, Number(body.variants) || 1));
+        if (!base && want > 1) {
+          const stored = { art: Buffer.from(out.art.slice(out.art.indexOf(",") + 1), "base64"), meta: { style, widthMm, heightMm, ground: out.ground } };
+          const avoid = [out.tag];
+          for (let i = 1; i < want; i++) {
+            try {
+              const v = await relayoutLabel(stored, data, avoid, i === 1 ? { big: true } : { flip: true });
+              avoid.push(v.tag);
+              const vid = saveLabel({ style, widthMm, heightMm, faces: v.faces, ground: v.ground, svg: v.svg, png: v.png, art: v.art, prompt: v.prompt, layout: v.layout });
+              let vprev: string | null = null;
+              try { vprev = "data:image/jpeg;base64," + (await sharp(Buffer.from(v.png.slice(v.png.indexOf(",") + 1), "base64")).resize(1024).jpeg({ quality: 82 }).toBuffer()).toString("base64"); } catch {}
+              variants.push({ dream: v.png, preview: vprev, id: vid });
+            } catch { /* a missing variant never fails the label */ }
+          }
+        }
+        send({ type: "result", dream: out.png, preview, id, variants });
       } catch (e) {
         send({ type: "error", error: e instanceof Error ? e.message : String(e) });
       }
