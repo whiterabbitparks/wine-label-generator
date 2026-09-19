@@ -12,17 +12,20 @@ export interface Inks { ink: string; accent: string | null; paper: string }
    the illustration may run to the window's very edge (boots, grass) — so
    the type must start below the last row that carries ink, not below the
    window on paper. Returns that row as a fraction of the image height. */
-export async function inkFootOf(dataUrl: string): Promise<number> {
+export async function inkFootOf(dataUrl: string, ground = "#F4EFE3"): Promise<number> {
   const buf = Buffer.from(dataUrl.slice(dataUrl.indexOf(",") + 1), "base64");
-  const { data, info } = await sharp(buf).resize(200, 200, { fit: "fill" }).flatten({ background: "#F4EFE3" }).raw().toBuffer({ resolveWithObject: true });
+  const { data, info } = await sharp(buf).resize(200, 200, { fit: "fill" }).flatten({ background: ground }).raw().toBuffer({ resolveWithObject: true });
   const W = info.width, H = info.height, C = info.channels;
+  /* "ink" = anything that is not the ground the painter was given — so a
+     deep-blue punk ground counts as empty, not as drawing */
+  const g = parseInt(ground.slice(1), 16);
+  const gr = g >> 16, gg = (g >> 8) & 255, gb = g & 255;
   for (let y = H - 1; y >= 0; y--) {
     let ink = 0;
     for (let x = 0; x < W; x++) {
       const i = (y * W + x) * C;
-      const lum = 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
-      const max = Math.max(data[i], data[i + 1], data[i + 2]), min = Math.min(data[i], data[i + 1], data[i + 2]);
-      if (lum < 200 || (max - min) > 40) ink++;
+      const d = Math.abs(data[i] - gr) + Math.abs(data[i + 1] - gg) + Math.abs(data[i + 2] - gb);
+      if (d > 90) ink++;
     }
     if (ink > W * 0.01) return (y + 1) / H;
   }

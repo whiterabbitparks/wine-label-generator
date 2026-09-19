@@ -55,11 +55,11 @@ async function paintItem(run: EvalRun, model: EvalModel, brief: EvalBrief, item:
       item.file = saveImage(run.id, item.id, await generateArtwork(model, ap));
     } else {
       /* hybrid: the masked painter, then the composer */
-      const ap = await buildArtworkPrompt(brief, item.style);
+      const seed = [...item.id].reduce((h, c) => ((h * 33) ^ c.charCodeAt(0)) >>> 0, 5381);
+      const ap = await buildArtworkPrompt(brief, item.style, seed);
       item.prompt = ap.prompt; item.card = ap.card;
       const art = await generateArtwork(model, ap);
-      const seed = [...item.id].reduce((h, c) => ((h * 33) ^ c.charCodeAt(0)) >>> 0, 5381);
-      const out = await composeLabel({ artwork: art, style: item.style, texts: textsOf(brief), widthMm: brief.width, heightMm: brief.height, seed });
+      const out = await composeLabel({ artwork: art, style: item.style, texts: textsOf(brief), widthMm: brief.width, heightMm: brief.height, seed, paper: ap.paper });
       item.file = saveImage(run.id, item.id, out.png);
       fs.writeFileSync(path.join(runDir(run.id), `${item.id}.svg`), out.svg);
       saveImage(run.id, `${item.id}--art`, art);

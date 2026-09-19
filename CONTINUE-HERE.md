@@ -2007,6 +2007,41 @@ composition-contract tightening, then customer wiring.
   Roman). Curation = ~20 VALUES per style across 5-6 axes, not 30 parts.
   FONT LICENSING flagged: live type in a delivered PDF means the font
   travels — commercial faces (Helvetica Neue World) may not permit it.
+- ROUND 82 — COMPOSER v1.2 + THE GAZETTEER (2026-09-19). Owner's rules
+  after seeing hybrid v1: (1) GROUP the lines into logical blocks —
+  producer + name, appellation + vintage, grape + origin, alcohol +
+  volume — 120% leading INSIDE a block, real air BETWEEN blocks; never
+  name + alcohol. Each block is ONE <text> with a <tspan> per line, so
+  Illustrator opens it as one editable paragraph (owner: "in SVG every
+  line was a separate object"). (2) The beige band under a colourful
+  illustration: the GROUND is now chosen BEFORE the ask — groundFor(style,
+  seed): traditional = paper tones, contemporary = pale tints, punk = bold
+  flat colours (deep blue, red, mustard, black, green, orange, purple);
+  the painter gets that exact canvas, the composer draws the band in it,
+  the type is set for contrast (drawing's ink on light, paper-white on
+  dark/saturated) — one ground, no seam; inkFootOf() now treats the given
+  ground as "empty", not just cream. (3) THE GAZETTEER: src/lib/eval/
+  regions.ts holds Claude's drafts for 10 Georgian regions (landscape,
+  buildings, plants, what NOT to draw); /admin → Rules → "Regions" card
+  (RegionsCard.tsx, /api/admin/regions, settings/_id "regions") lets the
+  owner correct and save; regionNote() injects the match into the ask.
+  First smoke with it: Kakheti came back as the Alazani plain with the
+  Caucasus wall, no invented village. (4) HARD CLAUSE: no buildings /
+  towers / churches / castles unless the story names them (owner x4).
+  (5) FIT ORDER fixed after a smoke lost three lines to a full-size hero:
+  close air a little → shrink everything in proportion to a COMFORTABLE
+  size (hero ≥ 7% of H) → drop the least important line → shrink to hard
+  floors. On a short landscape band six lines still don't all fit at
+  comfortable sizes — the least important go (special, then origin);
+  BAND_MIN 0.34 could rise for text-heavy wines.
+  NEXT (agreed order): wire the WIZARD to the hybrid engine on this branch
+  (no UI change — the three option columns come from the new engine);
+  PDF with live type + embedded fonts in the Final Pack (SVG stays as the
+  source; Playwright print-to-PDF is the likely path); "download →
+  correct in Illustrator → upload" on /eval with a code diff of what the
+  owner moved (their idea — the best training signal we can get); punk
+  layout schemes where the MASK SHAPE is the layout (centre block,
+  diagonal, full-bleed with type over art) — later.
 - ROUND 81c — HYBRID v1, FIRST FULL SET (2026-09-19): run "hybrid-v1"
   on /eval (#11 in blind order), 18/18 after the Archivo fix (7 retried).
   The first labels the new way: three visibly different styles

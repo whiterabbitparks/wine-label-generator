@@ -14,6 +14,7 @@ import {
   AdminStyles as S,
 } from "../legacy/LegacyAdmin";
 import { StudioCore } from "../dream/studio";
+import { RegionsCard } from "./RegionsCard";
 
 const TABS = ["Dream Studio", "Image Refs", "Image Play", "Marketing", "Rules", "Generations", "Users"] as const;
 type Tab = (typeof TABS)[number];
@@ -120,6 +121,7 @@ function RulesTab() {
   return (
     <>
       <DreamRulesCard />
+        <RegionsCard />
       <IllustrationRulesCard />
       <LinesRulesCard
         title="Marketing rules"

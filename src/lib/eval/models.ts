@@ -1,5 +1,7 @@
 import { generateOpenAIImage } from "@/lib/image-provider/openai";
 import { artworkGuidance } from "@/lib/dream/engine";
+import { getDb } from "@/lib/db";
+import { DEFAULT_REGIONS } from "./regions";
 import type { EvalBrief } from "./briefs";
 import { aspectOf } from "./briefs";
 
@@ -61,19 +63,54 @@ function zoneOf(aspect: "landscape" | "portrait" | "square"): { where: string; s
     : { where: "bottom part", share: "roughly the bottom 40%" };
 }
 
-export interface ArtworkPrompt { prompt: string; short: string; card: string | null; aspect: "landscape" | "portrait" | "square" }
+export interface ArtworkPrompt { prompt: string; short: string; card: string | null; aspect: "landscape" | "portrait" | "square"; paper: string }
+
+/* THE GROUND, chosen before the ask (owner 2026-09-19: "a beautiful
+   colourful illustration on top and a boring beige ground painted under
+   it"). Traditional stays on paper tones; contemporary may take a pale
+   colour; punk takes bold flat colour outright. The painter is handed
+   this exact colour as its canvas, the composer draws the band in it, and
+   the type is set for contrast — one ground, no seam. */
+const GROUNDS: Record<string, string[]> = {
+  traditional: ["#F4EFE3", "#F1EBDC", "#EFE6D3", "#F6F2EA", "#EAE3D2"],
+  contemporary: ["#F4EFE3", "#FAF7F1", "#E9E4D6", "#DCE3DA", "#E8DFD0", "#F2E7D8"],
+  punk: ["#1E2A44", "#B71318", "#D9A400", "#0F0F0F", "#2E6B4F", "#E85D2C", "#F4EFE3", "#7A2E8E"],
+};
+export function groundFor(style: string, seed: number): string {
+  const list = GROUNDS[style] || GROUNDS.traditional;
+  return list[Math.abs((seed * 2246822519 + 7) >>> 0) % list.length];
+}
+
+/* THE GAZETTEER (owner 2026-09-19: Svaneti towers on a Racha label — a
+   region NAME means nothing to a painter; it needs what the region LOOKS
+   like). Owner-written, 2-3 sentences per region, in /admin → Regions;
+   used whenever the brief's region matches. */
+export async function regionNote(region: string): Promise<string> {
+  if (!region) return "";
+  let map: Record<string, string> = DEFAULT_REGIONS;          /* Claude's drafts until the owner saves */
+  try {
+    const db = await getDb();
+    const doc = (await db.collection("settings").findOne({ _id: "regions" } as never)) as { map?: Record<string, string> } | null;
+    if (doc?.map) map = doc.map;
+  } catch { /* the drafts still apply */ }
+  const key = Object.keys(map).find((k) => k.trim().toLowerCase() === region.trim().toLowerCase());
+  return key && map[key]?.trim() ? ` ${region.trim()} looks like this: ${map[key].trim()} ` : "";
+}
 
 /* THE ASK. Same words to every model. The reserved zone is the whole
    idea: the picture is composed to receive type, so art and type are
    planned together instead of fighting afterwards.
    `short` is the same ask without the house-feedback tail, for painters
    that cap the prompt (Recraft: 1000 characters). */
-export async function buildArtworkPrompt(brief: EvalBrief, style: string): Promise<ArtworkPrompt> {
+export async function buildArtworkPrompt(brief: EvalBrief, style: string, seed = 0): Promise<ArtworkPrompt> {
   const aspect = aspectOf(brief);
   const zone = zoneOf(aspect);
   const g = await artworkGuidance(style);
   const d = brief.data;
   const place = [d.region, d.country].filter(Boolean).join(", ");
+  const paper = groundFor(style, seed);
+  const dark = (() => { const n = parseInt(paper.slice(1), 16); return (0.2126 * (n >> 16) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255 < 0.45; })();
+  const gaz = await regionNote(d.region);
   const head =
     `Illustration for a wine label — the ARTWORK ONLY. No text, no lettering, no words, no numbers, no logo, no monogram, no border, no frame, no badge. ` +
     `Format: ${aspect === "portrait" ? "portrait 2:3" : aspect === "square" ? "square" : "landscape 3:2"}, the flat printed label itself, not a bottle, not a mockup. ` +
@@ -81,16 +118,18 @@ export async function buildArtworkPrompt(brief: EvalBrief, style: string): Promi
   const styleLine = `STYLE: ${ART_STYLE[style] || ART_STYLE.traditional}.`;
   const subject =
     ` SUBJECT: ${brief.vision} ` +
-    (place ? `The wine comes from ${place} — if the setting shows a landscape or buildings, they must be true to ${place}, never landmarks of another region. ` : "") +
+    (place ? `The wine comes from ${place} — if the setting shows a landscape, it must be true to ${place}, never another region's.${gaz}` : "") +
+    /* owner 2026-09-19 (x4 on the bake-off): painters invent churches, towers, châteaux */
+    `Do NOT add buildings, towers, churches, castles or any architecture unless the story itself names them. ` +
     `A ${[d.sweetness, d.wineColorName].filter(Boolean).join(" ").toLowerCase()} ${(d.wineType || "wine").toLowerCase()}. `;
-  const finish = `FINISH: handmade print on paper, not a photograph, not 3D, not airbrushed; discrete inks, honest imperfection; the ground is paper-coloured and plain.`;
+  const finish = `FINISH: handmade print on paper, not a photograph, not 3D, not airbrushed; discrete inks, honest imperfection; the ground is the plain ${dark ? "dark coloured" : "paper-coloured"} canvas you are given (${paper}) — keep it flat and untouched around the drawing.`;
   const prompt = head + styleLine + g.text + subject + finish;
   /* the short form keeps the ask, the style and the subject; the house
      feedback goes first, then the finish line, then the geography note */
   let short = head + styleLine + subject + finish;
   if (short.length > 1000) short = head + styleLine + subject;
   if (short.length > 1000) short = (head + styleLine + ` SUBJECT: ${brief.vision}`).slice(0, 1000);
-  return { prompt, short, card: g.card, aspect };
+  return { prompt, short, card: g.card, aspect, paper };
 }
 
 const FAL_SIZE: Record<ArtworkPrompt["aspect"], string> = { landscape: "landscape_4_3", portrait: "portrait_4_3", square: "square_hd" };
@@ -100,11 +139,12 @@ const FAL_RATIO: Record<ArtworkPrompt["aspect"], string> = { landscape: "4:3", p
 /* a plain paper canvas and a mask that opens ONLY the art region — the
    type zone (the same bottom band the prompt asks for) stays opaque, so
    the edit endpoint hands it back untouched */
-async function paperAndMask(aspect: ArtworkPrompt["aspect"]): Promise<{ paper: string; mask: string }> {
+async function paperAndMask(aspect: ArtworkPrompt["aspect"], colour: string): Promise<{ paper: string; mask: string }> {
   const sharp = (await import("sharp")).default;
   const W = aspect === "portrait" ? 1024 : aspect === "square" ? 1024 : 1536;
   const H = aspect === "portrait" ? 1536 : aspect === "square" ? 1024 : 1024;
-  const paper = await sharp({ create: { width: W, height: H, channels: 4, background: { r: 244, g: 239, b: 227, alpha: 1 } } }).png().toBuffer();
+  const n = parseInt(colour.slice(1), 16);
+  const paper = await sharp({ create: { width: W, height: H, channels: 4, background: { r: n >> 16, g: (n >> 8) & 255, b: n & 255, alpha: 1 } } }).png().toBuffer();
   /* the open (transparent) window: top ~60% for landscape/square, ~65% for
      portrait, with a 4% margin at the top and sides */
   const m = Math.round(W * 0.04);
@@ -125,7 +165,7 @@ export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt): Prom
       } as never);
     }
     if (model.id === "gpt-image-masked") {
-      const { paper, mask } = await paperAndMask(ap.aspect);
+      const { paper, mask } = await paperAndMask(ap.aspect, ap.paper);
       return generateOpenAIImage({
         prompt: ap.prompt + " Paint the illustration into the open area of the canvas; the rest of the canvas is finished paper and must stay exactly as it is.",
         size, reference: paper, mask,
