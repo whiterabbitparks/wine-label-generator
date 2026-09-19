@@ -2007,6 +2007,37 @@ composition-contract tightening, then customer wiring.
   Roman). Curation = ~20 VALUES per style across 5-6 axes, not 30 parts.
   FONT LICENSING flagged: live type in a delivered PDF means the font
   travels — commercial faces (Helvetica Neue World) may not permit it.
+- ROUND 86 — VARIATIONS WITHOUT GENERATIONS + THE KORRA WALKTHROUGH
+  (2026-09-19). (#3, owner's idea) a Variation now KEEPS the column's
+  painting and re-sets the type with a fresh seed — relayoutLabel() in
+  hybrid.ts, `relayout: <id>` on /api/dream-label, ~1 s, no model call,
+  NO credit (round 56 #7's gate lifted for variations; the button reads
+  "Punk Variation", no "(1 Credit)"). New faces, hero size, wine-ink role
+  and air each time; same picture, same ground. (#1) the "Check your
+  details" modal lists only filled rows — no placeholders (reverses round
+  67). (#2) glasses fill faster: loader 4 %/s for 10 s then 1.5 %/s to
+  0.72; asset glasses 8 %/1.5 s active, 5 %/3 s waiting; the variation
+  slot's glass runs on a 6 s clock. (#4) small thumbs: the glass+dots
+  group rides 10 px higher, dots 2 px under the glass. (#5) Sparkling
+  bottle + cork: bottleDescription() adds a SPARKLING TOP clause — a
+  mushroom cork with cage (bare or under the hood), 3 cm above the lip,
+  "the outline stops at the glass lip", total height +3 cm — because the
+  shot traced the outline drawing, which ends at the lip. Not yet seen in
+  a paid run. DEMO LEAK: the product page (/api/product payload, page.tsx
+  fx2) still fell back to the Château Margaux demo values for empty
+  fields — KORRA's page showed "Margaux AOC / Grand Cru Classé / Bordeaux,
+  France / Vieilles Vignes"; gone, as is the demo country in the back-
+  label payload. The back-label COMPOSER's own TEMP placeholders (owner
+  2026-09-07, "switch off before launch") remain — that's why KORRA's back
+  label says "Popiashvili Cellars". WALKTHROUGH = KORRA: public/newui/
+  demo/* rebuilt from the owner's pack (labels 1-3 = traditional /
+  contemporary / punk-yellow, label3b = the blue punk re-layout, back
+  label from its SVG, shots and five images from the ZIP, landing = a
+  screenshot of /p/tb1yg0j6); DEMO_FRONT/VISION/DESC/BACK/BOTTLE are
+  KORRA's (white pet-nat, Rkatsiteli 2023, Giorgi's Marani; clear
+  Sparkling bottle, cork, black matte hood — DEMO_SHADE 0.97); the
+  variation plays on the PUNK column (TAP.varBtn/dot0/dot1 moved to
+  x≈1131). Verified unattended: STEP 1→6→card in 71 s.
 - ROUND 85 — THE OWNER'S TWELVE (2026-09-19, after the first hybrid ZIP;
   #1 withdrawn by the owner). UI: (#3) the Final Pack's baked "Proceed to
   payment" and "Download" bars are wiped; the red round button IS the

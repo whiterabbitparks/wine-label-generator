@@ -1,6 +1,6 @@
 import sharp from "sharp";
-import { paintHybridLabel } from "@/lib/label/hybrid";
-import { saveLabel } from "@/lib/label/store";
+import { paintHybridLabel, relayoutLabel } from "@/lib/label/hybrid";
+import { saveLabel, readLabel } from "@/lib/label/store";
 
 /* PUBLIC customer endpoint — one label, streamed as NDJSON so the page's
    loader stays honest.
@@ -20,7 +20,7 @@ const DATA_KEYS = [
 ] as const;
 
 export async function POST(req: Request) {
-  let body: { vision?: string; style?: string; data?: Record<string, string>; sketch?: string | null; width?: number; height?: number };
+  let body: { vision?: string; style?: string; data?: Record<string, string>; sketch?: string | null; width?: number; height?: number; relayout?: string };
   try {
     body = await req.json();
   } catch {
@@ -42,9 +42,14 @@ export async function POST(req: Request) {
     async start(controller) {
       const send = (o: unknown) => controller.enqueue(enc.encode(JSON.stringify(o) + "\n"));
       try {
-        send({ type: "progress", stage: "painting" });
-        const out = await paintHybridLabel({ vision, style, data, widthMm, heightMm, sketch });
-        const id = saveLabel({ style, widthMm, heightMm, faces: out.faces, ground: out.ground, svg: out.svg, png: out.png, art: out.art, prompt: out.prompt, layout: out.layout });
+        /* round 86 #3: a VARIATION keeps the painting and re-sets the type */
+        const base = body.relayout ? readLabel(String(body.relayout)) : null;
+        send({ type: "progress", stage: base ? "setting" : "painting" });
+        const out = base
+          ? await relayoutLabel(base, data)
+          : await paintHybridLabel({ vision, style, data, widthMm, heightMm, sketch });
+        const m = base ? base.meta : { style, widthMm, heightMm };
+        const id = saveLabel({ style: m.style, widthMm: m.widthMm, heightMm: m.heightMm, faces: out.faces, ground: out.ground, svg: out.svg, png: out.png, art: out.art, prompt: out.prompt, layout: out.layout });
         /* medium-res JPEG for the page's views — the PNG stays the print source */
         let preview: string | null = null;
         try {

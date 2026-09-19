@@ -63,6 +63,18 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput> 
   return { png: out.png, svg: out.svg, art, faces: out.faces, ink: out.ink, ground, prompt: ap.prompt, layout: out.layout };
 }
 
+/* ROUND 86 #3 (owner: "keep the image, just change the layout — tons of
+   variations without burning generations"). A variation re-sets the type
+   on the SAME painting with a fresh seed: new faces, hero size, wine-ink
+   role, air — no model call, no credit. */
+export async function relayoutLabel(stored: { art: Buffer; meta: { style: string; widthMm: number; heightMm: number; ground: string } }, data: Record<string, string>): Promise<HybridOutput> {
+  const seed = (Math.random() * 0xffffffff) >>> 0;
+  const art = `data:image/png;base64,${stored.art.toString("base64")}`;
+  const { style, widthMm, heightMm, ground } = stored.meta;
+  const out = await composeLabel({ artwork: art, style, texts: textsOf(data), widthMm, heightMm, seed, paper: ground, wineColour: data.wineColorName });
+  return { png: out.png, svg: out.svg, art, faces: out.faces, ink: out.ink, ground, prompt: "(re-layout of an existing painting)", layout: out.layout };
+}
+
 /* the TTFs a label's SVG sets its type in — shipped beside the SVG so
    Illustrator opens it with the right faces */
 export function fontFilesOf(svg: string): string[] {

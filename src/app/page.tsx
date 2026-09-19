@@ -212,11 +212,13 @@ const IDEAS = [
 /* TEMP demo fill (owner RESTORED 2026-09-07 for testing speed — switch
    off before launch): empty fields fall back to these sample texts in
    GENERATED results only; the form stays empty */
+/* ROUND 86 (owner): the walkthrough plays the owner's own KORRA pack —
+   exactly the fields they filled in, nothing invented */
 const DEMO_FRONT: Record<string, string> = {
-  producer: "GRAND VIN", wine: "Château Margaux", appellation: "Margaux AOC",
-  classification: "Grand Cru Classé", vintage: "2018", grape: "Cabernet Sauvignon",
-  regionCountry: "Bordeaux, France", special: "Vieilles Vignes", sweetness: "Dry",
-  colour: "Red", wineType: "Still Wine", alcohol: "12.5", volume: "750",
+  producer: "Giorgi's Marani", wine: "KORRA", appellation: "",
+  classification: "", vintage: "2023", grape: "Rkatsiteli",
+  regionCountry: "", special: "", sweetness: "Dry",
+  colour: "White", wineType: "Pet-Nat", alcohol: "12", volume: "750",
 };
 
 /* ================= ROUND 71 #4: the first-run WALKTHROUGH =============
@@ -246,18 +248,20 @@ const TUT_CARDS: { step: string; title: string[]; body: string[] }[] = [
   { step: "STEP 6", title: ["Marketing Assets"], body: ["Two product shots, five", "marketing images, and your", "product page if you asked."] },
   { step: "", title: ["Let's build", "your pack!"], body: [] },
 ];
-const DEMO_VISION = "An old winemaker resting under a fig tree with his mandolin, a rooster at his feet — warm, rustic, Georgian.";
-const DEMO_DESC = "A dry red wine from old Saperavi vines. Deep garnet colour; dark berries, tobacco leaf and warm spice on the nose; firm but polished tannins carry a long mineral finish. Eight months in traditional qvevri.";
+const DEMO_VISION = "The village cat walking along the top of a stone wall at dusk";
+const DEMO_DESC = "Traditional qvevri amber wine with aromas of dried apricot, quince, wild herbs, and subtle spice. Full-bodied and textured, with gentle tannins, bright acidity, and a long, earthy finish.";
 const DEMO_BACK: Record<string, string> = {
   producerCompany: '"Popiashvili Cellars" LLC', producerAddress: "#36 S. Chikovani st. 0171 Tbilisi, Georgia",
   importer: '"Teller Wines" LLC', importerAddress: "148 W 68 st. 10023 NYC, USA",
-  bottlingDate: "28/04/2026", lot: "L2606242", web: "www.popiashvili.com",
+  bottlingDate: "29/04/2026", lot: "L2606142", web: "www.popiashvili.com",
 };
-/* round 73 #4: where the bottle step ENDS (it starts on Bordeaux / Amber /
-   Wax Seal and is changed on camera) */
-const DEMO_BOTTLE = { type: "Burgundy", color: "Olive Green", closure: "Cork", finish: "Matte" };
-const DEMO_BOTTLE_0 = { type: "Bordeaux", color: "Amber", closure: "Wax Seal", finish: "Matte" };
-const DEMO_WHEEL = { x: 0.44, y: 0.1, rgb: [250, 27, 31] };   /* a capsule red */
+/* round 73 #4: where the bottle step ENDS (it starts on Bordeaux / Olive
+   Green / Wax Seal and is changed on camera). Round 86: KORRA's bottle —
+   a clear Sparkling bottle, cork, black matte hood. */
+const DEMO_BOTTLE = { type: "Sparkling", color: "Transparent", closure: "Cork", finish: "Matte" };
+const DEMO_BOTTLE_0 = { type: "Bordeaux", color: "Olive Green", closure: "Wax Seal", finish: "Matte" };
+const DEMO_WHEEL = { x: 0.44, y: 0.1, rgb: [250, 27, 31] };   /* the pick; the shade drag takes it to black */
+const DEMO_SHADE = 0.97;
 /* round 72 #8: the ghost taps — a red ring blooms where a hand would be */
 const TAP = {
   visionBox: [250, 400], width: [476, 645], height: [650, 645],
@@ -266,7 +270,9 @@ const TAP = {
   descBox: [250, 265], barcode: [360, 468], qrBtn: [874.5, 467],
   market: [873.5, 670], eu: [873, 330],
   backFirst: [1050, 212],            /* round 73 #1: up to the details */
-  varBtn: [720.15, 582], dot0: [708.95, 516.85], dot1: [730.95, 516.85],
+  /* round 86: the variation plays on the PUNK column (KORRA's yellow →
+     blue re-layout); column 3's centre is 960 + 342.9/2 */
+  varBtn: [1131.45, 582], dot0: [1120.25, 516.85], dot1: [1142.25, 516.85],
   wheel: [1137.89 + 0.44 * 137.2, 368 + 0.1 * 137.2],
   bottleRings: [[386.06, 283.57], [577.98, 283.57], [769.9, 283.57], [961.82, 283.57], [1153.74, 283.57]],
 } as const;
@@ -621,8 +627,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     if (idx < cur) return 0.93;                                                 // done, image imminent
     /* round 41 #17: STEPPED rises — a clear nudge every few seconds, so a
        glass never looks stuck even when the render is slow */
-    if (idx === cur) return Math.min(0.9, 0.14 + Math.floor((now - assetT.current.stage) / 2500) * 0.045);
-    return Math.min(0.5, 0.08 + Math.floor((now - assetT.current.run) / 4000) * 0.03);   // waiting: 4s nudges
+    /* round 86 #2: bigger, quicker steps — 8 % every 1.5 s on the active
+       glass, 5 % every 3 s while waiting */
+    if (idx === cur) return Math.min(0.9, 0.2 + Math.floor((now - assetT.current.stage) / 1500) * 0.08);
+    return Math.min(0.6, 0.1 + Math.floor((now - assetT.current.run) / 3000) * 0.05);
   };
 
   /* round 17 #2: the front label's wording suggests the bottle type */
@@ -817,7 +825,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
            ROUND 47: own-label mode builds NO landing page. */
         if (qrMode === "create" && !customLabel) {
           try {
-            const fx2 = (k: string) => f[k]?.trim() || DEMO_FRONT[k] || "";
+            /* round 86: the product page carried the Château Margaux demo
+               values for every field the customer left empty (found on the
+               KORRA page) — the last of the demo fallbacks goes */
+            const fx2 = (k: string) => f[k]?.trim() || "";
             const r2 = await fetch("/api/product", {
               method: "POST", headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -1144,8 +1155,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         pr.src = TUT_D + "back-label.png";
       }
       if (tut > 4) {
-        bottleTouched.current = true; setBottle({ ...DEMO_BOTTLE }); setWineColor("Red");
-        setWheel({ ...DEMO_WHEEL }); setShade(0.79);
+        bottleTouched.current = true; setBottle({ ...DEMO_BOTTLE }); setWineColor("White");
+        setWheel({ ...DEMO_WHEEL }); setShade(DEMO_SHADE);
       }
       if (tut > 5) {
         setLifeTarget(5); setAssetsStage(""); setTutLanding(true);
@@ -1196,17 +1207,17 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           /* round 73 #7: a variation is made first, so they can see that
              every design can be re-rolled, and the dots flick between them */
           if (!(await tap(TAP.varBtn, 260))) return;
-          setStyleVars((v) => { const n = v.map((x) => [...x]); n[1] = [null]; return n; });
-          setStyleView((v) => { const n = [...v]; n[1] = 1; return n; });
+          setStyleVars((v) => { const n = v.map((x) => [...x]); n[2] = [null]; return n; });
+          setStyleView((v) => { const n = [...v]; n[2] = 1; return n; });
           varT.current = Date.now();
           if (!(await hold(2100))) return;
-          setStyleVars((v) => { const n = v.map((x) => [...x]); n[1] = [{ style: "contemporary", dream: TUT_D + "label2b.jpg", preview: TUT_D + "label2b.jpg" }]; return n; });
+          setStyleVars((v) => { const n = v.map((x) => [...x]); n[2] = [{ style: "punk", dream: TUT_D + "label3b.jpg", preview: TUT_D + "label3b.jpg" }]; return n; });
           if (!(await beat(1100))) return;
           if (!(await tap(TAP.dot0, 260))) return;
-          setStyleView((v) => { const n = [...v]; n[1] = 0; return n; });
+          setStyleView((v) => { const n = [...v]; n[2] = 0; return n; });
           if (!(await beat(820))) return;
           if (!(await tap(TAP.dot1, 260))) return;
-          setStyleView((v) => { const n = [...v]; n[1] = 1; return n; });
+          setStyleView((v) => { const n = [...v]; n[2] = 1; return n; });
           if (!(await beat(760))) return;
           if (!(await tap(TAP.optSelect))) return;
           setSelected(1);
@@ -1248,26 +1259,27 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         case 4: {
           /* round 73 #4: it opens already filled in — only the changes play */
           bottleTouched.current = true;
-          setWineColor("Red"); setBottle({ ...DEMO_BOTTLE_0 });
+          setWineColor("White"); setBottle({ ...DEMO_BOTTLE_0 });
           setWheel({ x: 0.5, y: 0.5, rgb: [255, 255, 255] }); setShade(0.5);
           /* ROUND 73 #4 (owner's exact order): the page OPENS already set
-             to Red / Bordeaux / Amber / Wax Seal / Matte. The pointer then
-             changes the bottle type, the glass colour and the closure,
-             picks a colour off the wheel and finally darkens it. */
+             to White / Bordeaux / Olive Green / Wax Seal / Matte. The
+             pointer then changes the bottle type, the glass colour and the
+             closure, picks a colour off the wheel and finally darkens it
+             (round 86: to KORRA's clear Sparkling bottle, cork, black hood). */
           if (!(await beat(700))) return;
-          /* Bordeaux -> Burgundy */
-          if (!(await tap(BRING(1, 2), 560))) return; setBottle((m) => ({ ...m, type: "Burgundy" }));
+          /* Bordeaux -> Sparkling */
+          if (!(await tap(BRING(1, 3), 560))) return; setBottle((m) => ({ ...m, type: "Sparkling" }));
           if (!(await beat(620))) return;
-          /* Amber -> Olive Green */
-          if (!(await tap(BRING(2, 0), 480))) return; setBottle((m) => ({ ...m, color: "Olive Green" }));
+          /* Olive Green -> Transparent */
+          if (!(await tap(BRING(2, 1), 480))) return; setBottle((m) => ({ ...m, color: "Transparent" }));
           if (!(await beat(620))) return;
           /* Wax Seal -> Cork */
           if (!(await tap(BRING(3, 0), 480))) return; setBottle((m) => ({ ...m, closure: "Cork" }));
           if (!(await beat(680))) return;
-          /* the capsule's colour, then its lightness */
+          /* the hood's colour, then down to black */
           if (!(await tap(TAP.wheel, 420, 560))) return; pickWheel(DEMO_WHEEL.x, DEMO_WHEEL.y);
           if (!(await beat(560))) return;
-          if (!(await dragShade(0.5, 0.79))) return;
+          if (!(await dragShade(0.5, DEMO_SHADE))) return;
           break;
         }
         case 5: {
@@ -1357,9 +1369,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       return { style, dream: d0?.dream || FAKE_IMG, preview: d0?.preview || null };
     }
     const { data, aspectKey, width, height } = buildDreamPayload();
+    /* round 86 #3: a variation keeps the column's painting and only
+       re-sets the type (the server needs the label's id); a label without
+       an id (pre-hybrid) is painted afresh */
+    const fi = STYLES3.indexOf(style);
+    const baseId = (fi >= 0 && (viewedDream(fi)?.id || dreams[fi]?.id)) || undefined;
     const r = await fetch("/api/dream-label", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ vision, style, data, sketch, aspect: aspectKey, width, height }),
+      body: JSON.stringify({ vision, style, data, sketch, aspect: aspectKey, width, height, relayout: baseId }),
     });
     if (!r.ok || !r.body) throw new Error(`generation failed (${r.status})`);
     const reader = r.body.getReader(); const dec = new TextDecoder();
@@ -1395,10 +1412,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     }
     setVarBusyCol(-1);
   }
-  /* ROUND 56 #7: every variation spends 1 credit through the gate */
+  /* ROUND 86 #3 (owner): a variation re-sets the type on the SAME painting
+     — no model call, so no credit (round 56 #7's gate is lifted here) */
   const requestVariations = (fi: number) => {
     if (varBusyCol >= 0) return;
-    if (requestCredit("options")) createVariation(fi);
+    createVariation(fi);
   };
   /* round 52 #1 (owner: "it let me download without agreeing!"):
      every pay path checks the T&C ring first */
@@ -1524,7 +1542,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         description: b.description || "", importer: [b.importer, b.importerAddress].filter(Boolean).join(", "),
         bottlingDate: b.bottlingDate || "", lot: b.lot || "", web: b.web || "",
         alcohol: (f.alcohol || "12.5").replace("%", ""), volume: (f.volume || "750").replace(/\D/g, "") || "750",
-        countryOfOrigin: (f.regionCountry || DEMO_FRONT.regionCountry).split(",")[1]?.trim() || "",
+        /* round 86: no demo country — the composer's own TEMP fallback applies */
+        countryOfOrigin: (f.regionCountry || "").split(",")[1]?.trim() || "",
         barcodeDigits: gtinValid ? gtinNorm : "",
         /* round 53 #4: QR data travels ONLY when the customer chose one */
         qrImage: qrMode === "upload" ? qrImg : "",
@@ -1816,7 +1835,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         /* round 19: VISIBLE, never-stalling movement — fast creep for the
            first ~25s (1.2%/s), then a slow trickle; monotonic via fillMax */
         const el = Date.now() - dreamT.current + tick * 0;
-        const creep = el < 25000 ? (el / 1000) * 0.012 : Math.min(0.45, 0.3 + ((el - 25000) / 1000) * 0.003);
+        /* ROUND 86 #2 (owner: "too long before a substantial amount of wine
+           appears"): the hybrid run is ~15–40 s, so the glass fills in
+           BIG early steps — 4 %/s for the first 10 s, then 1.5 %/s, capped
+           at 0.72 so the real jumps still have somewhere to go */
+        const creep = el < 10000 ? (el / 1000) * 0.04 : Math.min(0.72, 0.4 + ((el - 10000) / 1000) * 0.015);
         const fill = Math.max(fillMax.current, Math.min(0.97, Math.max(0.06, genProgress + creep)));
         fillMax.current = fill;
         return (<>
@@ -1904,7 +1927,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 ) : (
                   /* a variation is being born — label-shaped loader */
                   <div style={{ ...px(lx, ly, lw, lh), background: "#F4F3EE", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    {miniGlass("var" + fi, Math.min(0.9, 0.14 + ((Date.now() - varT.current) / 45000) * 0.75 + tick * 0))}
+                    {/* round 86 #3: a re-layout takes seconds, not a minute */}
+                    {miniGlass("var" + fi, Math.min(0.9, 0.2 + ((Date.now() - varT.current) / 6000) * 0.7 + tick * 0))}
                   </div>
                 )}
                 {/* ROUND 85 #6 (owner's board): the selection frame stands
@@ -1934,7 +1958,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {dreams.length === 0 && OPT_FRAMES.map((fr, fi) => (
             <span key={"grey" + fi}>
               <div style={{ ...px(fr.x + 0.2, 565, OPT_W, 34.3), background: "#ECECEA", color: "#B3B1A8", font: `12px ${HNW}`, letterSpacing: 0.3, display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
-                {t(STYLE_NAMES[fi] + " Variation") + " " + t("(1 Credit)")}</div>
+                {t(STYLE_NAMES[fi] + " Variation")}</div>
               <div style={{ ...px(fr.x, 634 - 13, OPT_W, 26), display: "flex", alignItems: "center", justifyContent: "center", columnGap: 10 }}>
                 {ringSvg(15, false, { color: "#C9C7BF" })}
                 <span style={{ font: `700 15px ${HNW}`, color: "#C9C7BF", lineHeight: `${fm.a + fm.d}px`, transform: `translateY(${(17 - ((26 - (fm.a + fm.d)) / 2 + fm.a)).toFixed(2)}px)` }}>{t("Select")}</span>
@@ -1945,7 +1969,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {dreams.length > 0 && OPT_FRAMES.map((fr, fi) => (
             <button key={"cv" + fi} onClick={() => requestVariations(fi)}
               style={{ ...px(fr.x + 0.2, 565, OPT_W, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
-              {t(STYLE_NAMES[fi] + " Variation") + " " + t("(1 Credit)")}</button>
+              {t(STYLE_NAMES[fi] + " Variation")}</button>
           ))}
           {/* Select radios — one per column, marking the VIEWED version */}
           {dreams.length > 0 && OPT_FRAMES.map((fr, fi) => {
@@ -2449,10 +2473,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               title={onPick ? t("Show this one big") : undefined}
               style={{ ...px(x, y, w2, h2), objectFit: fit, animation: `nuiFadeIn ${FADE_MS}ms ${EASE}`, cursor: onPick ? "pointer" : undefined }} />
           ) : (
-            <div key={loadKey} style={{ ...px(x, y, w2, h2), background: assetsStage ? "#F4F3EE" : "#ECECEA", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+            /* round 86 #4 (owner): in the SMALL thumbs the dots sat on the
+               box's bottom edge — there the group rides higher, the dots
+               closer under the glass */
+            <div key={loadKey} style={{ ...px(x, y, w2, h2), background: assetsStage ? "#F4F3EE" : "#ECECEA", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", paddingBottom: h2 < 80 ? 10 : 0, boxSizing: "border-box" }}>
               {assetsStage ? (<>
                 {miniGlass(loadKey, assetFill(loadKey))}
-                <span style={{ marginTop: 8, font: `14px ${HNW}`, color: "#111", letterSpacing: 2, lineHeight: "10px" }}>
+                <span style={{ marginTop: h2 < 80 ? 2 : 8, font: `14px ${HNW}`, color: "#111", letterSpacing: 2, lineHeight: "10px" }}>
                   {[0, 1, 2].map((dd) => <span key={dd} style={{ animation: `nuiDot 1.2s ${dd * 0.2}s infinite` }}>.</span>)}
                 </span>
               </>) : quiet ? null : custom ? (
@@ -3209,7 +3236,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                left empty shows its own grey placeholder, exactly like the
                form it came from. (Whole BLOCKS with nothing in them —
                prompt, sketch, back label — still disappear, round 66 #3.) */
-            const rows: [string, string, string][] = isL
+            /* ROUND 86 #1 (owner): the check lists ONLY what the customer
+               filled in — no placeholders, no empty rows (reverses round
+               67's "every row with its grey placeholder") */
+            const rows: [string, string, string][] = (isL
               ? (FRONT_LABELS.map((c, i) => [c, (f[FRONT_ROWS[i]] || "").trim(), t(FRONT_PH[i])] as [string, string, string])
                 .concat([["Label size:", `${f.width || 110} × ${f.height || 80} ${t("mm")}`, ""]]))
               : ([
@@ -3220,7 +3250,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 ["Closure Type", bottle.closure, "—"],
                 ["Closure Color", bottle.closure === "No Capsule" ? "" : bottle.finish, "—"],
                 ["Label size:", `${customLabel ? customDims.w : f.width || 110} × ${customLabel ? customDims.h : f.height || 80} ${t("mm")}`, ""],
-              ] as [string, string, string][]);
+              ] as [string, string, string][])).filter(([, v]) => !!v);
             /* ── the columns, then the height that fits them ── */
             const left: React.ReactNode[] = [];
             let leftBottom = 140;

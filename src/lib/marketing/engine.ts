@@ -189,11 +189,19 @@ function bottleDescription(b: MarketingBrief) {
   const punt = /red/i.test(b.wineColour)
     ? "The punt (bottom indentation) is NOT visible through the opaque dark wine — the lower body and base read as solid dark glass with no inner base shape or glow."
     : "The punt's inner curve is subtly visible through the pale liquid at the base, as it naturally is with light wines.";
+  /* ROUND 86 #5 (owner: the sparkling bottle came back with a short
+     still-wine cork — the shot follows the outline drawing, which ends at
+     the glass lip): on a Sparkling bottle a cork closure is a MUSHROOM
+     sparkling cork with its cage, standing a clear 3 cm above the lip */
+  const sparklingTop = b.bottleType === "Sparkling" && !/screw|crown/i.test(b.closure)
+    ? ` SPARKLING TOP — NON-NEGOTIABLE: this is a sparkling wine bottle, so its closure is a tall MUSHROOM-shaped sparkling cork held by a wire cage (muselet)${/no cap/i.test(b.finish) || /no capsule/i.test(b.closure) ? ", bare" : `, dressed under the ${/glossy/i.test(b.finish) ? "glossy" : "matte"} ${b.closureColour || "deep red"} foil hood`}. The whole top stands a full 3 cm ABOVE the glass lip — a crowned, bulbous head clearly taller and wider than the neck, exactly as on a Champagne bottle. NEVER a short still-wine cork flush with the neck, never a plain capsule. The outline drawing stops at the glass lip; the closure rises above it.` +
+      ` The bottle's total height INCLUDING this closure is about ${(spec.heightCM + 3).toFixed(0)} cm — leave that headroom in the frame.`
+    : "";
   return {
     spec,
     text:
       `${spec.shape}. ${liquidLine(b.wineColour, b.glassColor)}. ${punt} ` +
-      `${closureLine(b.closure, b.closureColour, b.finish)}. ` +
+      `${closureLine(b.closure, b.closureColour, b.finish)}.${sparklingTop} ` +
       `${scaleLine(b.labelWmm, b.labelHmm, spec)} ` +
       placementLine(b, spec),
   };
