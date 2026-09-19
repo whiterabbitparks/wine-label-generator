@@ -36,11 +36,22 @@ export function loadFace(f: Face): opentype.Font | null {
   return font;
 }
 
-/* measured width of a line at `size` px, with optional letter-spacing (em) */
+/* measured width of a line at `size` px, with optional letter-spacing (em).
+   Glyph by glyph with pair kerning — never through opentype's GSUB
+   shaping, which trips on Archivo's chaining lookups ("substFormat 2 is
+   not yet supported") and would take the whole label down with it. */
 export function measure(text: string, f: Face, size: number, tracking = 0): number {
   const font = loadFace(f);
   if (!font) return text.length * size * 0.55;          /* never happens once fonts are installed */
-  return font.getAdvanceWidth(text, size) + Math.max(0, text.length - 1) * tracking * size;
+  const k = size / font.unitsPerEm;
+  let w = 0, prev: opentype.Glyph | null = null;
+  for (const ch of text) {
+    const g = font.charToGlyph(ch);
+    if (prev) { try { w += font.getKerningValue(prev, g) * k; } catch { /* no kern table */ } }
+    w += (g.advanceWidth || 0) * k;
+    prev = g;
+  }
+  return w + Math.max(0, [...text].length - 1) * tracking * size;
 }
 
 /* ascender / descender of the face, as fractions of the size */
