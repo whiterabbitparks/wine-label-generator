@@ -2029,7 +2029,18 @@ composition-contract tightening, then customer wiring.
   settings "painters"), /api/admin/painters, PaintersCard in /admin →
   Rules (one select per style); hybrid.ts asks painterFor(style) and
   gives canvas painters a paper tone (ownGround only for gpt-image-own).
-  Default stays gpt-image-own until the owner chooses. Walkthrough (#1):
+  Default stays gpt-image-own until the owner chooses. THE NO-TEXT GATE
+  (90b): the no-text law + negative_prompt cut Ideogram's lettering only
+  to 3/18 (#19), so generateArtworkChecked() now LOOKS at every fal
+  painter's picture (verifyImage + NO_TEXT_RULE, gpt-4o-mini) and
+  repaints once if text is seen — run #20 "ideogram-canvas-gated": 18/18,
+  8 repainted, ZERO visible lettering; arguably the strongest sheet so
+  far (Tsolikouri's engraving, the Chinuri colour dunes, the Racha
+  sunrise). Remaining Ideogram trait: it fills the mask window edge to
+  edge, so a hard "plate" rectangle shows on some (a look, not a bug).
+  Blind order after the smoke runs were removed: #16 ideogram (way 1),
+  #17 ideogram-canvas, #18 nano-canvas, #19 ideogram-notext, #20
+  ideogram-gated. Walkthrough (#1):
   tap(…, onTap) marks the selection the instant the ring blooms (bottle
   rings, markets, QR, Save) — the mark used to come a beat later.
 - ROUND 89 — NIGHT NOTES (2026-09-19, owner asleep). (#1) the walkthrough
