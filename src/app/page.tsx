@@ -1139,9 +1139,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       setCursor({ x: at[0], y: at[1], ms });
       return hold(ms + 40);
     };
-    const tap = async (at: readonly number[], after = 340, ms = 520) => {
+    /* round 90 #1 (owner): what the click selects is marked ON the click —
+       `onTap` runs the instant the ring blooms, the beat comes after */
+    const tap = async (at: readonly number[], after = 340, ms = 520, onTap?: () => void) => {
       if (!(await move(at, ms))) return false;
       setRipple({ x: at[0], y: at[1], n: ++rippleN.current });
+      onTap?.();
       return beat(after);
     };
     /* round 73 #4: a pick on the colour wheel, sampled the same way the
@@ -1251,12 +1254,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           /* round 89 #1 (owner): no variation play — the pointer goes
              straight to Save on the favourite, and the label flies into
              the folder (round 73 #7's re-roll demo retired) */
-          if (!(await tap(TAP.optSelect, 200))) return;
           /* not saveFront(): this closure was made before the demo labels
              existed, so its `dreams` is empty — set and fly directly (the
              sample labels are 1024×683 → 342.9×228.6 in column 2) */
-          setSelected(1);
-          flyToFolder([{ src: TUT_LABELS[1], x: 548.5, y: 240, w: 342.9, h: 228.6 }]);
+          if (!(await tap(TAP.optSelect, 200, 520, () => { setSelected(1); flyToFolder([{ src: TUT_LABELS[1], x: 548.5, y: 240, w: 342.9, h: 228.6 }]); }))) return;
           if (!(await hold(1900))) return;
           break;
         }
@@ -1267,8 +1268,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           if (!(await tap(TAP.barcode, 300))) return;
           if (!(await type("4860012345676", setGtin, 55))) return;
           if (!(await hold(240))) return;
-          if (!(await tap(TAP.qrBtn, 300))) return;
-          setQrMode("create");
+          if (!(await tap(TAP.qrBtn, 300, 520, () => setQrMode("create")))) return;
           if (!(await beat(560))) return;
           /* round 73 #1: up to the details column, and a click, before a
              single character of it is typed */
@@ -1279,14 +1279,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           }
           /* the market picker opens, takes its pick and closes again */
           if (!(await hold(360))) return;
-          if (!(await tap(TAP.market, 320))) return;
-          setMarketOpen(true);
+          if (!(await tap(TAP.market, 320, 520, () => setMarketOpen(true)))) return;
           if (!(await hold(800))) return;
-          if (!(await tap(TAP.eu, 320))) return;
-          setMarkets(["EU"]); setNoComp(false);
+          if (!(await tap(TAP.eu, 320, 520, () => { setMarkets(["EU"]); setNoComp(false); }))) return;
           if (!(await hold(700))) return;
-          if (!(await tap(TAP.market, 320))) return;
-          setMarketOpen(false);
+          if (!(await tap(TAP.market, 320, 520, () => setMarketOpen(false)))) return;
           break;
         }
         case 3: {
@@ -1305,16 +1302,16 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
              (round 86: to KORRA's clear Sparkling bottle, cork, black hood). */
           if (!(await beat(700))) return;
           /* Bordeaux -> Sparkling */
-          if (!(await tap(BRING(1, 3), 560))) return; setBottle((m) => ({ ...m, type: "Sparkling" }));
+          if (!(await tap(BRING(1, 3), 560, 520, () => setBottle((m) => ({ ...m, type: "Sparkling" }))))) return;
           if (!(await beat(620))) return;
           /* Olive Green -> Transparent */
-          if (!(await tap(BRING(2, 1), 480))) return; setBottle((m) => ({ ...m, color: "Transparent" }));
+          if (!(await tap(BRING(2, 1), 480, 520, () => setBottle((m) => ({ ...m, color: "Transparent" }))))) return;
           if (!(await beat(620))) return;
           /* Wax Seal -> Sparkling Cork (row 0 of the sparkling list) */
-          if (!(await tap(BRING(3, 0), 480))) return; setBottle((m) => ({ ...m, closure: "Sparkling Cork" }));
+          if (!(await tap(BRING(3, 0), 480, 520, () => setBottle((m) => ({ ...m, closure: "Sparkling Cork" }))))) return;
           if (!(await beat(680))) return;
           /* the hood's colour, then down to black */
-          if (!(await tap(TAP.wheel, 420, 560))) return; pickWheel(DEMO_WHEEL.x, DEMO_WHEEL.y);
+          if (!(await tap(TAP.wheel, 420, 560, () => pickWheel(DEMO_WHEEL.x, DEMO_WHEEL.y)))) return;
           if (!(await beat(560))) return;
           if (!(await dragShade(0.5, DEMO_SHADE))) return;
           break;

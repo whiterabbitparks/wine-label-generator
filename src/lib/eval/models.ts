@@ -24,6 +24,7 @@ export interface EvalModel {
   name: string;
   via: "openai" | "fal";
   endpoint?: string;
+  canvas?: boolean;        /* takes OUR paper canvas (the type zone stays ours) */
 }
 
 export const EVAL_MODELS: EvalModel[] = [
@@ -43,6 +44,12 @@ export const EVAL_MODELS: EvalModel[] = [
   { id: "gpt-image-own", name: "gpt-image · painter's own ground (way 1)", via: "openai" },
   { id: "flux-pro", name: "FLUX 1.1 Pro", via: "fal", endpoint: "fal-ai/flux-pro/v1.1" },
   { id: "ideogram-3", name: "Ideogram 3", via: "fal", endpoint: "fal-ai/ideogram/v3" },
+  /* ROUND 90 (owner: "why aren't we using the other painters?"): the two
+     fal painters that can take OUR CANVAS — Ideogram's edit endpoint with
+     a real mask (white = paint here), and nano-banana's edit (the canvas
+     as an input image, the band by instruction only) */
+  { id: "ideogram-3-edit", name: "Ideogram 3 · on our canvas (mask)", via: "fal", endpoint: "fal-ai/ideogram/v3/edit", canvas: true },
+  { id: "nano-banana-edit", name: "Nano Banana · on our canvas", via: "fal", endpoint: "fal-ai/nano-banana/edit", canvas: true },
   { id: "recraft-3", name: "Recraft V3", via: "fal", endpoint: "fal-ai/recraft/v3/text-to-image" },
   { id: "nano-banana", name: "Nano Banana (Gemini 2.5 Flash Image)", via: "fal", endpoint: "fal-ai/nano-banana" },
 ];
@@ -168,7 +175,7 @@ const FAL_RATIO: Record<ArtworkPrompt["aspect"], string> = { landscape: "4:3", p
 /* a plain paper canvas and a mask that opens ONLY the art region — the
    type zone (the same bottom band the prompt asks for) stays opaque, so
    the edit endpoint hands it back untouched */
-async function paperAndMask(aspect: ArtworkPrompt["aspect"], colour: string): Promise<{ paper: string; mask: string }> {
+async function paperAndMask(aspect: ArtworkPrompt["aspect"], colour: string): Promise<{ paper: string; mask: string; maskWhite: string }> {
   const sharp = (await import("sharp")).default;
   const W = aspect === "portrait" ? 1024 : aspect === "square" ? 1024 : 1536;
   const H = aspect === "portrait" ? 1536 : aspect === "square" ? 1024 : 1024;
@@ -181,7 +188,12 @@ async function paperAndMask(aspect: ArtworkPrompt["aspect"], colour: string): Pr
   const window = await sharp({ create: { width: W - 2 * m, height: openH, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } }).png().toBuffer();
   const mask = await sharp({ create: { width: W, height: H, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 1 } } })
     .composite([{ input: window, left: m, top: m, blend: "dest-out" }]).png().toBuffer();
-  return { paper: `data:image/png;base64,${paper.toString("base64")}`, mask: `data:image/png;base64,${mask.toString("base64")}` };
+  /* the same window as a WHITE-on-black mask — Ideogram's convention
+     (white = paint here, black = keep) */
+  const white = await sharp({ create: { width: W - 2 * m, height: openH, channels: 3, background: "#fff" } }).png().toBuffer();
+  const maskWhite = await sharp({ create: { width: W, height: H, channels: 3, background: "#000" } })
+    .composite([{ input: white, left: m, top: m }]).png().toBuffer();
+  return { paper: `data:image/png;base64,${paper.toString("base64")}`, mask: `data:image/png;base64,${mask.toString("base64")}`, maskWhite: `data:image/png;base64,${maskWhite.toString("base64")}` };
 }
 
 export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt, extra: { sketch?: string | null } = {}): Promise<string> {
@@ -213,11 +225,24 @@ export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt, extra
   if (!key) throw new Error("FAL_KEY is not set");
   /* Recraft caps the prompt at 1000 characters (422 otherwise) */
   const body: Record<string, unknown> = { prompt: model.id === "recraft-3" ? ap.short : ap.prompt.slice(0, 1900), num_images: 1 };
+  const canvasLine = " Paint the illustration into the open area of the canvas; the rest of the canvas is finished paper and must stay exactly as it is.";
   switch (model.id) {
     case "flux-pro": Object.assign(body, { image_size: FAL_SIZE[ap.aspect], output_format: "png", safety_tolerance: "2" }); break;
     case "ideogram-3": Object.assign(body, { image_size: FAL_SIZE[ap.aspect], rendering_speed: "BALANCED" }); break;
     case "recraft-3": Object.assign(body, { image_size: FAL_SIZE[ap.aspect], style: "digital_illustration" }); break;
     case "nano-banana": Object.assign(body, { aspect_ratio: FAL_RATIO[ap.aspect], output_format: "png" }); break;
+    /* round 90: our canvas goes in; Ideogram takes the white mask, nano-
+       banana only the instruction (no mask on that endpoint) */
+    case "ideogram-3-edit": {
+      const { paper, maskWhite } = await paperAndMask(ap.aspect, ap.paper || "#F4EFE3");
+      Object.assign(body, { prompt: (ap.prompt + canvasLine).slice(0, 1900), image_url: paper, mask_url: maskWhite, rendering_speed: "BALANCED", expand_prompt: false });
+      break;
+    }
+    case "nano-banana-edit": {
+      const { paper } = await paperAndMask(ap.aspect, ap.paper || "#F4EFE3");
+      Object.assign(body, { prompt: (ap.prompt + canvasLine + " Keep the canvas's exact size and proportions.").slice(0, 1900), image_urls: [paper], output_format: "png" });
+      break;
+    }
   }
   const res = await fetch(`https://fal.run/${model.endpoint}`, {
     method: "POST",
