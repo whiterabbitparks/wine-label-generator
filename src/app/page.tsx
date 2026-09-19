@@ -3254,7 +3254,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     {t("Skip")}</button>}
                   {solo ? (
                     card.title.map((ln, i) => (
-                      <span key={i} style={{ position: "absolute", left: TB.pad, top: baseTop(34.71 + i * 27.6, 23), width: TB.w - TB.pad, font: `700 23px ${HNW}`, lineHeight: "23px", color: "#fff", whiteSpace: "nowrap" }}>{t(ln)}</span>
+                      <span key={i} style={{ position: "absolute", left: TB.pad, top: baseTop(34.71 + i * 27.6, 23), width: TB.w - TB.pad, font: `700 ${lang === "ge" ? 18 : 23}px ${HNW}`, lineHeight: "23px", color: "#fff", whiteSpace: "nowrap" }}>{t(ln)}</span>
                     ))
                   ) : (<>
                     <span style={{ position: "absolute", left: TB.pad, top: baseTop(32.06, 23), width: TB.w - TB.pad, font: `700 ${lang === "ge" ? 19 : 23}px ${HNW}`, lineHeight: "23px", color: "#fff" }}>{t(card.step)}</span>
