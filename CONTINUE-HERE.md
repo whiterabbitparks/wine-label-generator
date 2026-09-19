@@ -2007,6 +2007,34 @@ composition-contract tightening, then customer wiring.
   Roman). Curation = ~20 VALUES per style across 5-6 axes, not 30 parts.
   FONT LICENSING flagged: live type in a delivered PDF means the font
   travels — commercial faces (Helvetica Neue World) may not permit it.
+- ROUND 96 — THE FREE PAINTERS JOIN (2026-09-19, owner: "the painters I
+  gave 5s to — we must have them, absolutely"). Finding: every 5 the owner
+  gave Ideogram / nano-banana was in ARTWORK mode (the free painting, no
+  canvas: nano-banana/traditional 4.17, nano-banana/punk 4.00, ideogram/
+  punk 3.75); the same painters on our canvas (#17–#21) scored ≤ 2.7. So
+  a free painter now gets EXACTLY the bake-off ask (buildArtworkPrompt
+  without ownGround/softGround) and the composer's new CROP mode
+  (compose.ts `fit: "crop"`): the painting stays whole (cover-fit, no
+  yield), the band is drawn OVER its foot at 60 % (62 % portrait) in the
+  colour of the rows just above the cut (palette.ts sliceColourOf) with
+  a 5 % gradient seam; the type takes ink/paper-white by that ground.
+  Stored labels remember `fit` so the three layouts and later
+  variations keep the crop. WIZARD_PAINTERS gained ideogram-3 and
+  nano-banana ("free painting, cropped"). Runs #22 ideogram-crop and #23
+  nano-crop (traditional + punk): 24/24, the look of the bake-off kept,
+  bands seamless. PAINTERS SET (settings "painters", local and live share
+  the Mongo): traditional = nano-banana, contemporary = gpt-image-own,
+  punk/Funky = ideogram-3 — the owner changes it in /admin → Rules →
+  Painters. COSTS (fal.ai list): Ideogram v3 BALANCED $0.06/image
+  (+ ≈ $0.005 no-text gate), nano-banana $0.039; gpt-image low ≈ $0.02.
+  A pack ≈ $0.20 (gpt) → $0.26 (nano) → $0.34 (ideogram). Known: fal
+  painters ignore the gazetteer more (Svaneti towers on Racha again).
+  NOT BUILT: "download → correct in Illustrator → upload → diff" (owner
+  asked where it is; to be part of the admin reorganisation). ADMIN
+  REORG proposed (one rating language 1–5 + faults + comment; tabs
+  Painters & Rules / References / Evaluate / System; site-style chrome);
+  three questions put to the owner (fold /eval into admin or delete;
+  delete or archive the old-engine parts; restyle or only tidy).
 - ROUND 95 — FIVE SMALL ONES (2026-09-19). (#1) the vision page's two
   sentences are one flowing paragraph (no <br>). (#2) under "Feel free to
   leave out fields…": "Type each field exactly as it should print:
