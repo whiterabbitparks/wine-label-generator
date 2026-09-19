@@ -8,6 +8,7 @@ import { runDreamPhase } from "@/lib/dream/engine";
 import { EVAL_BRIEFS, EVAL_STYLES, EVAL_FAULTS, aspectOf, type EvalBrief, type EvalItem, type EvalRun, type EvalRating, type EvalFault, type EvalMode } from "@/lib/eval/briefs";
 import { EVAL_MODELS, evalModel, buildArtworkPrompt, generateArtwork, type EvalModel } from "@/lib/eval/models";
 import { composeLabel } from "@/lib/typeset/compose";
+import { flatGroundOf } from "@/lib/typeset/palette";
 import { listRuns, readRun, writeRun, readRatings, writeRating, saveImage, runDir } from "@/lib/eval/store";
 
 /* THE EVALUATION LOOP (branch POPIKA_Back_To_Vector, 2026-09-18/19).
@@ -56,14 +57,21 @@ async function paintItem(run: EvalRun, model: EvalModel, brief: EvalBrief, item:
     } else {
       /* hybrid: the masked painter, then the composer */
       const seed = [...item.id].reduce((h, c) => ((h * 33) ^ c.charCodeAt(0)) >>> 0, 5381);
-      const ap = await buildArtworkPrompt(brief, item.style, seed);
+      const ap = await buildArtworkPrompt(brief, item.style, seed, { ownGround: model.id === "gpt-image-own" });
       item.prompt = ap.prompt; item.card = ap.card;
       const art = await generateArtwork(model, ap);
-      const out = await composeLabel({ artwork: art, style: item.style, texts: textsOf(brief), widthMm: brief.width, heightMm: brief.height, seed, paper: ap.paper });
+      /* way 1: no paper was given, so the ground is read off the picture */
+      let paper = ap.paper, own = "";
+      if (!paper) {
+        const g = await flatGroundOf(art);
+        paper = g.colour;
+        own = ` · own ground ${g.flat ? "flat" : "NOT flat"} ${(g.coverage * 100).toFixed(0)}%`;
+      }
+      const out = await composeLabel({ artwork: art, style: item.style, texts: textsOf(brief), widthMm: brief.width, heightMm: brief.height, seed, paper });
       item.file = saveImage(run.id, item.id, out.png);
       fs.writeFileSync(path.join(runDir(run.id), `${item.id}.svg`), out.svg);
       saveImage(run.id, `${item.id}--art`, art);
-      item.prompt = `[faces: ${out.faces} · ink ${out.ink}]\n` + item.prompt;
+      item.prompt = `[faces: ${out.faces} · ink ${out.ink}${own}]\n` + item.prompt;
     }
     delete item.error;
   } catch (e) {

@@ -36,6 +36,11 @@ export const EVAL_MODELS: EvalModel[] = [
      physically cannot paint there. */
   { id: "gpt-image-cutout", name: "gpt-image · cut-out on transparent", via: "openai" },
   { id: "gpt-image-masked", name: "gpt-image · type zone masked off", via: "openai" },
+  /* way 1 (owner 2026-09-19): contemporary and punk paint on a flat ground
+     of the PAINTER's choosing, unmasked; the composer reads that colour
+     off the picture and grows the band out of it. Traditional keeps its
+     paper tones and the mask. */
+  { id: "gpt-image-own", name: "gpt-image · painter's own ground (way 1)", via: "openai" },
   { id: "flux-pro", name: "FLUX 1.1 Pro", via: "fal", endpoint: "fal-ai/flux-pro/v1.1" },
   { id: "ideogram-3", name: "Ideogram 3", via: "fal", endpoint: "fal-ai/ideogram/v3" },
   { id: "recraft-3", name: "Recraft V3", via: "fal", endpoint: "fal-ai/recraft/v3/text-to-image" },
@@ -104,14 +109,15 @@ export async function regionNote(region: string): Promise<string> {
    planned together instead of fighting afterwards.
    `short` is the same ask without the house-feedback tail, for painters
    that cap the prompt (Recraft: 1000 characters). */
-export async function buildArtworkPrompt(brief: EvalBrief, style: string, seed = 0): Promise<ArtworkPrompt> {
+export async function buildArtworkPrompt(brief: EvalBrief, style: string, seed = 0, opts: { ownGround?: boolean } = {}): Promise<ArtworkPrompt> {
   const aspect = aspectOf(brief);
   const zone = zoneOf(aspect);
   const g = await artworkGuidance(style);
   const d = brief.data;
   const place = [d.region, d.country].filter(Boolean).join(", ");
-  const paper = groundFor(style, seed);
-  const dark = (() => { const n = parseInt(paper.slice(1), 16); return (0.2126 * (n >> 16) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255 < 0.45; })();
+  /* paper "" = the painter chooses (way 1); traditional always gets paper */
+  const paper = opts.ownGround && style !== "traditional" ? "" : groundFor(style, seed);
+  const dark = !!paper && (() => { const n = parseInt(paper.slice(1), 16); return (0.2126 * (n >> 16) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255 < 0.45; })();
   const gaz = await regionNote(d.region);
   const head =
     `Illustration for a wine label — the ARTWORK ONLY. No text, no lettering, no words, no numbers, no logo, no monogram, no border, no frame, no badge. ` +
@@ -124,7 +130,9 @@ export async function buildArtworkPrompt(brief: EvalBrief, style: string, seed =
     /* owner 2026-09-19 (x4 on the bake-off): painters invent churches, towers, châteaux */
     `Do NOT add buildings, towers, churches, castles or any architecture unless the story itself names them. ` +
     `A ${[d.sweetness, d.wineColorName].filter(Boolean).join(" ").toLowerCase()} ${(d.wineType || "wine").toLowerCase()}. `;
-  const finish = `FINISH: handmade print on paper, not a photograph, not 3D, not airbrushed; discrete inks, honest imperfection; the ground is the plain ${dark ? "dark coloured" : "paper-coloured"} canvas you are given (${paper}) — keep it flat and untouched around the drawing.`;
+  const finish = paper
+    ? `FINISH: handmade print on paper, not a photograph, not 3D, not airbrushed; discrete inks, honest imperfection; the ground is the plain ${dark ? "dark coloured" : "paper-coloured"} canvas you are given (${paper}) — keep it flat and untouched around the drawing.`
+    : `FINISH: handmade print, not a photograph, not 3D, not airbrushed; discrete inks, honest imperfection. THE GROUND: choose ONE flat, solid, even colour that belongs to this illustration — the colour it is printed on — and fill the whole picture with it edge to edge, so that it continues unchanged into the empty type zone. Absolutely no gradient, no texture, no vignette, no paper grain, no second colour in the ground; the type zone is nothing but that one flat colour.`;
   const prompt = head + styleLine + g.text + subject + finish;
   /* the short form keeps the ask, the style and the subject; the house
      feedback goes first, then the finish line, then the geography note */
@@ -166,7 +174,9 @@ export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt): Prom
         size, transparent: true,
       } as never);
     }
-    if (model.id === "gpt-image-masked") {
+    /* way 1: with a paper (traditional) the mask still guards the band;
+       without one the painter is free and the composer reads the ground */
+    if (model.id === "gpt-image-masked" || (model.id === "gpt-image-own" && ap.paper)) {
       const { paper, mask } = await paperAndMask(ap.aspect, ap.paper);
       return generateOpenAIImage({
         prompt: ap.prompt + " Paint the illustration into the open area of the canvas; the rest of the canvas is finished paper and must stay exactly as it is.",
