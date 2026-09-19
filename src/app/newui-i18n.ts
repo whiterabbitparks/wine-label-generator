@@ -254,6 +254,9 @@ export const UI_GE: Record<string, string> = {
   "Please stay on this page — preparing your labels usually takes about {N} seconds.": "გთხოვთ, დარჩეთ ამ გვერდზე — ეტიკეტების მომზადებას საშუალოდ {N} წამი სჭირდება.",
   /* round 48 #2: the radio label is just "Select" everywhere */
   "Select": "აირჩიე",
+  "Save": "შენახვა",
+  "Saved": "შენახულია",
+  "Save a label design to continue": "გასაგრძელებლად შეინახეთ ეტიკეტის დიზაინი",
   "Selected": "არჩეულია",
   "Select a label design to continue": "გასაგრძელებლად აირჩიეთ ეტიკეტის დიზაინი",
   "Select at least one market to continue": "გასაგრძელებლად აირჩიეთ ერთი ბაზარი მაინც",

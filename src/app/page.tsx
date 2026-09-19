@@ -249,7 +249,7 @@ const TUT_CARDS: { step: string; title: string[]; body: string[] }[] = [
   { step: "", title: ["Let's build", "your pack!"], body: [] },
 ];
 const DEMO_VISION = "The village cat walking along the top of a stone wall at dusk";
-const DEMO_DESC = "Traditional qvevri amber wine with aromas of dried apricot, quince, wild herbs, and subtle spice. Full-bodied and textured, with gentle tannins, bright acidity, and a long, earthy finish.";
+const DEMO_DESC = "A dry, naturally sparkling pét-nat from Rkatsiteli. Pale straw with a fine, lively bead; green apple, white peach and a touch of bread crust on the nose; crisp acidity and a clean, saline finish. Bottled unfiltered, before the first fermentation ended.";
 const DEMO_BACK: Record<string, string> = {
   producerCompany: '"Popiashvili Cellars" LLC', producerAddress: "#36 S. Chikovani st. 0171 Tbilisi, Georgia",
   importer: '"Teller Wines" LLC', importerAddress: "148 W 68 st. 10023 NYC, USA",
@@ -258,7 +258,9 @@ const DEMO_BACK: Record<string, string> = {
 /* round 73 #4: where the bottle step ENDS (it starts on Bordeaux / Olive
    Green / Wax Seal and is changed on camera). Round 86: KORRA's bottle —
    a clear Sparkling bottle, cork, black matte hood. */
-const DEMO_BOTTLE = { type: "Sparkling", color: "Transparent", closure: "Cork", finish: "Matte" };
+/* round 88 #4: a Sparkling bottle offers only "Sparkling Cork" / "Crown
+   Cap" — "Cork" left the ring empty */
+const DEMO_BOTTLE = { type: "Sparkling", color: "Transparent", closure: "Sparkling Cork", finish: "Matte" };
 const DEMO_BOTTLE_0 = { type: "Bordeaux", color: "Olive Green", closure: "Wax Seal", finish: "Matte" };
 const DEMO_WHEEL = { x: 0.44, y: 0.1, rgb: [250, 27, 31] };   /* the pick; the shade drag takes it to black */
 const DEMO_SHADE = 0.97;
@@ -266,7 +268,7 @@ const DEMO_SHADE = 0.97;
 const TAP = {
   visionBox: [250, 400], width: [476, 645], height: [650, 645],
   firstField: [1060, 279],          /* round 76 #3: on "GRAND VIN" itself */
-  optSelect: [692.5, 634],
+  optSelect: [720, 627],            /* round 88 #9: the Save button, column 2 */
   descBox: [250, 265], barcode: [360, 468], qrBtn: [874.5, 467],
   market: [873.5, 670], eu: [873, 330],
   backFirst: [1050, 212],            /* round 73 #1: up to the details */
@@ -379,6 +381,27 @@ export default function NewUI() {
      a variations press generates ONE new label of that style, dots under
      the label switch between the original (0) and its variations. */
   const [styleVars, setStyleVars] = useState<(Dream | null)[][]>([[], [], []]);
+  /* ROUND 88 #9 (owner): two rows of dots across the button's width —
+     15 a row, the original plus 29 variations */
+  const DOTS_PER_ROW = 15, MAX_VARS = 2 * 15 - 1;
+  /* ROUND 88 #6/#7/#10 (owner): "saving" is a little film — the image
+     shrinks and glides up into the header's folder mark, which bumps as
+     it lands. Several images go in sequence. */
+  const [flights, setFlights] = useState<{ id: number; src: string; x: number; y: number; w: number; h: number; delay: number }[]>([]);
+  const flightN = useRef(0);
+  const [folderBump, setFolderBump] = useState(0);
+  const FOLDER_C = { x: 1275, y: 66 };
+  const flyToFolder = (items: { src: string; x: number; y: number; w: number; h: number }[]) => {
+    const batch = items.filter((it) => it.src).map((it, i) => ({ ...it, id: ++flightN.current, delay: i * 150 }));
+    if (!batch.length) return;
+    const last = batch[batch.length - 1].delay;
+    setFlights((fl) => [...fl, ...batch]);
+    setTimeout(() => setFolderBump((n) => n + 1), last + 760);
+    setTimeout(() => setFlights((fl) => fl.filter((x) => !batch.some((b2) => b2.id === x.id))), last + 1500);
+  };
+  const [backSaved, setBackSaved] = useState(false);
+  const [assetsSaved, setAssetsSaved] = useState(false);
+  const [treeN, setTreeN] = useState(0);        /* round 88 #1: replays the tree reveal */
   const [styleView, setStyleView] = useState<number[]>([0, 0, 0]);
   const [varBusyCol, setVarBusyCol] = useState(-1);
   const STYLES3 = ["traditional", "contemporary", "punk"];
@@ -682,6 +705,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const id = setTimeout(() => setNudge((n) => n + 1), SLIDE_MS + 120);
     return () => clearTimeout(id);
   }, [page, paid]);
+  useEffect(() => { if (page === "checkout") setTreeN((n) => n + 1); }, [page]);
+  useEffect(() => { setBackSaved(false); }, [backPng]);
+  useEffect(() => { setAssetsSaved(false); }, [assetsSig]);
   const [warn, setWarn] = useState("");
   /* ROUND 27: honest barcode — we never invent digits; the winery types its
      own number. ROUND 29 #1/#7: any 12- or 13-digit number is ACCEPTED and
@@ -1087,7 +1113,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     if (tut < 0) return;
     const tok = ++tutTok.current;
     const live = () => tok === tutTok.current;
-    const hold = (ms: number) => new Promise<boolean>((r) => setTimeout(() => r(live()), ms));
+    /* round 88 #3 (owner: "feels rushed"): every pause runs at 1.45× */
+    const TUT_PACE = 1.45;
+    const hold = (ms: number) => new Promise<boolean>((r) => setTimeout(() => r(live()), ms * TUT_PACE));
     /* round 72 #10: nobody works to a metronome — every pause is nudged
        off the beat, and typing slows at spaces and stops at punctuation */
     let beatN = 0;
@@ -1166,6 +1194,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         bottleTouched.current = true; setBottle({ ...DEMO_BOTTLE }); setWineColor("White");
         setWheel({ ...DEMO_WHEEL }); setShade(DEMO_SHADE);
       }
+      /* round 88 #5: the assets step opens ALREADY loading — no grey
+         placeholders before the glasses */
+      if (tut === 5) {
+        setTutLanding(false);
+        setAssets({ life: [] }); setLifeTarget(5); setLifeOrder([0, 1, 2, 3, 4]);
+        assetT.current = { run: Date.now(), stage: Date.now() };
+        setAssetsStage("front shot");
+      }
       if (tut > 5) {
         setLifeTarget(5); setAssetsStage(""); setTutLanding(true);
         setAssets({
@@ -1228,7 +1264,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           setStyleView((v) => { const n = [...v]; n[2] = 1; return n; });
           if (!(await beat(760))) return;
           if (!(await tap(TAP.optSelect))) return;
-          setSelected(1);
+          saveFront(1);
+          if (!(await hold(1200))) return;
           break;
         }
         case 2: {
@@ -1281,8 +1318,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           /* Olive Green -> Transparent */
           if (!(await tap(BRING(2, 1), 480))) return; setBottle((m) => ({ ...m, color: "Transparent" }));
           if (!(await beat(620))) return;
-          /* Wax Seal -> Cork */
-          if (!(await tap(BRING(3, 0), 480))) return; setBottle((m) => ({ ...m, closure: "Cork" }));
+          /* Wax Seal -> Sparkling Cork (row 0 of the sparkling list) */
+          if (!(await tap(BRING(3, 0), 480))) return; setBottle((m) => ({ ...m, closure: "Sparkling Cork" }));
           if (!(await beat(680))) return;
           /* the hood's colour, then down to black */
           if (!(await tap(TAP.wheel, 420, 560))) return; pickWheel(DEMO_WHEEL.x, DEMO_WHEEL.y);
@@ -1324,7 +1361,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
          waits, and only there the button keeps its double pulse. */
       if (!live()) return;
       if (tut >= TUT_CARDS.length - 1) { setNudge((n) => n + 1); return; }
-      if (!(await hold(1600))) return;
+      if (!(await hold(1900))) return;
       setPressed((n) => n + 1);
       if (!(await hold(260))) return;
       const nx = tut + 1;
@@ -1424,7 +1461,28 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
      — no model call, so no credit (round 56 #7's gate is lifted here) */
   const requestVariations = (fi: number) => {
     if (varBusyCol >= 0) return;
+    if ((styleVars[fi]?.length || 0) >= MAX_VARS) return;   /* round 88 #9: two rows, full */
     createVariation(fi);
+  };
+  /* the option column's label box — shared by the picture, the frame, the
+     dots and the Save film (round 88) */
+  const optGeom = (fi: number) => {
+    const nat = imgDims[fi];
+    const ar = nat ? nat.w / nat.h : (Number(f.width) || 110) / (Number(f.height) || 80);
+    const CUBE = 34.3, AREA_TOP = 240, AREA_BOT = 519;
+    let lw: number, lh: number;
+    if (ar >= 1) { lw = OPT_W; lh = OPT_W / ar; if (lh > AREA_BOT - AREA_TOP) { lh = AREA_BOT - AREA_TOP; lw = lh * ar; } }
+    else { lh = AREA_BOT - AREA_TOP; lw = lh * ar; if (lw > OPT_W - 2 * CUBE) { lw = OPT_W - 2 * CUBE; lh = lw / ar; } }
+    return { lx: OPT_FRAMES[fi].x + (OPT_W - lw) / 2, ly: AREA_TOP + (ar >= 1 ? 0 : (AREA_BOT - AREA_TOP - lh) / 2), lw, lh };
+  };
+  /* ROUND 88 #9 (owner): "Select" became SAVE — a black button under the
+     variations; saving marks the column and flies the label into the folder */
+  const saveFront = (fi: number) => {
+    if (!dreams[fi]) return;
+    setSelected(fi); setWarn("");
+    const dv = viewedDream(fi);
+    const g = optGeom(fi);
+    if (dv) flyToFolder([{ src: dv.preview || dv.dream, x: g.lx, y: g.ly, w: g.lw, h: g.lh }]);
   };
   /* round 52 #1 (owner: "it let me download without agreeing!"):
      every pay path checks the T&C ring first */
@@ -1946,17 +2004,24 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 {selected === fi && dashedBox(lx - 10, ly - 10, lw + 20, lh + 20, "selD" + fi)}
                 {cross(lx - 10, ly - 10, `tl${fi}`)}{cross(lx + lw + 10, ly - 10, `tr${fi}`)}
                 {cross(lx - 10, ly + lh + 10, `bl${fi}`)}{cross(lx + lw + 10, ly + lh + 10, `br${fi}`)}
-                {/* the column's dot switcher, centered to the label */}
-                {nDots > 1 && Array.from({ length: nDots }, (_, k) => (
+                {/* the column's dot switcher, centered to the label — round
+                    88 #9: up to two rows of 15, the rows centred on the
+                    midline between label and button */}
+                {nDots > 1 && Array.from({ length: nDots }, (_, k) => {
+                  const rows = Math.ceil(nDots / DOTS_PER_ROW), row = Math.floor(k / DOTS_PER_ROW), col = k % DOTS_PER_ROW;
+                  const inRow = Math.min(nDots - row * DOTS_PER_ROW, DOTS_PER_ROW);
+                  const dx = lx + lw / 2 + (col - (inRow - 1) / 2) * 22 - 9;
+                  const dy = (ly + lh + 565) / 2 - 9 + (row - (rows - 1) / 2) * 17;
+                  return (
                   <button key={"vd" + fi + k} onClick={() => setStyleView((p) => { const n = [...p]; n[fi] = k; return n; })}
                     aria-label={`view ${fi}-${k}`}
-                    /* round 61 #1: dots sit midway between label and button */
-                    style={{ ...px(lx + lw / 2 + (k - (nDots - 1) / 2) * 22 - 9, (ly + lh + 565) / 2 - 9, 18, 18), ...ghost }}>
+                    style={{ ...px(dx, dy, 18, 18), ...ghost }}>
                     <svg width="18" height="18" viewBox="0 0 18 18" style={{ position: "absolute", left: 0, top: 0, display: "block" }}>
                       <circle cx="9" cy="9" r="4" fill={(styleView[fi] || 0) === k ? "#111" : "#fff"} stroke="#111" strokeWidth="1" />
                     </svg>
                   </button>
-                ))}
+                  );
+                })}
               </div>
             );
           })}
@@ -1968,29 +2033,29 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             <span key={"grey" + fi}>
               <div style={{ ...px(fr.x + 0.2, 565, OPT_W, 34.3), background: "#ECECEA", color: "#B3B1A8", font: `12px ${HNW}`, letterSpacing: 0.3, display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
                 {t(STYLE_NAMES[fi] + " Variation")}</div>
-              <div style={{ ...px(fr.x, 634 - 13, OPT_W, 26), display: "flex", alignItems: "center", justifyContent: "center", columnGap: 10 }}>
-                {ringSvg(15, false, { color: "#C9C7BF" })}
-                <span style={{ font: `700 15px ${HNW}`, color: "#C9C7BF", lineHeight: `${fm.a + fm.d}px`, transform: `translateY(${(17 - ((26 - (fm.a + fm.d)) / 2 + fm.a)).toFixed(2)}px)` }}>{t("Select")}</span>
-              </div>
+              <div style={{ ...px(fr.x + 0.2, 610, OPT_W, 34.3), background: "#ECECEA", color: "#B3B1A8", font: `12px ${HNW}`, letterSpacing: 0.3, display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
+                {t("Save")}</div>
             </span>
           ))}
-          {/* the buttons live on every state (round 51 #4) */}
-          {dreams.length > 0 && OPT_FRAMES.map((fr, fi) => (
-            <button key={"cv" + fi} onClick={() => requestVariations(fi)}
-              style={{ ...px(fr.x + 0.2, 565, OPT_W, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
-              {t(STYLE_NAMES[fi] + " Variation")}</button>
-          ))}
-          {/* Select radios — one per column, marking the VIEWED version */}
+          {/* the buttons live on every state (round 51 #4); round 88 #9: the
+              variations button greys out once its two rows of dots are full */}
+          {dreams.length > 0 && OPT_FRAMES.map((fr, fi) => {
+            const full = (styleVars[fi]?.length || 0) >= MAX_VARS;
+            return (
+              <button key={"cv" + fi} onClick={() => requestVariations(fi)} disabled={full}
+                style={{ ...px(fr.x + 0.2, 565, OPT_W, 34.3), cursor: full ? "default" : "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: full ? "#ECECEA" : "#111", color: full ? "#B3B1A8" : "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, transition: `background 240ms ${EASE}` }}>
+                {t(STYLE_NAMES[fi] + " Variation")}</button>
+            );
+          })}
+          {/* ROUND 88 #9 (owner): SAVE — a black button under the variations,
+              in place of the "Select" ring; it marks the column and flies the
+              label into the folder */}
           {dreams.length > 0 && OPT_FRAMES.map((fr, fi) => {
             const on = selected === fi;
-            const lbl = t("Select");
             return (
-              <button key={"sr" + fi} onClick={() => { if (!dreams[fi]) return; setSelected(selected === fi ? -1 : fi); setWarn(""); }}
-                style={{ ...px(fr.x, 634 - 13, OPT_W, 26), ...ghost, display: "flex", alignItems: "center", justifyContent: "center", columnGap: 10, textTransform: "none", cursor: "pointer" }}>
-                {ringSvg(15, on, { dot: 7.5 })}
-                {/* round 47: one explicit baseline in every browser */}
-                <span style={{ font: `700 15px ${HNW}`, color: "#111", lineHeight: `${fm.a + fm.d}px`, whiteSpace: "nowrap", transform: `translateY(${(17 - ((26 - (fm.a + fm.d)) / 2 + fm.a)).toFixed(2)}px)` }}>{lbl}</span>
-              </button>
+              <button key={"sv" + fi} onClick={() => saveFront(fi)}
+                style={{ ...px(fr.x + 0.2, 610, OPT_W, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: on ? "#fff" : "#111", color: "#111", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, transition: `background 240ms ${EASE}, color 240ms ${EASE}`, ...(on ? {} : { color: "#fff" }) }}>
+                {on ? t("Saved") : t("Save")}</button>
             );
           })}
         </>);
@@ -2203,10 +2268,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={backPng} alt="back label"
               style={{ ...px(lx, ly, fit.w, fit.h), objectFit: "fill" }} />
-            {cross(lx, ly, "b1")}{cross(lx + fit.w, ly, "b2")}{cross(lx, ly + fit.h, "b3")}{cross(lx + fit.w, ly + fit.h, "b4")}
-            {dashedBox(lx, ly, fit.w, fit.h, "bdD")}
+            {/* round 88 #8: the frame stands 10px off the label, crosses on its corners */}
+            {cross(lx - 10, ly - 10, "b1")}{cross(lx + fit.w + 10, ly - 10, "b2")}{cross(lx - 10, ly + fit.h + 10, "b3")}{cross(lx + fit.w + 10, ly + fit.h + 10, "b4")}
+            {dashedBox(lx - 10, ly - 10, fit.w + 20, fit.h + 20, "bdD")}
             <button onClick={() => go("backdetails", -1)}
               style={{ ...px(548.6, 589, 341.4, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>{t("Edit")}</button>
+            {/* round 88 #7 (owner): SAVE under Edit — flies the back label into the folder */}
+            <button onClick={() => { setBackSaved(true); flyToFolder([{ src: backPng, x: lx, y: ly, w: fit.w, h: fit.h }]); }}
+              style={{ ...px(548.6, 633.3, 341.4, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: backSaved ? "#fff" : "#111", color: backSaved ? "#111" : "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, transition: `background 240ms ${EASE}, color 240ms ${EASE}` }}>{backSaved ? t("Saved") : t("Save")}</button>
             {/* ROUND 51 #7/#8 (owner): informational size caption — same
                 type as the front page's Width/Height, no input, no
                 underline, centered between the label and Edit. The width
@@ -2533,6 +2602,23 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               {slot((BOX.x + R1) / 2 - 60, Y0, 120, CH, assets.front, "front shot", "contain")}
               {slot((R1 + R2) / 2 - 60, Y0, 120, CH, assets.back, "back shot", "contain")}
             </>)}
+          {/* ROUND 88 #10 (owner): SAVE under the dashed area's left corner,
+              outside it, on its left edge — every image flies into the
+              folder in sequence */}
+          {!assetsStage && assets.front && (
+            <button onClick={() => {
+              setAssetsSaved(true);
+              const items: { src: string; x: number; y: number; w: number; h: number }[] = [];
+              if (assets.front) items.push({ src: assets.front.prev, x: (custom ? (BOX.x + R2) / 2 : (BOX.x + R1) / 2) - 60, y: Y0, w: 120, h: CH });
+              if (!custom && assets.back) items.push({ src: assets.back.prev, x: (R1 + R2) / 2 - 60, y: Y0, w: 120, h: CH });
+              const hero = assets.life[lifeOrder[0]];
+              if (hero) items.push({ src: hero.prev, x: HERO.x, y: Y0, w: HERO.w, h: CH });
+              thumbs.forEach((th, k) => { const it = assets.life[lifeOrder[k + 1]]; if (it) items.push({ src: it.prev, x: th.x, y: th.y, w: th.s, h: th.s }); });
+              flyToFolder(items);
+            }}
+              style={{ ...px(BOX.x, BOX.y + BOX.h + 14, 274, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: assetsSaved ? "#fff" : "#111", color: assetsSaved ? "#111" : "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, transition: `background 240ms ${EASE}, color 240ms ${EASE}` }}>
+              {assetsSaved ? t("Saved") : t("Save")}</button>
+          )}
           {/* the hero, then its four thumbs */}
           {slot(HERO.x, Y0, HERO.w, CH, assets.life[lifeOrder[0]], `lifestyle ${lifeOrder[0] + 1}/5`, "cover")}
           {thumbs.map((th, k) => {
@@ -2649,20 +2735,74 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {!gensMode && ["After payment, you’ll be able to download your", "Final Pack with high-resolution, print-ready files,", "instructions, and a Read Me containing", "the link to your published product page."].map((ln, i) => (
             <span key={"pp" + i} style={{ ...px(COL_R, baseTop(559.8 + i * 18, 15), COL_W, 20), font: `italic 15px ${HNW}`, lineHeight: "15px", color: "#111", whiteSpace: "nowrap" }}>{t(ln)}</span>
           ))}
-          {/* an own-label (assets-only) order buys no labels, so the whole
-              tree and its paragraph go (round 50) */}
-          {customLabel && !gensMode && (<>
-            {patch(760, 92, 600, 540, "notree")}
-            {patch(1225, 108, 120, 40, "nofpcap")}
-          </>)}
-          {/* unselected rows prune their own branch of the tree */}
-          {!customLabel && !gensMode && !packSel[0] && patch(1218, 232, 118, 230, "nolabels")}
-          {!customLabel && !gensMode && !packSel[2] && (<>
-            {patch(995, 232, 122, 275, "nomarketing")}
-            {patch(1046, 200, 20, 44, "nomarketingarm")}
-          </>)}
-          {/* round 56 #6: no QR/page row → the domain line leaves READ ME */}
-          {!customLabel && !gensMode && !packSel[1] && patch(795, 447, 130, 13, "noqrfile")}
+          {/* ROUND 88 #1 (owner): the baked tree is wiped and REDRAWN LIVE —
+              it reveals from the folder mark downward (trunk, bar, branches,
+              icons, names, arrows, then the files line by line) and lists
+              the REAL files of the ZIP under the wine's name (Wine_Name
+              until one is typed). Unselected rows drop their branch; an
+              own-label order has no tree (round 50). */}
+          {!gensMode && patch(760, 92, 600, 450, "notree")}
+          {!gensMode && !customLabel && (() => {
+            const base = (f.wine || "").trim().replace(/[^\w]+/g, "_").replace(/^_+|_+$/g, "") || "Wine_Name";
+            const slug = (f.wine || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "wine-name";
+            type Branch = { x: number; kind: "doc" | "folder"; name: string[]; files: string[] };
+            const branches: Branch[] = [
+              { x: 856, kind: "doc", name: ["READ ME"], files: ["Instructions.pdf", "Terms&Conditions.pdf", ...(packSel[1] ? [`www.8klabels.com/${slug}`] : [])] },
+              ...(packSel[2] ? [{ x: 1055, kind: "folder" as const, name: ["MARKETING", "ASSETS"], files: [`${base}_Bottle_Front.png`, `${base}_Bottle_Back.png`, ...[1, 2, 3, 4, 5].map((n) => `${base}_Image0${n}.png`)] }] : []),
+              ...(packSel[0] ? [{ x: 1275, kind: "folder" as const, name: ["LABELS"], files: [`${base}_Front_Label.pdf`, `${base}_Front_Label.svg`, `Links/${base}_Front_Artwork.png`, `Fonts/`, `${base}_Back_Label.svg`] }] : []),
+            ];
+            const TX = 1275, BAR_Y = 205, TRUNK_TOP = 152;
+            const leftX = Math.min(...branches.map((b2) => b2.x));
+            const A = (delay: number, name: string, ms = 320): React.CSSProperties => ({ animation: `${name} ${ms}ms ${EASE} ${delay}ms both` });
+            const folderPath = (
+              <>
+                <path d="M1233.31,103.1V38.26c0-1.98,1.34-3.59,2.99-3.59h25.27c.79,0,1.55.38,2.11,1.05l7.74,9.3c.56.67,1.32,1.05,2.11,1.05h25.27c1.65,0,2.99,1.61,2.99,3.59v7.81" fill="#fff" stroke="#000" strokeWidth="0.75" strokeMiterlimit="10" />
+                <path d="M1233.31,103.1h68.49l15.03-40.57c.88-2.38-.57-5.05-2.73-5.05h-61.95c-1.18,0-2.25.84-2.73,2.13l-16.11,43.49" fill="#fff" stroke="#000" strokeWidth="0.75" strokeMiterlimit="10" />
+              </>
+            );
+            return (
+              <div key={"tree" + treeN}>
+                {/* the caption under the folder mark */}
+                <span style={{ ...px(TX - 80, baseTop(137.14, 15), 160, 18), font: `15px ${HNW}`, lineHeight: "15px", textAlign: "center", whiteSpace: "nowrap", ...A(0, "nuiFadeUp", 300) }}>{t("FINAL PACK")}</span>
+                {/* the trunk grows down from the folder mark */}
+                <div style={{ ...px(TX - 0.5, TRUNK_TOP, 1, BAR_Y - TRUNK_TOP), transformOrigin: "top", ...A(0, "nuiGrowY", 260) }}>{dashRule(0, 0, BAR_Y - TRUNK_TOP, true)}</div>
+                {/* the bar runs from the trunk to the left-most branch */}
+                {leftX < TX && (
+                  <div style={{ ...px(leftX, BAR_Y - 0.5, TX - leftX, 1), transformOrigin: "right", ...A(260, "nuiGrowXR", 340) }}>{dashRule(0, 0, TX - leftX, false)}</div>
+                )}
+                {branches.map((b2, i) => (
+                  <span key={b2.name[0]}>
+                    <div style={{ ...px(b2.x - 0.5, BAR_Y, 1, 44), transformOrigin: "top", ...A(600 + i * 90, "nuiGrowY", 220) }}>{dashRule(0, 0, 44, true)}</div>
+                    <div style={{ ...px(b2.x - 4, BAR_Y + 43, 8, 1), background: "#000", ...A(780 + i * 90, "nuiFadeIn", 160) }} />
+                    {/* the icon */}
+                    <div style={{ ...px(b2.x - 42.5, 255, 85, 70), ...A(880 + i * 120, "nuiPop", 360) }}>
+                      {b2.kind === "folder"
+                        ? <svg viewBox="1232.5 33.9 85.1 70" width="85" height="70" style={{ display: "block" }}>{folderPath}</svg>
+                        : <svg viewBox="0 0 85 70" width="85" height="70" style={{ display: "block" }}>
+                            <path d="M14 3 H70 V52 Q70 66 56 66 H14 Z" fill="#fff" stroke="#000" strokeWidth="0.9" />
+                            <path d="M14 66 Q2 66 2 56 V50 H56 V52 Q56 66 70 66" fill="#fff" stroke="#000" strokeWidth="0.9" />
+                            {[15, 23, 31, 39].map((yy) => <line key={yy} x1="24" y1={yy} x2="60" y2={yy} stroke="#000" strokeWidth="0.9" />)}
+                          </svg>}
+                    </div>
+                    {/* the name */}
+                    {b2.name.map((ln, j) => (
+                      <span key={ln} style={{ ...px(b2.x - 80, baseTop(345 + j * 18, 15), 160, 18), font: `15px ${HNW}`, lineHeight: "15px", textAlign: "center", whiteSpace: "nowrap", ...A(1080 + i * 120, "nuiFadeUp", 300) }}>{t(ln)}</span>
+                    ))}
+                    {/* the arrow down to the files */}
+                    <div style={{ ...px(b2.x - 4, 372, 8, 1), background: "#000", ...A(1300 + i * 120, "nuiFadeIn", 160) }} />
+                    <div style={{ ...px(b2.x - 0.5, 372, 1, 32), transformOrigin: "top", ...A(1300 + i * 120, "nuiGrowY", 240) }}>{dashRule(0, 0, 32, true)}</div>
+                    <svg viewBox="0 0 10 6" style={{ ...px(b2.x - 5, 402, 10, 6), ...A(1500 + i * 120, "nuiFadeIn", 160) }}><polyline points="0.5,0.5 5,5.5 9.5,0.5" fill="none" stroke="#000" strokeWidth="1" /></svg>
+                    {/* the files, one line after another */}
+                    {b2.files.map((fn, j) => (
+                      <span key={fn} style={{ ...px(b2.x - 110, baseTop(434.45 + j * 10, 9.5), 220, 12), font: `9.5px ${HNW}`, lineHeight: "9.5px", textAlign: "center", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", ...A(1620 + i * 120 + j * 70, "nuiFadeUp", 260) }}>{fn}</span>
+                    ))}
+                  </span>
+                ))}
+              </div>
+            );
+          })()}
+          {/* an own-label (assets-only) order buys no labels: no tree, no caption (round 50) */}
+          {customLabel && !gensMode && patch(1225, 108, 120, 40, "nofpcap")}
           {/* ROUND 85 #3 (owner): no "Proceed to payment" bar, no "Download"
               bar — the red round button does both: a card until the payment
               lands, a download tray after. Both baked bars are wiped. */}
@@ -2833,6 +2973,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         @keyframes nuiTap { 0% { transform: scale(0.3); opacity: 0 } 22% { opacity: 1 } 100% { transform: scale(1.3); opacity: 0 } }
         @keyframes nuiNudge { 0%, 100% { transform: scale(1) } 22% { transform: scale(1.14) } 44% { transform: scale(1) } 66% { transform: scale(1.14) } 88% { transform: scale(1) } }
         @keyframes nuiPress { 0%, 100% { transform: scale(1) } 45% { transform: scale(1.09) } }
+        @keyframes nuiGrowY { from { transform: scaleY(0) } to { transform: scaleY(1) } }
+        @keyframes nuiGrowXR { from { transform: scaleX(0) } to { transform: scaleX(1) } }
+        @keyframes nuiPop { from { opacity: 0; transform: scale(0.82) } 70% { transform: scale(1.03) } to { opacity: 1; transform: scale(1) } }
+        @keyframes nuiFadeUp { from { opacity: 0; transform: translateY(5px) } to { opacity: 1; transform: translateY(0) } }
+        @keyframes nuiFly { 0% { transform: translate(0,0) scale(1) rotate(0deg); opacity: 1 } 28% { transform: translate(calc(var(--dx) * 0.14), calc(var(--dy) * 0.3 - 26px)) scale(0.86) rotate(-3deg); opacity: 1 } 100% { transform: translate(var(--dx), var(--dy)) scale(var(--s)) rotate(5deg); opacity: 0.2 } }
+        @keyframes nuiFolderBump { 0%, 100% { transform: scale(1) } 40% { transform: scale(1.14) } 72% { transform: scale(0.97) } }
         @keyframes btnFly { from { left: ${WELCOME_X - NEXT_R}px } to { left: ${NEXT_X - NEXT_R}px } }
         @keyframes nuiFadeIn { from { opacity: 0 } to { opacity: 1 } }
         @keyframes nuiFadeOut { from { opacity: 1 } to { opacity: 0 } }
@@ -2915,7 +3061,16 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               placed at its own coordinates — it straddles the header edge,
               reading as a white shape on the black and as an outline on the
               white below. Functionality still to come from the owner. */}
-          <svg viewBox="1232.5 33.9 85.1 70" style={{ ...px(1232.5, 33.9, 85.1, 70), zIndex: 13, pointerEvents: "none" }}>
+          {/* ROUND 88 #6: the saving films — each image shrinks and glides
+              into the folder mark; the mark bumps as the last one lands */}
+          {flights.map((fl) => (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img key={"fly" + fl.id} src={fl.src} alt=""
+              style={{ ...px(fl.x, fl.y, fl.w, fl.h), objectFit: "contain", zIndex: 60, pointerEvents: "none", transformOrigin: "center",
+                animation: `nuiFly 1150ms cubic-bezier(.5,.02,.18,1) ${fl.delay}ms both`,
+                ...({ "--dx": `${FOLDER_C.x - (fl.x + fl.w / 2)}px`, "--dy": `${FOLDER_C.y - (fl.y + fl.h / 2)}px`, "--s": `${Math.min(0.14, 52 / Math.max(fl.w, fl.h)).toFixed(3)}` } as React.CSSProperties) }} />
+          ))}
+          <svg key={"fm" + folderBump} viewBox="1232.5 33.9 85.1 70" style={{ ...px(1232.5, 33.9, 85.1, 70), zIndex: 13, pointerEvents: "none", transformOrigin: "50% 62%", animation: folderBump > 0 ? `nuiFolderBump 560ms ${EASE} both` : "none" }}>
             <path d="M1233.31,103.1V38.26c0-1.98,1.34-3.59,2.99-3.59h25.27c.79,0,1.55.38,2.11,1.05l7.74,9.3c.56.67,1.32,1.05,2.11,1.05h25.27c1.65,0,2.99,1.61,2.99,3.59v7.81" fill="#fff" stroke="#000" strokeWidth="0.75" strokeMiterlimit="10" />
             <path d="M1233.31,103.1h68.49l15.03-40.57c.88-2.38-.57-5.05-2.73-5.05h-61.95c-1.18,0-2.25.84-2.73,2.13l-16.11,43.49" fill="#fff" stroke="#000" strokeWidth="0.75" strokeMiterlimit="10" />
           </svg>
@@ -3081,7 +3236,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   else if (page === "options") {
                     /* round 7 #12: warn instead of silently ignoring */
                     if (selected >= 0) go("backdetails");
-                    else { setWarn(t("Select a label design to continue")); setTimeout(() => setWarn(""), 3200); }
+                    else { setWarn(t("Save a label design to continue")); setTimeout(() => setWarn(""), 3200); }
                   }
                   else if (page === "backdetails") {
                     if (markets.length || noComp) nextFromCompliance();

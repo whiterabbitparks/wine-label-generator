@@ -2007,6 +2007,34 @@ composition-contract tightening, then customer wiring.
   Roman). Curation = ~20 VALUES per style across 5-6 axes, not 30 parts.
   FONT LICENSING flagged: live type in a delivered PDF means the font
   travels — commercial faces (Helvetica Neue World) may not permit it.
+- ROUND 88 — SAVE FILMS + THE LIVE TREE (2026-09-19). (#6/#7/#10) a
+  "Save" flies the image into the header's folder mark: flyToFolder()
+  clones it as an absolutely placed <img> with CSS vars --dx/--dy/--s and
+  the nuiFly keyframes (a slight lift and tilt first, then the glide,
+  1150 ms, cubic-bezier(.5,.02,.18,1)); several images go 150 ms apart
+  and the mark bumps (nuiFolderBump) as the last lands. (#9) the options
+  page: "Select" ring → black SAVE button under the variations (white
+  "Saved" once chosen; saveFront()), gate text "Save a label design to
+  continue", dots in up to TWO rows of 15 (DOTS_PER_ROW; MAX_VARS 29;
+  the variations button greys when full). (#7) back label: Save under
+  Edit (backSaved, reset when backPng changes). (#10) assets: Save under
+  the dashed area's left corner (assetsSaved, reset on assetsSig); shots,
+  hero and thumbs fly in sequence. (#8) back label frame 10 px off, like
+  the front. (#1) the Final Pack tree is LIVE: the baked tree is wiped
+  (patch 760,92,600,450) and redrawn — caption, trunk (nuiGrowY), bar
+  from the trunk to the left-most branch (nuiGrowXR), branches, icons
+  (the header's own folder path; a drawn doc for READ ME), names,
+  arrows, then the files line by line (nuiFadeUp) — with the REAL ZIP
+  names under the wine (Wine_Name until typed): Instructions.pdf,
+  Terms&Conditions.pdf, the page link; _Bottle_Front/Back.png,
+  _Image01–05.png; _Front_Label.pdf/.svg, Links/_Front_Artwork.png,
+  Fonts/, _Back_Label.svg. Branches follow packSel; replays on each visit
+  (treeN). WALKTHROUGH: (#2) pét-nat description; (#3) every pause ×1.45
+  (TUT_PACE) and 1.9 s before the self-press — 71 s → 109 s; (#4) the
+  Sparkling bottle's closures are "Sparkling Cork"/"Crown Cap", so the
+  demo closure is "Sparkling Cork" (was "Cork" → empty ring); (#5) the
+  assets step opens already loading (seed() at tut 5) — no grey boxes;
+  the save film plays on the demo's Save too.
 - ROUND 87 — LIVE (2026-09-19, owner "fix those and ship"). The back
   label's TEMP demo placeholders (2026-09-07) are OFF: an empty field
   prints nothing, its title goes with it, the template's rules stay;
