@@ -2007,6 +2007,28 @@ composition-contract tightening, then customer wiring.
   Roman). Curation = ~20 VALUES per style across 5-6 axes, not 30 parts.
   FONT LICENSING flagged: live type in a delivered PDF means the font
   travels — commercial faces (Helvetica Neue World) may not permit it.
+- ROUND 84 — THE WIZARD ON THE HYBRID ENGINE (owner "let's build the
+  web-page", 2026-09-19). /api/dream-label now runs src/lib/label/
+  hybrid.ts::paintHybridLabel — buildArtworkPrompt(ownGround) →
+  gpt-image-own (traditional: paper tone + mask; contemporary/punk: the
+  painter's own ground by kind) → flatGroundOf → composeLabel. No text is
+  painted, so the proofread/strict-redream machinery is gone from this
+  path. The result carries an `id`: the SVG (live type, artwork embedded),
+  PNG, art and prompt live under data/labels/<id>/ (store.ts); the page
+  keeps only the id on the Dream. /api/package takes `frontId` and adds
+  `<wine>_Front_Label.svg` + `Fonts/<the TTFs the SVG sets>` beside the
+  TIFF (fontFilesOf reads font-family/weight/style off the SVG). The
+  customer's sketch rides as an image input (references[] after the
+  masked canvas; reference when unmasked). buildDreamPayload sends the
+  label's real mm; nextFromFront's duplicate payload builder — which STILL
+  carried the Château Margaux demo fallback round 78 removed elsewhere —
+  is gone. Verified: API smoke (punk landscape, traditional portrait with
+  a sketch), the ZIP (TIFF + SVG + 3 TTFs), and a Playwright drive of the
+  real wizard on :3200 (walkthrough → vision → Create → three hybrid
+  labels in 13 s at dev quality, credits 5→2). Variations go through the
+  same path. NOT yet: PDF with live type (next), fonts on the live server
+  (public/fonts/labels → /usr/local/share/fonts + fc-cache) before deploy,
+  the eval "download → correct → upload" diff.
 - ROUND 83 — WAY 1: THE PAINTER CHOOSES THE GROUND (owner 2026-09-19:
   "a list of colours limits variety; every illustration has its own
   background colour — read it off the picture and the ground will be
