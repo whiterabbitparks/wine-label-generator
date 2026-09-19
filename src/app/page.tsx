@@ -87,7 +87,7 @@ const DOT_BIG = 4.92;
 const DOT_SMALL = 3.15;
 const LINE_H = 4;
 const LABEL_BASE = 788.6;      /* white station labels' baseline */
-const NEXT_R = 34;             /* red round button */
+const NEXT_R = 27;             /* red round button — round 87: 20% smaller (was 34) */
 const NEXT_X = 1302.86;        /* its centre on working pages … */
 const WELCOME_X = 168.1;       /* … and on the welcome page */
 const STEPS: { x: number; label: string; page: PageKey; big: boolean }[] = [
@@ -674,6 +674,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   /* ROUND 75 (owner): the new Final Pack has TWO buttons — Download stays
      grey and dead until "Proceed to payment" has gone through */
   const [paid, setPaid] = useState(false);
+  /* round 87 (owner): the button announces each change of role on the
+     Final Pack — arrow → card on arrival, card → download once paid —
+     with the same double pulse the walkthrough's last card uses */
+  useEffect(() => {
+    if (page !== "checkout") return;
+    const id = setTimeout(() => setNudge((n) => n + 1), SLIDE_MS + 120);
+    return () => clearTimeout(id);
+  }, [page, paid]);
   const [warn, setWarn] = useState("");
   /* ROUND 27: honest barcode — we never invent digits; the winery types its
      own number. ROUND 29 #1/#7: any 12- or 13-digit number is ACCEPTED and
@@ -1823,7 +1831,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 <span style={{ ...px(891.8, baseTop(base, 14), 130, 14), font: `700 ${lang === "ge" ? 13 : 14}px ${HNW}`, lineHeight: "14px", color: "#111", whiteSpace: "nowrap" }}>{t(FRONT_LABELS[i])}</span>
                 <input value={f[k2] || ""} placeholder={t(FRONT_PH[i])}
                   onChange={(e) => setF((m) => ({ ...m, [k2]: e.target.value }))}
-                  style={{ ...px(1012, base - IN_BASE * (14 / 15), 288, 20), ...inputStyle, fontSize: 14 }} />
+                  /* round 87 (owner): typed text sat ON its rule line — 2px up */
+                  style={{ ...px(1012, base - IN_BASE * (14 / 15) - 2, 288, 20), ...inputStyle, fontSize: 14 }} />
                 {rowLine(1013, base + 2.5, 1302.86 - 1013, `ln${i}`)}
               </span>
             );
@@ -2027,7 +2036,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 <span style={{ ...px(755.5, baseTop(base, 14), 230, 14), font: `700 ${lang === "ge" ? 13 : 14}px ${HNW}`, lineHeight: "14px", color: "#111", whiteSpace: "nowrap" }}>{t(BACK_LABELS[i])}</span>
                 <input value={b[k] || ""} placeholder={t(BACK_PH[i])}
                   onChange={(e) => setB((m) => ({ ...m, [k]: e.target.value }))}
-                  style={{ ...px(989, base - IN_BASE * (14 / 15), 311, 20), ...inputStyle, fontSize: 14 }} />
+                  style={{ ...px(989, base - IN_BASE * (14 / 15) - 2, 311, 20), ...inputStyle, fontSize: 14 }} />
                 {rowLine(990, base + 2.5, 1302.86 - 990, `bln${i}`)}
               </span>
             );
@@ -2035,7 +2044,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {/* ── barcode (ROUND 27's honest GTIN, in the mock's button row) ── */}
           <span style={{ ...px(139, baseTop(472, 14), 112, 14), font: `700 14px ${HNW}`, lineHeight: "14px" }}>{t("Barcode:")}</span>
           <input value={gtin} onChange={(e) => setGtin(e.target.value)} placeholder="E.g. 4860012345676"
-            style={{ ...px(232, 472 - IN_BASE * (14 / 15), 450, 20), ...inputStyle, fontSize: 14 }} />
+            style={{ ...px(232, 472 - IN_BASE * (14 / 15) - 2, 450, 20), ...inputStyle, fontSize: 14 }} />
           {rowLine(233, 474.5, 686 - 233, "gtln")}
           {gtin.trim() && (
             <span style={{ ...px(233, baseTop(492, 11), 320, 14), font: `11px ${HNW}`, lineHeight: "11px", color: gtinValid ? "#3f6d2a" : "#8e2b2b" }}>
@@ -3101,27 +3110,27 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   width: NEXT_R * 2, height: NEXT_R * 2, borderRadius: NEXT_R, background: BAR_RED, border: "none",
                   padding: 0, cursor: "pointer", pointerEvents: modalOpen ? "none" : "auto", display: "flex", alignItems: "center", justifyContent: "center",
                   animation: arrowFly ? `btnFly ${SLIDE_MS}ms ${EASE} both`
-                    : tut >= 0 && tut >= tutLast && nudge > 0 ? `nuiNudge 1200ms ${EASE} both`
+                    : ((tut >= 0 && tut >= tutLast) || page === "checkout") && nudge > 0 ? `nuiNudge 1200ms ${EASE} both`
                     : pressed > 0 ? `nuiPress 260ms ${EASE} both` : "none",
                 }}>
                 {/* round 71: the artboard's arrow — 34.3 long, 3px stroke,
                     its head 10.52 deep */}
                 {page === "checkout" && !gensMode && paid ? (
                   /* the owner's download tray (Red_Buttons_Pay&Download.svg) */
-                  <svg viewBox="0 0 40 40" width="40" height="40">
+                  <svg viewBox="0 0 40 40" width="32" height="32">
                     <path d="M8 20 V32 H32 V20" fill="none" stroke="#fff" strokeWidth="3" strokeLinejoin="miter" />
                     <line x1="20" y1="6" x2="20" y2="24" stroke="#fff" strokeWidth="3" />
                     <polyline points="13,17 20,24.5 27,17" fill="none" stroke="#fff" strokeWidth="3" />
                   </svg>
                 ) : page === "checkout" ? (
                   /* the owner's card */
-                  <svg viewBox="0 0 44 32" width="44" height="32">
+                  <svg viewBox="0 0 44 32" width="35" height="25.5">
                     <rect x="2.5" y="2.5" width="39" height="27" rx="3.5" fill="none" stroke="#fff" strokeWidth="3" />
                     <line x1="2.5" y1="11" x2="41.5" y2="11" stroke="#fff" strokeWidth="3" />
                     <rect x="29" y="19" width="7" height="4" fill="#fff" />
                   </svg>
                 ) : (
-                  <svg viewBox="-1.5 -12.02 37.3 24.04" width="37.3" height="24.04">
+                  <svg viewBox="-1.5 -12.02 37.3 24.04" width="29.8" height="19.2">
                     <line x1="0" y1="0" x2="34.3" y2="0" stroke="#fff" strokeWidth="3" />
                     <polyline points="23.78,-10.52 34.3,0 23.78,10.52" fill="none" stroke="#fff" strokeWidth="3" />
                   </svg>

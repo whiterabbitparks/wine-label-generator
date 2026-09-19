@@ -2007,6 +2007,23 @@ composition-contract tightening, then customer wiring.
   Roman). Curation = ~20 VALUES per style across 5-6 axes, not 30 parts.
   FONT LICENSING flagged: live type in a delivered PDF means the font
   travels — commercial faces (Helvetica Neue World) may not permit it.
+- ROUND 87 — LIVE (2026-09-19, owner "fix those and ship"). The back
+  label's TEMP demo placeholders (2026-09-07) are OFF: an empty field
+  prints nothing, its title goes with it, the template's rules stay;
+  numeric minimums (12.5 % / 750 ml / 81 kcal) remain for the regulatory
+  maths. Form inputs (front + back details, barcode) sit 2 px higher so
+  typed text no longer rides its rule line. The red round button is 20 %
+  smaller everywhere (NEXT_R 34 → 27, icons scaled) and on the Final Pack
+  it double-pulses (nuiNudge) when it becomes the card and again when it
+  becomes the download. DEPLOYED to 2.28.48.43 from this branch (rsync
+  --exclude data; label fonts installed to /usr/local/share/fonts/
+  8k-labels + fc-cache; npm ci; build; restart). COSTS (owner asked): the
+  wizard calls only OpenAI's image model (key in .env.local, pay-as-you-go
+  on platform.openai.com — no subscription); FAL was used only on /eval.
+  One pack = 3 front paintings + 2 product shots + 5 lifestyle = 10
+  images; variations are free (re-layout in code). At IMAGE_QUALITY=dev
+  ("low") that is roughly $0.15–0.20 per pack at list prices; "medium"
+  ~ $0.6, "high" ~ $2.5. Verify on the OpenAI usage page.
 - ROUND 86 — VARIATIONS WITHOUT GENERATIONS + THE KORRA WALKTHROUGH
   (2026-09-19). (#3, owner's idea) a Variation now KEEPS the column's
   painting and re-sets the type with a fresh seed — relayoutLabel() in
