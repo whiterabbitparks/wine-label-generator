@@ -234,8 +234,15 @@ export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt, extra
     /* round 90: our canvas goes in; Ideogram takes the white mask, nano-
        banana only the instruction (no mask on that endpoint) */
     case "ideogram-3-edit": {
+      /* run #17: Ideogram loves lettering — it wrote paragraphs of gibberish
+         and echoed "RACHA" into the picture on 5 of 18. The no-text law goes
+         FIRST (early tokens weigh most) and again as a negative prompt. */
       const { paper, maskWhite } = await paperAndMask(ap.aspect, ap.paper || "#F4EFE3");
-      Object.assign(body, { prompt: (ap.prompt + canvasLine).slice(0, 1900), image_url: paper, mask_url: maskWhite, rendering_speed: "BALANCED", expand_prompt: false });
+      const noText = "ABSOLUTELY NO TEXT: no letters, no words, no numbers, no captions, no signs, no paragraphs, no lorem ipsum, no watermark, no border, no frame — a pure wordless illustration. ";
+      Object.assign(body, {
+        prompt: (noText + ap.prompt + canvasLine).slice(0, 1900), image_url: paper, mask_url: maskWhite, rendering_speed: "BALANCED", expand_prompt: false,
+        negative_prompt: "text, letters, words, lettering, typography, caption, label, sign, paragraph, watermark, signature, border, frame",
+      });
       break;
     }
     case "nano-banana-edit": {

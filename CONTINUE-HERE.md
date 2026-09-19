@@ -2007,6 +2007,31 @@ composition-contract tightening, then customer wiring.
   Roman). Curation = ~20 VALUES per style across 5-6 axes, not 30 parts.
   FONT LICENSING flagged: live type in a delivered PDF means the font
   travels — commercial faces (Helvetica Neue World) may not permit it.
+- ROUND 90 — THE OTHER PAINTERS JOIN (2026-09-19, owner: "why aren't we
+  using the models we praised? plug them in"). The hybrid engine can take
+  any painter that leaves the type zone alone, so two fal painters now
+  paint ON OUR CANVAS: `ideogram-3-edit` (fal-ai/ideogram/v3/edit — our
+  paper as image_url, a WHITE-window-on-black mask as mask_url; both
+  accept data URIs) and `nano-banana-edit` (fal-ai/nano-banana/edit —
+  the paper as image_urls[0], the band by instruction only; no mask on
+  that endpoint). EvalModel.canvas marks them; the eval gives fal
+  painters without a canvas the way-1 ask. Runs: #17 Ideogram-on-canvas
+  18/18 — clean bands everywhere, often striking (Tsolikouri's river
+  vista, the colour-block Chinuri, the purple stag), BUT lettering on
+  5/18 (gibberish paragraphs, "RACHA GEORGIA", "KARTLI"), a framed
+  border once, Svaneti towers on Racha again → the no-text law now leads
+  the ask and rides as negative_prompt (accepted by the endpoint; rerun
+  = "hybrid-ideogram-canvas-notext"). #18 nano-banana-on-canvas 18/18 —
+  keeps the band by instruction alone; traditional excellent; on bold
+  punk grounds it paints a picture-in-picture (a cream plate with a
+  seam) on 5/6, contemporary subtly so. WIRING: src/lib/label/
+  painters.ts (WIZARD_PAINTERS, DEFAULT_PAINTERS, painterFor(style) from
+  settings "painters"), /api/admin/painters, PaintersCard in /admin →
+  Rules (one select per style); hybrid.ts asks painterFor(style) and
+  gives canvas painters a paper tone (ownGround only for gpt-image-own).
+  Default stays gpt-image-own until the owner chooses. Walkthrough (#1):
+  tap(…, onTap) marks the selection the instant the ring blooms (bottle
+  rings, markets, QR, Save) — the mark used to come a beat later.
 - ROUND 89 — NIGHT NOTES (2026-09-19, owner asleep). (#1) the walkthrough
   no longer plays the variation re-roll (round 73 #7 retired): on the
   options page the pointer goes straight to Save on column 2 and the

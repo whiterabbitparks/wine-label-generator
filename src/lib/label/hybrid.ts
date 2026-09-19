@@ -4,6 +4,7 @@ import { flatGroundOf } from "@/lib/typeset/palette";
 import { faceFile } from "@/lib/typeset/fonts";
 import type { Layout } from "@/lib/typeset/compose";
 import { gen429 } from "@/lib/dream/engine";
+import { painterFor } from "./painters";
 
 /* THE HYBRID ENGINE for the wizard (branch POPIKA_Back_To_Vector, round
    84, 2026-09-19). What /eval proved in rounds 79–83, as ONE call:
@@ -54,8 +55,11 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput> 
   const widthMm = Math.min(300, Math.max(30, inp.widthMm || 110));
   const heightMm = Math.min(300, Math.max(30, inp.heightMm || 80));
   const brief = { id: "wizard", title: "wizard", vision: inp.vision, data: inp.data, width: widthMm, height: heightMm };
-  const ap = await buildArtworkPrompt(brief, style, seed, { ownGround: true });
-  const model = evalModel("gpt-image-own")!;
+  /* round 90: the painter is the owner's choice per style (admin → Rules
+     → Painters); canvas painters get a paper tone, the own-ground painter
+     chooses its own */
+  const model = evalModel(await painterFor(style)) || evalModel("gpt-image-own")!;
+  const ap = await buildArtworkPrompt(brief, style, seed, { ownGround: model.id === "gpt-image-own" });
   const art = await gen429(() => generateArtwork(model, ap, { sketch: inp.sketch || null }));
   /* no paper given (contemporary / punk): the ground is read off the picture */
   const ground = ap.paper || (await flatGroundOf(art)).colour;
