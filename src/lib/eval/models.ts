@@ -5,6 +5,7 @@ import { DEFAULT_REGIONS } from "./regions";
 import type { EvalBrief } from "./briefs";
 import { aspectOf } from "./briefs";
 import { mix } from "@/lib/typeset/fonts";
+import { verifyImage, NO_TEXT_RULE } from "@/lib/admin/image-rules";
 
 /* THE PAINTERS (branch POPIKA_Back_To_Vector, 2026-09-18).
 
@@ -194,6 +195,20 @@ async function paperAndMask(aspect: ArtworkPrompt["aspect"], colour: string): Pr
   const maskWhite = await sharp({ create: { width: W, height: H, channels: 3, background: "#000" } })
     .composite([{ input: white, left: m, top: m }]).png().toBuffer();
   return { paper: `data:image/png;base64,${paper.toString("base64")}`, mask: `data:image/png;base64,${mask.toString("base64")}`, maskWhite: `data:image/png;base64,${maskWhite.toString("base64")}` };
+}
+
+/* THE NO-TEXT GATE (round 90): Ideogram wrote lettering on 5/18, then
+   3/18 with the law in the ask — so a canvas painter's picture is LOOKED
+   AT (gpt-4o-mini vision, the old engine's verifyImage) and repainted
+   once if any text is seen. gpt-image needs no gate (0 text in ~100). */
+export async function generateArtworkChecked(model: EvalModel, ap: ArtworkPrompt, extra: { sketch?: string | null } = {}): Promise<{ art: string; retried: boolean }> {
+  let art = await generateArtwork(model, ap, extra);
+  if (model.via !== "fal") return { art, retried: false };
+  try {
+    const v = await verifyImage(art, [NO_TEXT_RULE]);
+    if (!v.ok) { art = await generateArtwork(model, ap, extra); return { art, retried: true }; }
+  } catch { /* the gate never blocks a painting */ }
+  return { art, retried: false };
 }
 
 export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt, extra: { sketch?: string | null } = {}): Promise<string> {

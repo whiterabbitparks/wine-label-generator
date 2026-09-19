@@ -6,7 +6,7 @@ import { requestIsAuthenticated } from "@/lib/admin/session";
 import { listRefs } from "@/lib/admin/style-refs";
 import { runDreamPhase } from "@/lib/dream/engine";
 import { EVAL_BRIEFS, EVAL_STYLES, EVAL_FAULTS, aspectOf, type EvalBrief, type EvalItem, type EvalRun, type EvalRating, type EvalFault, type EvalMode } from "@/lib/eval/briefs";
-import { EVAL_MODELS, evalModel, buildArtworkPrompt, generateArtwork, type EvalModel } from "@/lib/eval/models";
+import { EVAL_MODELS, evalModel, buildArtworkPrompt, generateArtwork, generateArtworkChecked, type EvalModel } from "@/lib/eval/models";
 import { composeLabel } from "@/lib/typeset/compose";
 import { flatGroundOf } from "@/lib/typeset/palette";
 import { textsOf } from "@/lib/label/hybrid";
@@ -52,9 +52,9 @@ async function paintItem(run: EvalRun, model: EvalModel, brief: EvalBrief, item:
          no mask — the ground is read off their picture) */
       const ap = await buildArtworkPrompt(brief, item.style, seed, { ownGround: model.id === "gpt-image-own" || (model.via === "fal" && !model.canvas) });
       item.prompt = ap.prompt; item.card = ap.card;
-      const art = await generateArtwork(model, ap);
+      const { art, retried } = await generateArtworkChecked(model, ap);
       /* way 1: no paper was given, so the ground is read off the picture */
-      let paper = ap.paper, own = "";
+      let paper = ap.paper, own = retried ? " · repainted (text seen)" : "";
       if (!paper) {
         const g = await flatGroundOf(art);
         paper = g.colour;

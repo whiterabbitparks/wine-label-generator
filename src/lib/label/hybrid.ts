@@ -1,4 +1,4 @@
-import { buildArtworkPrompt, evalModel, generateArtwork } from "@/lib/eval/models";
+import { buildArtworkPrompt, evalModel, generateArtworkChecked } from "@/lib/eval/models";
 import { composeLabel } from "@/lib/typeset/compose";
 import { flatGroundOf } from "@/lib/typeset/palette";
 import { faceFile } from "@/lib/typeset/fonts";
@@ -60,7 +60,7 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput> 
      chooses its own */
   const model = evalModel(await painterFor(style)) || evalModel("gpt-image-own")!;
   const ap = await buildArtworkPrompt(brief, style, seed, { ownGround: model.id === "gpt-image-own" });
-  const art = await gen429(() => generateArtwork(model, ap, { sketch: inp.sketch || null }));
+  const { art } = await gen429(() => generateArtworkChecked(model, ap, { sketch: inp.sketch || null }));
   /* no paper given (contemporary / punk): the ground is read off the picture */
   const ground = ap.paper || (await flatGroundOf(art)).colour;
   const out = await composeLabel({ artwork: art, style, texts: textsOf(inp.data), widthMm, heightMm, seed, paper: ground, wineColour: inp.data.wineColorName });
