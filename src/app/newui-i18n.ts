@@ -251,6 +251,7 @@ export const UI_GE: Record<string, string> = {
   "© 8K Labels — a demo interface built from your uploaded mockup": "© 8K Labels — საჩვენებელი ინტერფეისი თქვენი მაკეტიდან",
   "classic interface": "კლასიკური ინტერფეისი",
   "Feel free to leave out fields you don't want on your front label.": "გამოტოვეთ ველები, რომლებიც არ გსურთ, რომ გამოჩნდეს მთავარ ეტიკეტზე.",
+  "Type each field exactly as it should print: capitals, spelling and language stay as you enter them.": "ჩაწერეთ ზუსტად ისე, როგორც ეტიკეტზე უნდა დაიბეჭდოს — დიდი და პატარა ასოები, მართლწერა და ენა ისე რჩება, როგორც აკრეფთ.",
   "Width:": "სიგანე:",
   "Height:": "სიმაღლე:",
   "mm": "მმ",

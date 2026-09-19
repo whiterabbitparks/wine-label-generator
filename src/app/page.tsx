@@ -1862,8 +1862,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {/* ── left: the vision ── */}
           <span style={{ ...px(137.14, baseTop(149.08, 24), 600, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t("YOUR VISION")}</span>
           <span style={{ ...px(137.14, baseTop(183, 14), 600, 40), font: `italic 14px ${HNW}`, lineHeight: "18px", color: "#111" }}>
-            {t("If you have a specific idea for the front label, describe it in simple words")}<br />
-            {t("or upload a sketch or photo reference. Or, let us suggest ideas for you.")}
+            {/* round 95 #1: one flowing paragraph — the second sentence follows on the same line */}
+            {t("If you have a specific idea for the front label, describe it in simple words")} {t("or upload a sketch or photo reference. Or, let us suggest ideas for you.")}
           </span>
           <label style={{ ...px(138, 275, 240, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, textTransform: "none" }}>
             <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
@@ -1900,8 +1900,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {dashRule(788, 133, 522, true, "vrule")}
           {/* ── right: the label's own details ── */}
           <span style={{ ...px(891.8, baseTop(149.08, 24), 500, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t("FRONT LABEL DETAILS")}</span>
-          <span style={{ ...px(891.8, baseTop(183, 14), 400, 40), font: `italic 14px ${HNW}`, lineHeight: "18px", color: "#111" }}>
-            {t("Feel free to leave out fields you don't want on your front label.")}</span>
+          <span style={{ ...px(891.8, baseTop(183, 14), 410, 76), font: `italic 14px ${HNW}`, lineHeight: "18px", color: "#111" }}>
+            {t("Feel free to leave out fields you don't want on your front label.")}<br />
+            {/* round 95 #2 (owner): what they type is what prints — case and language */}
+            {t("Type each field exactly as it should print: capitals, spelling and language stay as you enter them.")}</span>
           {FRONT_ROWS.map((k2, i) => {
             const base = 284.5 + i * 30;
             return (
@@ -3279,8 +3281,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                       <span key={"t" + i} style={{ position: "absolute", left: TB.pad, top: baseTop(58.06 + i * 18, 15), width: TB.w - TB.pad, font: `700 ${lang === "ge" ? 11 : 15}px ${HNW}`, lineHeight: "15px", color: "#fff", whiteSpace: "nowrap" }}>{t(ln)}</span>
                     ))}
                     <div style={{ position: "absolute", left: TB.pad + 0.63, top: 93.67, width: TB.rule, height: 1, backgroundImage: "repeating-linear-gradient(90deg,#fff 0 5px,transparent 5px 10px)" }} />
-                    {card.body.map((ln, i) => (
-                      <span key={"b" + i} style={{ position: "absolute", left: TB.pad, top: baseTop(118.57 + i * 14.4, 12), width: TB.w - TB.pad + 6, font: `italic ${lang === "ge" ? 9 : 12}px ${HNW}`, lineHeight: "12px", color: "#fff", whiteSpace: "nowrap" }}>{t(ln)}</span>
+                    {lang === "ge" ? (
+                      <span style={{ position: "absolute", left: TB.pad, top: baseTop(118.57, 12), width: TB.w - TB.pad * 2 + 4, font: `italic 9.5px ${HNW}`, lineHeight: "14.4px", color: "#fff" }}>{card.body.map((ln) => t(ln)).join(" ")}</span>
+                    ) : card.body.map((ln, i) => (
+                      <span key={"b" + i} style={{ position: "absolute", left: TB.pad, top: baseTop(118.57 + i * 14.4, 12), width: TB.w - TB.pad + 6, font: `italic 12px ${HNW}`, lineHeight: "12px", color: "#fff", whiteSpace: "nowrap" }}>{t(ln)}</span>
                     ))}
                   </>)}
                 </div>
@@ -3505,7 +3509,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             const cap = (txt: string) => <span style={{ font: `700 ${lang === "ge" ? fs - 2 : fs}px ${HNW}`, lineHeight: "15px", whiteSpace: "nowrap" }}>{txt}</span>;
             const val = (txt: string) => <span style={{ font: `italic ${fs}px ${HNW}`, lineHeight: "15px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{txt}</span>;
             const colTitle = (x: number, txt: string) => (
-              <span style={{ position: "absolute", left: x, top: baseTop(162.8, 21), font: `700 21px ${HNW}`, lineHeight: "21px", whiteSpace: "nowrap" }}>{txt}</span>
+              <span style={{ position: "absolute", left: x, top: baseTop(162.8, 21), font: `700 ${lang === "ge" ? 15 : 18}px ${HNW}`, lineHeight: "21px", whiteSpace: "nowrap" }}>{txt}</span>
             );
             /* ROUND 74 #1 (owner): the two label previews must stand the
                SAME height — they are the same physical height on the bottle,

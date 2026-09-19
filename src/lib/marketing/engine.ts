@@ -247,8 +247,14 @@ export function buildShotPrompt(b: MarketingBrief, side: "front" | "back", hasSh
     /* round 56 #4 (owner's THIRD report of label-height drift): the back
        shot no longer trusts words alone — the finished FRONT shot rides
        along as a reference to copy */
+    /* ROUND 95 #5 (owner: the back shot carried the FRONT label): the
+       reference photo is for scale and position ONLY — its label is never
+       copied; a back label is a plain text label and may be nearly empty */
+    (side === "back"
+      ? `THIS IS THE BACK OF THE BOTTLE: the label on it is the BACK label — the FIRST attached image, a plain text-only label — even if it is sparse or nearly empty. The front label's artwork, illustration and title must NOT appear anywhere in this photograph; never substitute, blend or reuse the front label. `
+      : "") +
     (hasFrontRef
-      ? `The ${hasShape ? "THIRD" : "SECOND"} attached image is the finished FRONT-view photograph of THIS VERY BOTTLE — the same physical bottle rotated 180°. COPY its bottle size, position, framing and lighting EXACTLY, and place the back label in EXACTLY the same vertical band at EXACTLY the same height as the front label sits in that photo. The two photographs must overlay perfectly; only the label artwork differs. `
+      ? `The ${hasShape ? "THIRD" : "SECOND"} attached image is the finished FRONT-view photograph of THIS VERY BOTTLE — the same physical bottle rotated 180°. COPY its bottle size, position, framing and lighting EXACTLY, and place the back label in EXACTLY the same vertical band at EXACTLY the same height as the front label sits in that photo. The two photographs must overlay perfectly; only the label differs — and the label here is the BACK label (first image), NOT the one visible in that reference photo. `
       : "") +
     `Lighting: crisp premium studio softbox lighting, elegant vertical highlights along the glass, true colours, razor-sharp focus. ` +
     `CUTOUT: pure transparent background, no surface, no table, no cast shadow, no glow or halo around the silhouette — a clean isolated product cutout.` +
