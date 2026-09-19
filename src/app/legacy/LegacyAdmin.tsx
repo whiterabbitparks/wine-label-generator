@@ -352,7 +352,7 @@ function VerifiedRulesSection() {
       ))}
       <div style={{ marginTop: 10, display: "flex", gap: 12, alignItems: "center" }}>
         <button style={S.btn} disabled={busy} onClick={save}>{busy ? "Saving…" : "Save verified rules"}</button>
-        {saved && <span style={{ color: "#5a6b3b", fontSize: 12 }}>Saved ✓ — applies to every next generation</span>}
+        {saved && <span style={{ color: "#111", fontSize: 12 }}>Saved ✓ — applies to every next generation</span>}
       </div>
     </div>
   );
@@ -497,7 +497,7 @@ interface PlayResult {
 function layoutBadge(w: number | undefined) {
   const v = w ?? 1;
   const [label, color] =
-    v > 1 ? ["selected", "#5a6b3b"] : v < 1 ? ["rejected", "#a03030"] : ["unrated", "#8a887e"];
+    v > 1 ? ["selected", "#111"] : v < 1 ? ["rejected", "#a03030"] : ["unrated", "#8a887e"];
   return (
     <span style={{ fontSize: 11, border: `1px solid ${color}`, color, borderRadius: 4, padding: "1px 7px" }}>
       {label}
@@ -509,8 +509,8 @@ function layoutBadge(w: number | undefined) {
 function weightBadge(w: number | undefined) {
   const v = w ?? 1;
   const [label, color] =
-    v >= 1.8 ? ["favourite", "#5a6b3b"] :
-    v > 1.05 ? ["boosted", "#5a6b3b"] :
+    v >= 1.8 ? ["favourite", "#111"] :
+    v > 1.05 ? ["boosted", "#111"] :
     v <= 0.1 ? ["retired", "#a03030"] :
     v < 0.95 ? ["fading", "#a06a30"] : ["neutral", "#8a887e"];
   return (
@@ -611,7 +611,7 @@ function PlaygroundTab() {
       <div style={S.card}>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
           <div>
-      <VerifiedRulesSection />
+      {/* round 97: the illustration rules live once, in Painters & Rules */}
             <label style={S.label}>Style</label>
             <select style={S.input} value={style} onChange={(e) => setStyle(e.target.value)}>
               {STYLE_DEFS.map(([k, name]) => (
@@ -681,7 +681,7 @@ function PlaygroundTab() {
                     <p style={{ fontSize: 11, color: "#a03030", margin: "6px 0 0" }}>⚠ rule check failed even after retry: {res.check.violations.join("; ")}</p>
                   )}
                   {res.check && res.check.ok && (
-                    <p style={{ fontSize: 11, color: "#5a6b3b", margin: "6px 0 0" }}>✓ passed your image rules</p>
+                    <p style={{ fontSize: 11, color: "#111", margin: "6px 0 0" }}>✓ passed your image rules</p>
                   )}
                   <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
                     <input
@@ -801,7 +801,7 @@ function GenerationsTab() {
                   <td style={S.td}>{(g.durationMs / 1000).toFixed(1)}s</td>
                   <td style={S.td}>
                     {g.imageUrl ? (
-                      <a href={g.imageUrl} target="_blank" rel="noreferrer" style={{ color: "#5a6b3b" }}>
+                      <a href={g.imageUrl} target="_blank" rel="noreferrer" style={{ color: "#111" }}>
                         view
                       </a>
                     ) : (
@@ -970,21 +970,24 @@ function UsersTab({ onSessionLost }: { onSessionLost: () => void }) {
 
 /* ---------------- styles ---------------- */
 
+/* ROUND 97 (owner: "build the admin in the site's style"): white ground,
+   the site's Helvetica (HNW, self-hosted for the wizard), black hairlines,
+   black buttons — one language for the customer's site and its admin. */
 const S: Record<string, React.CSSProperties> = {
-  page: { minHeight: "100vh", background: "#f0f0ee", padding: "32px 20px", fontFamily: "'Hepta Slab', Georgia, serif", color: "#1e1e1e" },
-  h1: { fontSize: 19, fontWeight: 700 },
-  tabbar: { display: "flex", gap: 2, flexWrap: "wrap", borderBottom: "2px solid #d8d7cf", marginTop: 8 },
-  tab: { font: "inherit", fontSize: 11, fontWeight: 700, letterSpacing: 0.2, whiteSpace: "nowrap", background: "transparent", border: "none", borderBottomWidth: 3, borderBottomStyle: "solid", borderBottomColor: "transparent", padding: "7px 9px", cursor: "pointer", color: "#8a887e", marginBottom: -2 },
-  tabActive: { color: "#3f4d2a", borderBottomColor: "#5a6b3b" },
-  card: { background: "#fff", border: "1px solid #ddd", borderRadius: 8, padding: 14, marginTop: 12 },
-  label: { display: "block", fontSize: 11, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", color: "#5a5a52", margin: "10px 0 5px" },
-  input: { width: "100%", boxSizing: "border-box", font: "inherit", fontSize: 13, padding: "6px 9px", border: "1px solid #ccc", borderRadius: 6, background: "#fdfdfb" },
-  btn: { font: "inherit", fontSize: 13, fontWeight: 700, background: "#5a6b3b", color: "#fff", border: "none", borderRadius: 6, padding: "7px 15px", cursor: "pointer" },
-  btnGhost: { font: "inherit", fontSize: 13, background: "transparent", color: "#5a6b3b", border: "1px solid #5a6b3b", borderRadius: 6, padding: "6px 12px", cursor: "pointer" },
-  linkBtn: { font: "inherit", fontSize: 13, background: "none", border: "none", padding: 0, color: "#5a6b3b", textDecoration: "underline", cursor: "pointer" },
-  mono: { font: "12px/1.5 Menlo, Consolas, monospace", background: "#f4f3ee", border: "1px solid #e2e1da", borderRadius: 6, padding: 12, whiteSpace: "pre-wrap", wordBreak: "break-word" },
-  th: { textAlign: "left", borderBottom: "2px solid #ddd", padding: "6px 8px", fontSize: 11, textTransform: "uppercase", color: "#5a5a52" },
-  td: { borderBottom: "1px solid #eee", padding: "6px 8px", verticalAlign: "top" },
+  page: { minHeight: "100vh", background: "#fff", padding: "28px 24px 60px", fontFamily: "'HNW', 'Helvetica Neue', Helvetica, Arial, sans-serif", color: "#111", fontSize: 14 },
+  h1: { fontSize: 24, fontWeight: 700, letterSpacing: 0, margin: "0 0 6px", fontFamily: "inherit" },
+  tabbar: { display: "flex", gap: 28, flexWrap: "wrap", borderBottom: "1px solid #111", marginTop: 10 },
+  tab: { font: "inherit", fontSize: 13, fontWeight: 400, letterSpacing: 0.2, whiteSpace: "nowrap", background: "transparent", border: "none", borderBottom: "2px solid transparent", padding: "10px 0", marginBottom: -1, color: "#8a887e", cursor: "pointer" },
+  tabActive: { color: "#111", fontWeight: 700, borderBottomColor: "#111" },
+  card: { background: "#fff", border: "1px solid #111", borderRadius: 0, padding: 18, marginTop: 16 },
+  label: { display: "block", fontSize: 12, fontWeight: 700, letterSpacing: 0.3, textTransform: "uppercase", color: "#111", margin: "12px 0 6px", fontFamily: "inherit" },
+  input: { width: "100%", boxSizing: "border-box", font: "inherit", fontSize: 13, padding: "7px 10px", border: "1px solid #111", borderRadius: 0, background: "#fff", color: "#111" },
+  btn: { font: "inherit", fontSize: 12, fontWeight: 400, letterSpacing: 0.3, background: "#111", color: "#fff", border: "1px solid #111", borderRadius: 0, padding: "8px 18px", cursor: "pointer" },
+  btnGhost: { font: "inherit", fontSize: 12, letterSpacing: 0.3, background: "#fff", color: "#111", border: "1px solid #111", borderRadius: 0, padding: "7px 14px", cursor: "pointer" },
+  linkBtn: { font: "inherit", fontSize: 13, background: "none", border: "none", padding: 0, color: "#111", textDecoration: "underline", cursor: "pointer" },
+  mono: { font: "12px/1.5 Menlo, Consolas, monospace", background: "#F4F3EE", border: "1px solid #111", borderRadius: 0, padding: 12, whiteSpace: "pre-wrap", wordBreak: "break-word" },
+  th: { textAlign: "left", borderBottom: "1px solid #111", padding: "6px 8px", fontSize: 11, textTransform: "uppercase", color: "#111", letterSpacing: 0.3 },
+  td: { borderBottom: "1px solid #E3E3E1", padding: "6px 8px", verticalAlign: "top" },
 };
 
 /* ================= LAYOUT SECTION (owner, 2026-08-14 restart) =================
@@ -1089,7 +1092,7 @@ function LayoutTab() {
               </div>
             </div>
             {mine.some((r) => r.buildRequest) && (
-              <p style={{ fontSize: 13, color: "#5a6b3b", margin: "10px 0 0" }}>
+              <p style={{ fontSize: 13, color: "#111", margin: "10px 0 0" }}>
                 🔨 {mine.filter((r) => r.buildRequest).length} label(s) marked &ldquo;build as composition&rdquo; —
                 tell Claude to build them and they become real layouts in the playground.
               </p>
@@ -1099,10 +1102,10 @@ function LayoutTab() {
                 {mine.map((r) => (
                   <div key={r.id} style={{ position: "relative" }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={r.url} alt={r.name} style={{ width: 110, height: 110, objectFit: "cover", border: r.buildRequest ? "3px solid #5a6b3b" : "1px solid #999" }} />
+                    <img src={r.url} alt={r.name} style={{ width: 110, height: 110, objectFit: "cover", border: r.buildRequest ? "3px solid #111" : "1px solid #999" }} />
                     <button title={r.buildRequest ? "Unmark — don't build this layout" : "Mark: build this label's layout as a composition"}
                       onClick={() => toggleBuild(r)}
-                      style={{ position: "absolute", bottom: 2, left: 2, border: "none", background: r.buildRequest ? "#5a6b3b" : "#fff", color: r.buildRequest ? "#fff" : "#111", cursor: "pointer", lineHeight: 1.2, fontSize: 11, padding: "1px 4px" }}>🔨</button>
+                      style={{ position: "absolute", bottom: 2, left: 2, border: "none", background: r.buildRequest ? "#111" : "#fff", color: r.buildRequest ? "#fff" : "#111", cursor: "pointer", lineHeight: 1.2, fontSize: 11, padding: "1px 4px" }}>🔨</button>
                     <button title="Delete" onClick={() => remove(r.id)}
                       style={{ position: "absolute", top: 2, right: 2, border: "none", background: "#fff", cursor: "pointer", lineHeight: 1 }}>×</button>
                   </div>
@@ -1146,7 +1149,7 @@ function LayoutTab() {
           style={{ ...S.input, marginTop: 10, minHeight: 70 }} />
         <div style={{ marginTop: 10, display: "flex", gap: 12, alignItems: "center" }}>
           <button style={S.btn} disabled={busy === "rules"} onClick={saveRules}>{busy === "rules" ? "Saving…" : "Save rules"}</button>
-          {saved && <span style={{ color: "#5a6b3b" }}>Saved ✓</span>}
+          {saved && <span style={{ color: "#111" }}>Saved ✓</span>}
         </div>
       </section>
     </div>
@@ -1399,12 +1402,12 @@ function LayoutPlaygroundTab() {
           </h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
             {approved.map((c) => (
-              <div key={"ap" + c.st + c.variant + "s" + c.seed} style={{ border: "2px solid #5a6b3b", background: "#fff", padding: 8 }}>
+              <div key={"ap" + c.st + c.variant + "s" + c.seed} style={{ border: "2px solid #111", background: "#fff", padding: 8 }}>
                 <div style={{ width: "100%" }} dangerouslySetInnerHTML={{ __html: c.svg.replace(/width="110mm" height="80mm"/, 'width="100%" height="auto"') }} />
                 <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center" }}>
                   <b style={{ fontSize: 12 }}>{(STYLE_DEFS.find(([k]) => k === c.st) || [, c.st])[1]}</b>
                   <span style={{ fontSize: 11, color: "#8a887e" }}>comp #{c.variant + 1}</span>
-                  <b style={{ color: "#5a6b3b", fontSize: 12 }}>Selected ✓</b>
+                  <b style={{ color: "#111", fontSize: 12 }}>Selected ✓</b>
                   {c.legacy && (
                     <span title="Approved before looks existed — pins the arrangement only; fonts and colours still rotate."
                       style={{ fontSize: 11, color: "#a06010", border: "1px solid #a06010", padding: "1px 6px" }}>
@@ -1445,7 +1448,7 @@ function LayoutPlaygroundTab() {
                 </span>
               )}
               {c.done ? (
-                <b style={{ color: c.done === "approve" ? "#5a6b3b" : "#a03030" }}>{c.done === "approve" ? "Approved ✓" : "Rejected ✕"}</b>
+                <b style={{ color: c.done === "approve" ? "#111" : "#a03030" }}>{c.done === "approve" ? "Approved ✓" : "Rejected ✕"}</b>
               ) : (
                 <>
                   <button style={{ ...S.btnGhost, padding: "5px 14px" }} onClick={() => verdict(i, "approve")}>Approve</button>
@@ -1548,7 +1551,7 @@ function FontsTab() {
   function card(style: string, f: FontRow, inPool: boolean) {
     const cs = caseIn(style, f);
     return (
-      <div key={fontKey(f)} style={{ border: inPool ? "2px solid #5a6b3b" : "1px solid #c2c0b8", background: "#fff", padding: "7px 10px 6px" }}>
+      <div key={fontKey(f)} style={{ border: inPool ? "2px solid #111" : "1px solid #c2c0b8", background: "#fff", padding: "7px 10px 6px" }}>
         <div style={{ fontFamily: f.family, fontWeight: f.weight, fontSize: roleDef.size, lineHeight: 1.3, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis", opacity: cs === "upper" ? 1 : 0.3 }}>
           {base.toUpperCase()}
         </div>
@@ -1561,9 +1564,9 @@ function FontsTab() {
             <>
               <span style={{ display: "inline-flex", border: "1px solid #999", borderRadius: 4, overflow: "hidden" }} title="Case on final labels">
                 <button onClick={() => setCase(style, f, null)}
-                  style={{ ...btn, border: "none", background: cs !== "upper" ? "#5a6b3b" : "#fff", color: cs !== "upper" ? "#fff" : "#4a4a42" }}>Aa</button>
+                  style={{ ...btn, border: "none", background: cs !== "upper" ? "#111" : "#fff", color: cs !== "upper" ? "#fff" : "#4a4a42" }}>Aa</button>
                 <button onClick={() => setCase(style, f, "upper")}
-                  style={{ ...btn, border: "none", background: cs === "upper" ? "#5a6b3b" : "#fff", color: cs === "upper" ? "#fff" : "#4a4a42" }}>AA</button>
+                  style={{ ...btn, border: "none", background: cs === "upper" ? "#111" : "#fff", color: cs === "upper" ? "#fff" : "#4a4a42" }}>AA</button>
               </span>
               <span style={{ flex: 1 }} />
               <button style={{ ...btn, background: "#fff", border: "1px solid #a03030", borderRadius: 4, color: "#a03030" }}
@@ -1571,7 +1574,7 @@ function FontsTab() {
             </>
           ) : (
             <>
-              <button style={{ ...btn, background: "#fff", border: "1px solid #5a6b3b", borderRadius: 4, color: "#5a6b3b" }}
+              <button style={{ ...btn, background: "#fff", border: "1px solid #111", borderRadius: 4, color: "#111" }}
                 onClick={() => verdict(style, f, "approve")}>Approve</button>
               <button style={{ ...btn, background: "#fff", border: "1px solid #a03030", borderRadius: 4, color: "#a03030" }}
                 onClick={() => verdict(style, f, "reject")}>Reject</button>
@@ -1599,11 +1602,11 @@ function FontsTab() {
           {STYLE_DEFS.map(([k, n]) => <option key={k} value={k}>{n}</option>)}
           <option value="selected">★ Selected fonts</option>
         </select>
-        <div style={{ display: "flex", border: "1px solid #5a6b3b", borderRadius: 5, overflow: "hidden" }}>
+        <div style={{ display: "flex", border: "1px solid #111", borderRadius: 5, overflow: "hidden" }}>
           {ROLE_DEFS.map((r) => (
             <button key={r.key} onClick={() => setRole(r.key)} title={r.hint}
               style={{ font: "inherit", fontSize: 12, padding: "6px 11px", border: "none", cursor: "pointer",
-                background: role === r.key ? "#5a6b3b" : "transparent", color: role === r.key ? "#fff" : "#5a6b3b" }}>
+                background: role === r.key ? "#111" : "transparent", color: role === r.key ? "#fff" : "#111" }}>
               {r.name}
             </button>
           ))}
@@ -1630,14 +1633,14 @@ function FontsTab() {
         ))
       ) : (
         <>
-          <div style={{ border: "1px dashed #5a6b3b", padding: "8px 10px", marginBottom: 12, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <div style={{ border: "1px dashed #111", padding: "8px 10px", marginBottom: 12, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             <b style={{ fontSize: 12 }}>Add a specific font:</b>
             <input style={{ ...S.input, width: 200, padding: "5px 8px", fontSize: 13 }} value={addName}
               placeholder='Google Fonts name, e.g. "Lobster Two"'
               onChange={(e) => { setAddName(e.target.value); setAddMsg(""); }}
               onKeyDown={(e) => { if (e.key === "Enter") addByName(); }} />
             <button style={{ ...S.btn, padding: "5px 13px", fontSize: 12 }} onClick={addByName}>Add to my pool</button>
-            {addMsg && <span style={{ fontSize: 11, color: addMsg.startsWith("Added") ? "#5a6b3b" : "#a03030" }}>{addMsg}</span>}
+            {addMsg && <span style={{ fontSize: 11, color: addMsg.startsWith("Added") ? "#111" : "#a03030" }}>{addMsg}</span>}
           </div>
           <div style={{ display: "flex", alignItems: "baseline", gap: 12, margin: "0 0 8px", flexWrap: "wrap" }}>
             <span style={{ fontSize: 12, color: "#8a887e" }}>
@@ -1711,7 +1714,7 @@ function HardRulesTab() {
           onChange={(e) => setArtFill(e.target.value)}
           style={{ ...S.input, width: 90 }} /> <span>% — bigger = bolder artwork, may bleed off the label edge</span>
         <button style={{ ...S.btn, marginLeft: 8 }} onClick={save}>Save</button>
-        {saved && <span style={{ fontSize: 12, color: saved.startsWith("Saved") ? "#5a6b3b" : "#a03030" }}>{saved}</span>}
+        {saved && <span style={{ fontSize: 12, color: saved.startsWith("Saved") ? "#111" : "#a03030" }}>{saved}</span>}
       </div>
     </div>
   );
@@ -1940,13 +1943,13 @@ function ProofBenchTab() {
             <>
               <button style={S.btnGhost} onClick={reroll}>Re-render layouts (same artwork)</button>
               <button style={S.btnGhost} onClick={() => setShowZones((v) => !v)}>{showZones ? "Hide" : "Show"} quiet zones</button>
-              <button style={{ ...S.btnGhost, ...(intg ? { background: "#5a6b3b", color: "#fff" } : {}) }} onClick={toggleIntegrated}>
+              <button style={{ ...S.btnGhost, ...(intg ? { background: "#111", color: "#fff" } : {}) }} onClick={toggleIntegrated}>
                 {intg ? "Integrated preview ON" : "Integrated preview"}
               </button>
             </>
           )}
           {busy && <div style={{ flex: 1, height: 6, background: "#e4e3db", borderRadius: 3 }}>
-            <div style={{ width: `${Math.round(prog * 100)}%`, height: "100%", background: "#5a6b3b", borderRadius: 3, transition: "width .4s" }} />
+            <div style={{ width: `${Math.round(prog * 100)}%`, height: "100%", background: "#111", borderRadius: 3, transition: "width .4s" }} />
           </div>}
         </div>
         {err && <p style={{ color: "#a03030", fontSize: 13 }}>{err}</p>}
@@ -1988,7 +1991,7 @@ function ProofBenchTab() {
               <div dangerouslySetInnerHTML={{ __html: c.svg.replace(/width="110mm" height="80mm"/, 'width="100%"') }} />
               {/* quiet zones mapped into LABEL space at the artwork's real placement */}
               {showZones && labelZones(c).map((z, i) => (
-                <div key={i} style={{ position: "absolute", left: `${z.x}%`, top: `${z.y}%`, width: `${z.w}%`, height: `${z.h}%`, outline: "2px dashed #5a6b3b", outlineOffset: -2, pointerEvents: "none", background: "rgba(90,107,59,0.06)" }} />
+                <div key={i} style={{ position: "absolute", left: `${z.x}%`, top: `${z.y}%`, width: `${z.w}%`, height: `${z.h}%`, outline: "2px dashed #111", outlineOffset: -2, pointerEvents: "none", background: "rgba(90,107,59,0.06)" }} />
               ))}
             </div>
             <div style={{ width: 170, flex: "none" }}>
@@ -1998,7 +2001,7 @@ function ProofBenchTab() {
                 {/* artwork mini-map with quiet zones (image intelligence) */}
                 {c.imgUrl && <img src={c.imgUrl} alt="" style={{ width: "100%", display: "block", background: "#fff", border: "1px solid #e2e1da" }} />}
                 {(c.analysis?.quiet || []).map((q, i) => (
-                  <div key={i} style={{ position: "absolute", left: `${q.x * 100}%`, top: `${q.y * 100}%`, width: `${q.w * 100}%`, height: `${q.h * 100}%`, outline: "2px dashed #5a6b3b", outlineOffset: -2, background: "rgba(90,107,59,0.08)" }} />
+                  <div key={i} style={{ position: "absolute", left: `${q.x * 100}%`, top: `${q.y * 100}%`, width: `${q.w * 100}%`, height: `${q.h * 100}%`, outline: "2px dashed #111", outlineOffset: -2, background: "rgba(90,107,59,0.08)" }} />
                 ))}
               </div>
               {c.analysis && (
@@ -2027,7 +2030,7 @@ function ProofBenchTab() {
                       const on = rej[c.style].chips.includes(f);
                       return (
                         <button key={f} onClick={() => setRej((m) => ({ ...m, [c.style]: { ...m[c.style], chips: on ? m[c.style].chips.filter((x) => x !== f) : [...m[c.style].chips, f] } }))}
-                          style={{ font: "inherit", fontSize: 11, padding: "3px 8px", borderRadius: 10, cursor: "pointer", border: "1px solid #5a6b3b", background: on ? "#5a6b3b" : "transparent", color: on ? "#fff" : "#5a6b3b" }}>
+                          style={{ font: "inherit", fontSize: 11, padding: "3px 8px", borderRadius: 10, cursor: "pointer", border: "1px solid #111", background: on ? "#111" : "transparent", color: on ? "#fff" : "#111" }}>
                           {f}
                         </button>
                       );

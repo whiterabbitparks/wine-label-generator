@@ -29,11 +29,11 @@ export function PaintersCard() {
     <div style={S.card}>
       <label style={{ ...S.label, margin: 0 }}>Painters — who paints the artwork, per style</label>
       <p style={{ fontSize: 12, color: "#6b6a60", margin: "6px 0 10px" }}>
-        The type is always set by code; the painter only paints the picture. Compare painters on /eval first, then choose here. Applies to the next generation.
+        The type is always set by code; the painter only paints the picture. Compare painters in Evaluate first, then choose here. Applies to the next generation.
       </p>
       {STYLES.map((st) => (
         <div key={st} style={{ display: "grid", gridTemplateColumns: "150px 1fr", gap: 8, alignItems: "center", marginBottom: 8 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, textTransform: "capitalize" }}>{st}</span>
+          <span style={{ fontSize: 13, fontWeight: 700, textTransform: "capitalize" }}>{st === "punk" ? "Funky" : st}</span>
           <select value={map[st] || ""} onChange={(e) => setMap({ ...map, [st]: e.target.value })} style={{ ...S.input, width: 360 }}>
             {options.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
           </select>
