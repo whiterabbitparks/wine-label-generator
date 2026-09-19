@@ -109,8 +109,12 @@ function wineMood(colour?: string): string {
   if (/spark/.test(c)) return "PALETTE: a sparkling wine — light, airy: pale gold, chalk, green, sky; nothing heavy or dark-red. ";
   return "";
 }
-export function groundFor(style: string, seed: number): string {
-  const list = GROUNDS[style] || GROUNDS.traditional;
+export function groundFor(style: string, seed: number, soft = false): string {
+  /* round 91 (owner: "the backgrounds are ruined — small pictures locked in
+     weird bright colours"): a CANVAS painter (Ideogram / nano-banana) never
+     gets the bold punk list — paper and pale tones only; the colour lives
+     in the picture, which now bleeds to the edges */
+  const list = soft ? (style === "traditional" ? GROUNDS.traditional : GROUNDS.contemporary) : (GROUNDS[style] || GROUNDS.traditional);
   /* salt 7: the ground must not move in lockstep with the faces (1–3) */
   return list[mix(seed, 7) % list.length];
 }
@@ -136,14 +140,14 @@ export async function regionNote(region: string): Promise<string> {
    planned together instead of fighting afterwards.
    `short` is the same ask without the house-feedback tail, for painters
    that cap the prompt (Recraft: 1000 characters). */
-export async function buildArtworkPrompt(brief: EvalBrief, style: string, seed = 0, opts: { ownGround?: boolean } = {}): Promise<ArtworkPrompt> {
+export async function buildArtworkPrompt(brief: EvalBrief, style: string, seed = 0, opts: { ownGround?: boolean; softGround?: boolean } = {}): Promise<ArtworkPrompt> {
   const aspect = aspectOf(brief);
   const zone = zoneOf(aspect);
   const g = await artworkGuidance(style);
   const d = brief.data;
   const place = [d.region, d.country].filter(Boolean).join(", ");
   /* paper "" = the painter chooses (way 1); traditional always gets paper */
-  const paper = opts.ownGround && style !== "traditional" ? "" : groundFor(style, seed);
+  const paper = opts.ownGround && style !== "traditional" ? "" : groundFor(style, seed, !!opts.softGround);
   const dark = !!paper && (() => { const n = parseInt(paper.slice(1), 16); return (0.2126 * (n >> 16) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255 < 0.45; })();
   const gaz = await regionNote(d.region);
   const head =
@@ -176,7 +180,7 @@ const FAL_RATIO: Record<ArtworkPrompt["aspect"], string> = { landscape: "4:3", p
 /* a plain paper canvas and a mask that opens ONLY the art region — the
    type zone (the same bottom band the prompt asks for) stays opaque, so
    the edit endpoint hands it back untouched */
-async function paperAndMask(aspect: ArtworkPrompt["aspect"], colour: string): Promise<{ paper: string; mask: string; maskWhite: string }> {
+async function paperAndMask(aspect: ArtworkPrompt["aspect"], colour: string, marginFrac = 0.04): Promise<{ paper: string; mask: string; maskWhite: string }> {
   const sharp = (await import("sharp")).default;
   const W = aspect === "portrait" ? 1024 : aspect === "square" ? 1024 : 1536;
   const H = aspect === "portrait" ? 1536 : aspect === "square" ? 1024 : 1024;
@@ -184,7 +188,7 @@ async function paperAndMask(aspect: ArtworkPrompt["aspect"], colour: string): Pr
   const paper = await sharp({ create: { width: W, height: H, channels: 4, background: { r: n >> 16, g: (n >> 8) & 255, b: n & 255, alpha: 1 } } }).png().toBuffer();
   /* the open (transparent) window: top ~60% for landscape/square, ~65% for
      portrait, with a 4% margin at the top and sides */
-  const m = Math.round(W * 0.04);
+  const m = Math.round(W * marginFrac);
   const openH = Math.round(H * (aspect === "portrait" ? 0.65 : 0.6)) - m;
   const window = await sharp({ create: { width: W - 2 * m, height: openH, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } }).png().toBuffer();
   const mask = await sharp({ create: { width: W, height: H, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 1 } } })
@@ -252,7 +256,9 @@ export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt, extra
       /* run #17: Ideogram loves lettering — it wrote paragraphs of gibberish
          and echoed "RACHA" into the picture on 5 of 18. The no-text law goes
          FIRST (early tokens weigh most) and again as a negative prompt. */
-      const { paper, maskWhite } = await paperAndMask(ap.aspect, ap.paper || "#F4EFE3");
+      /* round 91: the window runs edge to edge (no 4 % frame) so the
+         picture bleeds like the own-ground painter's, not a framed plate */
+      const { paper, maskWhite } = await paperAndMask(ap.aspect, ap.paper || "#F4EFE3", 0);
       const noText = "ABSOLUTELY NO TEXT: no letters, no words, no numbers, no captions, no signs, no paragraphs, no lorem ipsum, no watermark, no border, no frame — a pure wordless illustration. ";
       Object.assign(body, {
         prompt: (noText + ap.prompt + canvasLine).slice(0, 1900), image_url: paper, mask_url: maskWhite, rendering_speed: "BALANCED", expand_prompt: false,
@@ -261,8 +267,8 @@ export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt, extra
       break;
     }
     case "nano-banana-edit": {
-      const { paper } = await paperAndMask(ap.aspect, ap.paper || "#F4EFE3");
-      Object.assign(body, { prompt: (ap.prompt + canvasLine + " Keep the canvas's exact size and proportions.").slice(0, 1900), image_urls: [paper], output_format: "png" });
+      const { paper } = await paperAndMask(ap.aspect, ap.paper || "#F4EFE3", 0);
+      Object.assign(body, { prompt: (ap.prompt + canvasLine + " The illustration fills the upper part of the canvas from edge to edge — never a smaller picture sitting inside the canvas, never a frame. Keep the canvas's exact size and proportions.").slice(0, 1900), image_urls: [paper], output_format: "png" });
       break;
     }
   }

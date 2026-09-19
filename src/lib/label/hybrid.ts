@@ -59,7 +59,7 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput> 
      → Painters); canvas painters get a paper tone, the own-ground painter
      chooses its own */
   const model = evalModel(await painterFor(style)) || evalModel("gpt-image-own")!;
-  const ap = await buildArtworkPrompt(brief, style, seed, { ownGround: model.id === "gpt-image-own" });
+  const ap = await buildArtworkPrompt(brief, style, seed, { ownGround: model.id === "gpt-image-own", softGround: !!model.canvas });
   const { art } = await gen429(() => generateArtworkChecked(model, ap, { sketch: inp.sketch || null }));
   /* no paper given (contemporary / punk): the ground is read off the picture */
   const ground = ap.paper || (await flatGroundOf(art)).colour;

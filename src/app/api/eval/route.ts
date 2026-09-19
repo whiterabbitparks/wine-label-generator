@@ -50,7 +50,7 @@ async function paintItem(run: EvalRun, model: EvalModel, brief: EvalBrief, item:
       const seed = [...item.id].reduce((h, c) => ((h * 33) ^ c.charCodeAt(0)) >>> 0, 5381);
       /* way 1 for the own-ground painter AND every fal painter (they take
          no mask — the ground is read off their picture) */
-      const ap = await buildArtworkPrompt(brief, item.style, seed, { ownGround: model.id === "gpt-image-own" || (model.via === "fal" && !model.canvas) });
+      const ap = await buildArtworkPrompt(brief, item.style, seed, { ownGround: model.id === "gpt-image-own" || (model.via === "fal" && !model.canvas), softGround: !!model.canvas });
       item.prompt = ap.prompt; item.card = ap.card;
       const { art, retried } = await generateArtworkChecked(model, ap);
       /* way 1: no paper was given, so the ground is read off the picture */
