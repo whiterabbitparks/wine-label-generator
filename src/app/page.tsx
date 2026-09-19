@@ -2533,13 +2533,25 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           </span>
         );
         /* round 57 #3: `quiet` cells show NO message — just the grey box */
-        const slot = (x: number, y: number, w2: number, h2: number, it: { full: string; prev: string } | undefined, loadKey: string, fit: "cover" | "contain", quiet = false, onPick?: () => void) =>
-          it ? (
+        /* ROUND 92 #1 (owner): the product shots read small — the PNG carries
+           transparent air around the bottle — so the shot slots draw at
+           130 % (a transform, the box stays put; the air overflows unseen) */
+        const SHOT_ZOOM = 1.3;
+        const slot = (x: number, y: number, w2: number, h2: number, it: { full: string; prev: string } | undefined, loadKey: string, fit: "cover" | "contain", quiet = false, onPick?: () => void, zoom = 1) =>
+          it ? (zoom !== 1 ? (
+            /* the zoomed shot lives in a clip the width of its column, so
+               a wide picture can never cross the dashed rules */
+            <div key={loadKey} style={{ ...px(x + w2 / 2 - 67, BOX.y + 2, 134, BOX.h - 4), overflow: "hidden" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={it.prev} alt="" onClick={onPick} title={onPick ? t("Show this one big") : undefined}
+                style={{ position: "absolute", left: 67 - w2 / 2, top: y - BOX.y - 2, width: w2, height: h2, objectFit: fit, animation: `nuiFadeIn ${FADE_MS}ms ${EASE}`, cursor: onPick ? "pointer" : undefined, transform: `scale(${zoom})`, transformOrigin: "center" }} />
+            </div>
+          ) : (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img key={loadKey} src={it.prev} alt="" onClick={onPick}
               title={onPick ? t("Show this one big") : undefined}
               style={{ ...px(x, y, w2, h2), objectFit: fit, animation: `nuiFadeIn ${FADE_MS}ms ${EASE}`, cursor: onPick ? "pointer" : undefined }} />
-          ) : (
+          )) : (
             /* round 86 #4 (owner): in the SMALL thumbs the dots sat on the
                box's bottom edge — there the group rides higher, the dots
                closer under the glass */
@@ -2586,10 +2598,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {cross(BOX.x + BOX.w, BOX.y, "as3")}{cross(BOX.x + BOX.w, BOX.y + BOX.h, "as4")}
           {/* product shots — split col 1, centred in each half */}
           {custom
-            ? slot((BOX.x + R2) / 2 - 60, Y0, 120, CH, assets.front, "front shot", "contain")
+            ? slot((BOX.x + R2) / 2 - 60, Y0, 120, CH, assets.front, "front shot", "contain", false, undefined, SHOT_ZOOM)
             : (<>
-              {slot((BOX.x + R1) / 2 - 60, Y0, 120, CH, assets.front, "front shot", "contain")}
-              {slot((R1 + R2) / 2 - 60, Y0, 120, CH, assets.back, "back shot", "contain")}
+              {slot((BOX.x + R1) / 2 - 60, Y0, 120, CH, assets.front, "front shot", "contain", false, undefined, SHOT_ZOOM)}
+              {slot((R1 + R2) / 2 - 60, Y0, 120, CH, assets.back, "back shot", "contain", false, undefined, SHOT_ZOOM)}
             </>)}
           {/* ROUND 88 #10 (owner): SAVE under the dashed area's left corner,
               outside it, on its left edge — every image flies into the
@@ -2598,8 +2610,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             <button onClick={() => {
               setAssetsSaved(true);
               const items: { src: string; x: number; y: number; w: number; h: number }[] = [];
-              if (assets.front) items.push({ src: assets.front.prev, x: (custom ? (BOX.x + R2) / 2 : (BOX.x + R1) / 2) - 60, y: Y0, w: 120, h: CH });
-              if (!custom && assets.back) items.push({ src: assets.back.prev, x: (R1 + R2) / 2 - 60, y: Y0, w: 120, h: CH });
+              /* the shots fly from their zoomed box */
+              const zw = 120 * SHOT_ZOOM, zh = CH * SHOT_ZOOM, zdx = (zw - 120) / 2, zdy = (zh - CH) / 2;
+              if (assets.front) items.push({ src: assets.front.prev, x: (custom ? (BOX.x + R2) / 2 : (BOX.x + R1) / 2) - 60 - zdx, y: Y0 - zdy, w: zw, h: zh });
+              if (!custom && assets.back) items.push({ src: assets.back.prev, x: (R1 + R2) / 2 - 60 - zdx, y: Y0 - zdy, w: zw, h: zh });
               const hero = assets.life[lifeOrder[0]];
               if (hero) items.push({ src: hero.prev, x: HERO.x, y: Y0, w: HERO.w, h: CH });
               thumbs.forEach((th, k) => { const it = assets.life[lifeOrder[k + 1]]; if (it) items.push({ src: it.prev, x: th.x, y: th.y, w: th.s, h: th.s }); });
