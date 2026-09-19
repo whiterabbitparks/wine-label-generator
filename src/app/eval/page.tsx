@@ -180,9 +180,10 @@ export default function EvalPage() {
           </div>
           <div>
             <label style={{ ...S.label, marginTop: 0 }}>Mode</label>
-            <select value={mode} onChange={(e) => setMode(e.target.value as EvalMode)} style={{ ...S.input, width: 150 }}>
+            <select value={mode} onChange={(e) => { const m = e.target.value as EvalMode; setMode(m); if (m === "hybrid") setModel("gpt-image-masked"); }} style={{ ...S.input, width: 190 }}>
+              <option value="hybrid">hybrid — full label, new engine</option>
               <option value="artwork">artwork only</option>
-              <option value="label">whole label</option>
+              <option value="label">whole label (old engine)</option>
             </select>
           </div>
           <div>

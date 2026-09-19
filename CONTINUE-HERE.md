@@ -2007,6 +2007,34 @@ composition-contract tightening, then customer wiring.
   Roman). Curation = ~20 VALUES per style across 5-6 axes, not 30 parts.
   FONT LICENSING flagged: live type in a delivered PDF means the font
   travels — commercial faces (Helvetica Neue World) may not permit it.
+- ROUND 81 — THE TYPOGRAPHY ENGINE, v1.1 (2026-09-19). src/lib/typeset/:
+  fonts.ts — the legacy engine's Google pool (34 families, 61 TTFs) is
+  DOWNLOADED to public/fonts/labels/ (opentype.js measures every line;
+  librsvg renders the same file — install them as system fonts:
+  ~/Library/Fonts/8k-labels locally, /usr/local/share/fonts on the
+  server + fc-cache, the back-label lesson) and distilled into per-style
+  ROLE POOLS (hero / secondary / small + alignment: traditional centred
+  serif, contemporary left sans, punk left rough), picked by seed.
+  Owner 2026-09-19: labels use ONLY Google fonts (the UI face gets
+  swapped for a free one at the very end). palette.ts — inkOf() samples
+  the drawing's dominant DARK ink (median, outlier-proof) + accent +
+  paper; inkFootOf() finds the last inked row. compose.ts — sets the
+  type INTO the band of a masked artwork: measured hierarchy (producer /
+  HERO / appellation+vintage / classification·grape·origin / special /
+  legal), fit by closing gaps → dropping the least important line →
+  shrinking with floors (hero ≥ 2.2x 7pt, never under 2x the secondary),
+  legal pinned to the 5 mm foot, ink from the art. LESSONS from the
+  smokes, now law: (a) the type starts below the drawing's LAST INKED
+  ROW, not the mask window — gpt-image feathers past its mask (the
+  masked "guarantee" is soft: 18/18 looked clean, but the foot drifts
+  60→75%); (b) when the drawing leaves too little room the ART YIELDS
+  (drawn smaller, top-anchored) before the type is crushed; (c) a
+  varietal's grape is never printed twice. Output: SVG with live type
+  (the future PDF) + PNG; /eval mode "hybrid" runs masked painter →
+  composer, files PNG + SVG + the raw art; OpenAI-backed runs go one
+  style at a time with a 3s breath (the per-minute quota). opentype.js
+  needs the NAMESPACE import (no ES default) and the exact file bytes
+  (Buffer slab trap).
 - ROUND 80 — THE OWNER'S BLIND VERDICT (2026-09-18/19). Overall (all
   styles): #10 gpt-image MASKED 3.53 (punk 4.6!) · #4 nano-banana 3.39
   (trad 4.2, punk 4.0, cont 2.0) · #1 baseline 3.00 · #6 gpt-image plain

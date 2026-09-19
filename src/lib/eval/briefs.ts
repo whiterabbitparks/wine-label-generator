@@ -123,8 +123,10 @@ export interface EvalItem {
 }
 
 /* "label" = today's whole-label dream (type painted by the model);
-   "artwork" = the hybrid's ask — illustration only, a zone left for type */
-export type EvalMode = "label" | "artwork";
+   "artwork" = the hybrid's ask — illustration only, a zone left for type;
+   "hybrid" = the new engine end to end — masked artwork, then the type set
+   by code into the band (the first full labels the new way) */
+export type EvalMode = "label" | "artwork" | "hybrid";
 
 export interface EvalRun {
   id: string;
