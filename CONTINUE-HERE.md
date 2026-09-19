@@ -2007,6 +2007,21 @@ composition-contract tightening, then customer wiring.
   Roman). Curation = ~20 VALUES per style across 5-6 axes, not 30 parts.
   FONT LICENSING flagged: live type in a delivered PDF means the font
   travels — commercial faces (Helvetica Neue World) may not permit it.
+- ROUND 91 — "THE BACKGROUNDS ARE RUINED" (2026-09-19). The owner rated
+  the canvas-painter runs (#17 1.94, #18 2.35, #19 2.75, #20 2.17 — vs
+  #15 gpt-image own-ground 3.50) and saw "small illustrations locked in
+  weird bright colours": the CANVAS painters were handed the bold punk
+  GROUNDS list as their paper and a 4 %-framed mask window. The WIZARD
+  never changed (painterFor() default = gpt-image-own, settings
+  "painters" unset) — it has been at the #15 state throughout. Fix for
+  canvas painters: groundFor(style, seed, soft) → paper/pale tones for
+  every style, the window edge to edge (marginFrac 0), nano-banana told
+  "edge to edge, never a smaller picture inside". Run #21 "ideogram-
+  soft": grounds calm, several pictures bleed — but Ideogram still draws
+  a bordered plate INSIDE the window on about half (its habit, not our
+  canvas). Standing recommendation: wizard stays on gpt-image-own;
+  Ideogram / nano-banana remain selectable in /admin → Painters as
+  options, no further spend on them unless the owner asks.
 - ROUND 90 — THE OTHER PAINTERS JOIN (2026-09-19, owner: "why aren't we
   using the models we praised? plug them in"). The hybrid engine can take
   any painter that leaves the type zone alone, so two fal painters now
