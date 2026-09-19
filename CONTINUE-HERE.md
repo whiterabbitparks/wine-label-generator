@@ -2007,6 +2007,41 @@ composition-contract tightening, then customer wiring.
   Roman). Curation = ~20 VALUES per style across 5-6 axes, not 30 parts.
   FONT LICENSING flagged: live type in a delivered PDF means the font
   travels — commercial faces (Helvetica Neue World) may not permit it.
+- ROUND 93 — THE OWNER'S TWENTY-ONE (2026-09-19). MARKETING: (#1) the
+  cork under a capsule is HIDDEN — the old "through the glass, a 45 mm
+  cylinder" clause made the model draw a cork sunk in the neck; the bare
+  cork keeps "seated at the lip, nothing drawn below". (#2) grapes ONLY
+  when the variety is known (grapeLine(colour, grape): no variety → "NO
+  grapes anywhere"; known → exactly that variety, rosé = red-skinned);
+  dealScenarios(…, noGrapes) drops the grape scenes; the wizard sends
+  f.grape; the two marketing payloads lost their last DEMO_FRONT
+  fallbacks (they would have sent "KORRA"/"White"). UI: (#4) page
+  transitions are ONE sheet out then ONE sheet in (sliceDefs → a single
+  slice; the arriving sheet waits SLIDE_MS; go() settles at 2×SLIDE_MS)
+  — the slice cascade of round 16 is retired. (#12/#14) the bottle
+  page's ring (18 px, 2 px stroke, 7.5 px dot) is THE ring: market menu
+  (in a box that can't clip it), Final Pack rows and T&C (dotBtn ring:
+  true r: 9 cover: 24 over the baked rings), credits. (#5) the credits
+  page is drawn live at the page centre — no frame, no carousel, no
+  T&C. (#6) "Total:" and the amount at 30 px bold, same edges, the
+  total 24 px lower (bigTotal). (#7) the progress line ends at the last
+  station on the Final Pack. (#8) EMPTY-DETAILS warning: all front
+  fields empty → modal "All fields are empty" (Edit details / Continue
+  anyway) before the confirm; same for the back details before the
+  compliance step. (#11) the folder mark is a BUTTON to the Final Pack;
+  rows and tree branches for things not yet made read pale (madeRow).
+  (#15/#16) GALLERY: clicking a label (options), the back label, a shot
+  or a marketing image opens it big with ‹ › ✕ and a Save inside; the
+  thumb-for-hero swap is retired. (#17) stacked buttons sit one button-
+  height apart (Save at 633.6 on options, 657.6 on back label; the
+  assets Save at 657.6, right-aligned to the dashed area — #3). (#18)
+  "Upload Another Label" inside the bottle frame, under the bottle.
+  (#19) the folder mark rides above modal veils (zIndex 50). (#20) saved
+  things peek out of the folder as a little deck (savedThumbs()). (#21)
+  README icon redrawn after the owner's drawing. WALKTHROUGH: (#9)
+  Georgian cards use 18/19/12.5/10 px; (#10) demo shots re-exported
+  with their transparent air so the 130 % zoom matches real shots;
+  (#13) "არ მჭირდება".
 - ROUND 92 — SHOTS AT 130 % (2026-09-19). The assets page's two product
   shots draw at 130 % (SHOT_ZOOM, a transform on the img; the slot box
   stays) inside a clip the width of their column, so a wide picture can
