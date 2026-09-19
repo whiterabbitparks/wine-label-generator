@@ -2007,6 +2007,35 @@ composition-contract tightening, then customer wiring.
   Roman). Curation = ~20 VALUES per style across 5-6 axes, not 30 parts.
   FONT LICENSING flagged: live type in a delivered PDF means the font
   travels — commercial faces (Helvetica Neue World) may not permit it.
+- ROUND 80 — THE OWNER'S BLIND VERDICT (2026-09-18/19). Overall (all
+  styles): #10 gpt-image MASKED 3.53 (punk 4.6!) · #4 nano-banana 3.39
+  (trad 4.2, punk 4.0, cont 2.0) · #1 baseline 3.00 · #6 gpt-image plain
+  2.93 (cont 4.3, punk 1.6) · #5 ideogram 2.88 (punk 3.8, cont 1.4) ·
+  #8 ideogram rerun 2.67 · #9 cut-out 2.46 (raw material, judged
+  unfairly as a result) · #7/#2 flux 1.9/1.7 · #3 recraft 1.8.
+  FAULT PATTERN: composition / type / colour faults exist ONLY on the
+  baseline and recraft — once type leaves the model's job, composition
+  faults vanish. Subject + technique are what remain. → the hybrid split
+  is validated by the owner's own marks.
+  OWNER'S NOTES that become rules: (1) "avoid specific buildings /
+  architecture if not requested" (x4) — painters invent churches,
+  towers, châteaux → HARD CLAUSE in the artwork ask; (2) "beige bottom
+  makes no sense" on PUNK when the art floats mid-frame (#6) — yet
+  masked punk scored 4.6 because the art fills the window and the band
+  reads as designed paper → the free-space treatment is PER STYLE
+  (traditional/contemporary keep the band; punk gets a full window, or
+  type over art); (3) "too AI / looks like AI" on gpt-image traditional,
+  "amazing technique" on ideogram and nano-banana traditional → hand
+  feel matters most in traditional; (4) contemporary is the weakest
+  style for every painter EXCEPT gpt-image plain (4.3) — its two-colour
+  flat/collage language is the contemporary the owner wants.
+  DECISION (proposed): gpt-image with MASKING as the composer;
+  nano-banana as a second composer (fast, cheap, loved on trad + punk)
+  selectable as a trait; ideogram parked for a later hand-feel/texture
+  pass; flux and recraft dropped. Cut-out kept as an INPUT for layouts
+  that move/scale art — it can only be judged once composed.
+  NEXT BUILD: the typography engine on masked artworks — plus the
+  no-architecture clause, the region gazetteer, and code-side roughness.
 - ROUND 79b — FREE-SPACE RESULTS (2026-09-18, both runs 18/18 after
   one-at-a-time retries; OpenAI's per-minute image quota is the wall —
   even ONE run with 3 styles in parallel trips it, so /api/eval retry
