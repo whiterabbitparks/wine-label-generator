@@ -2007,6 +2007,14 @@ composition-contract tightening, then customer wiring.
   Roman). Curation = ~20 VALUES per style across 5-6 axes, not 30 parts.
   FONT LICENSING flagged: live type in a delivered PDF means the font
   travels — commercial faces (Helvetica Neue World) may not permit it.
+- ROUND 92 — SHOTS AT 130 % (2026-09-19). The assets page's two product
+  shots draw at 130 % (SHOT_ZOOM, a transform on the img; the slot box
+  stays) inside a clip the width of their column, so a wide picture can
+  never cross the dashed rules; the Save film starts from the zoomed
+  box. Reason: the shot PNGs carry transparent air around the bottle, so
+  the bottle read small. Live. NOTE for the fake-generation dev switch:
+  the stand-in label image is landscape and gets clipped by the column —
+  expected; real shots are tall and transparent.
 - ROUND 91 — "THE BACKGROUNDS ARE RUINED" (2026-09-19). The owner rated
   the canvas-painter runs (#17 1.94, #18 2.35, #19 2.75, #20 2.17 — vs
   #15 gpt-image own-ground 3.50) and saw "small illustrations locked in
