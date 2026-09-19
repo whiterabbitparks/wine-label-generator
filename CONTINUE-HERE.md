@@ -2007,6 +2007,21 @@ composition-contract tightening, then customer wiring.
   Roman). Curation = ~20 VALUES per style across 5-6 axes, not 30 parts.
   FONT LICENSING flagged: live type in a delivered PDF means the font
   travels — commercial faces (Helvetica Neue World) may not permit it.
+- ROUND 81c — HYBRID v1, FIRST FULL SET (2026-09-19): run "hybrid-v1"
+  on /eval (#11 in blind order), 18/18 after the Archivo fix (7 retried).
+  The first labels the new way: three visibly different styles
+  (traditional = centred serif over engraving; contemporary = left bold
+  sans / Fraunces over two-colour red-sun art; punk = left rough faces
+  over loud single-ink prints), the wine name at rank on every label,
+  letterspaced secondaries, legal pinned to the 5 mm foot, type in the
+  drawing's own ink (cyan Château on the punk print, blue Tsolikouri).
+  No text errors, no doubled lines, no invented words — by construction.
+  The art yielded (80-98%) on most, i.e. the ink-foot rule fires often:
+  gpt-image's mask is soft. Still open: Racha → towers on every painter
+  (gazetteer), the gap art→type on some (spacing tuning), legal at the
+  7pt floor reads small, contemporary Saperavi's hero ink sampled red
+  from the sun (accent vs ink choice needs a rule). Compare on /eval:
+  Run A = #1 (baseline, whole-label dream) vs Run B = #11 (hybrid v1).
 - ROUND 81 — THE TYPOGRAPHY ENGINE, v1.1 (2026-09-19). src/lib/typeset/:
   fonts.ts — the legacy engine's Google pool (34 families, 61 TTFs) is
   DOWNLOADED to public/fonts/labels/ (opentype.js measures every line;
