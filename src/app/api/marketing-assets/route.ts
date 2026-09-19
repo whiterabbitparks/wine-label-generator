@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   let body: {
     front?: string; back?: string | null;
     bottle?: { type?: string; color?: string; closure?: string; finish?: string; closureColour?: string };
-    wine?: { colour?: string; name?: string };
+    wine?: { colour?: string; name?: string; grape?: string };
     labelMM?: { w?: number; h?: number };
     backLabelMM?: { w?: number; h?: number };
     style?: string; seed?: number;
@@ -39,6 +39,7 @@ export async function POST(req: Request) {
     closureColour: String(body.bottle?.closureColour || "deep red").slice(0, 60),
     wineColour: String(body.wine?.colour || "Red").slice(0, 40),
     wine: String(body.wine?.name || "Wine").slice(0, 120),
+    grape: String(body.wine?.grape || "").slice(0, 80),
     labelWmm: Math.min(300, Math.max(30, Number(body.labelMM?.w) || 110)),
     labelHmm: Math.min(300, Math.max(30, Number(body.labelMM?.h) || 80)),
     /* round 51 #9: the back shot states the BACK label's true size */
@@ -60,7 +61,7 @@ export async function POST(req: Request) {
      prompt WITHOUT generating — proves whether charters+scenes reach the model */
   if ((body as { dryRun?: boolean }).dryRun) {
     const { buildLifestylePrompt, dealScenarios } = await import("@/lib/marketing/engine");
-    const sc = dealScenarios(brief.seed, charters.scenes)[0];
+    const sc = dealScenarios(brief.seed, charters.scenes, 5, !brief.grape)[0];
     const prompt = buildLifestylePrompt(brief, sc.text, charters.life, true, sc.fromBoard);
     return new Response(JSON.stringify({ charters: { life: charters.life.length, shots: charters.shots.length, scenes: charters.scenes.length, fromBoard: sc.fromBoard }, promptStart: prompt.slice(0, 900) }), { headers: { "Content-Type": "application/json" } });
   }

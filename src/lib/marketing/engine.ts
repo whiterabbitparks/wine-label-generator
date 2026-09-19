@@ -89,15 +89,19 @@ function glassWineShade(wineColour: string) {
 
 /* round 49 #9 (owner: red wine kept appearing with WHITE grapes): any
    grapes in a scene must match the wine's colour family */
-function grapeLine(wineColour: string) {
-  const g = /red/i.test(wineColour)
-    ? "DARK red-wine grapes — deep purple-black / blue-black clusters with dusty bloom"
-    : /ros/i.test(wineColour)
-      ? "red-pink grapes — light-red to pink-skinned clusters"
-      : /amber|orange/i.test(wineColour)
-        ? "ripe amber-golden grapes — deep yellow-gold clusters"
-        : "GREEN-GOLD white-wine grapes — pale green to golden clusters";
-  return `GRAPES — NON-NEGOTIABLE: if grapes, grape clusters or vines appear ANYWHERE in the scene, they are ${g}, matching this wine. A red wine NEVER appears with green/white grapes and a white wine NEVER with dark grapes. `;
+/* ROUND 93 #2 (owner, "once and for all"): grapes appear ONLY when the
+   variety is known — and then they are THAT variety. No variety → no
+   grapes anywhere (no pink grapes under a rosé that is made from red
+   grapes, no guessing). Rosé = red-skinned grapes, never pink. */
+export function grapeLine(wineColour: string, grape?: string) {
+  const v = (grape || "").trim();
+  if (!v) return "GRAPES — NON-NEGOTIABLE: NO grapes anywhere in the scene — no grape clusters, no bunches, no grapes on the table, no fruiting vines in focus; the variety is not specified, so none may be invented. ";
+  const skin = /red|ros/i.test(wineColour)
+    ? "dark red-skinned grapes (deep purple-black / blue-black clusters with a dusty bloom) — a rosé is made from RED grapes, never pink ones"
+    : /amber|orange/i.test(wineColour)
+      ? "ripe amber-golden grapes (deep yellow-gold clusters)"
+      : "green-gold white-wine grapes (pale green to golden clusters)";
+  return `GRAPES — NON-NEGOTIABLE: if grapes appear ANYWHERE in the scene they are exactly the variety ${v}, true to that variety's berry size, cluster shape and skin colour — ${skin}. Never a generic or different grape. `;
 }
 
 /* ---- closure ------------------------------------------------------- */
@@ -115,7 +119,11 @@ function closureLine(closure: string, colourCSS: string, finish: string) {
       ? "CLOSURE — NON-NEGOTIABLE: a mushroom sparkling cork held by its BARE wire cage (muselet) with its round metal cap plate — no foil hood; the cage and its neatly twisted wire sit fully visible against the glass"
       /* round 50 #6 (owner: cork kept rendering half-pulled) + #7 (cork
          through the glass had defects) */
-      : "CLOSURE — NON-NEGOTIABLE: a natural cork sits FULLY SEATED in the bare bottle mouth, driven ALL the way in exactly like an unopened bottle — its top level with the glass lip or at most 1–2 mm above it. NEVER half-pulled, never rising tall out of the neck, never partially extracted. NO capsule, NO foil, the glass lip fully visible. THROUGH THE GLASS: where the neck is transparent, the cork inside reads as ONE clean uniform cylinder of natural cork length (~45 mm), crisp and evenly rendered along its FULL length — no doubling, no half-sharp half-hazy sections, no short stubs, no artifacts";
+      /* ROUND 93 #1 (owner: "the cork shows pushed DOWN into the bottle
+         under the cap"): the old "through the glass, a 45 mm cylinder"
+         wording made the model DRAW the cork inside the neck. Now: the
+         cork is seated at the lip and nothing of it is drawn below. */
+      : "CLOSURE — NON-NEGOTIABLE: a natural cork sits FULLY SEATED in the bare bottle mouth, exactly like an unopened bottle — its top level with the glass lip or at most 1–2 mm above it. NEVER half-pulled, never rising tall out of the neck, never partially extracted, and NEVER sunk down inside the neck. NO capsule, NO foil, the glass lip fully visible. Below the lip the neck reads as plain glass — do NOT draw the cork's body inside the neck, no cork cylinder visible through the glass, no second cork lower down";
   switch (closure) {
     case "Screw Cap": return `CLOSURE — NON-NEGOTIABLE: a ${fin} ${col} aluminium SCREW CAP with a clean straight skirt over the bottle mouth and upper neck. There is NO cork and NO foil capsule — a screw cap only`;
     /* round 29 #3: medium-height wax; round 49 #14 (owner: "reads like a
@@ -128,7 +136,10 @@ function closureLine(closure: string, colourCSS: string, finish: string) {
        spelled out: with a foil hood the cage lives entirely UNDER the foil */
     case "Sparkling Cork": return `CLOSURE — NON-NEGOTIABLE: a ${fin} ${col} FOIL HOOD dressed smoothly over the sparkling cork AND its entire wire cage, running down the upper neck with a clean crimped lower edge. The foil COMPLETELY covers the cage — no wire ever pokes through, over or out of the foil; at most the cage's form reads as a soft embossed relief under the foil surface`;
     /* round 50 #7: the visible in-neck cork must be clean and full-length */
-    default: return `CLOSURE — NON-NEGOTIABLE: a natural cork under a ${fin} ${col} foil capsule covering the bottle lip and upper neck. THROUGH THE GLASS: where the neck is transparent below the capsule, the cork inside reads as ONE clean uniform cylinder of natural cork length (~45 mm), crisp and evenly rendered along its FULL length — no doubling, no half-sharp half-hazy sections, no short stubs, no artifacts`;
+    /* round 93 #1: the cork is HIDDEN under the capsule — nothing of it is
+       drawn in the neck below (the old through-the-glass clause put a
+       cork cylinder halfway down the neck on most shots) */
+    default: return `CLOSURE — NON-NEGOTIABLE: a ${fin} ${col} foil capsule covers the bottle lip and upper neck; the cork is entirely HIDDEN under it. Below the capsule the neck shows ONLY glass and the wine's fill level — NO cork is visible inside the neck, no cork cylinder through the glass, nothing sunk down into the bottle. Never a half-pulled or protruding cork`;
   }
 }
 
@@ -174,6 +185,7 @@ function scaleLine(wmm: number, hmm: number, spec: BottleSpec) {
 export interface MarketingBrief {
   bottleType: string; glassColor: string; closure: string; finish: string; closureColour: string;
   wineColour: string; wine: string;
+  grape?: string;          /* round 93 #2: grapes appear only when this is known */
   labelWmm: number; labelHmm: number;
   /* round 51 #9: the back label's own mm (same height, its real width) —
      the back shot's scale line uses these so the model never rescales */
@@ -282,7 +294,7 @@ export function buildLifestylePrompt(b: MarketingBrief, scenario: string, charte
     /* round 41 #1: a red wine once poured ROSÉ in a glass — every visible
        drop must match the label's wine */
     `WINE COLOUR — NON-NEGOTIABLE: any wine visible anywhere in the scene (in glasses, mid-pour, in decanters) is THE SAME wine as in the bottle: ${glassWineShade(b.wineColour)}. Never a different colour, never a different wine. ` +
-    grapeLine(b.wineColour) +
+    grapeLine(b.wineColour, b.grape) +
     /* round 49 #10 (owner: two bottle-in-grapes shots in one set): each
        image knows what the REST of the series shows and must differ */
     (others && others.length
@@ -313,7 +325,7 @@ export function buildLifestylePrompt(b: MarketingBrief, scenario: string, charte
 /* seeded scenario deal — full coverage before repeats, stable per seed.
    round 31: when the owner's board yielded scenes, deal from THOSE —
    the generic list is only the no-board fallback. */
-export function dealScenarios(seed: number, boardScenes?: string[], count = 5): { text: string; fromBoard: boolean }[] {
+export function dealScenarios(seed: number, boardScenes?: string[], count = 5, noGrapes = false): { text: string; fromBoard: boolean }[] {
   let s = seed >>> 0;
   const rnd = () => ((s = (Math.imul(s, 1664525) + 1013904223) >>> 0) / 2 ** 32);
   const shuffle = <T,>(a: T[]) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
@@ -323,7 +335,8 @@ export function dealScenarios(seed: number, boardScenes?: string[], count = 5): 
     let n = 0; for (const w of A) if (B.has(w)) n++;
     return n / Math.max(1, Math.min(A.size, B.size));
   };
-  const generic = shuffle([...SCENARIOS]).map(([, text]) => ({ text, fromBoard: false }));
+  /* round 93 #2: no known variety → the grape scenes are never dealt */
+  const generic = shuffle(SCENARIOS.filter(([, text]) => !noGrapes || !/grape/i.test(text))).map(([, text]) => ({ text, fromBoard: false }));
   /* round 56 #5 (owner: identical prompts again): near-duplicates are
      DELETED, never dealt — when the distinct board pool runs short the
      GENERIC scenarios top it up (they are distinct by construction).
@@ -461,7 +474,7 @@ export async function generateMarketingAssets(
   }
 
   /* round 71 #3 (owner went back to FIVE): five lifestyle images per set/batch */
-  const scenarios = dealScenarios(b.seed, scenes, 5 * (batch + 1)).slice(batch * 5);
+  const scenarios = dealScenarios(b.seed, scenes, 5 * (batch + 1), !b.grape).slice(batch * 5);
   for (let i = 0; i < scenarios.length; i++) {
     send({ type: "progress", stage: `lifestyle ${i + 1}/${scenarios.length}` });
     try {

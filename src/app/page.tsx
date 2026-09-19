@@ -120,7 +120,7 @@ const THICK: Record<PageKey, number | null> = {
   backdesign: CIRCLE_X[3],
   bottle: CIRCLE_X[4],
   assets: CIRCLE_X[5],
-  checkout: NEXT_X - NEXT_R,                     /* up to the red button */
+  checkout: CIRCLE_X[5],                         /* round 93 #7: to the last station, not into the button */
 };
 /* highest station index REACHED — that dot (and earlier ones) turn red */
 const STEP_OF: Record<PageKey, number> = { welcome: -1, vision: 0, loader: 0, options: 1, backdetails: 2, backdesign: 3, bottle: 4, assets: 5, checkout: 5 };
@@ -166,7 +166,13 @@ const PAGE_SLICES: Partial<Record<PageKey, Slice[]>> = {
     { x0: 1110.5, delay: 300 },
   ],
 };
+/* ROUND 93 #4 (owner: "the old page's pieces reappear and slide off"):
+   the content-aware slice cascade (round 16) is retired — every page now
+   leaves as ONE sheet and the next arrives as ONE sheet, after it */
 const sliceDefs = (p: PageKey): Slice[] => {
+  void p;
+  return [{ delay: 0 }];
+  // eslint-disable-next-line no-unreachable
   if (PAGE_SLICES[p]) return PAGE_SLICES[p]!;
   const [b1, b2] = STRIP_BOUNDS[p];
   return [{ y1: b1, delay: STRIP_DELAYS[0] }, { y0: b1, y1: b2, delay: STRIP_DELAYS[1] }, { y0: b2, delay: STRIP_DELAYS[2] }];
@@ -402,6 +408,13 @@ export default function NewUI() {
   const [backSaved, setBackSaved] = useState(false);
   const [assetsSaved, setAssetsSaved] = useState(false);
   const [treeN, setTreeN] = useState(0);        /* round 88 #1: replays the tree reveal */
+  /* round 93 #20: what peeks out of the folder — the saved front label,
+     the saved back label, the saved product shot */
+  const savedThumbs = () => [
+    selected >= 0 ? (viewedDream(selected)?.preview || viewedDream(selected)?.dream || "") : "",
+    backSaved ? backPng : "",
+    assetsSaved ? (assets.front?.prev || "") : "",
+  ].filter(Boolean) as string[];
   const [styleView, setStyleView] = useState<number[]>([0, 0, 0]);
   const [varBusyCol, setVarBusyCol] = useState(-1);
   const STYLES3 = ["traditional", "contemporary", "punk"];
@@ -435,6 +448,10 @@ export default function NewUI() {
   /* ROUND 54 #2: pre-generation confirmation popups — a run starts only
      after the customer reviews everything that shapes the result */
   const [confirmModal, setConfirmModal] = useState<"" | "labels" | "assets">("");
+  /* round 93 #15/#16: the gallery — big picture, arrows, ✕, Save inside */
+  const [gallery, setGallery] = useState<{ items: string[]; index: number; save?: () => void; saved?: boolean } | null>(null);
+  /* round 93 #8: "every field is empty — really?" before moving on */
+  const [emptyWarn, setEmptyWarn] = useState<"" | "front" | "back">("");
   const [assetsTick, setAssetsTick] = useState(0);
   const pendingAssetsSig = useRef("");
   const confirmedAssetsSig = useRef("");
@@ -826,7 +843,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           body: JSON.stringify({
             front: sel.dream, back: backData,
             bottle: { type: bottle.type, color: bottle.color, closure: bottle.closure, finish: bottle.finish, closureColour: shadeRgb() },
-            wine: { colour: wineColor || f.colour || DEMO_FRONT.colour, name: f.wine || DEMO_FRONT.wine },
+            wine: { colour: wineColor || f.colour || "Red", name: f.wine || "Wine", grape: (f.grape || "").trim() },
             labelMM: customLabel ? customDims : { w: Number(f.width) || 110, h: Number(f.height) || 80 },
             /* ROUND 51 #9 (owner: back-shot label height STILL drifts):
                the back shot used to claim the FRONT label's width — the
@@ -906,9 +923,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
      lifeOrder[0] is whatever is showing big, the rest are the thumbs, and
      clicking a thumb swaps it with the hero */
   const [lifeOrder, setLifeOrder] = useState([0, 1, 2, 3, 4]);
-  const swapHero = (slotIdx: number) => setLifeOrder((o) => {
-    const n = [...o]; [n[0], n[slotIdx]] = [n[slotIdx], n[0]]; return n;
-  });
   const moreRunning = useRef(false);
   async function moreVariations() {
     if (assetsRunning.current || moreRunning.current || assetsStage) return;
@@ -935,7 +949,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           body: JSON.stringify({
             front: sel.dream, back: null,
             bottle: { type: bottle.type, color: bottle.color, closure: bottle.closure, finish: bottle.finish, closureColour: shadeRgb() },
-            wine: { colour: wineColor || f.colour || DEMO_FRONT.colour, name: f.wine || DEMO_FRONT.wine },
+            wine: { colour: wineColor || f.colour || "Red", name: f.wine || "Wine", grape: (f.grape || "").trim() },
             labelMM: customLabel ? customDims : { w: Number(f.width) || 110, h: Number(f.height) || 80 },
             style: sel.style, seed, lifeOnly: true, batch,
           }),
@@ -1046,7 +1060,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     /* into the loader the fade starts only after the slide-out (round 9 #1);
        out of the loader the fade completes before the slide (round 21 #1);
        slice cascades extend the settle per page (round 16 #3) */
-    const md = SLIDE_MS + Math.max(maxSliceDelay(cur), maxSliceDelay(next));
+    const md = SLIDE_MS * 2 + Math.max(maxSliceDelay(cur), maxSliceDelay(next));
     const extra = next === "loader" || cur === "loader" ? FADE_MS : 0;
     setTimeout(() => setPrev(null), md + extra + 60);
   }, []);
@@ -1978,7 +1992,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               <div key={fi}>
                 {dv ? (
                   /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={dv.preview || dv.dream} alt={orig.style} onClick={() => { setSelected(fi); setWarn(""); }}
+                  <img src={dv.preview || dv.dream} alt={orig.style} title={t("Show this one big")}
+                    onClick={() => setGallery({ items: [dreams[fi], ...(styleVars[fi] || [])].filter(Boolean).map((d) => (d as Dream).preview || (d as Dream).dream), index: styleView[fi] || 0, save: () => saveFront(fi), saved: selected === fi })}
                     style={{ ...px(lx, ly, lw, lh), cursor: "pointer", objectFit: "fill" }} />
                 ) : (
                   /* a variation is being born — label-shaped loader */
@@ -2022,7 +2037,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             <span key={"grey" + fi}>
               <div style={{ ...px(fr.x + 0.2, 565, OPT_W, 34.3), background: "#ECECEA", color: "#B3B1A8", font: `12px ${HNW}`, letterSpacing: 0.3, display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
                 {t(STYLE_NAMES[fi] + " Variation")}</div>
-              <div style={{ ...px(fr.x + 0.2, 610, OPT_W, 34.3), background: "#ECECEA", color: "#B3B1A8", font: `12px ${HNW}`, letterSpacing: 0.3, display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
+              <div style={{ ...px(fr.x + 0.2, 633.6, OPT_W, 34.3), background: "#ECECEA", color: "#B3B1A8", font: `12px ${HNW}`, letterSpacing: 0.3, display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
                 {t("Save")}</div>
             </span>
           ))}
@@ -2043,7 +2058,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             const on = selected === fi;
             return (
               <button key={"sv" + fi} onClick={() => saveFront(fi)}
-                style={{ ...px(fr.x + 0.2, 610, OPT_W, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: on ? "#fff" : "#111", color: "#111", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, transition: `background 240ms ${EASE}, color 240ms ${EASE}`, ...(on ? {} : { color: "#fff" }) }}>
+                style={{ ...px(fr.x + 0.2, 633.6, OPT_W, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: on ? "#fff" : "#111", color: "#111", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, transition: `background 240ms ${EASE}, color 240ms ${EASE}`, ...(on ? {} : { color: "#fff" }) }}>
                 {on ? t("Saved") : t("Save")}</button>
             );
           })}
@@ -2174,9 +2189,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 backgroundPosition: `${-(FLAG_X[col] - 13 - 250.9) * w2 / 26}px ${-(PNG_ROW[row] - 10 - 289.8) * w2 / 26}px`,
               }} />
             );
+            /* round 93 #12/#14: the bottle page's ring (18 px, 2 px stroke,
+               7.5 px dot) — and a box that cannot clip it */
             const ring = (on: boolean) => (
-              <span style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", width: 11, height: 11 }}>
-                {ringSvg(11, on, { stroke: 1.4, dot: 5.5 })}
+              <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", width: 18, height: 18, overflow: "visible" }}>
+                {ringSvg(18, on, { stroke: 2, dot: 7.5 })}
               </span>
             );
             return (<>
@@ -2255,8 +2272,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           </>)}
           {backPng && (<>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={backPng} alt="back label"
-              style={{ ...px(lx, ly, fit.w, fit.h), objectFit: "fill" }} />
+            <img src={backPng} alt="back label" title={t("Show this one big")}
+              onClick={() => setGallery({ items: [backPng], index: 0, save: () => { setBackSaved(true); flyToFolder([{ src: backPng, x: lx, y: ly, w: fit.w, h: fit.h }]); }, saved: backSaved })}
+              style={{ ...px(lx, ly, fit.w, fit.h), objectFit: "fill", cursor: "pointer" }} />
             {/* round 88 #8: the frame stands 10px off the label, crosses on its corners */}
             {cross(lx - 10, ly - 10, "b1")}{cross(lx + fit.w + 10, ly - 10, "b2")}{cross(lx - 10, ly + fit.h + 10, "b3")}{cross(lx + fit.w + 10, ly + fit.h + 10, "b4")}
             {dashedBox(lx - 10, ly - 10, fit.w + 20, fit.h + 20, "bdD")}
@@ -2264,7 +2282,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               style={{ ...px(548.6, 589, 341.4, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>{t("Edit")}</button>
             {/* round 88 #7 (owner): SAVE under Edit — flies the back label into the folder */}
             <button onClick={() => { setBackSaved(true); flyToFolder([{ src: backPng, x: lx, y: ly, w: fit.w, h: fit.h }]); }}
-              style={{ ...px(548.6, 633.3, 341.4, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: backSaved ? "#fff" : "#111", color: backSaved ? "#111" : "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, transition: `background 240ms ${EASE}, color 240ms ${EASE}` }}>{backSaved ? t("Saved") : t("Save")}</button>
+              style={{ ...px(548.6, 657.6, 341.4, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: backSaved ? "#fff" : "#111", color: backSaved ? "#111" : "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, transition: `background 240ms ${EASE}, color 240ms ${EASE}` }}>{backSaved ? t("Saved") : t("Save")}</button>
             {/* ROUND 51 #7/#8 (owner): informational size caption — same
                 type as the front page's Width/Height, no input, no
                 underline, centered between the label and Edit. The width
@@ -2463,7 +2481,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               ROUND 48: the confirmation is GREEN like every other ✓, and
               a fresh upload UNSELECTS every section — the customer picks
               each one before the next arrow lets them through. */}
-          <label style={{ ...px(137.14, 596, 205.7, 18), font: `13px ${HNW}`, color: customLabel ? "#3f6d2a" : "#111", textDecoration: "underline", textTransform: "none", textAlign: "center", cursor: "pointer", display: "block", lineHeight: "18px" }}>
+          <label style={{ ...px(137.14, 562, 205.7, 18), font: `13px ${HNW}`, color: customLabel ? "#3f6d2a" : "#111", textDecoration: "underline", textTransform: "none", textAlign: "center", cursor: "pointer", display: "block", lineHeight: "18px" }}>
             <input type="file" accept="image/png,image/jpeg,image/webp,image/*" style={{ display: "none" }} onChange={(e) => {
               const input = e.currentTarget;
               const file = input.files?.[0]; if (!file) return;
@@ -2568,6 +2586,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               )}
             </div>
           );
+        /* round 93 #16: any picture opens the gallery of every asset; the
+           thumb-for-hero swap is retired */
+        const assetItems = [assets.front?.prev, custom ? "" : assets.back?.prev, ...lifeOrder.map((i2) => assets.life[i2]?.prev)].filter(Boolean) as string[];
+        const openAssetGallery = (lifeSlot: number) => {
+          const src = assets.life[lifeOrder[lifeSlot]]?.prev;
+          setGallery({ items: assetItems, index: Math.max(0, assetItems.indexOf(src || "")) });
+        };
         /* the four thumbs, in whichever shape this layout calls for */
         const thumbs = landingCol
           ? Array.from({ length: 4 }, (_, k) => ({ x: 757.5, y: Y0 + k * 70.83, s: 62 }))
@@ -2598,10 +2623,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {cross(BOX.x + BOX.w, BOX.y, "as3")}{cross(BOX.x + BOX.w, BOX.y + BOX.h, "as4")}
           {/* product shots — split col 1, centred in each half */}
           {custom
-            ? slot((BOX.x + R2) / 2 - 60, Y0, 120, CH, assets.front, "front shot", "contain", false, undefined, SHOT_ZOOM)
+            ? slot((BOX.x + R2) / 2 - 60, Y0, 120, CH, assets.front, "front shot", "contain", false, assets.front ? () => setGallery({ items: assetItems, index: 0 }) : undefined, SHOT_ZOOM)
             : (<>
-              {slot((BOX.x + R1) / 2 - 60, Y0, 120, CH, assets.front, "front shot", "contain", false, undefined, SHOT_ZOOM)}
-              {slot((R1 + R2) / 2 - 60, Y0, 120, CH, assets.back, "back shot", "contain", false, undefined, SHOT_ZOOM)}
+              {slot((BOX.x + R1) / 2 - 60, Y0, 120, CH, assets.front, "front shot", "contain", false, assets.front ? () => setGallery({ items: assetItems, index: 0 }) : undefined, SHOT_ZOOM)}
+              {slot((R1 + R2) / 2 - 60, Y0, 120, CH, assets.back, "back shot", "contain", false, assets.back ? () => setGallery({ items: assetItems, index: 1 }) : undefined, SHOT_ZOOM)}
             </>)}
           {/* ROUND 88 #10 (owner): SAVE under the dashed area's left corner,
               outside it, on its left edge — every image flies into the
@@ -2619,17 +2644,17 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               thumbs.forEach((th, k) => { const it = assets.life[lifeOrder[k + 1]]; if (it) items.push({ src: it.prev, x: th.x, y: th.y, w: th.s, h: th.s }); });
               flyToFolder(items);
             }}
-              style={{ ...px(BOX.x, BOX.y + BOX.h + 14, 274, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: assetsSaved ? "#fff" : "#111", color: assetsSaved ? "#111" : "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, transition: `background 240ms ${EASE}, color 240ms ${EASE}` }}>
+              style={{ ...px(BOX.x + BOX.w - 274, 657.6, 274, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: assetsSaved ? "#fff" : "#111", color: assetsSaved ? "#111" : "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, transition: `background 240ms ${EASE}, color 240ms ${EASE}` }}>
               {assetsSaved ? t("Saved") : t("Save")}</button>
           )}
           {/* the hero, then its four thumbs */}
-          {slot(HERO.x, Y0, HERO.w, CH, assets.life[lifeOrder[0]], `lifestyle ${lifeOrder[0] + 1}/5`, "cover")}
+          {slot(HERO.x, Y0, HERO.w, CH, assets.life[lifeOrder[0]], `lifestyle ${lifeOrder[0] + 1}/5`, "cover", false, assets.life[lifeOrder[0]] ? () => openAssetGallery(0) : undefined)}
           {thumbs.map((th, k) => {
             const idx = lifeOrder[k + 1];
             return (
               <span key={"mi" + k}>
                 {slot(th.x, th.y, th.s, th.s, assets.life[idx], `lifestyle ${(idx % N) + 1}/5`, "cover", true,
-                  assets.life[idx] ? () => swapHero(k + 1) : undefined)}
+                  assets.life[idx] ? () => openAssetGallery(k + 1) : undefined)}
               </span>
             );
           })}
@@ -2726,6 +2751,17 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         const priceAt = (baseline: number, v: string, bold = false, right = PRICE_R) => (
           <span key={"pr" + baseline + right} style={{ ...px(right - 160, baseTop(baseline, 15), 160, 18), font: `${bold ? 700 : 400} 15px ${HNW}`, lineHeight: "15px", textAlign: "right", display: "block" }}>{v}</span>
         );
+        /* ROUND 93 #6 (owner): the total reads at twice the size — word and
+           amount 30 px bold on the same left/right edges, and twice the air
+           between the last dashed rule and the total */
+        const bigTotal = (v: string) => (
+          <span key="bigtotal">
+            {patch(LBL_X - 2, TOT_B - 20, PRICE_R - LBL_X + 4, 28, "totwipe")}
+            <span style={{ ...px(LBL_X, baseTop(TOT_B + 24, 30), 240, 34), font: `700 30px ${HNW}`, lineHeight: "30px" }}>{t("Total:")}</span>
+            <span style={{ ...px(PRICE_R - 240, baseTop(TOT_B + 24, 30), 240, 34), font: `700 30px ${HNW}`, lineHeight: "30px", textAlign: "right", display: "block" }}>{v}</span>
+          </span>
+        );
+        const madeRow = [selected >= 0 && !!backPng, qrMode === "create", !!assets.front, true];
         const rowLabel = (baseline: number, text: string, click: () => void, key: string) => (
           <button key={key} onClick={click}
             style={{ ...px(LBL_X, baseline - 17, 360, 24), ...ghost, textAlign: "left", textTransform: "none", font: `15px ${HNW}`, color: "#111", display: "flex", alignItems: "center" }}>{text}</button>
@@ -2774,7 +2810,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   <div style={{ ...px(leftX, BAR_Y - 0.5, TX - leftX, 1), transformOrigin: "right", ...A(260, "nuiGrowXR", 340) }}>{dashRule(0, 0, TX - leftX, false)}</div>
                 )}
                 {branches.map((b2, i) => (
-                  <span key={b2.name[0]}>
+                  <span key={b2.name[0]} style={{ opacity: (b2.name[0] === "LABELS" ? madeRow[0] : b2.name[0] === "MARKETING" ? madeRow[2] : true) ? 1 : 0.32 }}>
                     <div style={{ ...px(b2.x - 0.5, BAR_Y, 1, 44), transformOrigin: "top", ...A(600 + i * 90, "nuiGrowY", 220) }}>{dashRule(0, 0, 44, true)}</div>
                     <div style={{ ...px(b2.x - 4, BAR_Y + 43, 8, 1), background: "#000", ...A(780 + i * 90, "nuiFadeIn", 160) }} />
                     {/* the icon */}
@@ -2782,9 +2818,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                       {b2.kind === "folder"
                         ? <svg viewBox="1232.5 33.9 85.1 70" width="85" height="70" style={{ display: "block" }}>{folderPath}</svg>
                         : <svg viewBox="0 0 85 70" width="85" height="70" style={{ display: "block" }}>
-                            <path d="M14 3 H70 V52 Q70 66 56 66 H14 Z" fill="#fff" stroke="#000" strokeWidth="0.9" />
-                            <path d="M14 66 Q2 66 2 56 V50 H56 V52 Q56 66 70 66" fill="#fff" stroke="#000" strokeWidth="0.9" />
-                            {[15, 23, 31, 39].map((yy) => <line key={yy} x1="24" y1={yy} x2="60" y2={yy} stroke="#000" strokeWidth="0.9" />)}
+                            {/* round 93 #21 (owner's drawing): a sheet whose foot rolls
+                                into a scroll that runs out past the page's right edge */}
+                            <path d="M20 4 H67 V46 H28 Q20 46 20 54 Z" fill="#fff" stroke="#000" strokeWidth="0.9" strokeLinejoin="round" />
+                            <path d="M20 54 Q20 62 28 62 H70 Q78 62 78 54 Q78 46 70 46 H28 Q20 46 20 54 Z" fill="#fff" stroke="#000" strokeWidth="0.9" />
+                            <path d="M20 4 V54" fill="none" stroke="#000" strokeWidth="0.9" />
+                            {[15, 21, 27, 33].map((yy) => <line key={yy} x1="29" y1={yy} x2="59" y2={yy} stroke="#000" strokeWidth="0.9" />)}
                           </svg>}
                     </div>
                     {/* the name */}
@@ -2811,6 +2850,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               lands, a download tray after. Both baked bars are wiped. */}
           {!gensMode && patch(COL_R - 2, BTN.y - 2, COL_W + 4, BTN.h + 4, "dlwipe")}
           {patch(COL_L - 2, BTN.y - 2, COL_W + 4, BTN.h + 4, "paywipe")}
+          {/* ROUND 93 #11 (owner): what is already made reads crisp, what is
+              not yet made reads pale — the rows here and the tree's branches */}
+          {!gensMode && !customLabel && PACK.map((it, i) => (!madeRow[i] && (
+            <div key={"pale" + i} style={{ ...px(COL_L, ROWB[i] - 20, COL_W, 30), background: "rgba(255,255,255,0.62)", pointerEvents: "none", zIndex: 2 }} />
+          )))}
           {/* ── the left-hand column: the order ─────────────────────────── */}
           {/* the live slide, centred between the baked chevrons */}
           {gensMode ? null : sl.landing ? (
@@ -2834,49 +2878,53 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             <button aria-label="next slide" onClick={() => setCarIdx((c) => (c + 1) % slides.length)}
               style={{ ...px(PRICE_R - 36, CAR_MID - 22, 44, 44), ...ghost }} />
             {/* T&C — the ring's dot and both click zones are live */}
-            {dotBtn(RING_X, ringY(TC_B), agree, () => setAgree((a) => !a), "agree")}
+            {dotBtn(RING_X, ringY(TC_B), agree, () => setAgree((a) => !a), "agree", { ring: true, r: 9, cover: 24 })}
             <button onClick={() => setAgree((a) => !a)} style={{ ...px(206, TC_B - 15, 94, 20), ...ghost }} />
             <button aria-label="terms" onClick={() => { setTermsOpen(true); setTermsPos(0); }} style={{ ...px(298, TC_B - 15, 130, 20), ...ghost, cursor: "pointer" }} />
           </>)}
-          {gensMode ? (<>
-            {/* ROUND 52 #2 / 53 #1: the credit top-up borrows the same order
-                column — the right half and the divider come off entirely. */}
-            {patch(700, 92, 660, 600, "notreeg")}
-            {patch(130, 126, 620, 32, "gtitle")}
-            <span style={{ ...px(COL_L, baseTop(149.02, 23), 300, 26), font: `700 23px ${HNW}`, lineHeight: "23px" }}>{t("CREDITS")}</span>
-            {dashedBox(CAR.x, CAR.y, CAR.w, CAR.h, "genFrame")}
-            {cross(CAR.x, CAR.y, "gf1")}{cross(CAR.x + CAR.w, CAR.y, "gf2")}
-            {cross(CAR.x, CAR.y + CAR.h, "gf3")}{cross(CAR.x + CAR.w, CAR.y + CAR.h, "gf4")}
-            {/* the four baked product rows become the four credit bundles */}
-            {patch(LBL_X - 2, 486, 380, 134, "growwipe")}
-            {GENS.map((g, i) => (
-              <span key={g.name}>
-                {dotBtn(RING_X, ringY(ROWB[i]), gensSel === i, () => setGensSel(i), "gen" + i)}
-                {rowLabel(ROWB[i], t(g.name), () => setGensSel(i), "gr" + i)}
-                {priceAt(ROWB[i], "$" + g.price.toFixed(2))}
-              </span>
-            ))}
-            {priceAt(TOT_B, "$" + GENS[gensSel].price.toFixed(2), true)}
-          </>) : customLabel ? (<>
+          {gensMode ? (() => {
+            /* ROUND 93 #5 (owner: "the credits page is a mess"): the whole
+               board content is wiped and the four bundles are drawn live at
+               the page's centre — no carousel, no frame, no T&C row */
+            const GX = 480, GW = 480, GR = GX + GW, y0 = 300, pitch = 40;
+            return (<>
+              {patch(0, 92, W, FOOTER_Y - 92, "gwipe")}
+              <span style={{ ...px(GX, baseTop(230, 24), GW, 26), font: `700 24px ${HNW}`, lineHeight: "24px", textAlign: "center" }}>{t("CREDITS")}</span>
+              {dashRule(GX, y0 - 22, GW, false, "gr-top")}
+              {GENS.map((g, i) => {
+                const by = y0 + i * pitch;
+                return (
+                  <span key={g.name}>
+                    {dotBtn(GX + 16, by - 6, gensSel === i, () => setGensSel(i), "gen" + i, { ring: true, r: 9 })}
+                    <button onClick={() => setGensSel(i)} style={{ ...px(GX + 40, by - 17, 300, 24), ...ghost, textAlign: "left", textTransform: "none", font: `15px ${HNW}`, color: "#111", display: "flex", alignItems: "center" }}>{t(g.name)}</button>
+                    <span style={{ ...px(GR - 160, baseTop(by, 15), 160, 18), font: `15px ${HNW}`, lineHeight: "15px", textAlign: "right", display: "block" }}>{"$" + g.price.toFixed(2)}</span>
+                    {dashRule(GX, by + 12, GW, false, "gr" + i)}
+                  </span>
+                );
+              })}
+              <span style={{ ...px(GX, baseTop(y0 + GENS.length * pitch + 26, 30), 240, 34), font: `700 30px ${HNW}`, lineHeight: "30px" }}>{t("Total:")}</span>
+              <span style={{ ...px(GR - 240, baseTop(y0 + GENS.length * pitch + 26, 30), 240, 34), font: `700 30px ${HNW}`, lineHeight: "30px", textAlign: "right", display: "block" }}>{"$" + GENS[gensSel].price.toFixed(2)}</span>
+            </>);
+          })() : customLabel ? (<>
             {/* own-label order: only Marketing Assets and its price */}
             {patch(LBL_X - 2, 486, 380, 134, "custrows")}
             {patch(PRICE_R - 160, 486, 160, 134, "custprices")}
-            {dotBtn(RING_X, ringY(ROWB[0]), !!packSel[2], () => setPackSel((ps) => ps.map((v, k) => (k === 2 ? !v : v))), "pkc")}
+            {dotBtn(RING_X, ringY(ROWB[0]), !!packSel[2], () => setPackSel((ps) => ps.map((v, k) => (k === 2 ? !v : v))), "pkc", { ring: true, r: 9, cover: 24 })}
             {[1, 2, 3].map((i) => <span key={"nr" + i} style={{ ...px(RING_X - 13, ringY(ROWB[i]) - 13, 26, 26), background: "#fff" }} />)}
             {rowLabel(ROWB[0], t("Marketing Assets"), () => setPackSel((ps) => ps.map((v, k) => (k === 2 ? !v : v))), "clm")}
             {priceAt(ROWB[0], "$" + PACK[2].price)}
-            {priceAt(TOT_B, "$" + total, true)}
+            {bigTotal("$" + total)}
           </>) : (<>
             {/* live dots on the baked rings + the row click zones */}
             {PACK.map((it, i) => (
               <span key={it.name}>
-                {dotBtn(RING_X, ringY(ROWB[i]), !!packSel[i], () => setPackSel((ps) => ps.map((v, k) => (k === i ? !v : v))), "pk" + i)}
+                {dotBtn(RING_X, ringY(ROWB[i]), !!packSel[i], () => setPackSel((ps) => ps.map((v, k) => (k === i ? !v : v))), "pk" + i, { ring: true, r: 9, cover: 24 })}
                 <button onClick={() => setPackSel((ps) => ps.map((v, k) => (k === i ? !v : v)))}
                   style={{ ...px(LBL_X, ROWB[i] - 17, 360, 24), ...ghost }} />
                 {priceAt(ROWB[i], "$" + it.price)}
               </span>
             ))}
-            {priceAt(TOT_B, "$" + total, true)}
+            {bigTotal("$" + total)}
           </>)}
           {/* round 52 #1: the agree gate message under the Pay bar */}
           {warn && (
@@ -3026,7 +3074,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               const zy0 = Math.max(0, Math.min(zoneH, py0 + pageTop));
               const zy1 = Math.max(0, Math.min(zoneH, py1 + pageTop));
               if (zy1 <= zy0 || x1 <= x0) return null;
-              const d0 = s.delay + (dirIn ? outBase : 0);
+              /* the arriving sheet waits for the leaving one (or the loader's fade) */
+              const d0 = dirIn ? (prev === "loader" ? outBase : SLIDE_MS) : 0;
               const anim = s.mode === "fade"
                 ? `${dirIn ? "nuiFadeIn" : "nuiFadeOut"} ${FADE_MS}ms ${EASE} ${d0}ms both`
                 : `${dirIn ? "nuiInPx" : "nuiOutPx"} ${SLIDE_MS}ms ${EASE} ${d0}ms both`;
@@ -3073,10 +3122,22 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 animation: `nuiFly 1150ms cubic-bezier(.5,.02,.18,1) ${fl.delay}ms both`,
                 ...({ "--dx": `${FOLDER_C.x - (fl.x + fl.w / 2)}px`, "--dy": `${FOLDER_C.y - (fl.y + fl.h / 2)}px`, "--s": `${Math.min(0.14, 52 / Math.max(fl.w, fl.h)).toFixed(3)}` } as React.CSSProperties) }} />
           ))}
-          <svg key={"fm" + folderBump} viewBox="1232.5 33.9 85.1 70" style={{ ...px(1232.5, 33.9, 85.1, 70), zIndex: 13, pointerEvents: "none", transformOrigin: "50% 62%", animation: folderBump > 0 ? `nuiFolderBump 560ms ${EASE} both` : "none" }}>
-            <path d="M1233.31,103.1V38.26c0-1.98,1.34-3.59,2.99-3.59h25.27c.79,0,1.55.38,2.11,1.05l7.74,9.3c.56.67,1.32,1.05,2.11,1.05h25.27c1.65,0,2.99,1.61,2.99,3.59v7.81" fill="#fff" stroke="#000" strokeWidth="0.75" strokeMiterlimit="10" />
-            <path d="M1233.31,103.1h68.49l15.03-40.57c.88-2.38-.57-5.05-2.73-5.05h-61.95c-1.18,0-2.25.84-2.73,2.13l-16.11,43.49" fill="#fff" stroke="#000" strokeWidth="0.75" strokeMiterlimit="10" />
-          </svg>
+          {/* ROUND 93 #11/#20 (owner): the folder mark is a BUTTON to the Final
+              Pack, and what has been saved peeks out of it as a little deck
+              of thumbnails between the folder's back and its front flap */}
+          <button key={"fm" + folderBump} aria-label="final pack" onClick={() => { if (tut < 0 && page !== "checkout" && dreams.length) go("checkout"); }}
+            style={{ ...px(1232.5, 33.9, 85.1, 70), zIndex: 50, ...ghost, cursor: dreams.length ? "pointer" : "default", transformOrigin: "50% 62%", animation: folderBump > 0 ? `nuiFolderBump 560ms ${EASE} both` : "none", overflow: "visible" }}>
+            <svg viewBox="1232.5 33.9 85.1 70" style={{ position: "absolute", left: 0, top: 0, width: 85.1, height: 70 }}>
+              <path d="M1233.31,103.1V38.26c0-1.98,1.34-3.59,2.99-3.59h25.27c.79,0,1.55.38,2.11,1.05l7.74,9.3c.56.67,1.32,1.05,2.11,1.05h25.27c1.65,0,2.99,1.61,2.99,3.59v7.81" fill="#fff" stroke="#000" strokeWidth="0.75" strokeMiterlimit="10" />
+            </svg>
+            {savedThumbs().map((src, i) => (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img key={"st" + i} src={src} alt="" style={{ position: "absolute", left: 30 + i * 9, top: 14 - i * 3, width: 34, height: 24, objectFit: "cover", background: "#fff", border: "0.75px solid #000", boxShadow: "0 1px 2px rgba(0,0,0,0.25)", transform: `rotate(${-7 + i * 6}deg)`, transformOrigin: "50% 100%", animation: `nuiFadeUp 320ms ${EASE} both` }} />
+            ))}
+            <svg viewBox="1232.5 33.9 85.1 70" style={{ position: "absolute", left: 0, top: 0, width: 85.1, height: 70 }}>
+              <path d="M1233.31,103.1h68.49l15.03-40.57c.88-2.38-.57-5.05-2.73-5.05h-61.95c-1.18,0-2.25.84-2.73,2.13l-16.11,43.49" fill="#fff" stroke="#000" strokeWidth="0.75" strokeMiterlimit="10" />
+            </svg>
+          </button>
           {/* STATIC header (real fonts, extracted geometry) */}
           <div style={{ ...px(0, 0, W, HEADER_H), background: "#000" }}>
             {/* round 56 #3 — TEMP DEV SWITCH (remove before launch); ROUND 63
@@ -3196,13 +3257,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                       <span key={i} style={{ position: "absolute", left: TB.pad, top: baseTop(34.71 + i * 27.6, 23), width: TB.w - TB.pad, font: `700 23px ${HNW}`, lineHeight: "23px", color: "#fff", whiteSpace: "nowrap" }}>{t(ln)}</span>
                     ))
                   ) : (<>
-                    <span style={{ position: "absolute", left: TB.pad, top: baseTop(32.06, 23), width: TB.w - TB.pad, font: `700 23px ${HNW}`, lineHeight: "23px", color: "#fff" }}>{t(card.step)}</span>
+                    <span style={{ position: "absolute", left: TB.pad, top: baseTop(32.06, 23), width: TB.w - TB.pad, font: `700 ${lang === "ge" ? 19 : 23}px ${HNW}`, lineHeight: "23px", color: "#fff" }}>{t(card.step)}</span>
                     {card.title.map((ln, i) => (
-                      <span key={"t" + i} style={{ position: "absolute", left: TB.pad, top: baseTop(58.06 + i * 18, 15), width: TB.w - TB.pad, font: `700 15px ${HNW}`, lineHeight: "15px", color: "#fff", whiteSpace: "nowrap" }}>{t(ln)}</span>
+                      <span key={"t" + i} style={{ position: "absolute", left: TB.pad, top: baseTop(58.06 + i * 18, 15), width: TB.w - TB.pad, font: `700 ${lang === "ge" ? 12.5 : 15}px ${HNW}`, lineHeight: "15px", color: "#fff", whiteSpace: "nowrap" }}>{t(ln)}</span>
                     ))}
                     <div style={{ position: "absolute", left: TB.pad + 0.63, top: 93.67, width: TB.rule, height: 1, backgroundImage: "repeating-linear-gradient(90deg,#fff 0 5px,transparent 5px 10px)" }} />
                     {card.body.map((ln, i) => (
-                      <span key={"b" + i} style={{ position: "absolute", left: TB.pad, top: baseTop(118.57 + i * 14.4, 12), width: TB.w - TB.pad + 6, font: `italic 12px ${HNW}`, lineHeight: "12px", color: "#fff", whiteSpace: "nowrap" }}>{t(ln)}</span>
+                      <span key={"b" + i} style={{ position: "absolute", left: TB.pad, top: baseTop(118.57 + i * 14.4, 12), width: TB.w - TB.pad + 6, font: `italic ${lang === "ge" ? 10 : 12}px ${HNW}`, lineHeight: "12px", color: "#fff", whiteSpace: "nowrap" }}>{t(ln)}</span>
                     ))}
                   </>)}
                 </div>
@@ -3234,6 +3295,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     /* round 54 #2: a REAL generation asks for confirmation;
                        unchanged inputs just move along */
                     if (dreams.length && frontSig === sigFront()) nextFromFront();
+                    else if (!FRONT_ROWS.some((k2) => (f[k2] || "").trim())) setEmptyWarn("front");
                     else setConfirmModal("labels");
                   }
                   else if (page === "options") {
@@ -3242,8 +3304,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     else { setWarn(t("Save a label design to continue")); setTimeout(() => setWarn(""), 3200); }
                   }
                   else if (page === "backdetails") {
-                    if (markets.length || noComp) nextFromCompliance();
-                    else { setWarn(t("Select at least one market to continue")); setTimeout(() => setWarn(""), 3200); }
+                    if (!(markets.length || noComp)) { setWarn(t("Select at least one market to continue")); setTimeout(() => setWarn(""), 3200); }
+                    else if (!BACK_ROWS.some((k2) => (b[k2] || "").trim()) && !(b.description || "").trim() && !gtin.trim()) setEmptyWarn("back");
+                    else nextFromCompliance();
                   }
                   else if (page === "backdesign") go("bottle");
                   else if (page === "bottle") {
@@ -3338,6 +3401,53 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
           {busyMsg && <div style={{ ...px(1090, 78, 320, 20), font: `13px ${HNW}`, color: "#8a887e", textAlign: "right" }}>{busyMsg}</div>}
 
+          {/* ROUND 93 #15/#16: THE GALLERY — the picture big on a white veil,
+              arrows when there is more than one, ✕, and Save when the page
+              offers one */}
+          {gallery && (() => {
+            const src = gallery.items[gallery.index] || "";
+            const many = gallery.items.length > 1;
+            const step = (d: number) => setGallery((g) => g ? { ...g, index: (g.index + d + g.items.length) % g.items.length } : g);
+            return (<>
+              <div style={{ ...px(0, 0, W, H), zIndex: 44 }} onClick={() => setGallery(null)} />
+              <div style={{ ...px(0, HEADER_H, W, FOOTER_Y - HEADER_H), background: "rgba(255,255,255,0.94)", zIndex: 44, pointerEvents: "none" }} />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={src} alt="" style={{ ...px(220, 110, 1000, 520), objectFit: "contain", zIndex: 45, animation: `nuiFadeIn 220ms ${EASE} both` }} />
+              {many && (<>
+                <button aria-label="previous" onClick={() => step(-1)} style={{ ...px(150, 340, 50, 60), ...ghost, zIndex: 46, cursor: "pointer", font: `300 40px ${HNW}`, color: "#111" }}>‹</button>
+                <button aria-label="next" onClick={() => step(1)} style={{ ...px(1240, 340, 50, 60), ...ghost, zIndex: 46, cursor: "pointer", font: `300 40px ${HNW}`, color: "#111" }}>›</button>
+                <span style={{ ...px(0, 640, W, 16), font: `13px ${HNW}`, color: "#8a887e", textAlign: "center", display: "block", zIndex: 46 }}>{gallery.index + 1} / {gallery.items.length}</span>
+              </>)}
+              <button aria-label="close gallery" onClick={() => setGallery(null)} style={{ ...px(1180, 96, 30, 30), ...ghost, zIndex: 46, cursor: "pointer", font: `20px ${HNW}`, color: "#111" }}>✕</button>
+              {gallery.save && (
+                <button onClick={() => { gallery.save?.(); setGallery((g) => g ? { ...g, saved: true } : g); }}
+                  style={{ ...px(W / 2 - 120, 664, 240, 34.3), zIndex: 46, cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: gallery.saved ? "#fff" : "#111", color: gallery.saved ? "#111" : "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
+                  {gallery.saved ? t("Saved") : t("Save")}</button>
+              )}
+            </>);
+          })()}
+          {/* ROUND 93 #8: "every field is empty" — asked once, before the
+              confirmation or the next page */}
+          {emptyWarn && (() => {
+            const front = emptyWarn === "front";
+            const proceed = () => { setEmptyWarn(""); if (front) setConfirmModal("labels"); else nextFromCompliance(); };
+            const edit = () => { setEmptyWarn(""); if (!front) go("backdetails", -1); };
+            const B2 = { x: 420, y: 250, w: 600, h: 250 };
+            return (<>
+              <div style={{ ...px(0, 0, W, H), zIndex: 40 }} onClick={() => setEmptyWarn("")} />
+              <div style={{ ...px(0, HEADER_H, W, FOOTER_Y - HEADER_H), background: "rgba(255,255,255,0.88)", zIndex: 40, pointerEvents: "none" }} />
+              <div style={{ ...px(B2.x, B2.y, B2.w, B2.h), background: "#fff", border: "1px solid #111", zIndex: 41, boxSizing: "border-box" }}>
+                <span style={{ position: "absolute", left: 32, top: baseTop(52, 23), font: `700 23px ${HNW}`, lineHeight: "23px", whiteSpace: "nowrap" }}>{t("All fields are empty").toUpperCase()}</span>
+                <span style={{ position: "absolute", left: 32, top: 78, width: B2.w - 64, font: `italic 15px ${HNW}`, lineHeight: "21px", color: "#111" }}>
+                  {t(front
+                    ? "You haven't filled in any front label details. The label will carry no wine name, producer or vintage. Is that what you want?"
+                    : "You haven't filled in any back label details. The back label will carry no producer, importer, lot or description. Is that what you want?")}
+                </span>
+                <button onClick={edit} style={{ ...px(32, B2.h - 34.3 - 30, (B2.w - 64) / 2 - 8, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#fff", color: "#111", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>{t("Edit details")}</button>
+                <button onClick={proceed} style={{ ...px(32 + (B2.w - 64) / 2 + 8, B2.h - 34.3 - 30, (B2.w - 64) / 2 - 8, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>{t("Continue anyway")}</button>
+              </div>
+            </>);
+          })()}
           {/* ROUND 56 #7/#8: the mailing-list GIFT modal — global, because
               the credit gate can fire from vision, options or assets */}
           {emailModal && (<>

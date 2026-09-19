@@ -210,7 +210,12 @@ export const UI_GE: Record<string, string> = {
   /* round 57 #4: short clean version everywhere */
   "Create front label": "შექმენი წინა ეტიკეტი",
   "Create back label": "შექმენი უკანა ეტიკეტი",
-  "No compliance needed": "შესაბამისობა არ მჭირდება",
+  "No compliance needed": "არ მჭირდება",
+  "All fields are empty": "ყველა ველი ცარიელია",
+  "You haven't filled in any front label details. The label will carry no wine name, producer or vintage. Is that what you want?": "წინა ეტიკეტის არცერთი ველი არ შეგივსიათ. ეტიკეტზე არ იქნება ღვინის სახელი, მწარმოებელი და მოსავლის წელი. ნამდვილად ასე გსურთ?",
+  "You haven't filled in any back label details. The back label will carry no producer, importer, lot or description. Is that what you want?": "უკანა ეტიკეტის არცერთი ველი არ შეგივსიათ. უკანა ეტიკეტზე არ იქნება მწარმოებელი, იმპორტიორი, ლოტი და აღწერა. ნამდვილად ასე გსურთ?",
+  "Edit details": "დეტალების შევსება",
+  "Continue anyway": "მაინც გაგრძელება",
   "Copy the link": "ბმულის კოპირება",
   "Copied ✓": "დაკოპირდა ✓",
   /* round 45: new progress bar era */
