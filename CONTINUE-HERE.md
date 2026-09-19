@@ -2007,6 +2007,42 @@ composition-contract tightening, then customer wiring.
   Roman). Curation = ~20 VALUES per style across 5-6 axes, not 30 parts.
   FONT LICENSING flagged: live type in a delivered PDF means the font
   travels — commercial faces (Helvetica Neue World) may not permit it.
+- ROUND 94 — THE OWNER'S FIFTEEN + THE SAVE TOGGLE (2026-09-19). (#2)
+  The parallax slice cascade is BACK (round 93's single-sheet change
+  reverted) — the "old page reappears" glitch was the confirm popup on a
+  still-present page. New PageKey "blank": openConfirm(kind, from) slides
+  the page out to blank BEFORE the popup opens (no history entry, the bar
+  keeps the from-page's stop via blankFrom), Create fades the loader in
+  from blank, Edit / ✕ / backdrop slide the page back in (go(from, -1));
+  a failed credit gate never leaves blank behind. The assets confirm
+  stays on the assets page (its effect lives there). (#3/#4/#5/#6) The
+  options page after Front_Label_UI.jpg: TRADITIONAL / CONTEMPORARY /
+  FUNKY over each column with a dashed rule (y 221 / 242), the label
+  with crosses (AREA 290–540), three dots (36 px apart, y 584), Save at
+  637; no subtitle, no variation buttons. Every painting arrives with
+  THREE layouts in ONE call (/api/dream-label `variants: 3` →
+  `variants[]`): relayoutLabel(stored, data, avoid, recipe) re-draws the
+  seed until the hero FACE (and size bucket) differ from every earlier
+  layout; variant 2 = `big` (largest hero buckets), variant 3 = `flip`
+  (the other alignment — compose.ts `align`). Proven: Caveat-left /
+  Bebas-left / Anton-centred on one painting. "Punk" reads FUNKY
+  (STYLE_NAMES + i18n "Funky"; the internal key stays "punk"). SAVE
+  TOGGLES (owner mid-round): a second press un-saves and the film plays
+  in REVERSE (nuiFlyBack, folder → page; flyToFolder(items, back)); the
+  back label and the assets Save do the same; the gallery's Save flips
+  too. (#12/#15) the folder mark: no thumbnails, hover scale 1.08,
+  zIndex 55, click verified with a real mouse click → Final Pack. (#13)
+  README icon traced from the owner's drawing (sheet, foot curling into
+  a band that runs out right). (#14) credits page: T&C row back (ring +
+  "I agree to the" + underlined "Terms & Conditions"), the gate message
+  centred ABOVE the list; the root gate message moved to y 700 (it
+  overlapped the options Save). WALKTHROUGH: (#1) the pointer taps ON
+  Save (optSelect 720, 654); (#7) step 3 presses the back label's Save
+  and it flies (TAP.bdSave); (#8) Georgian card titles 11 px, body 9 px;
+  (#9) cursor without the drop-shadow filter (artefacts); (#10) loaders
+  ≈1 s (two steps of 320 ms; assets 600/500/340×5/600); (#11) TUT_PACE
+  1.2, 900 ms after the front save, 1.4 s before the self-press —
+  71 s end to end. The dev "fake generation" switch fakes three layouts.
 - ROUND 93 — THE OWNER'S TWENTY-ONE (2026-09-19). MARKETING: (#1) the
   cork under a capsule is HIDDEN — the old "through the glass, a 45 mm
   cylinder" clause made the model draw a cork sunk in the neck; the bare
