@@ -11,7 +11,7 @@ import { getDb } from "@/lib/db";
    in settings/_id "painters". Kept out of the route file (a route may
    export only handlers) and out of models.ts (no Mongo there at import). */
 
-export const WIZARD_PAINTERS = ["gpt-image-own", "gpt-image-masked", "ideogram-3-edit", "nano-banana-edit"];
+export const WIZARD_PAINTERS = ["gpt-image-own", "gpt-image-masked", "ideogram-3", "nano-banana", "ideogram-3-edit", "nano-banana-edit"];
 export const DEFAULT_PAINTERS: Record<string, string> = { traditional: "gpt-image-own", contemporary: "gpt-image-own", punk: "gpt-image-own" };
 
 export async function painterFor(style: string): Promise<string> {

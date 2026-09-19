@@ -99,3 +99,24 @@ export async function inkOf(dataUrl: string): Promise<Inks> {
   const paper = pn > 200 ? hex(pr / pn, pg / pn, pb / pn) : "#F4EFE3";
   return { ink, accent, paper };
 }
+
+/* ROUND 96 (owner: "the painters I gave 5s to — we must have them"): those
+   pictures were FREE paintings (no canvas), so the composer now has a
+   CROP mode that keeps the painting whole and draws the type band over its
+   foot. The band's colour is the dominant colour of the rows just above
+   the cut — the picture's own foot, so the seam reads as designed. */
+export async function sliceColourOf(dataUrl: string, fracTop: number, fracBottom: number): Promise<string> {
+  const buf = Buffer.from(dataUrl.slice(dataUrl.indexOf(",") + 1), "base64");
+  const { data, info } = await sharp(buf).resize(160, 160, { fit: "fill" }).flatten({ background: "#F4EFE3" }).raw().toBuffer({ resolveWithObject: true });
+  const W = info.width, H = info.height, C = info.channels;
+  const y0 = Math.max(0, Math.floor(H * fracTop)), y1 = Math.min(H, Math.ceil(H * fracBottom));
+  const bins = new Map<string, { n: number; r: number; g: number; b: number }>();
+  for (let y = y0; y < y1; y++) for (let x = 0; x < W; x++) {
+    const i = (y * W + x) * C;
+    const k = `${data[i] >> 4}-${data[i + 1] >> 4}-${data[i + 2] >> 4}`;
+    const e = bins.get(k) || { n: 0, r: 0, g: 0, b: 0 };
+    e.n++; e.r += data[i]; e.g += data[i + 1]; e.b += data[i + 2]; bins.set(k, e);
+  }
+  const top = [...bins.values()].sort((a, b) => b.n - a.n)[0];
+  return top ? hex(top.r / top.n, top.g / top.n, top.b / top.n) : "#F4EFE3";
+}

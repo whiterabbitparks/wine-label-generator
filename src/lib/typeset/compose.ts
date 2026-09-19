@@ -1,6 +1,6 @@
 import sharp from "sharp";
 import { measure, vmetrics, pickRoles, mix, type Pick } from "./fonts";
-import { inkOf, inkFootOf } from "./palette";
+import { inkOf, inkFootOf, sliceColourOf } from "./palette";
 
 /* THE COMPOSER, v1.2 (branch POPIKA_Back_To_Vector, 2026-09-19).
 
@@ -34,6 +34,7 @@ export interface ComposeInput {
   paper?: string;                  /* the ground the painter was given; sampled when absent */
   wineColour?: string;             /* "Red" / "White" / "Amber" / "Rosé" … — round 85 #10 */
   align?: "center" | "left";       /* round 94 #6: a layout variant may flip the style's alignment */
+  fit?: "yield" | "crop";          /* round 96: crop = the painting stays whole, the band is drawn OVER its foot */
 }
 /* every set line, in label pixels — what the PDF is drawn from */
 export interface LaidLine { text: string; x: number; y: number; size: number; tracking: number; family: string; weight: number; italic: boolean; anchor: "start" | "middle"; colour: string }
@@ -82,7 +83,11 @@ export async function composeLabel(inp: ComposeInput): Promise<ComposeOutput> {
   const minPx = (MIN_PT / 72) * 25.4 * PX_PER_MM;
   const roles = pickRoles(inp.style, inp.seed);
   const inks = await inkOf(inp.artwork);
-  const ground = inp.paper || inks.paper;
+  const crop = inp.fit === "crop";
+  /* crop mode: the band's colour is the painting's own foot (the rows
+     just above the cut), so the band grows out of the picture */
+  const bandFrac = portrait ? 0.62 : 0.6;
+  const ground = crop ? await sliceColourOf(inp.artwork, bandFrac - 0.1, bandFrac) : (inp.paper || inks.paper);
   /* the type's colour: the drawing's ink on a light ground, paper-white on
      a dark or saturated one */
   const dark = lum(ground) < 0.45 || sat(ground) > 0.45;
@@ -116,9 +121,9 @@ export async function composeLabel(inp: ComposeInput): Promise<ComposeOutput> {
   roleList.push("small");                                    /* legal */
   const needH = (roleList.reduce((h, r) => h + floorOf(r) * LEADING, 0) + 2 * H * 0.018 + floorOf("hero") * 0.3) * 1.08;
   const wanted = Math.min(H * (1 - BAND_MIN) - H * 0.03, H - M - needH - H * 0.03);
-  if (inkFootPx > wanted) { artScale = wanted / inkFootPx; inkFootPx = wanted; }
+  if (!crop && inkFootPx > wanted) { artScale = wanted / inkFootPx; inkFootPx = wanted; }
   const windowFoot = Math.min(H * (portrait ? 0.65 : 0.6) * artScale, wanted + H * 0.03);
-  const bandTop = Math.round(Math.max(windowFoot, inkFootPx + H * 0.03));
+  const bandTop = crop ? Math.round(Math.min(H * bandFrac, wanted + H * 0.03)) : Math.round(Math.max(windowFoot, inkFootPx + H * 0.03));
 
   /* ---- the blocks ---- */
   const L = (text: string, pick: Pick, size: number, role: Role, drop: number): Line => ({ text, pick, size, role, drop });
@@ -219,6 +224,12 @@ export async function composeLabel(inp: ComposeInput): Promise<ComposeOutput> {
     `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${inp.widthMm}mm" height="${inp.heightMm}mm" viewBox="0 0 ${W} ${H}">` +
     `<rect width="${W}" height="${H}" fill="${ground}"/>` +
     `<image xlink:href="${inp.artwork}" x="${((W - drawW) / 2).toFixed(1)}" y="0" width="${drawW.toFixed(1)}" height="${drawH.toFixed(1)}" preserveAspectRatio="xMidYMin slice"/>` +
+    /* crop mode: the band over the painting's foot, with a soft 5 % seam */
+    (crop
+      ? `<defs><linearGradient id="seam" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${ground}" stop-opacity="0"/><stop offset="1" stop-color="${ground}" stop-opacity="1"/></linearGradient></defs>` +
+        `<rect x="0" y="${(bandTop - H * 0.05).toFixed(1)}" width="${W}" height="${(H * 0.05).toFixed(1)}" fill="url(#seam)"/>` +
+        `<rect x="0" y="${bandTop}" width="${W}" height="${H - bandTop}" fill="${ground}"/>`
+      : "") +
     els.join("") +
     `</svg>`;
   /* sharp rasterises at 12 px/mm regardless of the mm size on the root */

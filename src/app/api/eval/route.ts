@@ -50,17 +50,19 @@ async function paintItem(run: EvalRun, model: EvalModel, brief: EvalBrief, item:
       const seed = [...item.id].reduce((h, c) => ((h * 33) ^ c.charCodeAt(0)) >>> 0, 5381);
       /* way 1 for the own-ground painter AND every fal painter (they take
          no mask — the ground is read off their picture) */
-      const ap = await buildArtworkPrompt(brief, item.style, seed, { ownGround: model.id === "gpt-image-own" || (model.via === "fal" && !model.canvas), softGround: !!model.canvas });
+      const free = model.via === "fal" && !model.canvas;
+      const ap = await buildArtworkPrompt(brief, item.style, seed, { ownGround: model.id === "gpt-image-own", softGround: !!model.canvas });
       item.prompt = ap.prompt; item.card = ap.card;
       const { art, retried } = await generateArtworkChecked(model, ap);
       /* way 1: no paper was given, so the ground is read off the picture */
       let paper = ap.paper, own = retried ? " · repainted (text seen)" : "";
-      if (!paper) {
+      if (free) { paper = ""; own += " · cropped"; }
+      else if (!paper) {
         const g = await flatGroundOf(art);
         paper = g.colour;
         own = ` · own ground ${g.flat ? "flat" : "NOT flat"} ${(g.coverage * 100).toFixed(0)}%`;
       }
-      const out = await composeLabel({ artwork: art, style: item.style, texts: textsOf(brief.data), widthMm: brief.width, heightMm: brief.height, seed, paper });
+      const out = await composeLabel({ artwork: art, style: item.style, texts: textsOf(brief.data), widthMm: brief.width, heightMm: brief.height, seed, paper: paper || undefined, wineColour: brief.data.wineColorName, fit: free ? "crop" : "yield" });
       item.file = saveImage(run.id, item.id, out.png);
       fs.writeFileSync(path.join(runDir(run.id), `${item.id}.svg`), out.svg);
       saveImage(run.id, `${item.id}--art`, art);

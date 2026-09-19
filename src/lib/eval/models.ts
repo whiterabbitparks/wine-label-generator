@@ -44,7 +44,7 @@ export const EVAL_MODELS: EvalModel[] = [
      paper tones and the mask. */
   { id: "gpt-image-own", name: "gpt-image · painter's own ground (way 1)", via: "openai" },
   { id: "flux-pro", name: "FLUX 1.1 Pro", via: "fal", endpoint: "fal-ai/flux-pro/v1.1" },
-  { id: "ideogram-3", name: "Ideogram 3", via: "fal", endpoint: "fal-ai/ideogram/v3" },
+  { id: "ideogram-3", name: "Ideogram 3 · free painting, cropped", via: "fal", endpoint: "fal-ai/ideogram/v3" },
   /* ROUND 90 (owner: "why aren't we using the other painters?"): the two
      fal painters that can take OUR CANVAS — Ideogram's edit endpoint with
      a real mask (white = paint here), and nano-banana's edit (the canvas
@@ -52,7 +52,7 @@ export const EVAL_MODELS: EvalModel[] = [
   { id: "ideogram-3-edit", name: "Ideogram 3 · on our canvas (mask)", via: "fal", endpoint: "fal-ai/ideogram/v3/edit", canvas: true },
   { id: "nano-banana-edit", name: "Nano Banana · on our canvas", via: "fal", endpoint: "fal-ai/nano-banana/edit", canvas: true },
   { id: "recraft-3", name: "Recraft V3", via: "fal", endpoint: "fal-ai/recraft/v3/text-to-image" },
-  { id: "nano-banana", name: "Nano Banana (Gemini 2.5 Flash Image)", via: "fal", endpoint: "fal-ai/nano-banana" },
+  { id: "nano-banana", name: "Nano Banana · free painting, cropped", via: "fal", endpoint: "fal-ai/nano-banana" },
 ];
 
 export function evalModel(id: string): EvalModel | null {
