@@ -44,7 +44,7 @@ export async function POST(req: Request) {
       try {
         send({ type: "progress", stage: "painting" });
         const out = await paintHybridLabel({ vision, style, data, widthMm, heightMm, sketch });
-        const id = saveLabel({ style, widthMm, heightMm, faces: out.faces, ground: out.ground, svg: out.svg, png: out.png, art: out.art, prompt: out.prompt });
+        const id = saveLabel({ style, widthMm, heightMm, faces: out.faces, ground: out.ground, svg: out.svg, png: out.png, art: out.art, prompt: out.prompt, layout: out.layout });
         /* medium-res JPEG for the page's views — the PNG stays the print source */
         let preview: string | null = null;
         try {

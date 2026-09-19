@@ -5,6 +5,7 @@ import { composeBackLabel, BackLabelData } from "@/lib/back-label";
 import { buildZip } from "@/lib/zip";
 import { readLabel } from "@/lib/label/store";
 import { fontFilesOf } from "@/lib/label/hybrid";
+import { labelPdf } from "@/lib/label/pdf";
 
 /* DELIVERY PACKAGE (owner 2026-09-07): "Proceed to payment" downloads one
    ZIP named after the wine:
@@ -88,20 +89,25 @@ export async function POST(req: Request) {
   const files: { name: string; data: Buffer }[] = [];
 
   try {
-    /* 1. LABELS */
-    const frontBuf = dataBuf(body.front);
-    if (frontBuf) {
-      const tiff = await sharp(frontBuf).withMetadata({ density: 300 }).tiff({ compression: "lzw" }).toBuffer();
-      files.push({ name: `${root}1. LABELS/${base}_Front_Label.tiff`, data: tiff });
-    }
-    /* round 84 (hybrid engine): the front label as LIVE TYPE — the SVG the
-       composer wrote, with the Google TTFs it set, so the customer's
-       designer opens it in Illustrator and moves words, not pixels */
+    /* 1. LABELS — round 84/85 (hybrid engine): the front label as LIVE
+       TYPE. The PDF (print file, fonts embedded, the artwork embedded —
+       Illustrator opens it as editable type), the SVG (source; its artwork
+       LINKED from Links/, as the owner asked) and the TTFs it sets. The
+       TIFF is gone (owner, round 85 #12). A label made before the hybrid
+       engine has no id and still ships its bitmap as PNG. */
     const stored = body.frontId ? readLabel(String(body.frontId)) : null;
     if (stored) {
-      files.push({ name: `${root}1. LABELS/${base}_Front_Label.svg`, data: Buffer.from(stored.svg, "utf8") });
+      const artName = `${base}_Front_Artwork.png`;
+      files.push({ name: `${root}1. LABELS/Links/${artName}`, data: stored.art });
+      const linked = stored.svg.replace(/xlink:href="data:image\/[a-z]+;base64,[^"]+"/, `xlink:href="Links/${artName}"`);
+      files.push({ name: `${root}1. LABELS/${base}_Front_Label.svg`, data: Buffer.from(linked, "utf8") });
+      if (stored.layout)
+        files.push({ name: `${root}1. LABELS/${base}_Front_Label.pdf`, data: await labelPdf(stored.layout, stored.art, stored.meta.widthMm, stored.meta.heightMm) });
       for (const p of fontFilesOf(stored.svg))
         if (fs.existsSync(p)) files.push({ name: `${root}1. LABELS/Fonts/${path.basename(p)}`, data: fs.readFileSync(p) });
+    } else {
+      const frontBuf = dataBuf(body.front);
+      if (frontBuf) files.push({ name: `${root}1. LABELS/${base}_Front_Label.png`, data: await sharp(frontBuf).withMetadata({ density: 300 }).png().toBuffer() });
     }
     if (body.back) {
       const markets = (body.back.markets || ["EU"]).slice(0, 13);

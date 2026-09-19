@@ -659,6 +659,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   /* round 73 #2: when a step's script ends the arrow inflates twice, so
      they know the turn is theirs */
   const [nudge, setNudge] = useState(0);
+  const [pressed, setPressed] = useState(0);   /* round 85 #4: the self-press */
 
   const [packSel, setPackSel] = useState<boolean[]>([true, true, true, false]);
   const [agree, setAgree] = useState(false);
@@ -1297,8 +1298,19 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           setCursor(null);
           break;
       }
-      /* round 73 #2: the step has played out — invite the next press */
-      if (live()) setNudge((n) => n + 1);
+      /* ROUND 85 #4 (owner): the story does not wait to be pressed — a
+         beat after the step has played, the button presses itself (one
+         click-sized scale) and the next step begins. Only the closing card
+         waits, and only there the button keeps its double pulse. */
+      if (!live()) return;
+      if (tut >= TUT_CARDS.length - 1) { setNudge((n) => n + 1); return; }
+      if (!(await hold(1600))) return;
+      setPressed((n) => n + 1);
+      if (!(await hold(260))) return;
+      const nx = tut + 1;
+      setTut(nx);
+      const pg: PageKey = nx === 1 ? "loader" : TUT_PAGES[nx];
+      if (pg !== page) go(pg);
     })();
     return () => { /* the token bump in the next run cancels this one */ };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1546,7 +1558,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   /* round 18 #4: ONE delivery ZIP named after the wine — labels + fonts,
      marketing assets, sample contract (TEMP free until payments exist) */
   async function proceedToPayment() {
-    setBusyMsg("Packing your delivery…");
+    /* round 85 #5: no "Packing…" line — it flashed behind the folder mark */
     try {
       const r = await fetch("/api/package", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -1568,7 +1580,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       a.href = u; a.download = `${(f.wine || "Wine").replace(/[^\w]+/g, "_")}.zip`; a.click();
       setTimeout(() => URL.revokeObjectURL(u), 1500);
     } catch { alert("download failed — try again"); }
-    setBusyMsg("");
   }
 
   /* helpers */
@@ -1585,12 +1596,36 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   );
   /* round 41 #19: ONE dash style everywhere — the final-pack slot dashes
      (baked stroke-dasharray 4.12) are the sample */
-  const DASH = "#000 0 4.12px, transparent 4.12px 8.24px";
+  /* ROUND 85 #7 (owner: "some dashes thicker or doubled, some thinner"):
+     the dashes were four CSS gradients, each snapped to the pixel grid on
+     its own, so at fractional page scales a side could land on two rows
+     or lose one. ONE SVG rectangle with a dash pattern, its edges on
+     half-pixels, draws every side with the same hairline. */
   const dashedBox = (x: number, y: number, w: number, h: number, key?: string) => (
-    <div key={key} style={{ ...px(x, y, w, h), pointerEvents: "none",
-      backgroundImage: `repeating-linear-gradient(90deg,${DASH}),repeating-linear-gradient(90deg,${DASH}),repeating-linear-gradient(180deg,${DASH}),repeating-linear-gradient(180deg,${DASH})`,
-      backgroundPosition: "0 0, 0 100%, 0 0, 100% 0", backgroundSize: "100% 1px, 100% 1px, 1px 100%, 1px 100%", backgroundRepeat: "no-repeat" }} />
+    <svg key={key} style={{ ...px(x - 1, y - 1, w + 2, h + 2), pointerEvents: "none", overflow: "visible" }} viewBox={`0 0 ${w + 2} ${h + 2}`}>
+      <rect x="1.5" y="1.5" width={w - 1} height={h - 1} fill="none" stroke="#000" strokeWidth="1" strokeDasharray="4.12 4.12" shapeRendering="crispEdges" />
+    </svg>
   );
+  /* ROUND 85 #2 (owner, fourth time: "FIX THE DOTS INSIDE THE CIRCLES"):
+     a CSS dot centred with translate(-50%,-50%) inside a CSS ring rounds
+     to the pixel grid separately from the ring, so at most page scales the
+     dot sat a hair off. Two SVG circles on the SAME centre cannot drift —
+     the renderer places both from one fractional point. */
+  /* one dashed hairline (round 85 #7): same pattern, same crisp pixel row */
+  const dashRule = (x: number, y: number, len: number, vertical = false, key?: string, color = "#000") => (
+    <svg key={key} style={{ ...px(x, y, vertical ? 1 : len, vertical ? len : 1), pointerEvents: "none", overflow: "visible" }} viewBox={`0 0 ${vertical ? 1 : len} ${vertical ? len : 1}`}>
+      <line x1={vertical ? 0.5 : 0} y1={vertical ? 0 : 0.5} x2={vertical ? 0.5 : len} y2={vertical ? len : 0.5} stroke={color} strokeWidth="1" strokeDasharray="4.12 4.12" shapeRendering="crispEdges" />
+    </svg>
+  );
+  const ringSvg = (size: number, on: boolean, o?: { stroke?: number; color?: string; dot?: number; noRing?: boolean }) => {
+    const sw = o?.stroke ?? 2, col = o?.color || "#111", dot = o?.dot ?? size / 2;
+    return (
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display: "block", flex: "0 0 auto" }}>
+        {!o?.noRing && <circle cx={size / 2} cy={size / 2} r={(size - sw) / 2} fill="#fff" stroke={col} strokeWidth={sw} />}
+        {on && <circle cx={size / 2} cy={size / 2} r={dot / 2} fill={col} />}
+      </svg>
+    );
+  };
   /* owner #15 / round 7 #2: input text italic (design st16); the underline is
      a SEPARATE fixed-length row line, not text-decoration */
   const inputStyle: React.CSSProperties = { font: `italic 15px ${HNW}`, border: "none", outline: "none", background: "transparent", padding: "0 0 0 5px", color: "#111", lineHeight: "20px" };
@@ -1613,21 +1648,25 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
      optional drawn ring and the dot are centred in the same button */
   const dotBtn = (cx: number, cy: number, on: boolean, click: () => void, key: string, opts?: { ring?: boolean; coverDot?: boolean; cover?: number; r?: number }) => {
     const r = opts?.r ?? 7.5;
-    const c: React.CSSProperties = { position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", borderRadius: "50%" };
+    /* round 85 #2: one SVG, every circle on the button's exact centre */
     return (
       <button key={key} onClick={click} style={{ ...px(cx - 13, cy - 13, 26, 26), ...ghost }}>
-        {opts?.coverDot && <span style={{ ...c, width: 11, height: 11, background: "#fff" }} />}
-        {opts?.cover && <span style={{ ...c, width: opts.cover, height: opts.cover, background: "#fff" }} />}
-        {opts?.ring && <span style={{ ...c, width: 2 * r, height: 2 * r, border: "2px solid #111", background: "#fff", boxSizing: "border-box" }} />}
-        {on && <span style={{ ...c, width: 7.5, height: 7.5, background: "#111" }} />}
+        <svg width="26" height="26" viewBox="0 0 26 26" style={{ position: "absolute", left: 0, top: 0, display: "block" }}>
+          {opts?.coverDot && <circle cx="13" cy="13" r="5.5" fill="#fff" />}
+          {opts?.cover && <circle cx="13" cy="13" r={opts.cover / 2} fill="#fff" />}
+          {opts?.ring && <circle cx="13" cy="13" r={r - 1} fill="#fff" stroke="#111" strokeWidth="2" />}
+          {on && <circle cx="13" cy="13" r="3.75" fill="#111" />}
+        </svg>
       </button>
     );
   };
   const cross = (cx: number, cy: number, key: string, thick = false) => (
-    /* thick arms = 33px, matching the baked st14 pluses (532.06→565.02) */
+    /* thick arms = 33px, matching the baked st14 pluses (532.06→565.02).
+       Round 85 #7: hairline arms on the half-pixel, crisp, so the plus
+       and the dashed line it marks share one pixel row/column */
     <svg key={key} style={{ ...px(cx - (thick ? 16.5 : 9), cy - (thick ? 16.5 : 9), thick ? 33 : 18, thick ? 33 : 18), pointerEvents: "none", zIndex: 5 }} viewBox={thick ? "0 0 33 33" : "0 0 18 18"}>
-      <line x1={thick ? 16.5 : 9} y1="0.5" x2={thick ? 16.5 : 9} y2={thick ? 32.5 : 17.5} stroke="#000" strokeWidth={thick ? 3 : 1} />
-      <line x1="0.5" y1={thick ? 16.5 : 9} x2={thick ? 32.5 : 17.5} y2={thick ? 16.5 : 9} stroke="#000" strokeWidth={thick ? 3 : 1} />
+      <line x1={thick ? 16.5 : 9} y1="0" x2={thick ? 16.5 : 9} y2={thick ? 33 : 18} stroke="#000" strokeWidth={thick ? 3 : 1} shapeRendering={thick ? undefined : "crispEdges"} />
+      <line x1="0" y1={thick ? 16.5 : 9} x2={thick ? 33 : 18} y2={thick ? 16.5 : 9} stroke="#000" strokeWidth={thick ? 3 : 1} shapeRendering={thick ? undefined : "crispEdges"} />
     </svg>
   );
   /* mini loader glass for asset boxes (round 14 #10; round 17 #1): the wine
@@ -1753,7 +1792,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             ))}
           </div>
           {/* the dashed column rule */}
-          <div style={{ ...px(788, 133, 1, 522), background: `repeating-linear-gradient(180deg,${DASH})`, pointerEvents: "none" }} />
+          {dashRule(788, 133, 522, true, "vrule")}
           {/* ── right: the label's own details ── */}
           <span style={{ ...px(891.8, baseTop(149.08, 24), 500, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t("FRONT LABEL DETAILS")}</span>
           <span style={{ ...px(891.8, baseTop(183, 14), 400, 40), font: `italic 14px ${HNW}`, lineHeight: "18px", color: "#111" }}>
@@ -1868,16 +1907,21 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     {miniGlass("var" + fi, Math.min(0.9, 0.14 + ((Date.now() - varT.current) / 45000) * 0.75 + tick * 0))}
                   </div>
                 )}
-                {selected === fi && dashedBox(lx, ly, lw, lh, "selD" + fi)}
-                {cross(lx, ly, `tl${fi}`)}{cross(lx + lw, ly, `tr${fi}`)}
-                {cross(lx, ly + lh, `bl${fi}`)}{cross(lx + lw, ly + lh, `br${fi}`)}
+                {/* ROUND 85 #6 (owner's board): the selection frame stands
+                    OFF the label — 10px out on every side — and the corner
+                    crosses sit on the frame's corners, not the label's */}
+                {selected === fi && dashedBox(lx - 10, ly - 10, lw + 20, lh + 20, "selD" + fi)}
+                {cross(lx - 10, ly - 10, `tl${fi}`)}{cross(lx + lw + 10, ly - 10, `tr${fi}`)}
+                {cross(lx - 10, ly + lh + 10, `bl${fi}`)}{cross(lx + lw + 10, ly + lh + 10, `br${fi}`)}
                 {/* the column's dot switcher, centered to the label */}
                 {nDots > 1 && Array.from({ length: nDots }, (_, k) => (
                   <button key={"vd" + fi + k} onClick={() => setStyleView((p) => { const n = [...p]; n[fi] = k; return n; })}
                     aria-label={`view ${fi}-${k}`}
                     /* round 61 #1: dots sit midway between label and button */
                     style={{ ...px(lx + lw / 2 + (k - (nDots - 1) / 2) * 22 - 9, (ly + lh + 565) / 2 - 9, 18, 18), ...ghost }}>
-                    <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 9, height: 9, borderRadius: 5, border: "1px solid #111", background: (styleView[fi] || 0) === k ? "#111" : "#fff", boxSizing: "border-box" }} />
+                    <svg width="18" height="18" viewBox="0 0 18 18" style={{ position: "absolute", left: 0, top: 0, display: "block" }}>
+                      <circle cx="9" cy="9" r="4" fill={(styleView[fi] || 0) === k ? "#111" : "#fff"} stroke="#111" strokeWidth="1" />
+                    </svg>
                   </button>
                 ))}
               </div>
@@ -1892,7 +1936,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               <div style={{ ...px(fr.x + 0.2, 565, OPT_W, 34.3), background: "#ECECEA", color: "#B3B1A8", font: `12px ${HNW}`, letterSpacing: 0.3, display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
                 {t(STYLE_NAMES[fi] + " Variation") + " " + t("(1 Credit)")}</div>
               <div style={{ ...px(fr.x, 634 - 13, OPT_W, 26), display: "flex", alignItems: "center", justifyContent: "center", columnGap: 10 }}>
-                <span style={{ width: 15, height: 15, borderRadius: "50%", border: "2px solid #C9C7BF", background: "#fff", boxSizing: "border-box" }} />
+                {ringSvg(15, false, { color: "#C9C7BF" })}
                 <span style={{ font: `700 15px ${HNW}`, color: "#C9C7BF", lineHeight: `${fm.a + fm.d}px`, transform: `translateY(${(17 - ((26 - (fm.a + fm.d)) / 2 + fm.a)).toFixed(2)}px)` }}>{t("Select")}</span>
               </div>
             </span>
@@ -1910,9 +1954,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             return (
               <button key={"sr" + fi} onClick={() => { if (!dreams[fi]) return; setSelected(selected === fi ? -1 : fi); setWarn(""); }}
                 style={{ ...px(fr.x, 634 - 13, OPT_W, 26), ...ghost, display: "flex", alignItems: "center", justifyContent: "center", columnGap: 10, textTransform: "none", cursor: "pointer" }}>
-                <span style={{ position: "relative", width: 15, height: 15, borderRadius: "50%", border: "2px solid #111", background: "#fff", boxSizing: "border-box", flex: "0 0 auto" }}>
-                  {on && <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 7.5, height: 7.5, borderRadius: "50%", background: "#111" }} />}
-                </span>
+                {ringSvg(15, on, { dot: 7.5 })}
                 {/* round 47: one explicit baseline in every browser */}
                 <span style={{ font: `700 15px ${HNW}`, color: "#111", lineHeight: `${fm.a + fm.d}px`, whiteSpace: "nowrap", transform: `translateY(${(17 - ((26 - (fm.a + fm.d)) / 2 + fm.a)).toFixed(2)}px)` }}>{lbl}</span>
               </button>
@@ -2011,7 +2053,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             </label>
           )}
           {/* ── the band rule, then market compliance ── */}
-          <div style={{ ...px(138, 586, 1301 - 138, 1), backgroundImage: `repeating-linear-gradient(90deg,${DASH})`, backgroundSize: "100% 1px", backgroundRepeat: "no-repeat", pointerEvents: "none" }} />
+          {dashRule(138, 586, 1301 - 138, false, "hrule")}
           {/* round 69 #3: title + paragraph start on the SAME horizontal line as
               the Select Market button's top edge (653) — cap ascents measured
               live: 17.54 at 700 24px, 10.23 at 14px (+2px of the 18px line
@@ -2046,8 +2088,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               }} />
             );
             const ring = (on: boolean) => (
-              <span style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", width: 11, height: 11, borderRadius: 6, border: "1.4px solid #111", background: "#fff", boxSizing: "border-box" }}>
-                {on && <span style={{ position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 5.5, height: 5.5, borderRadius: 3, background: "#111" }} />}
+              <span style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", width: 11, height: 11 }}>
+                {ringSvg(11, on, { stroke: 1.4, dot: 5.5 })}
               </span>
             );
             return (<>
@@ -2079,7 +2121,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     <span style={{ font: `700 14px ${HNW}`, color: "#111", whiteSpace: "nowrap" }}>{t("No compliance needed")}</span>
                     {ring(noComp)}
                   </button>
-                  <div style={{ margin: "4px 14px", height: 1, backgroundImage: `repeating-linear-gradient(90deg,${DASH})`, backgroundSize: "100% 1px", backgroundRepeat: "no-repeat" }} />
+                  <svg style={{ display: "block", margin: "4px 14px", height: 1, width: "calc(100% - 28px)" }} preserveAspectRatio="none">
+                    <line x1="0" y1="0.5" x2="100%" y2="0.5" stroke="#000" strokeWidth="1" strokeDasharray="4.12 4.12" shapeRendering="crispEdges" />
+                  </svg>
                   {COMP.map(({ code, col, row }) => {
                     const on = markets.includes(code);
                     return (
@@ -2205,7 +2249,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {/* live dividers + thin crosses at the new column boundaries */}
           {COLS_X.slice(1).map((dx, i) => (
             <span key={"dv" + i}>
-              <div style={{ ...px(dx, 171.71, 1, 411.43), background: `repeating-linear-gradient(180deg,${DASH})`, pointerEvents: "none" }} />
+              {dashRule(dx, 171.71, 411.43, true, "bdrule")}
               {cross(dx, 171.77, "dvt" + i)}{cross(dx, 583.41, "dvb" + i)}
             </span>
           ))}
@@ -2424,7 +2468,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           : Array.from({ length: 4 }, (_, k) => ({ x: 754 + (k % 2) * 152, y: Y0 + Math.floor(k / 2) * 152, s: 122 }));
         const vrule = (x: number, key: string) => (
           <span key={key}>
-            <div style={{ ...px(x, BOX.y, 1, BOX.h), background: `repeating-linear-gradient(180deg,${DASH})`, pointerEvents: "none" }} />
+            {dashRule(x, BOX.y, BOX.h, true, "boxrule" + x)}
             {cross(x, BOX.y, key + "a")}{cross(x, BOX.y + BOX.h, key + "b")}
           </span>
         );
@@ -2583,13 +2627,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           </>)}
           {/* round 56 #6: no QR/page row → the domain line leaves READ ME */}
           {!customLabel && !gensMode && !packSel[1] && patch(795, 447, 130, 13, "noqrfile")}
-          {/* the Download button: grey and dead until the payment lands */}
-          {!gensMode && (<>
-            {patch(COL_R - 2, BTN.y - 2, COL_W + 4, BTN.h + 4, "dlwipe")}
-            <button onClick={() => { if (paid) proceedToPayment(); }} disabled={!paid}
-              style={{ ...px(COL_R, BTN.y, COL_W, BTN.h), background: paid ? "#111" : "#C2C2C2", border: "none", color: "#fff", font: `12px ${HNW}`, letterSpacing: 0.3, textTransform: "none", cursor: paid ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, transition: `background 240ms ${EASE}` }}>
-              {t("Download")}</button>
-          </>)}
+          {/* ROUND 85 #3 (owner): no "Proceed to payment" bar, no "Download"
+              bar — the red round button does both: a card until the payment
+              lands, a download tray after. Both baked bars are wiped. */}
+          {!gensMode && patch(COL_R - 2, BTN.y - 2, COL_W + 4, BTN.h + 4, "dlwipe")}
+          {patch(COL_L - 2, BTN.y - 2, COL_W + 4, BTN.h + 4, "paywipe")}
           {/* ── the left-hand column: the order ─────────────────────────── */}
           {/* the live slide, centred between the baked chevrons */}
           {gensMode ? null : sl.landing ? (
@@ -2636,8 +2678,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               </span>
             ))}
             {priceAt(TOT_B, "$" + GENS[gensSel].price.toFixed(2), true)}
-            <button aria-label="pay" onClick={() => { if (requireAgree()) payForGenerations(); }}
-              style={{ ...px(COL_L, BTN.y, COL_W, BTN.h), ...ghost }} />
           </>) : customLabel ? (<>
             {/* own-label order: only Marketing Assets and its price */}
             {patch(LBL_X - 2, 486, 380, 134, "custrows")}
@@ -2647,8 +2687,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             {rowLabel(ROWB[0], t("Marketing Assets"), () => setPackSel((ps) => ps.map((v, k) => (k === 2 ? !v : v))), "clm")}
             {priceAt(ROWB[0], "$" + PACK[2].price)}
             {priceAt(TOT_B, "$" + total, true)}
-            <button aria-label="pay" onClick={() => { if (requireAgree()) setPaid(true); }}
-              style={{ ...px(COL_L, BTN.y, COL_W, BTN.h), ...ghost }} />
           </>) : (<>
             {/* live dots on the baked rings + the row click zones */}
             {PACK.map((it, i) => (
@@ -2660,8 +2698,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               </span>
             ))}
             {priceAt(TOT_B, "$" + total, true)}
-            <button aria-label="pay" onClick={() => { if (requireAgree()) setPaid(true); }}
-              style={{ ...px(COL_L, BTN.y, COL_W, BTN.h), ...ghost }} />
           </>)}
           {/* round 52 #1: the agree gate message under the Pay bar */}
           {warn && (
@@ -2760,6 +2796,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         @keyframes nuiOutPx { from { transform: translateX(0) } to { transform: translateX(${dir > 0 ? -1440 : 1440}px) } }
         @keyframes nuiTap { 0% { transform: scale(0.3); opacity: 0 } 22% { opacity: 1 } 100% { transform: scale(1.3); opacity: 0 } }
         @keyframes nuiNudge { 0%, 100% { transform: scale(1) } 22% { transform: scale(1.14) } 44% { transform: scale(1) } 66% { transform: scale(1.14) } 88% { transform: scale(1) } }
+        @keyframes nuiPress { 0%, 100% { transform: scale(1) } 45% { transform: scale(1.09) } }
         @keyframes btnFly { from { left: ${WELCOME_X - NEXT_R}px } to { left: ${NEXT_X - NEXT_R}px } }
         @keyframes nuiFadeIn { from { opacity: 0 } to { opacity: 1 } }
         @keyframes nuiFadeOut { from { opacity: 1 } to { opacity: 0 } }
@@ -2979,7 +3016,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             })()}
             {/* the red round NEXT button */}
             {(page !== "loader" || tut >= 0) && (
-              <button key={"next" + nudge} aria-label={page === "welcome" ? "start" : "next"} className="nui-next"
+              <button key={"next" + nudge + "-" + pressed} aria-label={page === "welcome" ? "start" : "next"} className="nui-next"
                 onClick={() => {
                   barJumped.current = false;
                   /* round 71 #4: inside the walkthrough the arrow only ever
@@ -3023,6 +3060,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     else { setWarn(t("Pick an option in every section to continue")); setTimeout(() => setWarn(""), 3200); }
                   }
                   else if (page === "assets") go("checkout");
+                  /* round 85 #3: on the Final Pack the button is the payment,
+                     then the download */
+                  else if (page === "checkout") {
+                    if (gensMode) { if (requireAgree()) payForGenerations(); }
+                    else if (!paid) { if (requireAgree()) setPaid(true); }
+                    else proceedToPayment();
+                  }
                 }}
                 style={{
                   position: "absolute", left: (tutX !== null ? tutX : page === "welcome" ? WELCOME_X : NEXT_X) - NEXT_R, top: PROG_Y - NEXT_R,
@@ -3030,14 +3074,31 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   width: NEXT_R * 2, height: NEXT_R * 2, borderRadius: NEXT_R, background: BAR_RED, border: "none",
                   padding: 0, cursor: "pointer", pointerEvents: modalOpen ? "none" : "auto", display: "flex", alignItems: "center", justifyContent: "center",
                   animation: arrowFly ? `btnFly ${SLIDE_MS}ms ${EASE} both`
-                    : tut >= 0 && nudge > 0 ? `nuiNudge 1200ms ${EASE} both` : "none",
+                    : tut >= 0 && tut >= tutLast && nudge > 0 ? `nuiNudge 1200ms ${EASE} both`
+                    : pressed > 0 ? `nuiPress 260ms ${EASE} both` : "none",
                 }}>
                 {/* round 71: the artboard's arrow — 34.3 long, 3px stroke,
                     its head 10.52 deep */}
-                <svg viewBox="-1.5 -12.02 37.3 24.04" width="37.3" height="24.04">
-                  <line x1="0" y1="0" x2="34.3" y2="0" stroke="#fff" strokeWidth="3" />
-                  <polyline points="23.78,-10.52 34.3,0 23.78,10.52" fill="none" stroke="#fff" strokeWidth="3" />
-                </svg>
+                {page === "checkout" && !gensMode && paid ? (
+                  /* the owner's download tray (Red_Buttons_Pay&Download.svg) */
+                  <svg viewBox="0 0 40 40" width="40" height="40">
+                    <path d="M8 20 V32 H32 V20" fill="none" stroke="#fff" strokeWidth="3" strokeLinejoin="miter" />
+                    <line x1="20" y1="6" x2="20" y2="24" stroke="#fff" strokeWidth="3" />
+                    <polyline points="13,17 20,24.5 27,17" fill="none" stroke="#fff" strokeWidth="3" />
+                  </svg>
+                ) : page === "checkout" ? (
+                  /* the owner's card */
+                  <svg viewBox="0 0 44 32" width="44" height="32">
+                    <rect x="2.5" y="2.5" width="39" height="27" rx="3.5" fill="none" stroke="#fff" strokeWidth="3" />
+                    <line x1="2.5" y1="11" x2="41.5" y2="11" stroke="#fff" strokeWidth="3" />
+                    <rect x="29" y="19" width="7" height="4" fill="#fff" />
+                  </svg>
+                ) : (
+                  <svg viewBox="-1.5 -12.02 37.3 24.04" width="37.3" height="24.04">
+                    <line x1="0" y1="0" x2="34.3" y2="0" stroke="#fff" strokeWidth="3" />
+                    <polyline points="23.78,-10.52 34.3,0 23.78,10.52" fill="none" stroke="#fff" strokeWidth="3" />
+                  </svg>
+                )}
               </button>
             )}
           </div>
@@ -3131,7 +3192,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                label came out half again as tall as a landscape front one).
                `imgH` forces a shared height and lets the widths follow. */
             const dashBox = (x: number, y: number, w2: number, h2: number, img?: string, imgH?: number) => (
-              <div style={{ position: "absolute", left: x, top: y, width: w2, height: h2, backgroundImage: `repeating-linear-gradient(90deg,${DASH}),repeating-linear-gradient(90deg,${DASH}),repeating-linear-gradient(180deg,${DASH}),repeating-linear-gradient(180deg,${DASH})`, backgroundPosition: "0 0, 0 100%, 0 0, 100% 0", backgroundSize: "100% 1px, 100% 1px, 1px 100%, 1px 100%", backgroundRepeat: "no-repeat" }}>
+              <div style={{ position: "absolute", left: x, top: y, width: w2, height: h2 }}>
+                {dashedBox(0, 0, w2, h2)}
                 {img && (imgH
                   ? (/* eslint-disable-next-line @next/next/no-img-element */
                     <img src={img} alt="" style={{ position: "absolute", left: 8, right: 8, top: (h2 - imgH) / 2, height: imgH, width: "calc(100% - 16px)", objectFit: "contain" }} />)
@@ -3224,7 +3286,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   {t("Each creation costs")} {cost} {cost === 1 ? t("credit") : t("credits")}</span>
                 <span style={{ position: "absolute", left: 300, top: baseTop(104, 13), width: B.w - 332, textAlign: "right", font: `italic 13px ${HNW}`, lineHeight: "13px" }}>
                   {t("You have")} <span style={{ fontWeight: 700, fontStyle: "normal", color: BAR_RED }}>{genCredits}</span> {t("Credits")}</span>
-                <div style={{ position: "absolute", left: 32, top: 120, width: B.w - 64, height: 1, backgroundImage: `repeating-linear-gradient(90deg,${DASH})`, backgroundSize: "100% 1px", backgroundRepeat: "no-repeat" }} />
+                {dashRule(32, 120, B.w - 64, false, "cfrule")}
                 {left}
                 {rows.length > 0 && colTitle(detX, t(isL ? "Label Details" : "Product Details"))}
                 {rows.map(([c, v, ph], i) => (

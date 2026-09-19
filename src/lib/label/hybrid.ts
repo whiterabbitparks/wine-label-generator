@@ -2,6 +2,7 @@ import { buildArtworkPrompt, evalModel, generateArtwork } from "@/lib/eval/model
 import { composeLabel } from "@/lib/typeset/compose";
 import { flatGroundOf } from "@/lib/typeset/palette";
 import { faceFile } from "@/lib/typeset/fonts";
+import type { Layout } from "@/lib/typeset/compose";
 import { gen429 } from "@/lib/dream/engine";
 
 /* THE HYBRID ENGINE for the wizard (branch POPIKA_Back_To_Vector, round
@@ -34,6 +35,7 @@ export interface HybridOutput {
   ink: string;
   ground: string;
   prompt: string;
+  layout: Layout;       /* every set line in label px — the PDF draws from it */
 }
 
 /* the label's texts, exactly as the dream engine derives them */
@@ -57,8 +59,8 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput> 
   const art = await gen429(() => generateArtwork(model, ap, { sketch: inp.sketch || null }));
   /* no paper given (contemporary / punk): the ground is read off the picture */
   const ground = ap.paper || (await flatGroundOf(art)).colour;
-  const out = await composeLabel({ artwork: art, style, texts: textsOf(inp.data), widthMm, heightMm, seed, paper: ground });
-  return { png: out.png, svg: out.svg, art, faces: out.faces, ink: out.ink, ground, prompt: ap.prompt };
+  const out = await composeLabel({ artwork: art, style, texts: textsOf(inp.data), widthMm, heightMm, seed, paper: ground, wineColour: inp.data.wineColorName });
+  return { png: out.png, svg: out.svg, art, faces: out.faces, ink: out.ink, ground, prompt: ap.prompt, layout: out.layout };
 }
 
 /* the TTFs a label's SVG sets its type in — shipped beside the SVG so
