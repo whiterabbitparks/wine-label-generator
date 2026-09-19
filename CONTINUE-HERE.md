@@ -2007,6 +2007,32 @@ composition-contract tightening, then customer wiring.
   Roman). Curation = ~20 VALUES per style across 5-6 axes, not 30 parts.
   FONT LICENSING flagged: live type in a delivered PDF means the font
   travels — commercial faces (Helvetica Neue World) may not permit it.
+- ROUND 97 — THE ADMIN REORGANISED (2026-09-19, owner's answers: keep the
+  ratings and fold /eval into the admin without duplicated functions;
+  delete the old-engine parts if they have no effect; build it in the
+  site's style). /admin now = four tabs — PAINTERS & RULES (PaintersCard,
+  RegionsCard, marketing rules, illustration rules) · REFERENCES
+  (IllustrationTextsCard + StylesTab; MarketingRefsCard) · EVALUATE
+  (EvalPanel = the old /eval page as a component, ratings intact on disk;
+  ArtNotesCard = the dream_feedback notes that artworkGuidance quotes,
+  list/add/delete; PlaygroundTab + ArtDirectionTab as "Image Play") ·
+  SYSTEM (GenerationsTab, UsersTab). ?tab= rides the URL; /eval forwards
+  to /admin?tab=Evaluate. Style: the shared `S` in LegacyAdmin.tsx is
+  now the site's language (white, HNW, black hairlines, black buttons,
+  underline tabs; greens → black) and every legacy card inherits it.
+  DELETED (no effect on the hybrid engine): Dream Studio (DreamRefsCard +
+  StudioCore), DreamRulesCard, the frozen hard-rules card, /legacy,
+  /dream, /api/admin/dream, /api/admin/dream-rules, /api/admin/dream-refs;
+  the duplicate "Verified image rules" inside Image Play (the Rules tab
+  holds the one copy — same store /api/admin/image-rules). KEPT because
+  the live path reads them: styleProfiles (References), Image Play
+  feedback (weights the style cards), dream_feedback notes, regions,
+  painters, marketing charters/scenes/rules. Honest note: the
+  illustration rules steer Image Play only — the wizard's ask carries its
+  own style lines (wiring them in would be a functional change; not
+  done). BUG-FIX PASS: every tab opened in Playwright — no console
+  errors, no failed requests (only the deleted pages 404, as intended).
+  STILL NOT BUILT: "download → correct in Illustrator → upload → diff".
 - ROUND 96 — THE FREE PAINTERS JOIN (2026-09-19, owner: "the painters I
   gave 5s to — we must have them, absolutely"). Finding: every 5 the owner
   gave Ideogram / nano-banana was in ARTWORK mode (the free painting, no
