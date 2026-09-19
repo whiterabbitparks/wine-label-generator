@@ -3,6 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { composeBackLabel, BackLabelData } from "@/lib/back-label";
 import { buildZip } from "@/lib/zip";
+import { readLabel } from "@/lib/label/store";
+import { fontFilesOf } from "@/lib/label/hybrid";
 
 /* DELIVERY PACKAGE (owner 2026-09-07): "Proceed to payment" downloads one
    ZIP named after the wine:
@@ -70,6 +72,7 @@ export async function POST(req: Request) {
   let body: {
     wineName?: string;
     front?: string;
+    frontId?: string | null;
     back?: { data?: BackLabelData; markets?: string[]; heightMM?: number; bgColor?: string };
     shots?: { front?: string; back?: string };
     lifestyle?: string[];
@@ -90,6 +93,15 @@ export async function POST(req: Request) {
     if (frontBuf) {
       const tiff = await sharp(frontBuf).withMetadata({ density: 300 }).tiff({ compression: "lzw" }).toBuffer();
       files.push({ name: `${root}1. LABELS/${base}_Front_Label.tiff`, data: tiff });
+    }
+    /* round 84 (hybrid engine): the front label as LIVE TYPE — the SVG the
+       composer wrote, with the Google TTFs it set, so the customer's
+       designer opens it in Illustrator and moves words, not pixels */
+    const stored = body.frontId ? readLabel(String(body.frontId)) : null;
+    if (stored) {
+      files.push({ name: `${root}1. LABELS/${base}_Front_Label.svg`, data: Buffer.from(stored.svg, "utf8") });
+      for (const p of fontFilesOf(stored.svg))
+        if (fs.existsSync(p)) files.push({ name: `${root}1. LABELS/Fonts/${path.basename(p)}`, data: fs.readFileSync(p) });
     }
     if (body.back) {
       const markets = (body.back.markets || ["EU"]).slice(0, 13);

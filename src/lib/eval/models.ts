@@ -172,13 +172,18 @@ async function paperAndMask(aspect: ArtworkPrompt["aspect"], colour: string): Pr
   return { paper: `data:image/png;base64,${paper.toString("base64")}`, mask: `data:image/png;base64,${mask.toString("base64")}` };
 }
 
-export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt): Promise<string> {
+export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt, extra: { sketch?: string | null } = {}): Promise<string> {
   if (model.via === "openai") {
     const size = ap.aspect === "portrait" ? { w: 1024, h: 1536 } : ap.aspect === "square" ? { w: 1024, h: 1024 } : { w: 1536, h: 1024 };
+    /* the customer's sketch (wizard) rides along as an image input — after
+       the paper canvas when there is a mask, so the mask keeps applying to
+       the canvas */
+    const sketch = extra.sketch && extra.sketch.startsWith("data:image/") ? extra.sketch : null;
+    const sketchLine = sketch ? " The customer's own sketch is attached: follow its subject and arrangement, rendered in the style described." : "";
     if (model.id === "gpt-image-cutout") {
       return generateOpenAIImage({
-        prompt: ap.prompt + " Deliver the illustration as a CUT-OUT on a fully transparent background — nothing but the drawn subject, no paper, no ground, no vignette.",
-        size, transparent: true,
+        prompt: ap.prompt + " Deliver the illustration as a CUT-OUT on a fully transparent background — nothing but the drawn subject, no paper, no ground, no vignette." + sketchLine,
+        size, transparent: true, ...(sketch ? { reference: sketch } : {}),
       } as never);
     }
     /* way 1: with a paper (traditional) the mask still guards the band;
@@ -186,11 +191,11 @@ export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt): Prom
     if (model.id === "gpt-image-masked" || (model.id === "gpt-image-own" && ap.paper)) {
       const { paper, mask } = await paperAndMask(ap.aspect, ap.paper);
       return generateOpenAIImage({
-        prompt: ap.prompt + " Paint the illustration into the open area of the canvas; the rest of the canvas is finished paper and must stay exactly as it is.",
-        size, reference: paper, mask,
+        prompt: ap.prompt + " Paint the illustration into the open area of the canvas; the rest of the canvas is finished paper and must stay exactly as it is." + sketchLine,
+        size, reference: paper, mask, ...(sketch ? { references: [sketch] } : {}),
       } as never);
     }
-    return generateOpenAIImage({ prompt: ap.prompt, size } as never);
+    return generateOpenAIImage({ prompt: ap.prompt + sketchLine, size, ...(sketch ? { reference: sketch } : {}) } as never);
   }
   const key = process.env.FAL_KEY;
   if (!key) throw new Error("FAL_KEY is not set");

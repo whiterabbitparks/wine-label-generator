@@ -75,7 +75,7 @@ function dealCompositionCard(style: string, cards: { key: string; arrangement: s
 
 /* three styles dream in parallel from the classic page — a burst can trip
    the images rate limit; honour the hint and retry once */
-async function gen429<T>(fn: () => Promise<T>): Promise<T> {
+export async function gen429<T>(fn: () => Promise<T>): Promise<T> {
   try {
     return await fn();
   } catch (e) {

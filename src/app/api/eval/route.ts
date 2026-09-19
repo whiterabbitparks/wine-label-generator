@@ -9,6 +9,7 @@ import { EVAL_BRIEFS, EVAL_STYLES, EVAL_FAULTS, aspectOf, type EvalBrief, type E
 import { EVAL_MODELS, evalModel, buildArtworkPrompt, generateArtwork, type EvalModel } from "@/lib/eval/models";
 import { composeLabel } from "@/lib/typeset/compose";
 import { flatGroundOf } from "@/lib/typeset/palette";
+import { textsOf } from "@/lib/label/hybrid";
 import { listRuns, readRun, writeRun, readRatings, writeRating, saveImage, runDir } from "@/lib/eval/store";
 
 /* THE EVALUATION LOOP (branch POPIKA_Back_To_Vector, 2026-09-18/19).
@@ -32,16 +33,6 @@ function gitInfo(): { commit: string; branch: string } {
   return { commit: sh("git rev-parse --short HEAD"), branch: sh("git rev-parse --abbrev-ref HEAD") };
 }
 
-/* the label's texts, exactly as the dream engine derives them */
-function textsOf(b: EvalBrief) {
-  const d = b.data;
-  return {
-    wine: d.wine || "Wine", producer: d.producer || "", appellation: d.appellation || "", vintage: d.vintage || "",
-    grape: d.grape || "", region: [d.region, d.country].filter(Boolean).join(", "),
-    classification: d.classification || "", special: d.special || "",
-    legal: [[d.sweetness, d.wineColorName, "Wine"].filter(Boolean).join(" "), `${d.alcohol || "12.5"}% Alc. by Vol. / ${d.volume || "750"} mL`].join(" / "),
-  };
-}
 
 /* ONE picture, in whichever mode — shared by generate and retry */
 async function paintItem(run: EvalRun, model: EvalModel, brief: EvalBrief, item: EvalItem): Promise<void> {
@@ -67,7 +58,7 @@ async function paintItem(run: EvalRun, model: EvalModel, brief: EvalBrief, item:
         paper = g.colour;
         own = ` · own ground ${g.flat ? "flat" : "NOT flat"} ${(g.coverage * 100).toFixed(0)}%`;
       }
-      const out = await composeLabel({ artwork: art, style: item.style, texts: textsOf(brief), widthMm: brief.width, heightMm: brief.height, seed, paper });
+      const out = await composeLabel({ artwork: art, style: item.style, texts: textsOf(brief.data), widthMm: brief.width, heightMm: brief.height, seed, paper });
       item.file = saveImage(run.id, item.id, out.png);
       fs.writeFileSync(path.join(runDir(run.id), `${item.id}.svg`), out.svg);
       saveImage(run.id, `${item.id}--art`, art);

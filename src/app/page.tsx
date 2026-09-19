@@ -286,7 +286,9 @@ const TERMS_TEXT = Array.from({ length: 9 }, (_, i) => (
   `${i + 1}. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.`
 ));
 
-interface Dream { style: string; dream: string; preview: string | null }
+/* round 84: `id` names the label on the server — its SVG with live type
+   waits there for the delivery package */
+interface Dream { style: string; dream: string; preview: string | null; id?: string }
 
 /* ground colour of a label image — MEDIAN of many border samples
    (round 10 #4: the old 5-corner AVERAGE went dark whenever artwork or
@@ -1319,6 +1321,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const fx = (k: string) => f[k]?.trim() || "";
     return {
       aspectKey,
+      /* round 84: the hybrid engine sets type to the label's real mm */
+      width: Number(f.width) || 110, height: Number(f.height) || 80,
       data: {
         producer: fx("producer"), wine: fx("wine"), appellation: fx("appellation"),
         classification: fx("classification"), grape: fx("grape"),
@@ -1340,14 +1344,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       const d0 = pool[Math.floor(Math.random() * Math.max(1, pool.length))];
       return { style, dream: d0?.dream || FAKE_IMG, preview: d0?.preview || null };
     }
-    const { data, aspectKey } = buildDreamPayload();
+    const { data, aspectKey, width, height } = buildDreamPayload();
     const r = await fetch("/api/dream-label", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ vision, style, data, sketch, aspect: aspectKey }),
+      body: JSON.stringify({ vision, style, data, sketch, aspect: aspectKey, width, height }),
     });
     if (!r.ok || !r.body) throw new Error(`generation failed (${r.status})`);
     const reader = r.body.getReader(); const dec = new TextDecoder();
-    let buf = ""; let res: { dream?: string; preview?: string | null } = {};
+    let buf = ""; let res: { dream?: string; preview?: string | null; id?: string } = {};
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
@@ -1361,7 +1365,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       }
     }
     if (!res.dream) throw new Error("empty variation");
-    return { style, dream: res.dream, preview: res.preview || null };
+    return { style, dream: res.dream, preview: res.preview || null, id: res.id };
   }
   async function createVariation(fi: number) {
     /* round 60 #1: ONE variation of the pressed style; the column's dot
@@ -1417,19 +1421,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     go("loader");
     setGenProgress(0);
     const genT0 = Date.now();   /* round 46: feed the loader's REAL average */
-    const aspect = (Number(f.width) || 110) / (Number(f.height) || 80);
-    const aspectKey = aspect > 1.15 ? "landscape" : aspect < 0.87 ? "portrait" : "square";
-    const fx = (k: string) => f[k]?.trim() || DEMO_FRONT[k] || "";
-    const data = {
-      producer: fx("producer"), wine: fx("wine"), appellation: fx("appellation"),
-      classification: fx("classification"), grape: fx("grape"),
-      region: fx("regionCountry").split(",")[0]?.trim() || "",
-      country: fx("regionCountry").split(",")[1]?.trim() || "",
-      special: fx("special"), vintage: fx("vintage"),
-      wineColorName: fx("colour"), wineType: fx("wineType"),
-      sweetness: fx("sweetness"), alcohol: fx("alcohol").replace("%", ""),
-      volume: fx("volume").replace(/\D/g, "") || "750",
-    };
+    /* round 84: ONE payload builder — this copy still carried the demo
+       fallback that round 78 removed from buildDreamPayload */
+    const { data, aspectKey, width, height } = buildDreamPayload();
     const one = async (style: string): Promise<Dream> => {
       /* round 56 #3 (TEMP dev switch): fake the run with existing art */
       if (!liveGenRef.current) {
@@ -1440,11 +1434,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       }
       const r = await fetch("/api/dream-label", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ vision, style, data, sketch, aspect: aspectKey }),
+        body: JSON.stringify({ vision, style, data, sketch, aspect: aspectKey, width, height }),
       });
       if (!r.ok || !r.body) throw new Error(`generation failed (${r.status})`);
       const reader = r.body.getReader(); const dec = new TextDecoder();
-      let buf = ""; let res: { dream?: string; preview?: string | null } = {};
+      let buf = ""; let res: { dream?: string; preview?: string | null; id?: string } = {};
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -1459,7 +1453,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         }
       }
       setGenProgress((p) => p + 1 / 3);
-      return { style, dream: res.dream || "", preview: res.preview || null };
+      return { style, dream: res.dream || "", preview: res.preview || null, id: res.id };
     };
     try {
       const styles3 = ["traditional", "contemporary", "punk"];
@@ -1561,6 +1555,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           /* ROUND 47: an own-label order ships marketing assets only —
              the customer already has their printed labels */
           front: customLabel ? null : viewedDream(selected)?.dream || null,
+          /* round 84: the label's id fetches its SVG (live type) + fonts */
+          frontId: customLabel ? null : viewedDream(selected)?.id || null,
           back: customLabel ? null : backPayload,
           shots: { front: assets.front?.full, back: customLabel ? undefined : assets.back?.full },
           lifestyle: assets.life.filter(Boolean).map((l) => l.full),
