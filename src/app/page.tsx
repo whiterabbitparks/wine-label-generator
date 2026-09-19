@@ -1247,25 +1247,17 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           setDreams(["traditional", "contemporary", "punk"].map((st2, i) => ({ style: st2, dream: TUT_LABELS[i], preview: TUT_LABELS[i] })));
           go("options");
           setGenProgress(0);
-          if (!(await hold(SLIDE_MS + 800))) return;
-          /* round 73 #7: a variation is made first, so they can see that
-             every design can be re-rolled, and the dots flick between them */
-          if (!(await tap(TAP.varBtn, 260))) return;
-          setStyleVars((v) => { const n = v.map((x) => [...x]); n[2] = [null]; return n; });
-          setStyleView((v) => { const n = [...v]; n[2] = 1; return n; });
-          varT.current = Date.now();
-          if (!(await hold(2100))) return;
-          setStyleVars((v) => { const n = v.map((x) => [...x]); n[2] = [{ style: "punk", dream: TUT_D + "label3b.jpg", preview: TUT_D + "label3b.jpg" }]; return n; });
-          if (!(await beat(1100))) return;
-          if (!(await tap(TAP.dot0, 260))) return;
-          setStyleView((v) => { const n = [...v]; n[2] = 0; return n; });
-          if (!(await beat(820))) return;
-          if (!(await tap(TAP.dot1, 260))) return;
-          setStyleView((v) => { const n = [...v]; n[2] = 1; return n; });
-          if (!(await beat(760))) return;
-          if (!(await tap(TAP.optSelect))) return;
-          saveFront(1);
-          if (!(await hold(1200))) return;
+          if (!(await hold(SLIDE_MS + 1200))) return;
+          /* round 89 #1 (owner): no variation play — the pointer goes
+             straight to Save on the favourite, and the label flies into
+             the folder (round 73 #7's re-roll demo retired) */
+          if (!(await tap(TAP.optSelect, 200))) return;
+          /* not saveFront(): this closure was made before the demo labels
+             existed, so its `dreams` is empty — set and fly directly (the
+             sample labels are 1024×683 → 342.9×228.6 in column 2) */
+          setSelected(1);
+          flyToFolder([{ src: TUT_LABELS[1], x: 548.5, y: 240, w: 342.9, h: 228.6 }]);
+          if (!(await hold(1900))) return;
           break;
         }
         case 2: {

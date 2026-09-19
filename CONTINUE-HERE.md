@@ -2007,6 +2007,31 @@ composition-contract tightening, then customer wiring.
   Roman). Curation = ~20 VALUES per style across 5-6 axes, not 30 parts.
   FONT LICENSING flagged: live type in a delivered PDF means the font
   travels — commercial faces (Helvetica Neue World) may not permit it.
+- ROUND 89 — NIGHT NOTES (2026-09-19, owner asleep). (#1) the walkthrough
+  no longer plays the variation re-roll (round 73 #7 retired): on the
+  options page the pointer goes straight to Save on column 2 and the
+  label FLIES into the folder mark. The film had not played before
+  because the demo called saveFront() from a closure made before the
+  demo labels existed (its `dreams` was []); the step now sets the
+  selection and calls flyToFolder() directly with the sample's box
+  (548.5, 240, 342.9 × 228.6). Verified with a poll for the flying <img>
+  at 25.7 s. (#2) the "cut-off" red button on the Final Pack: measured in
+  Chromium on welcome / vision / options / checkout — 43.2 × 43.2 CSS px
+  (= 54 design px, 20 % under the old 68) on EVERY page, the button's
+  parent has overflow visible, and the checkout crop shows a whole
+  circle; not reproduced — ask the owner for a screenshot + browser
+  (Safari suspected; a WebKit run was attempted). IDEOGRAM AS HYBRID
+  PAINTER (owner asked why his favourite isn't used): run "hybrid-
+  ideogram" (#16 in blind order; punk + contemporary; the eval now gives
+  every fal painter the way-1 ask). Verdict: Ideogram ignores the
+  reserved zone and the flat ground (10/12 "NOT flat"; coverage 16–58 %),
+  so the composer shrinks the picture to 53–65 % and grows the band —
+  the result is a "plate on a dark ground" poster look: some are strong
+  (Saperavi punk, Rkatsiteli punk, Château punk, the teal contemporary
+  Saperavi), others show a seam (a beige plate floating on a taupe
+  ground). It would need its own layout scheme (picture kept whole on a
+  ground taken from its edge) — a candidate for the punk "mask shape =
+  layout" work, not for the wizard today. The wizard uses ONLY gpt-image.
 - ROUND 88 — SAVE FILMS + THE LIVE TREE (2026-09-19). (#6/#7/#10) a
   "Save" flies the image into the header's folder mark: flyToFolder()
   clones it as an absolutely placed <img> with CSS vars --dx/--dy/--s and
