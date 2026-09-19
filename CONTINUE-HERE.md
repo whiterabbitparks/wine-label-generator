@@ -2007,6 +2007,19 @@ composition-contract tightening, then customer wiring.
   Roman). Curation = ~20 VALUES per style across 5-6 axes, not 30 parts.
   FONT LICENSING flagged: live type in a delivered PDF means the font
   travels — commercial faces (Helvetica Neue World) may not permit it.
+- ROUND 95 — FIVE SMALL ONES (2026-09-19). (#1) the vision page's two
+  sentences are one flowing paragraph (no <br>). (#2) under "Feel free to
+  leave out fields…": "Type each field exactly as it should print:
+  capitals, spelling and language stay as you enter them." (GE in i18n).
+  (#3) the Georgian walkthrough card body is ONE wrapping paragraph
+  (9.5 px / 14.4 leading) so the last word drops to its own line. (#4)
+  the confirm modal's column titles 18 px (GE 15). (#5) the back product
+  shot carried the FRONT label (the owner's back label was near-empty
+  and the front shot rides along as a scale reference): buildShotPrompt
+  side "back" now leads with "THIS IS THE BACK … the label is the FIRST
+  image, a plain text-only label, even if nearly empty; the front label's
+  artwork must NOT appear" and the reference-photo clause says its label
+  is never copied. Not yet seen in a paid run.
 - ROUND 94 — THE OWNER'S FIFTEEN + THE SAVE TOGGLE (2026-09-19). (#2)
   The parallax slice cascade is BACK (round 93's single-sheet change
   reverted) — the "old page reappears" glitch was the confirm popup on a
