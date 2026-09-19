@@ -2007,6 +2007,46 @@ composition-contract tightening, then customer wiring.
   Roman). Curation = ~20 VALUES per style across 5-6 axes, not 30 parts.
   FONT LICENSING flagged: live type in a delivered PDF means the font
   travels — commercial faces (Helvetica Neue World) may not permit it.
+- ROUND 85 — THE OWNER'S TWELVE (2026-09-19, after the first hybrid ZIP;
+  #1 withdrawn by the owner). UI: (#3) the Final Pack's baked "Proceed to
+  payment" and "Download" bars are wiped; the red round button IS the
+  payment (owner's card icon, Red_Buttons_Pay&Download.svg) and, once
+  paid, the download tray — gensMode pays for credits the same way.
+  (#2) every ring+dot is now ONE SVG with both circles on the same centre
+  (ringSvg / dotBtn / variation dots / market ring) — CSS boxes centred
+  by translate rounded to the grid separately and the dot drifted.
+  (#6/#7) the selection frame stands 10 px OFF the label with the crosses
+  on its corners (owner's board); dashedBox, dashBox and every dashed
+  rule are SVG hairlines on the half-pixel with crispEdges — the CSS
+  gradients doubled/thinned at fractional scales. (#4) the walkthrough
+  advances by itself: 1.6 s after a step plays, the button presses itself
+  (nuiPress, one scale) and the next step starts; only the closing card
+  waits and only there the double nudge plays. Verified: STEP 1→6→card in
+  75 s unattended. (#5) no "Packing…" line. ENGINE: (#8) the SVG root is
+  width/height in MM (viewBox keeps the 12 px/mm grid) — Illustrator
+  opens 110 × 80 at 110 × 80; the 7 pt floor now binds the OPENING sizes
+  too (small labels opened at 5 pt); and since six lines at 7 pt don't
+  fit 34 % of 80 mm, the band grows to what the stack needs at its floors
+  and the ART yields (80 % on Château Margaux) — dropping a line is the
+  last resort, after the hard floors. (#9) hero opens at 11–15 % of H
+  (8–11 % portrait), dealt by seed. (#10) traditional on a light ground:
+  7 labels in 10 set ONE role (hero / secondary / small, dealt) in the
+  wine's colour — reds for red, greens for white, earth for amber, blush
+  for rosé (WINE_INKS in compose.ts). (#11) the painter's ask carries a
+  PALETTE line by wine colour (wineMood in models.ts) so a white wine
+  never gets a blood-red ground. PACKAGE (#12): TIFF gone; the front label
+  ships as PDF (live type, page in mm, artwork embedded and cropped as
+  shown, fonts embedded whole), SVG with the artwork LINKED from
+  Links/<wine>_Front_Artwork.png, and Fonts/. An .ai is a PDF with Adobe
+  private data — the PDF opens in Illustrator as editable type, so no .ai
+  is written. PDF LESSON (proven on all 61 faces): pdf-lib's fontkit
+  threw "beyond buffer length" on 15 originals embedded whole, and its
+  subsetter silently dropped glyphs from EB Garamond — so public/fonts/
+  labels-pdf/ holds fontTools-cleaned copies (all glyphs, DSIG/meta/hdmx/
+  GPOS/GSUB/GDEF dropped, no hinting) and pdf.ts embeds those, whole.
+  Rebuild command in pdf.ts. DEPLOY NOTE: the live server needs
+  public/fonts/labels installed for librsvg (→ /usr/local/share/fonts +
+  fc-cache); the PDF needs nothing extra.
 - ROUND 84 — THE WIZARD ON THE HYBRID ENGINE (owner "let's build the
   web-page", 2026-09-19). /api/dream-label now runs src/lib/label/
   hybrid.ts::paintHybridLabel — buildArtworkPrompt(ownGround) →
