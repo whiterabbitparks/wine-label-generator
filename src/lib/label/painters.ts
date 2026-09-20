@@ -19,7 +19,7 @@ export async function painterFor(style: string): Promise<string> {
     const db = await getDb();
     const doc = (await db.collection("settings").findOne({ _id: "painters" } as never)) as { map?: Record<string, string> } | null;
     const v = doc?.map?.[style];
-    if (v && WIZARD_PAINTERS.includes(v)) return v;
+    if (v && (WIZARD_PAINTERS.includes(v) || v.startsWith("artist:"))) return v;
   } catch { /* the default paints */ }
   return DEFAULT_PAINTERS[style] || "gpt-image-own";
 }

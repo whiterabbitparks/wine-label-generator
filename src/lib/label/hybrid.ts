@@ -64,7 +64,7 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
      the very ask the owner rated 5 in the bake-off, and the composer CROPS
      — the painting stays whole, the band sits over its foot */
   let free = model.via === "fal" && !model.canvas;
-  let ap = await buildArtworkPrompt(brief, style, seed, { ownGround: model.id === "gpt-image-own", softGround: !!model.canvas, wholeFrame: free });
+  let ap = await buildArtworkPrompt(brief, style, seed, { ownGround: model.id === "gpt-image-own", softGround: !!model.canvas, wholeFrame: free, artist: model.artist });
   let art: string;
   try {
     art = (await gen429(() => generateArtworkChecked(model, ap, { sketch: inp.sketch || null }))).art;

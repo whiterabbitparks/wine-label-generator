@@ -6,7 +6,7 @@ import { requestIsAuthenticated } from "@/lib/admin/session";
 import { listRefs } from "@/lib/admin/style-refs";
 import { runDreamPhase } from "@/lib/dream/engine";
 import { EVAL_BRIEFS, EVAL_STYLES, EVAL_FAULTS, aspectOf, type EvalBrief, type EvalItem, type EvalRun, type EvalRating, type EvalFault, type EvalMode } from "@/lib/eval/briefs";
-import { EVAL_MODELS, evalModel, buildArtworkPrompt, generateArtwork, generateArtworkChecked, type EvalModel } from "@/lib/eval/models";
+import { EVAL_MODELS, evalModel, artistModels, buildArtworkPrompt, generateArtwork, generateArtworkChecked, type EvalModel } from "@/lib/eval/models";
 import { composeLabel } from "@/lib/typeset/compose";
 import { flatGroundOf } from "@/lib/typeset/palette";
 import { textsOf } from "@/lib/label/hybrid";
@@ -52,7 +52,7 @@ async function paintItem(run: EvalRun, model: EvalModel, brief: EvalBrief, item:
       /* way 1 for the own-ground painter AND every fal painter (they take
          no mask — the ground is read off their picture) */
       const free = model.via === "fal" && !model.canvas;
-      const ap = await buildArtworkPrompt(brief, item.style, seed, { ownGround: model.id === "gpt-image-own", softGround: !!model.canvas, wholeFrame: free });
+      const ap = await buildArtworkPrompt(brief, item.style, seed, { ownGround: model.id === "gpt-image-own", softGround: !!model.canvas, wholeFrame: free, artist: model.artist });
       item.prompt = ap.prompt; item.card = ap.card;
       const { art, retried } = await generateArtworkChecked(model, ap);
       /* way 1: no paper was given, so the ground is read off the picture */
@@ -84,7 +84,7 @@ export async function GET() {
     try { refs[st] = (await listRefs(st)).map((d) => ({ id: d.id, name: d.name, url: d.url })); }
     catch { refs[st] = []; }
   }
-  return NextResponse.json({ briefs: EVAL_BRIEFS, styles: EVAL_STYLES, faults: EVAL_FAULTS, models: EVAL_MODELS.filter((m) => WIZARD_PAINTERS.includes(m.id)), runs, refs });
+  return NextResponse.json({ briefs: EVAL_BRIEFS, styles: EVAL_STYLES, faults: EVAL_FAULTS, models: [...EVAL_MODELS.filter((m) => WIZARD_PAINTERS.includes(m.id)), ...artistModels()], runs, refs });
 }
 
 export async function POST(req: Request) {

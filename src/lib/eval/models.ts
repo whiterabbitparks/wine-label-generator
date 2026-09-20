@@ -6,6 +6,7 @@ import type { EvalBrief } from "./briefs";
 import { aspectOf } from "./briefs";
 import { mix } from "@/lib/typeset/fonts";
 import { verifyImage, NO_TEXT_RULE } from "@/lib/admin/image-rules";
+import { readArtist, listArtists, artistStyleLine, type ArtistProfile } from "@/lib/label/artists";
 
 /* THE PAINTERS (branch POPIKA_Back_To_Vector, 2026-09-18).
 
@@ -26,6 +27,8 @@ export interface EvalModel {
   via: "openai" | "fal";
   endpoint?: string;
   canvas?: boolean;        /* takes OUR paper canvas (the type zone stays ours) */
+  artist?: ArtistProfile;  /* an artist painter: FLUX + this artist's LoRA */
+  lora?: { url: string; trigger: string };
 }
 
 export const EVAL_MODELS: EvalModel[] = [
@@ -56,7 +59,17 @@ export const EVAL_MODELS: EvalModel[] = [
 ];
 
 export function evalModel(id: string): EvalModel | null {
+  if (id.startsWith("artist:")) return artistModel(id.slice(7));
   return EVAL_MODELS.find((m) => m.id === id) || null;
+}
+/* ROUND 101: an artist as a painter — "artist:<id>" */
+export function artistModel(artistId: string): EvalModel | null {
+  const a = readArtist(artistId);
+  if (!a || !a.lora) return null;
+  return { id: `artist:${a.profile.id}`, name: `${a.profile.name} · AI artist`, via: "fal", endpoint: "fal-ai/flux-lora", artist: a.profile, lora: { url: a.lora.url, trigger: a.lora.trigger } };
+}
+export function artistModels(): EvalModel[] {
+  return listArtists().map((a) => artistModel(a.profile.id)).filter((m): m is EvalModel => !!m);
 }
 
 /* artwork-only style lines — the dream's STYLE_MOOD with every
@@ -140,7 +153,7 @@ export async function regionNote(region: string): Promise<string> {
    planned together instead of fighting afterwards.
    `short` is the same ask without the house-feedback tail, for painters
    that cap the prompt (Recraft: 1000 characters). */
-export async function buildArtworkPrompt(brief: EvalBrief, style: string, seed = 0, opts: { ownGround?: boolean; softGround?: boolean; wholeFrame?: boolean } = {}): Promise<ArtworkPrompt> {
+export async function buildArtworkPrompt(brief: EvalBrief, style: string, seed = 0, opts: { ownGround?: boolean; softGround?: boolean; wholeFrame?: boolean; artist?: ArtistProfile } = {}): Promise<ArtworkPrompt> {
   const aspect = aspectOf(brief);
   const zone = zoneOf(aspect);
   const g = await artworkGuidance(style);
@@ -165,7 +178,9 @@ export async function buildArtworkPrompt(brief: EvalBrief, style: string, seed =
          drawing ends where the artist ended it. */
       ? `COMPOSITION: a SPOT ILLUSTRATION — one self-contained drawing, isolated on a completely flat, plain, single-colour background that runs to every edge of the picture, with generous empty margin around the drawing on all sides (nothing touches the edges). The drawing's own edges finish naturally, feathering out into the plain ground — no scene filling the frame, no horizon running edge to edge, no border, no frame, no vignette shading, no gradient. The wine's name will be set beside the drawing on that same plain ground. `
       : `COMPOSITION: the illustration lives in the upper part of the picture; the ${zone.where} (${zone.share}) is left as EMPTY, flat, even paper ground — one continuous plain colour with nothing drawn on it — because the wine's name and details will be typeset there afterwards. Keep every drawn element clear of that zone; the illustration may reach the top and side edges if the style wants it, never the type zone. `);
-  const styleLine = `STYLE: ${ART_STYLE[style] || ART_STYLE.traditional}.`;
+  /* an artist's own words replace the house style line; the house
+     guidance (sub-style cards, feedback) stays out — the artist IS the style */
+  const styleLine = opts.artist ? `STYLE: ${artistStyleLine(opts.artist)}.` : `STYLE: ${ART_STYLE[style] || ART_STYLE.traditional}.`;
   const subject =
     ` SUBJECT: ${brief.vision} ` +
     (place ? `The wine comes from ${place} — if the setting shows a landscape, it must be true to ${place}, never another region's.${gaz}` : "") +
@@ -175,7 +190,7 @@ export async function buildArtworkPrompt(brief: EvalBrief, style: string, seed =
   const finish = paper
     ? `FINISH: handmade print on paper, not a photograph, not 3D, not airbrushed; discrete inks, honest imperfection; the ground is the plain ${dark ? "dark coloured" : "paper-coloured"} canvas you are given (${paper}) — keep it flat and untouched around the drawing.`
     : `FINISH: handmade print, not a photograph, not 3D, not airbrushed; discrete inks, honest imperfection. THE GROUND: choose ONE flat, solid, even colour that belongs to this illustration — the colour it is printed on — and fill the whole picture with it edge to edge, so that it continues unchanged into the empty type zone. ${OWN_GROUND_KIND[style] || ""}${wineMood(d.wineColorName)}Absolutely no gradient, no texture, no vignette, no paper grain, no second colour in the ground; the type zone is nothing but that one flat colour.`;
-  const prompt = head + styleLine + g.text + subject + finish;
+  const prompt = head + styleLine + (opts.artist ? "" : g.text) + subject + finish;
   /* the short form keeps the ask, the style and the subject; the house
      feedback goes first, then the finish line, then the geography note */
   let short = head + styleLine + subject + finish;
@@ -254,6 +269,15 @@ export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt, extra
   /* Recraft caps the prompt at 1000 characters (422 otherwise) */
   const body: Record<string, unknown> = { prompt: model.id === "recraft-3" ? ap.short : ap.prompt.slice(0, 1900), num_images: 1 };
   const canvasLine = " Paint the illustration into the open area of the canvas; the rest of the canvas is finished paper and must stay exactly as it is.";
+  if (model.lora) {
+    /* FLUX + the artist's LoRA: the trigger word first, the vignette ask,
+       the label's aspect */
+    Object.assign(body, {
+      prompt: `${model.lora.trigger} style. ${ap.prompt}`.slice(0, 1900),
+      image_size: FAL_SIZE[ap.aspect], num_inference_steps: 28, guidance_scale: 3.5, output_format: "png",
+      loras: [{ path: model.lora.url, scale: 1.0 }],
+    });
+  }
   switch (model.id) {
     case "flux-pro": Object.assign(body, { image_size: FAL_SIZE[ap.aspect], output_format: "png", safety_tolerance: "2" }); break;
     case "ideogram-3": Object.assign(body, { image_size: FAL_SIZE[ap.aspect], rendering_speed: "BALANCED" }); break;

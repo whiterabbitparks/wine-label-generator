@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requestIsAuthenticated } from "@/lib/admin/session";
 import { getDb } from "@/lib/db";
-import { EVAL_MODELS } from "@/lib/eval/models";
+import { EVAL_MODELS, artistModels } from "@/lib/eval/models";
 import { DEFAULT_PAINTERS, WIZARD_PAINTERS } from "@/lib/label/painters";
 
 /* THE PAINTERS (round 90, owner: "why aren't we using the other
@@ -17,7 +17,7 @@ export async function GET() {
   try {
     const db = await getDb();
     const doc = (await db.collection("settings").findOne({ _id: DOC } as never)) as { map?: Record<string, string> } | null;
-    const options = EVAL_MODELS.filter((m) => WIZARD_PAINTERS.includes(m.id)).map((m) => ({ id: m.id, name: m.name }));
+    const options = [...EVAL_MODELS.filter((m) => WIZARD_PAINTERS.includes(m.id)), ...artistModels()].map((m) => ({ id: m.id, name: m.name }));
     return NextResponse.json({ map: { ...DEFAULT_PAINTERS, ...(doc?.map || {}) }, options, saved: !!doc?.map });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 503 });
@@ -31,7 +31,7 @@ export async function POST(req: Request) {
   const map: Record<string, string> = {};
   for (const style of ["traditional", "contemporary", "punk"]) {
     const v = String(body.map?.[style] || "");
-    map[style] = WIZARD_PAINTERS.includes(v) ? v : DEFAULT_PAINTERS[style];
+    map[style] = WIZARD_PAINTERS.includes(v) || v.startsWith("artist:") ? v : DEFAULT_PAINTERS[style];
   }
   const db = await getDb();
   await db.collection("settings").updateOne({ _id: DOC } as never, { $set: { map } }, { upsert: true });
