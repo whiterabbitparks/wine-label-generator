@@ -2007,6 +2007,22 @@ composition-contract tightening, then customer wiring.
   Roman). Curation = ~20 VALUES per style across 5-6 axes, not 30 parts.
   FONT LICENSING flagged: live type in a delivered PDF means the font
   travels — commercial faces (Helvetica Neue World) may not permit it.
+- ROUND 99 — NOTHING IS EVER CUT (2026-09-20, owner: "NO — the background
+  is cutting the illustration"). The measured-foot band (#24) still cut
+  paintings; type-on-the-painting (#25) was unreadable. THE FIX is at
+  painting time: a free painter (Ideogram / nano-banana) is asked for
+  the PICTURE ONLY, composed for its space — `wholeFrame` ask ("fills
+  this whole frame edge to edge; the name is set BELOW the picture,
+  outside this frame"), painted at landscape_16_9 (landscape / square
+  labels) or landscape_4_3 (portrait labels). The composer's `fit:
+  "top"` sets that strip whole into the top 60 % (62 % portrait) with
+  xMidYMid slice (a hair of side crop at most), and the band below takes
+  the painting's own bottom-edge colour (sliceColourOf 0.9–1.0) — hard
+  edge, nothing over the picture, nothing shrunk. Ink: paper-white when
+  the band's luminance < 0.6, else dark. Run #26 "ideogram-top": 12/12
+  — pictures whole, bands reading as part of the print (black under
+  the blue Saperavi, olive under the Château, taupe under the Chinuri).
+  The crop modes (#22–#25) remain in code for stored labels only.
 - ROUND 98 — THE FOOT IS MEASURED; THE ADMIN SIMPLIFIED (2026-09-20).
   (#1) options placeholders moved to where the labels sit (OPT_TOP 290,
   OPT_BOT 540). (#3, owner: "the fade is terrible; adding a background
