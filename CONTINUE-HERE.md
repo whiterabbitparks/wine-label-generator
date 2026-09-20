@@ -2007,6 +2007,38 @@ composition-contract tightening, then customer wiring.
   Roman). Curation = ~20 VALUES per style across 5-6 axes, not 30 parts.
   FONT LICENSING flagged: live type in a delivered PDF means the font
   travels — commercial faces (Helvetica Neue World) may not permit it.
+- BRANCH POPIKA_Artists (2026-09-20) — THE ARTISTS. Owner's idea: real
+  artists submit their works + a short questionnaire, the owner
+  approves, an "AI artist" is built from them, the wizard shows three
+  artists' versions, artists earn a share per label. Live (2.28.48.43)
+  stays on POPIKA_Back_To_Vector. Decisions: start with ONE artist, all
+  three columns show her; no smart selection yet; share % undecided.
+- ROUND 101 — MARIAM KVASHILAVA, THE PILOT (2026-09-20). Material: 47
+  works (screenshots of her paintings) + a one-page PDF profile in
+  NEW UI/Comments/ARTISTS/Mariam Kvashilava/. Prepared into data/
+  artists/mariam-kvashilava/ (works/*.jpg at ≤1024 px, profile.json with
+  her seven answers, profile.pdf) — data/ is git-ignored, so the folder
+  lives on this Mac only (back it up; the live server has none of it).
+  TRAINING: fal flux-lora-fast-training via scratch train-lora.mjs (zip →
+  fal storage → queue → poll), 1000 steps, is_style, trigger MRMKV,
+  ≈ 6 min, ≈ $2 → lora.json (weights URL on fal). ENGINE: src/lib/label/
+  artists.ts (listArtists/readArtist/artistStyleLine); painter id
+  "artist:<id>" resolved by evalModel() → { via fal, endpoint fal-ai/
+  flux-lora, lora, artist }; the ask's STYLE line becomes the artist's
+  own answers and the house sub-style guidance is dropped; free-painter
+  path (vignette ask, vignette fit); FLUX body = trigger + ask, 28 steps,
+  guidance 3.5, lora scale 1.0. Painters dropdown and Evaluate list
+  artists automatically once lora.json exists; painterFor accepts
+  "artist:" ids. AUDITION run "artist-mariam-audition" (#29): 18/18,
+  10–17 s each, ≈ $0.035 each — unmistakably her hand (fluid blue
+  washes, open forms, the dream mood) across all six briefs; the
+  vignette composition holds (drawing whole on its own pale ground,
+  type below). Painters map (shared Mongo) is now artist:mariam for all
+  three styles — on the LIVE server that id resolves to null (no data/
+  artists there) and paintHybridLabel falls back to gpt-image-own.
+  NEXT: owner + Mariam rate #29; then the /artists intake form, the
+  admin Artists tab (approve → train → audition), artistId on labels,
+  the payout report; LoRA scale/steps to tune from the ratings.
 - ROUND 100 — THE VIGNETTE (2026-09-20, owner: "the illustration is cut
   in half by the background in #26; in #25 the text sits on the picture
   — I love Ideogram's look, find a way, it shouldn't be this hard").
