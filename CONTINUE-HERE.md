@@ -2013,6 +2013,23 @@ composition-contract tightening, then customer wiring.
   artists' versions, artists earn a share per label. Live (2.28.48.43)
   stays on POPIKA_Back_To_Vector. Decisions: start with ONE artist, all
   three columns show her; no smart selection yet; share % undecided.
+- ROUND 104 — EVALUATE MADE PLAIN (2026-09-20, owner: "slick and clean;
+  just prompt, the picture, two marks — Visual and Story — a note, and
+  the model's name"). EvalPanel rewritten: per brief ONE ROW of every
+  picture in the run, each headed by its painter's NAME (the style tag
+  shows only when one painter painted all columns; different painters =
+  the name IS the column). Shows the ARTWORK (`<id>--art.png`, flagged
+  `art` on GET), the composed label behind an Artwork/Label switch —
+  layouts are not judged here for now. Marks: Visual (= `score`, the
+  hand) and Story (= new `story`, is the brief's story in the picture);
+  note; prompt on demand with the technical first line stripped. GONE
+  from the UI: faults, "should resemble", reference board, sizes,
+  timings, blind, run A/B letters (compare = a second titled row), the
+  mode selector (hybrid only; "As the wizard" is the default painter).
+  `label` stays in the type for later. Story test (Mariam) filed as run
+  "story-test-mariam" with painters named FLUX + Mariam LoRA / Sketch
+  (gpt-image) → FLUX + LoRA / Ideogram + 4 of her works — data only,
+  the engine untouched; script data/experiments/story-test.ts.
 - ROUND 103 — TWO RATING AXES (2026-09-20, owner: "if I give a 5 for
   the illustration, don't read it as a 5 for the layout or the ground").
   EvalRating gains `label` (1–5, the composer's: layout, type, ground);

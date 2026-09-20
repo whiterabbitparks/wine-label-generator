@@ -104,8 +104,9 @@ export type EvalFault = (typeof EVAL_FAULTS)[number];
 
 export interface EvalRating {
   faults: EvalFault[];
-  score?: number;        /* 1..5 — the ILLUSTRATION (the painter / artist); legacy runs: overall */
-  label?: number;        /* 1..5 — the LABEL: layout, type, ground (the composer) — round 103 */
+  score?: number;        /* 1..5 — VISUAL: the hand (the painter / artist); legacy runs: overall */
+  story?: number;        /* 1..5 — STORY: is the brief's story in the picture? — round 104 */
+  label?: number;        /* 1..5 — the LABEL: layout, type, ground (the composer) — round 103; parked (round 104) */
   ref?: string;          /* style-ref id it should have resembled */
   note?: string;
   at: string;
@@ -120,6 +121,7 @@ export interface EvalItem {
   prompt: string;        /* the full prompt as sent — traceability */
   card?: string | null;  /* which illustration sub-style card was dealt */
   painter?: string;      /* round 103: which painter painted it (gpt-image-own, ideogram-3, artist:<id> …) */
+  art?: boolean;         /* round 104: the artwork alone is filed next to the label (`${id}--art.png`) — set on GET, not stored */
   ms: number;
   error?: string;
 }

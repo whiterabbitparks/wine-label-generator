@@ -3,7 +3,6 @@ import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { requestIsAuthenticated } from "@/lib/admin/session";
-import { listRefs } from "@/lib/admin/style-refs";
 import { runDreamPhase } from "@/lib/dream/engine";
 import { EVAL_BRIEFS, EVAL_STYLES, EVAL_FAULTS, aspectOf, type EvalBrief, type EvalItem, type EvalRun, type EvalRating, type EvalFault, type EvalMode } from "@/lib/eval/briefs";
 import { EVAL_MODELS, evalModel, artistModels, buildArtworkPrompt, generateArtwork, generateArtworkChecked, type EvalModel } from "@/lib/eval/models";
@@ -79,13 +78,13 @@ async function paintItem(run: EvalRun, model: EvalModel, brief: EvalBrief, item:
 
 export async function GET() {
   if (!(await requestIsAuthenticated())) return NextResponse.json({ error: "not authenticated" }, { status: 401 });
-  const runs = listRuns().map((r) => ({ ...r, mode: r.mode || "label", model: r.model || "gpt-image", ratings: readRatings(r.id) }));
-  const refs: Record<string, { id: string; name: string; url: string }[]> = {};
-  for (const st of EVAL_STYLES) {
-    try { refs[st] = (await listRefs(st)).map((d) => ({ id: d.id, name: d.name, url: d.url })); }
-    catch { refs[st] = []; }
-  }
-  return NextResponse.json({ briefs: EVAL_BRIEFS, styles: EVAL_STYLES, faults: EVAL_FAULTS, models: [...EVAL_MODELS.filter((m) => WIZARD_PAINTERS.includes(m.id)), ...artistModels()], runs, refs });
+  /* round 104: each item says whether its artwork alone is on file — the
+     panel shows that, not the composed label, unless asked */
+  const runs = listRuns().map((r) => ({
+    ...r, mode: r.mode || "label", model: r.model || "gpt-image", ratings: readRatings(r.id),
+    items: r.items.map((i) => ({ ...i, art: fs.existsSync(path.join(runDir(r.id), `${i.id}--art.png`)) })),
+  }));
+  return NextResponse.json({ briefs: EVAL_BRIEFS, styles: EVAL_STYLES, models: [...EVAL_MODELS.filter((m) => WIZARD_PAINTERS.includes(m.id)), ...artistModels()], runs });
 }
 
 export async function POST(req: Request) {
@@ -99,10 +98,11 @@ export async function POST(req: Request) {
     let rating: EvalRating | null = null;
     if (body.rating) {
       const faults = (Array.isArray(body.rating.faults) ? body.rating.faults : []).filter((f): f is EvalFault => (EVAL_FAULTS as readonly string[]).includes(f));
-      const score = Number(body.rating.score), label = Number(body.rating.label);
+      const score = Number(body.rating.score), story = Number(body.rating.story), label = Number(body.rating.label);
       rating = {
         faults,
         score: score >= 1 && score <= 5 ? Math.round(score) : undefined,
+        story: story >= 1 && story <= 5 ? Math.round(story) : undefined,
         label: label >= 1 && label <= 5 ? Math.round(label) : undefined,
         ref: body.rating.ref ? String(body.rating.ref).slice(0, 40) : undefined,
         note: body.rating.note ? String(body.rating.note).slice(0, 600) : undefined,
