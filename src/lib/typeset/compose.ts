@@ -1,6 +1,6 @@
 import sharp from "sharp";
 import { measure, vmetrics, pickRoles, mix, type Pick } from "./fonts";
-import { inkOf, inkFootOf, sliceColourOf } from "./palette";
+import { inkOf, inkFootOf, sliceColourOf, zoneStatsOf } from "./palette";
 
 /* THE COMPOSER, v1.2 (branch POPIKA_Back_To_Vector, 2026-09-19).
 
@@ -84,10 +84,13 @@ export async function composeLabel(inp: ComposeInput): Promise<ComposeOutput> {
   const roles = pickRoles(inp.style, inp.seed);
   const inks = await inkOf(inp.artwork);
   const crop = inp.fit === "crop";
-  /* crop mode: the band's colour is the painting's own foot (the rows
-     just above the cut), so the band grows out of the picture */
+  /* crop mode (round 98 #3): the foot of the painting is MEASURED. Quiet
+     foot → the type sits straight on the painting, nothing added. Busy
+     foot → a flat band in the foot's own colour, hard edge, no fade. */
   const bandFrac = portrait ? 0.62 : 0.6;
-  const ground = crop ? await sliceColourOf(inp.artwork, bandFrac - 0.1, bandFrac) : (inp.paper || inks.paper);
+  const zone = crop ? await zoneStatsOf(inp.artwork, bandFrac) : null;
+  const overlay = !!zone && zone.spread < 0.11;
+  const ground = crop ? (overlay ? zone!.colour : await sliceColourOf(inp.artwork, bandFrac - 0.06, bandFrac)) : (inp.paper || inks.paper);
   /* the type's colour: the drawing's ink on a light ground, paper-white on
      a dark or saturated one */
   const dark = lum(ground) < 0.45 || sat(ground) > 0.45;
@@ -225,10 +228,8 @@ export async function composeLabel(inp: ComposeInput): Promise<ComposeOutput> {
     `<rect width="${W}" height="${H}" fill="${ground}"/>` +
     `<image xlink:href="${inp.artwork}" x="${((W - drawW) / 2).toFixed(1)}" y="0" width="${drawW.toFixed(1)}" height="${drawH.toFixed(1)}" preserveAspectRatio="xMidYMin slice"/>` +
     /* crop mode: the band over the painting's foot, with a soft 5 % seam */
-    (crop
-      ? `<defs><linearGradient id="seam" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${ground}" stop-opacity="0"/><stop offset="1" stop-color="${ground}" stop-opacity="1"/></linearGradient></defs>` +
-        `<rect x="0" y="${(bandTop - H * 0.05).toFixed(1)}" width="${W}" height="${(H * 0.05).toFixed(1)}" fill="url(#seam)"/>` +
-        `<rect x="0" y="${bandTop}" width="${W}" height="${H - bandTop}" fill="${ground}"/>`
+    (crop && !overlay
+      ? `<rect x="0" y="${bandTop}" width="${W}" height="${H - bandTop}" fill="${ground}"/>`
       : "") +
     els.join("") +
     `</svg>`;
@@ -236,7 +237,7 @@ export async function composeLabel(inp: ComposeInput): Promise<ComposeOutput> {
   const png = await sharp(Buffer.from(svg), { density: (12 * 25.4) }).resize(W, H).png().toBuffer();
   return {
     svg, png: `data:image/png;base64,${png.toString("base64")}`,
-    faces: `${roles.hero.face.family} ${roles.hero.face.weight} / ${roles.secondary.face.family} / ${roles.small.face.family}${artScale < 1 ? ` · art ${(artScale * 100).toFixed(0)}%` : ""} · ground ${ground}${wineInk ? ` · ${wineRole} in ${wineInk}` : ""}`,
+    faces: `${roles.hero.face.family} ${roles.hero.face.weight} / ${roles.secondary.face.family} / ${roles.small.face.family}${artScale < 1 ? ` · art ${(artScale * 100).toFixed(0)}%` : ""} · ground ${ground}${wineInk ? ` · ${wineRole} in ${wineInk}` : ""}${zone ? ` · foot ${overlay ? "quiet, type on the painting" : "busy, flat band"} (${zone.spread.toFixed(2)})` : ""}`,
     ink: colour,
     layout: { W, H, ground, art: { x: (W - drawW) / 2, y: 0, w: drawW, h: drawH }, lines: laid },
   };

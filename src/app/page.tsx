@@ -1821,7 +1821,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   ];
 
   const OPT_FRAMES = [{ x: 137.1 }, { x: 548.5 }, { x: 960 }];
-  const OPT_TOP = 240, OPT_BOT = 468.6, OPT_W = 342.9;
+  const OPT_TOP = 290, OPT_BOT = 540, OPT_W = 342.9;   /* round 98 #1: where the labels sit */
   const BD_AREA = { x: 548.6, y: 171.5, w: 342.9, h: 342.9 };
 
   const wheelPick = (clientX: number, clientY: number, el: HTMLElement) => {

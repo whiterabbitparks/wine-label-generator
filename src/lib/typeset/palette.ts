@@ -120,3 +120,25 @@ export async function sliceColourOf(dataUrl: string, fracTop: number, fracBottom
   const top = [...bins.values()].sort((a, b) => b.n - a.n)[0];
   return top ? hex(top.r / top.n, top.g / top.n, top.b / top.n) : "#F4EFE3";
 }
+
+/* ROUND 98 #3 (owner: "the fade is terrible, adding a background after
+   obviously is not working"): the type zone is MEASURED. The painter was
+   asked to keep the foot quiet; if it is (little variation), the type is
+   set straight onto the painting — no band, no fade. Only a busy foot gets
+   a flat band in the painting's own colour, with a hard edge. */
+export interface ZoneStats { lum: number; spread: number; colour: string }
+export async function zoneStatsOf(dataUrl: string, fracTop: number, fracBottom = 1): Promise<ZoneStats> {
+  const buf = Buffer.from(dataUrl.slice(dataUrl.indexOf(",") + 1), "base64");
+  const { data, info } = await sharp(buf).resize(160, 160, { fit: "fill" }).flatten({ background: "#F4EFE3" }).raw().toBuffer({ resolveWithObject: true });
+  const W = info.width, H = info.height, C = info.channels;
+  const y0 = Math.max(0, Math.floor(H * fracTop)), y1 = Math.min(H, Math.ceil(H * fracBottom));
+  const lums: number[] = []; let sr = 0, sg = 0, sb = 0, n = 0;
+  for (let y = y0; y < y1; y++) for (let x = 0; x < W; x++) {
+    const i = (y * W + x) * C;
+    lums.push((0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]) / 255);
+    sr += data[i]; sg += data[i + 1]; sb += data[i + 2]; n++;
+  }
+  const mean = lums.reduce((a, b) => a + b, 0) / Math.max(1, lums.length);
+  const spread = Math.sqrt(lums.reduce((a, b) => a + (b - mean) * (b - mean), 0) / Math.max(1, lums.length));
+  return { lum: mean, spread, colour: n ? hex(sr / n, sg / n, sb / n) : "#F4EFE3" };
+}

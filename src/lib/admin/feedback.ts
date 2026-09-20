@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { getDb } from "@/lib/db";
+import { listRuns, readRatings } from "@/lib/eval/store";
 
 /* Owner feedback on generated artwork (the refinement loop, owner request
    2026-08-13). Each verdict is one document in `styleFeedback`. Generation
@@ -99,6 +100,23 @@ export async function feedbackAggregates(): Promise<Record<string, StyleFeedback
     .limit(500)
     .toArray();
   const out: Record<string, StyleFeedbackAggregate> = {};
+  /* ROUND 98 #2 (owner: "why Image Play AND Evaluate?"): ONE rating
+     language. An Evaluate mark of 4–5 on a label boosts the style card
+     that was dealt for it; a 1–2 counts as a rejected attempt of that
+     card — exactly what Image Play's thumbs used to do. */
+  try {
+    for (const run of listRuns()) {
+      const ratings = readRatings(run.id);
+      for (const it of run.items) {
+        const rt = ratings[it.id];
+        if (!it.card || !rt?.score) continue;
+        const agg = (out[it.style] ||= { weights: {}, avoid: [], favour: [], cardNotes: {}, latest: null });
+        const notes = (agg.cardNotes[it.card] ||= { keeps: [], fixes: [], rejections: 0 });
+        if (rt.score >= 4) agg.weights[it.card] = (agg.weights[it.card] ?? 1) + 1;
+        else if (rt.score <= 2) notes.rejections += 1;
+      }
+    }
+  } catch { /* no eval runs on this machine */ }
   for (const r of rows) {
     const agg = (out[r.style] ||= { weights: {}, avoid: [], favour: [], cardNotes: {}, latest: null });
     if (!agg.latest) agg.latest = r.createdAt; // rows arrive newest-first

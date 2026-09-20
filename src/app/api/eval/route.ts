@@ -10,6 +10,7 @@ import { EVAL_MODELS, evalModel, buildArtworkPrompt, generateArtwork, generateAr
 import { composeLabel } from "@/lib/typeset/compose";
 import { flatGroundOf } from "@/lib/typeset/palette";
 import { textsOf } from "@/lib/label/hybrid";
+import { WIZARD_PAINTERS } from "@/lib/label/painters";
 import { listRuns, readRun, writeRun, readRatings, writeRating, saveImage, runDir } from "@/lib/eval/store";
 
 /* THE EVALUATION LOOP (branch POPIKA_Back_To_Vector, 2026-09-18/19).
@@ -83,7 +84,7 @@ export async function GET() {
     try { refs[st] = (await listRefs(st)).map((d) => ({ id: d.id, name: d.name, url: d.url })); }
     catch { refs[st] = []; }
   }
-  return NextResponse.json({ briefs: EVAL_BRIEFS, styles: EVAL_STYLES, faults: EVAL_FAULTS, models: EVAL_MODELS, runs, refs });
+  return NextResponse.json({ briefs: EVAL_BRIEFS, styles: EVAL_STYLES, faults: EVAL_FAULTS, models: EVAL_MODELS.filter((m) => WIZARD_PAINTERS.includes(m.id)), runs, refs });
 }
 
 export async function POST(req: Request) {

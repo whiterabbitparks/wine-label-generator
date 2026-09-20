@@ -7,19 +7,18 @@
      References       — the illustration boards and their derived style
                         cards; the marketing boards and charters
      Evaluate         — the evaluation loop (six frozen briefs, 1–5 with
-                        faults), the art director's notes that ride every
-                        ask, and Image Play test batches
-     System           — recent generations, users
+                        faults — a 4 or 5 also boosts the style card that
+                        was dealt, a 1 or 2 marks it as a rejected
+                        attempt: the one rating language) and the art
+                        director's notes that ride every ask
+     System           — recent labels, users
    Gone (the old whole-label "dream" engine, no effect on the hybrid
    engine): Dream Studio, dream rules, dream reference boards, the frozen
    hard-rules card, /legacy and /dream. The legacy component library
    (LegacyAdmin.tsx) stays as the source of the shared cards. */
 
 import { useCallback, useEffect, useState } from "react";
-import {
-  GenerationsTab, UsersTab, LoginForm, StylesTab, PlaygroundTab, ArtDirectionTab,
-  AdminStyles as S,
-} from "../legacy/LegacyAdmin";
+import { UsersTab, LoginForm, StylesTab, AdminStyles as S } from "../legacy/LegacyAdmin";
 import { RegionsCard } from "./RegionsCard";
 import { PaintersCard } from "./PaintersCard";
 import { EvalPanel } from "./EvalPanel";
@@ -307,6 +306,28 @@ function ArtNotesCard() {
   );
 }
 
+/* ROUND 98 #2: the hybrid engine's own log — the labels under data/labels */
+function RecentLabelsCard() {
+  const [rows, setRows] = useState<{ id: string; style: string; widthMm: number; heightMm: number; faces: string; createdAt: string; fit?: string }[]>([]);
+  useEffect(() => { fetch("/api/admin/labels").then((r) => r.json()).then((b) => setRows(b.labels || [])); }, []);
+  return (
+    <div style={S.card}>
+      <label style={{ ...S.label, margin: 0 }}>Recent labels (last 40)</label>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))", gap: 14, marginTop: 12 }}>
+        {rows.map((r) => (
+          <div key={r.id} style={{ border: "1px solid #E3E3E1", padding: 8 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={`/api/admin/labels?id=${r.id}`} alt={r.id} style={{ width: "100%", display: "block", background: "#F4F3EE" }} />
+            <div style={{ fontSize: 11, color: "#8a887e", marginTop: 6 }}>{r.createdAt.slice(0, 16).replace("T", " ")} · {r.style === "punk" ? "funky" : r.style} · {r.widthMm}×{r.heightMm} mm</div>
+            <div style={{ fontSize: 11, marginTop: 2 }}>{r.faces}</div>
+          </div>
+        ))}
+        {!rows.length && <span style={{ fontSize: 12, color: "#8a887e" }}>nothing painted yet</span>}
+      </div>
+    </div>
+  );
+}
+
 function Section({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
   return (
     <section style={{ marginTop: 28 }}>
@@ -398,14 +419,10 @@ export default function AdminPage() {
           <Section title="Art director's notes">
             <ArtNotesCard />
           </Section>
-          <Section title="Image Play" note="Test batches of artwork per style with approve / reject — approving makes a style card appear more often, rejecting asks the next batch for a clearly different interpretation.">
-            <PlaygroundTab />
-            <ArtDirectionTab />
-          </Section>
         </>)}
 
         {tab === "System" && (<>
-          <Section title="Generations"><GenerationsTab /></Section>
+          <Section title="Recent labels" note="What the wizard painted lately — painter, faces, ground, the foot decision."><RecentLabelsCard /></Section>
           <Section title="Users"><UsersTab onSessionLost={() => setAuthed(false)} /></Section>
         </>)}
       </div>

@@ -39,8 +39,8 @@ export function EvalPanel() {
   const [name, setName] = useState("");
   const [note, setNote] = useState("");
   const [perBrief, setPerBrief] = useState(1);
-  const [mode, setMode] = useState<EvalMode>("artwork");
-  const [model, setModel] = useState("gpt-image");
+  const [mode, setMode] = useState<EvalMode>("hybrid");
+  const [model, setModel] = useState("gpt-image-own");
   /* BLIND: run names and painters hidden — runs are "#1, #2…" in the order
      they were made, so the marks are about the pictures, not the brand */
   const [blind, setBlind] = useState(false);
@@ -170,14 +170,6 @@ export function EvalPanel() {
           <div style={{ flex: "2 1 260px" }}>
             <label style={{ ...S.label, marginTop: 0 }}>What changed since the last run</label>
             <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="engine notes for the record" style={S.input} />
-          </div>
-          <div>
-            <label style={{ ...S.label, marginTop: 0 }}>Mode</label>
-            <select value={mode} onChange={(e) => { const m = e.target.value as EvalMode; setMode(m); if (m === "hybrid") setModel("gpt-image-masked"); }} style={{ ...S.input, width: 190 }}>
-              <option value="hybrid">hybrid — full label, new engine</option>
-              <option value="artwork">artwork only</option>
-              <option value="label">whole label (old engine)</option>
-            </select>
           </div>
           <div>
             <label style={{ ...S.label, marginTop: 0 }}>Painter</label>
