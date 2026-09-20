@@ -77,7 +77,7 @@ function zoneOf(aspect: "landscape" | "portrait" | "square"): { where: string; s
     : { where: "bottom part", share: "roughly the bottom 40%" };
 }
 
-export interface ArtworkPrompt { prompt: string; short: string; card: string | null; aspect: "landscape" | "portrait" | "square"; paper: string }
+export interface ArtworkPrompt { prompt: string; short: string; card: string | null; aspect: "landscape" | "portrait" | "square"; paper: string; wholeFrame?: boolean }
 
 /* THE GROUND, chosen before the ask (owner 2026-09-19: "a beautiful
    colourful illustration on top and a boring beige ground painted under
@@ -140,7 +140,7 @@ export async function regionNote(region: string): Promise<string> {
    planned together instead of fighting afterwards.
    `short` is the same ask without the house-feedback tail, for painters
    that cap the prompt (Recraft: 1000 characters). */
-export async function buildArtworkPrompt(brief: EvalBrief, style: string, seed = 0, opts: { ownGround?: boolean; softGround?: boolean } = {}): Promise<ArtworkPrompt> {
+export async function buildArtworkPrompt(brief: EvalBrief, style: string, seed = 0, opts: { ownGround?: boolean; softGround?: boolean; wholeFrame?: boolean } = {}): Promise<ArtworkPrompt> {
   const aspect = aspectOf(brief);
   const zone = zoneOf(aspect);
   const g = await artworkGuidance(style);
@@ -153,7 +153,13 @@ export async function buildArtworkPrompt(brief: EvalBrief, style: string, seed =
   const head =
     `Illustration for a wine label — the ARTWORK ONLY. No text, no lettering, no words, no numbers, no logo, no monogram, no border, no frame, no badge. ` +
     `Format: ${aspect === "portrait" ? "portrait 2:3" : aspect === "square" ? "square" : "landscape 3:2"}, the flat printed label itself, not a bottle, not a mockup. ` +
-    `COMPOSITION: the illustration lives in the upper part of the picture; the ${zone.where} (${zone.share}) is left as EMPTY, flat, even paper ground — one continuous plain colour with nothing drawn on it — because the wine's name and details will be typeset there afterwards. Keep every drawn element clear of that zone; the illustration may reach the top and side edges if the style wants it, never the type zone. `;
+    (opts.wholeFrame
+      /* ROUND 99: the free painters never left the zone — so they are not
+         asked for one. They paint the PICTURE ONLY, shaped for its space
+         (a wide strip); the type goes UNDER it, on the painting's own foot
+         colour, and nothing is ever cut or covered. */
+      ? `COMPOSITION: the illustration fills this whole frame edge to edge — a complete picture, composed for this wide format, with its own ground running to the bottom edge. Nothing will be written on it; the wine's name is set BELOW the picture, outside this frame. `
+      : `COMPOSITION: the illustration lives in the upper part of the picture; the ${zone.where} (${zone.share}) is left as EMPTY, flat, even paper ground — one continuous plain colour with nothing drawn on it — because the wine's name and details will be typeset there afterwards. Keep every drawn element clear of that zone; the illustration may reach the top and side edges if the style wants it, never the type zone. `);
   const styleLine = `STYLE: ${ART_STYLE[style] || ART_STYLE.traditional}.`;
   const subject =
     ` SUBJECT: ${brief.vision} ` +
@@ -170,7 +176,7 @@ export async function buildArtworkPrompt(brief: EvalBrief, style: string, seed =
   let short = head + styleLine + subject + finish;
   if (short.length > 1000) short = head + styleLine + subject;
   if (short.length > 1000) short = (head + styleLine + ` SUBJECT: ${brief.vision}`).slice(0, 1000);
-  return { prompt, short, card: g.card, aspect, paper };
+  return { prompt, short, card: g.card, aspect, paper, wholeFrame: !!opts.wholeFrame };
 }
 
 const FAL_SIZE: Record<ArtworkPrompt["aspect"], string> = { landscape: "landscape_4_3", portrait: "portrait_4_3", square: "square_hd" };
@@ -247,9 +253,9 @@ export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt, extra
   const canvasLine = " Paint the illustration into the open area of the canvas; the rest of the canvas is finished paper and must stay exactly as it is.";
   switch (model.id) {
     case "flux-pro": Object.assign(body, { image_size: FAL_SIZE[ap.aspect], output_format: "png", safety_tolerance: "2" }); break;
-    case "ideogram-3": Object.assign(body, { image_size: FAL_SIZE[ap.aspect], rendering_speed: "BALANCED" }); break;
+    case "ideogram-3": Object.assign(body, { image_size: ap.wholeFrame ? (ap.aspect === "portrait" ? "landscape_4_3" : "landscape_16_9") : FAL_SIZE[ap.aspect], rendering_speed: "BALANCED" }); break;
     case "recraft-3": Object.assign(body, { image_size: FAL_SIZE[ap.aspect], style: "digital_illustration" }); break;
-    case "nano-banana": Object.assign(body, { aspect_ratio: FAL_RATIO[ap.aspect], output_format: "png" }); break;
+    case "nano-banana": Object.assign(body, { aspect_ratio: ap.wholeFrame ? (ap.aspect === "portrait" ? "4:3" : "16:9") : FAL_RATIO[ap.aspect], output_format: "png" }); break;
     /* round 90: our canvas goes in; Ideogram takes the white mask, nano-
        banana only the instruction (no mask on that endpoint) */
     case "ideogram-3-edit": {
