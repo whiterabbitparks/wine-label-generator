@@ -68,6 +68,7 @@ async function paintItem(run: EvalRun, model: EvalModel, brief: EvalBrief, item:
       fs.writeFileSync(path.join(runDir(run.id), `${item.id}.svg`), out.svg);
       saveImage(run.id, `${item.id}--art`, art);
       item.prompt = `[faces: ${out.faces} · ink ${out.ink}${own}]\n` + item.prompt;
+      item.painter = model.id;
     }
     delete item.error;
   } catch (e) {
@@ -98,10 +99,11 @@ export async function POST(req: Request) {
     let rating: EvalRating | null = null;
     if (body.rating) {
       const faults = (Array.isArray(body.rating.faults) ? body.rating.faults : []).filter((f): f is EvalFault => (EVAL_FAULTS as readonly string[]).includes(f));
-      const score = Number(body.rating.score);
+      const score = Number(body.rating.score), label = Number(body.rating.label);
       rating = {
         faults,
         score: score >= 1 && score <= 5 ? Math.round(score) : undefined,
+        label: label >= 1 && label <= 5 ? Math.round(label) : undefined,
         ref: body.rating.ref ? String(body.rating.ref).slice(0, 40) : undefined,
         note: body.rating.note ? String(body.rating.note).slice(0, 600) : undefined,
         at: new Date().toISOString(),

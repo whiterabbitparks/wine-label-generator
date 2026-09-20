@@ -104,9 +104,11 @@ export function EvalPanel() {
     const items = run.items.filter((i) => i.style === style && !i.error);
     const rated = items.map((i) => run.ratings[i.id]).filter(Boolean);
     const scores = rated.map((r) => r.score).filter((s): s is number => !!s);
+    const labels = rated.map((r) => r.label).filter((s): s is number => !!s);
     const faultCount: Record<string, number> = {};
     rated.forEach((r) => r.faults.forEach((f) => { faultCount[f] = (faultCount[f] || 0) + 1; }));
-    return { n: items.length, rated: rated.length, avg: scores.length ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2) : "–", faultCount };
+    const avgOf = (a: number[]) => (a.length ? (a.reduce((x, y) => x + y, 0) / a.length).toFixed(2) : "–");
+    return { n: items.length, rated: rated.length, avg: avgOf(scores), avgLabel: avgOf(labels), faultCount };
   };
   const sumA = summary(A), sumB = summary(B);
 
@@ -130,11 +132,21 @@ export function EvalPanel() {
             );
           })}
         </div>
+        {/* round 103 (owner: "a 5 for the illustration must never read as a
+            5 for the layout"): two axes. ILLUSTRATION goes to the painter /
+            artist; LABEL goes to the composer. Faults name what is wrong. */}
         <div style={{ display: "flex", gap: 4, marginTop: 6, alignItems: "center" }}>
-          <span style={{ fontSize: 11, color: "#5a5a52", marginRight: 4 }}>overall</span>
+          <span style={{ fontSize: 11, color: "#5a5a52", width: 72 }}>illustration</span>
           {[1, 2, 3, 4, 5].map((s) => (
             <button key={s} onClick={() => rate(run, item, { score: rt?.score === s ? undefined : s })}
               style={{ ...S.btnGhost, padding: "2px 8px", fontSize: 12, background: rt?.score === s ? "#111" : "transparent", color: rt?.score === s ? "#fff" : "#111" }}>{s}</button>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: 4, marginTop: 4, alignItems: "center" }}>
+          <span style={{ fontSize: 11, color: "#5a5a52", width: 72 }}>label</span>
+          {[1, 2, 3, 4, 5].map((s) => (
+            <button key={"l" + s} onClick={() => rate(run, item, { label: rt?.label === s ? undefined : s })}
+              style={{ ...S.btnGhost, padding: "2px 8px", fontSize: 12, background: rt?.label === s ? "#111" : "transparent", color: rt?.label === s ? "#fff" : "#111" }}>{s}</button>
           ))}
         </div>
         <div style={{ display: "flex", gap: 6, marginTop: 6, alignItems: "center", flexWrap: "wrap" }}>
@@ -158,7 +170,7 @@ export function EvalPanel() {
 
   return (
     <div>
-      <p style={{ fontSize: 13, color: "#8a887e", margin: "12px 0 0" }}>Six frozen briefs · every style · every engine change · marked by the art director. Faults first, an overall 1–5, the reference it should have resembled, a note.</p>
+      <p style={{ fontSize: 13, color: "#8a887e", margin: "12px 0 0" }}>Six frozen briefs · every style · every engine change · marked by the art director. Two marks per label: <b>illustration</b> (goes to the painter or artist) and <b>label</b> (goes to the layout, type and ground — the composer). Faults name what is wrong; a note says why.</p>
 
       {/* ---- new run ---- */}
       <div style={S.card}>
@@ -234,7 +246,7 @@ export function EvalPanel() {
         <div style={{ ...S.card, display: "flex", gap: 24, fontSize: 12, flexWrap: "wrap" }}>
           {([["A", A, sumA], ["B", B, sumB]] as [string, RunWithRatings | null, ReturnType<typeof summary>][]).map(([k, run, sm]) => sm && run ? (
             <div key={k}>
-              <b>{k} · {runLabel(run)}</b> — {sm.rated}/{sm.n} marked · overall <b>{sm.avg}</b>
+              <b>{k} · {runLabel(run)}</b> — {sm.rated}/{sm.n} marked · illustration <b>{sm.avg}</b> · label <b>{sm.avgLabel}</b>
               {Object.keys(sm.faultCount).length > 0 && <> · faults: {Object.entries(sm.faultCount).sort((a, b) => b[1] - a[1]).map(([f, c]) => `${FAULT_LABEL[f as EvalFault]} ${c}`).join(", ")}</>}
               {run.note && !blind && <div style={{ color: "#8a887e", marginTop: 2 }}>{run.note}</div>}
             </div>
