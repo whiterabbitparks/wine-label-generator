@@ -74,7 +74,8 @@ export async function POST(req: Request) {
             } catch { /* a missing variant never fails the label */ }
           }
         }
-        send({ type: "result", dream: out.png, preview, id, variants });
+        /* round 102: the artist's name rides along so the wizard can head the column with it */
+        send({ type: "result", dream: out.png, preview, id, variants, artist: base ? undefined : (out as { artist?: string }).artist });
       } catch (e) {
         send({ type: "error", error: e instanceof Error ? e.message : String(e) });
       }

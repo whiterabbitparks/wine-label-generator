@@ -10,7 +10,7 @@ import { EVAL_MODELS, evalModel, artistModels, buildArtworkPrompt, generateArtwo
 import { composeLabel } from "@/lib/typeset/compose";
 import { flatGroundOf } from "@/lib/typeset/palette";
 import { textsOf } from "@/lib/label/hybrid";
-import { WIZARD_PAINTERS } from "@/lib/label/painters";
+import { WIZARD_PAINTERS, painterFor } from "@/lib/label/painters";
 import { listRuns, readRun, writeRun, readRatings, writeRating, saveImage, runDir } from "@/lib/eval/store";
 
 /* THE EVALUATION LOOP (branch POPIKA_Back_To_Vector, 2026-09-18/19).
@@ -133,7 +133,7 @@ export async function POST(req: Request) {
       for (const item of failed) {
         const brief = EVAL_BRIEFS.find((b) => b.id === item.briefId);
         if (!brief) continue;
-        await paintItem(run, model, brief, item);
+        await paintItem(run, wizard ? (evalModel(await painterFor(item.style)) || model) : model, brief, item);
         writeRun(run);
         send({ type: "item", done: ++done, total: failed.length, item: { ...item, prompt: undefined } });
         await new Promise((r) => setTimeout(r, 4000));   /* breathe — the limits asked for it */
@@ -145,7 +145,11 @@ export async function POST(req: Request) {
   if (body.action !== "generate") return NextResponse.json({ error: "unknown action" }, { status: 400 });
 
   const mode: EvalMode = body.mode === "artwork" ? "artwork" : body.mode === "hybrid" ? "hybrid" : "label";
-  const model = mode === "label" ? evalModel("gpt-image")! : mode === "hybrid" ? evalModel(String(body.model || "gpt-image-masked")) : evalModel(String(body.model || ""));
+  /* round 102: model "wizard" = exactly what the wizard does — each
+     style's painter from the Painters setting (three artists, one per
+     column) */
+  const wizard = body.model === "wizard";
+  const model = wizard ? evalModel(await painterFor("traditional")) || evalModel("gpt-image-own")! : mode === "label" ? evalModel("gpt-image")! : mode === "hybrid" ? evalModel(String(body.model || "gpt-image-masked")) : evalModel(String(body.model || ""));
   if (!model) return NextResponse.json({ error: "unknown model" }, { status: 400 });
   const perBrief = Math.min(3, Math.max(1, Number(body.perBrief) || 1));
   const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
@@ -155,7 +159,7 @@ export async function POST(req: Request) {
     note: body.note ? String(body.note).slice(0, 600) : undefined,
     createdAt: new Date().toISOString(),
     ...gitInfo(),
-    mode, model: model.id,
+    mode, model: wizard ? "wizard" : model.id,
     items: [],
   };
   writeRun(run);
@@ -176,7 +180,7 @@ export async function POST(req: Request) {
       for (let n = 1; n <= perBrief; n++) {
         const one = async (style: string) => {
           const item: EvalItem = { id: `${brief.id}--${style}--${n}`, briefId: brief.id, style, n, file: "", prompt: "", ms: 0 };
-          await paintItem(run, model, brief, item);
+          await paintItem(run, wizard ? (evalModel(await painterFor(item.style)) || model) : model, brief, item);
           run.items.push(item);
           writeRun(run);
           send({ type: "item", done: ++done, total, item: { ...item, prompt: undefined } });

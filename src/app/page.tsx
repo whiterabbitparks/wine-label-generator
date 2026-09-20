@@ -302,7 +302,7 @@ const TERMS_TEXT = Array.from({ length: 9 }, (_, i) => (
 
 /* round 84: `id` names the label on the server — its SVG with live type
    waits there for the delivery package */
-interface Dream { style: string; dream: string; preview: string | null; id?: string; variants?: Dream[] }
+interface Dream { style: string; dream: string; preview: string | null; id?: string; variants?: Dream[]; artist?: string }
 
 /* ground colour of a label image — MEDIAN of many border samples
    (round 10 #4: the old 5-corner AVERAGE went dark whenever artwork or
@@ -1553,7 +1553,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       });
       if (!r.ok || !r.body) throw new Error(`generation failed (${r.status})`);
       const reader = r.body.getReader(); const dec = new TextDecoder();
-      let buf = ""; let res: { dream?: string; preview?: string | null; id?: string; variants?: { dream: string; preview: string | null; id: string }[] } = {};
+      let buf = ""; let res: { dream?: string; preview?: string | null; id?: string; artist?: string; variants?: { dream: string; preview: string | null; id: string }[] } = {};
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -1569,7 +1569,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       }
       setGenProgress((p) => p + 1 / 3);
       /* round 94 #6: two contrasting re-layouts of the same painting ride along */
-      return { style, dream: res.dream || "", preview: res.preview || null, id: res.id, variants: (res.variants || []).map((v) => ({ style, dream: v.dream, preview: v.preview, id: v.id })) };
+      return { style, dream: res.dream || "", preview: res.preview || null, id: res.id, artist: res.artist, variants: (res.variants || []).map((v) => ({ style, dream: v.dream, preview: v.preview, id: v.id })) };
     };
     try {
       const styles3 = ["traditional", "contemporary", "punk"];
@@ -1994,7 +1994,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
            variation buttons, no subtitle. */
         const styleHead = (fi: number) => (
           <span key={"sh" + fi}>
-            <span style={{ ...px(OPT_FRAMES[fi].x, baseTop(221, 21), OPT_W, 24), font: `700 21px ${HNW}`, lineHeight: "21px", textAlign: "center", display: "block", whiteSpace: "nowrap" }}>{t(STYLE_NAMES[fi]).toUpperCase()}</span>
+            {/* round 102: an artist's column carries the artist's name */}
+            <span style={{ ...px(OPT_FRAMES[fi].x, baseTop(221, 21), OPT_W, 24), font: `700 21px ${HNW}`, lineHeight: "21px", textAlign: "center", display: "block", whiteSpace: "nowrap" }}>{(dreams[fi]?.artist || t(STYLE_NAMES[fi])).toUpperCase()}</span>
             {dashRule(OPT_FRAMES[fi].x - 12, 242, OPT_W + 24, false, "shr" + fi)}
           </span>
         );

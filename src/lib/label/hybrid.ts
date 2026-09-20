@@ -50,7 +50,7 @@ export function textsOf(d: Record<string, string>) {
   };
 }
 
-export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput & { tag: string }> {
+export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput & { tag: string; painter: string; artist?: string }> {
   const style = ["traditional", "contemporary", "punk"].includes(inp.style) ? inp.style : "traditional";
   const seed = inp.seed ?? (Math.random() * 0xffffffff) >>> 0;
   const widthMm = Math.min(300, Math.max(30, inp.widthMm || 110));
@@ -82,7 +82,7 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
   /* a finished free painting carries its foot ground (LAST_FOOT_GROUND) */
   const ground = free ? "" : (ap.paper || (await flatGroundOf(art)).colour);
   const out = await composeLabel({ artwork: art, style, texts: textsOf(inp.data), widthMm, heightMm, seed, paper: ground || undefined, wineColour: inp.data.wineColorName, fit: free ? "vignette" : "yield" });
-  return { png: out.png, svg: out.svg, art, faces: out.faces, ink: out.ink, ground: out.layout.ground, prompt: ap.prompt, layout: out.layout, tag: layoutTag(style, seed), fit: free ? "vignette" : "yield" };
+  return { png: out.png, svg: out.svg, art, faces: out.faces, ink: out.ink, ground: out.layout.ground, prompt: ap.prompt, layout: out.layout, tag: layoutTag(style, seed), fit: free ? "vignette" : "yield", painter: model.id, artist: model.artist?.name };
 }
 
 /* ROUND 86 #3 (owner: "keep the image, just change the layout — tons of
