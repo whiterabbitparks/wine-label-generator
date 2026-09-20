@@ -2013,6 +2013,25 @@ composition-contract tightening, then customer wiring.
   artists' versions, artists earn a share per label. Live (2.28.48.43)
   stays on POPIKA_Back_To_Vector. Decisions: start with ONE artist, all
   three columns show her; no smart selection yet; share % undecided.
+- ROUND 102 — THREE ARTISTS (2026-09-20). Keta Dvali (22 works, oil +
+  charcoal, earth tones, "human, flow, nature") and Tal Tamam (26 works,
+  bold oil, "human, distortion, family") prepared and trained the same
+  way (triggers KTDVL / TLTMM, 1000 steps, trained in parallel, ≈ 6
+  min). Areeba's folder is NOT ready (owner still collecting). Painters
+  map: traditional = artist:mariam-kvashilava, contemporary =
+  artist:tal-tamam, punk = artist:keta-dvali. The wizard heads each
+  column with the ARTIST'S NAME (paintHybridLabel returns painter +
+  artist; /api/dream-label sends `artist`; Dream.artist). Eval model
+  "wizard" paints each style with its own painter (painterFor per item)
+  — run #30 "artists-three-audition": 18/18, three clearly different
+  hands side by side; sheet copied to ARTISTS/AUDITION-three-artists.png.
+  Honest read: Mariam's twin is the truest; Tal's LoRA reads as generic
+  gouache illustration — 26 works of the same subject family (faces,
+  buses) did not carry the distortion into new subjects; Keta's twin
+  keeps her palette and brush but drifts toward monochrome charcoal on
+  some briefs (two techniques in one training set). Real wizard run
+  verified: three columns headed MARIAM KVASHILAVA / TAL TAMAM / KETA
+  DVALI, 9 layouts in 21 s.
 - ROUND 101 — MARIAM KVASHILAVA, THE PILOT (2026-09-20). Material: 47
   works (screenshots of her paintings) + a one-page PDF profile in
   NEW UI/Comments/ARTISTS/Mariam Kvashilava/. Prepared into data/
