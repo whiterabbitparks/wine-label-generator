@@ -2013,6 +2013,16 @@ composition-contract tightening, then customer wiring.
   artists' versions, artists earn a share per label. Live (2.28.48.43)
   stays on POPIKA_Back_To_Vector. Decisions: start with ONE artist, all
   three columns show her; no smart selection yet; share % undecided.
+- ROUND 103 — TWO RATING AXES (2026-09-20, owner: "if I give a 5 for
+  the illustration, don't read it as a 5 for the layout or the ground").
+  EvalRating gains `label` (1–5, the composer's: layout, type, ground);
+  `score` now means the ILLUSTRATION (the painter's / artist's); faults
+  still name what is wrong. EvalItem records `painter`. What acts on a
+  mark automatically: only feedbackAggregates() — a `score` ≥ 4 boosts
+  the dealt style card, ≤ 2 counts a rejection — and artist items carry
+  NO card, so an artist's marks change nothing by themselves; they are
+  read by Claude (and later by the payout/quality reports). Old runs:
+  their single score reads as "overall".
 - ROUND 102 — THREE ARTISTS (2026-09-20). Keta Dvali (22 works, oil +
   charcoal, earth tones, "human, flow, nature") and Tal Tamam (26 works,
   bold oil, "human, distortion, family") prepared and trained the same
