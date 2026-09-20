@@ -2007,6 +2007,27 @@ composition-contract tightening, then customer wiring.
   Roman). Curation = ~20 VALUES per style across 5-6 axes, not 30 parts.
   FONT LICENSING flagged: live type in a delivered PDF means the font
   travels — commercial faces (Helvetica Neue World) may not permit it.
+- ROUND 98 — THE FOOT IS MEASURED; THE ADMIN SIMPLIFIED (2026-09-20).
+  (#1) options placeholders moved to where the labels sit (OPT_TOP 290,
+  OPT_BOT 540). (#3, owner: "the fade is terrible; adding a background
+  after obviously is not working") crop mode no longer fades: palette.ts
+  zoneStatsOf() measures the painting's foot (luminance spread); spread
+  < 0.11 → the type is set straight on the painting, nothing added;
+  otherwise a flat band in the foot's own colour with a HARD edge. Run
+  #24 "ideogram-foot" (funky + traditional): 12/12, one quiet foot, the
+  rest hard bands — several read seamless because the band IS the
+  painting's colour. The honest alternative the owner raised ("ask for
+  the label-size image with ink only in certain areas") IS the mask —
+  it works with gpt-image (masked/own-ground) and Ideogram's edit
+  endpoint disappointed (#17–#21); for the free painters the measured
+  band is the reliable path. (#2) the admin, again: Image Play and Art
+  Direction removed (their providers were the old engine's — FLUX etc.);
+  Evaluate lists only WIZARD_PAINTERS and runs hybrid only (mode select
+  gone); ONE rating language — feedbackAggregates() now also reads the
+  eval ratings: a 4–5 boosts the style card the item was dealt, a 1–2
+  counts a rejected attempt (what Image Play's thumbs did); System shows
+  RECENT LABELS from data/labels (/api/admin/labels, ?id= serves the PNG)
+  instead of the old generation log. Bug-fix pass clean.
 - ROUND 97 — THE ADMIN REORGANISED (2026-09-19, owner's answers: keep the
   ratings and fold /eval into the admin without duplicated functions;
   delete the old-engine parts if they have no effect; build it in the
