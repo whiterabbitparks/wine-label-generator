@@ -2007,6 +2007,27 @@ composition-contract tightening, then customer wiring.
   Roman). Curation = ~20 VALUES per style across 5-6 axes, not 30 parts.
   FONT LICENSING flagged: live type in a delivered PDF means the font
   travels — commercial faces (Helvetica Neue World) may not permit it.
+- ROUND 100 — THE VIGNETTE (2026-09-20, owner: "the illustration is cut
+  in half by the background in #26; in #25 the text sits on the picture
+  — I love Ideogram's look, find a way, it shouldn't be this hard").
+  Two dead ends first: #27 "finished" (Ideogram inpainting the strip's
+  foot into a quiet ground) wrote our own instructions INTO the picture
+  as lettering on 4/12 — discarded, code removed. THE ANSWER is the one
+  composition every painter knows: a SPOT ILLUSTRATION — "one self-
+  contained drawing, isolated on a completely flat single-colour
+  background, generous empty margin, the edges finish naturally". The
+  composer's `fit: "vignette"` (palette.ts vignetteOf: ground = the 6 %
+  border ring's mode colour; box = bounding box of everything that
+  differs from it, ≥ 0.8 % of a row/column, 3 % pad) trims the air and
+  places the drawing, whole, centred in the top area above the type, on
+  the label filled with that same colour — no seam, no cut, no fade,
+  nothing over the picture. Run #28 "ideogram-vignette": 6 painted, all
+  six right (the cyan Saperavi, the black Rkatsiteli, the Chinuri
+  bubbles, the grey Racha). The other 6 FAILED: fal.ai "User is locked.
+  Reason: TOP_UP" — THE FAL BALANCE IS EMPTY (owner asked to be told).
+  SAFETY: paintHybridLabel falls back to gpt-image-own when a fal
+  painter throws (logged), so the site keeps painting while the balance
+  is empty. Free painters = vignette in wizard and eval alike.
 - ROUND 99 — NOTHING IS EVER CUT (2026-09-20, owner: "NO — the background
   is cutting the illustration"). The measured-foot band (#24) still cut
   paintings; type-on-the-painting (#25) was unreadable. THE FIX is at

@@ -59,13 +59,25 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
   /* round 90: the painter is the owner's choice per style (admin → Rules
      → Painters); canvas painters get a paper tone, the own-ground painter
      chooses its own */
-  const model = evalModel(await painterFor(style)) || evalModel("gpt-image-own")!;
+  let model = evalModel(await painterFor(style)) || evalModel("gpt-image-own")!;
   /* round 96: a FREE painter (Ideogram, nano-banana without a canvas) gets
      the very ask the owner rated 5 in the bake-off, and the composer CROPS
      — the painting stays whole, the band sits over its foot */
-  const free = model.via === "fal" && !model.canvas;
-  const ap = await buildArtworkPrompt(brief, style, seed, { ownGround: model.id === "gpt-image-own", softGround: !!model.canvas, wholeFrame: free });
-  const { art } = await gen429(() => generateArtworkChecked(model, ap, { sketch: inp.sketch || null }));
+  let free = model.via === "fal" && !model.canvas;
+  let ap = await buildArtworkPrompt(brief, style, seed, { ownGround: model.id === "gpt-image-own", softGround: !!model.canvas, wholeFrame: free });
+  let art: string;
+  try {
+    art = (await gen429(() => generateArtworkChecked(model, ap, { sketch: inp.sketch || null }))).art;
+  } catch (e) {
+    /* ROUND 100: a fal painter that cannot paint (balance locked, outage)
+       must never leave the customer without a label — gpt-image steps in
+       and the reason is logged for the owner */
+    if (model.via !== "fal") throw e;
+    console.error(`[painter] ${model.id} failed for ${style}: ${e instanceof Error ? e.message : e} — falling back to gpt-image-own`);
+    model = evalModel("gpt-image-own")!; free = false;
+    ap = await buildArtworkPrompt(brief, style, seed, { ownGround: true });
+    art = (await gen429(() => generateArtworkChecked(model, ap, { sketch: inp.sketch || null }))).art;
+  }
   /* no paper given (contemporary / punk): the ground is read off the picture */
   /* a finished free painting carries its foot ground (LAST_FOOT_GROUND) */
   const ground = free ? "" : (ap.paper || (await flatGroundOf(art)).colour);
