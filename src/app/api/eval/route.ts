@@ -57,13 +57,13 @@ async function paintItem(run: EvalRun, model: EvalModel, brief: EvalBrief, item:
       const { art, retried } = await generateArtworkChecked(model, ap);
       /* way 1: no paper was given, so the ground is read off the picture */
       let paper = ap.paper, own = retried ? " · repainted (text seen)" : "";
-      if (free) { paper = ""; own += " · cropped"; }
+      if (free) { paper = ""; own += " · vignette"; }
       else if (!paper) {
         const g = await flatGroundOf(art);
         paper = g.colour;
         own = ` · own ground ${g.flat ? "flat" : "NOT flat"} ${(g.coverage * 100).toFixed(0)}%`;
       }
-      const out = await composeLabel({ artwork: art, style: item.style, texts: textsOf(brief.data), widthMm: brief.width, heightMm: brief.height, seed, paper: paper || undefined, wineColour: brief.data.wineColorName, fit: free ? "top" : "yield" });
+      const out = await composeLabel({ artwork: art, style: item.style, texts: textsOf(brief.data), widthMm: brief.width, heightMm: brief.height, seed, paper: paper || undefined, wineColour: brief.data.wineColorName, fit: free ? "vignette" : "yield" });
       item.file = saveImage(run.id, item.id, out.png);
       fs.writeFileSync(path.join(runDir(run.id), `${item.id}.svg`), out.svg);
       saveImage(run.id, `${item.id}--art`, art);

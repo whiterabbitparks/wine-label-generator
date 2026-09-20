@@ -37,7 +37,7 @@ export interface HybridOutput {
   ground: string;
   prompt: string;
   layout: Layout;       /* every set line in label px — the PDF draws from it */
-  fit?: "yield" | "crop" | "top";
+  fit?: "yield" | "crop" | "top" | "vignette";
 }
 
 /* the label's texts, exactly as the dream engine derives them */
@@ -67,9 +67,10 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
   const ap = await buildArtworkPrompt(brief, style, seed, { ownGround: model.id === "gpt-image-own", softGround: !!model.canvas, wholeFrame: free });
   const { art } = await gen429(() => generateArtworkChecked(model, ap, { sketch: inp.sketch || null }));
   /* no paper given (contemporary / punk): the ground is read off the picture */
+  /* a finished free painting carries its foot ground (LAST_FOOT_GROUND) */
   const ground = free ? "" : (ap.paper || (await flatGroundOf(art)).colour);
-  const out = await composeLabel({ artwork: art, style, texts: textsOf(inp.data), widthMm, heightMm, seed, paper: ground || undefined, wineColour: inp.data.wineColorName, fit: free ? "top" : "yield" });
-  return { png: out.png, svg: out.svg, art, faces: out.faces, ink: out.ink, ground: out.layout.ground, prompt: ap.prompt, layout: out.layout, tag: layoutTag(style, seed), fit: free ? "top" : "yield" };
+  const out = await composeLabel({ artwork: art, style, texts: textsOf(inp.data), widthMm, heightMm, seed, paper: ground || undefined, wineColour: inp.data.wineColorName, fit: free ? "vignette" : "yield" });
+  return { png: out.png, svg: out.svg, art, faces: out.faces, ink: out.ink, ground: out.layout.ground, prompt: ap.prompt, layout: out.layout, tag: layoutTag(style, seed), fit: free ? "vignette" : "yield" };
 }
 
 /* ROUND 86 #3 (owner: "keep the image, just change the layout — tons of
@@ -88,7 +89,7 @@ export function layoutTag(style: string, seed: number): string {
    arrangements"): `big` insists on the largest hero sizes; `flip` sets
    the type on the OTHER alignment (a centred style goes left, a left one
    goes centred) */
-export async function relayoutLabel(stored: { art: Buffer; meta: { style: string; widthMm: number; heightMm: number; ground: string; fit?: "yield" | "crop" | "top" } }, data: Record<string, string>, avoid: string[] = [], recipe: { big?: boolean; flip?: boolean } = {}): Promise<HybridOutput & { tag: string }> {
+export async function relayoutLabel(stored: { art: Buffer; meta: { style: string; widthMm: number; heightMm: number; ground: string; fit?: "yield" | "crop" | "top" | "vignette" } }, data: Record<string, string>, avoid: string[] = [], recipe: { big?: boolean; flip?: boolean } = {}): Promise<HybridOutput & { tag: string }> {
   const { style, widthMm, heightMm, ground } = stored.meta;
   const fams = new Set(avoid.map((a) => a.split("|")[0])), buckets = new Set(avoid.map((a) => a.split("|")[1]));
   let seed = (Math.random() * 0xffffffff) >>> 0;

@@ -1,6 +1,6 @@
 import sharp from "sharp";
 import { measure, vmetrics, pickRoles, mix, type Pick } from "./fonts";
-import { inkOf, inkFootOf, sliceColourOf, zoneStatsOf } from "./palette";
+import { inkOf, inkFootOf, sliceColourOf, zoneStatsOf, vignetteOf } from "./palette";
 
 /* THE COMPOSER, v1.2 (branch POPIKA_Back_To_Vector, 2026-09-19).
 
@@ -34,7 +34,7 @@ export interface ComposeInput {
   paper?: string;                  /* the ground the painter was given; sampled when absent */
   wineColour?: string;             /* "Red" / "White" / "Amber" / "Rosé" … — round 85 #10 */
   align?: "center" | "left";       /* round 94 #6: a layout variant may flip the style's alignment */
-  fit?: "yield" | "crop" | "top";  /* round 99: top = the picture was painted FOR the top region; it sits there whole, the type below it */
+  fit?: "yield" | "crop" | "top" | "vignette";  /* round 100: vignette = the drawing is trimmed off its plain ground and placed above the type on that colour */
 }
 /* every set line, in label pixels — what the PDF is drawn from */
 export interface LaidLine { text: string; x: number; y: number; size: number; tracking: number; family: string; weight: number; italic: boolean; anchor: "start" | "middle"; colour: string }
@@ -93,11 +93,12 @@ export async function composeLabel(inp: ComposeInput): Promise<ComposeOutput> {
      painting, in the ink that reads against its foot; nothing is drawn
      over the picture. The measurement only chooses the ink. */
   const top = inp.fit === "top";
+  const vig = inp.fit === "vignette" ? await vignetteOf(inp.artwork) : null;
   const zone = crop ? await zoneStatsOf(inp.artwork, bandFrac) : null;
   const overlay = !!zone;
   /* top mode: the band takes the painting's own bottom-edge colour, so
      the picture and the band read as one printed sheet */
-  const ground = crop ? zone!.colour : top ? await sliceColourOf(inp.artwork, 0.9, 1) : (inp.paper || inks.paper);
+  const ground = vig ? vig.ground : crop ? zone!.colour : top ? await sliceColourOf(inp.artwork, 0.9, 1) : (inp.paper || inks.paper);
   /* the type's colour: the drawing's ink on a light ground, paper-white on
      a dark or saturated one */
   /* on a painting the foot's mean luminance decides the ink: light foot →
@@ -133,9 +134,9 @@ export async function composeLabel(inp: ComposeInput): Promise<ComposeOutput> {
   roleList.push("small");                                    /* legal */
   const needH = (roleList.reduce((h, r) => h + floorOf(r) * LEADING, 0) + 2 * H * 0.018 + floorOf("hero") * 0.3) * 1.08;
   const wanted = Math.min(H * (1 - BAND_MIN) - H * 0.03, H - M - needH - H * 0.03);
-  if (!crop && !top && inkFootPx > wanted) { artScale = wanted / inkFootPx; inkFootPx = wanted; }
+  if (!crop && !top && !vig && inkFootPx > wanted) { artScale = wanted / inkFootPx; inkFootPx = wanted; }
   const windowFoot = Math.min(H * (portrait ? 0.65 : 0.6) * artScale, wanted + H * 0.03);
-  const bandTop = (crop || top) ? Math.round(Math.min(H * bandFrac, wanted + H * 0.03)) : Math.round(Math.max(windowFoot, inkFootPx + H * 0.03));
+  const bandTop = (crop || top || vig) ? Math.round(Math.min(H * bandFrac, wanted + H * 0.03)) : Math.round(Math.max(windowFoot, inkFootPx + H * 0.03));
 
   /* ---- the blocks ---- */
   const L = (text: string, pick: Pick, size: number, role: Role, drop: number): Line => ({ text, pick, size, role, drop });
@@ -235,7 +236,17 @@ export async function composeLabel(inp: ComposeInput): Promise<ComposeOutput> {
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${inp.widthMm}mm" height="${inp.heightMm}mm" viewBox="0 0 ${W} ${H}">` +
     `<rect width="${W}" height="${H}" fill="${ground}"/>` +
-    (top
+    (vig
+      ? (() => {
+          /* the drawing's box in image px → fitted into the top area */
+          const bx = vig.box.x * aw, by = vig.box.y * ah, bw = vig.box.w * aw, bh = vig.box.h * ah;
+          const areaW = W - 2 * M, areaH = bandTop - M * 0.6;
+          const k = Math.min(areaW / bw, areaH / bh);
+          const pw = bw * k, ph = bh * k;
+          const px = (W - pw) / 2, py = M * 0.6 + (areaH - ph) / 2;
+          return `<svg x="${px.toFixed(1)}" y="${py.toFixed(1)}" width="${pw.toFixed(1)}" height="${ph.toFixed(1)}" viewBox="${bx.toFixed(1)} ${by.toFixed(1)} ${bw.toFixed(1)} ${bh.toFixed(1)}" preserveAspectRatio="xMidYMid meet"><image xlink:href="${inp.artwork}" x="0" y="0" width="${aw}" height="${ah}"/></svg>`;
+        })()
+      : top
       ? `<svg x="0" y="0" width="${W}" height="${bandTop}" viewBox="0 0 ${W} ${bandTop}"><image xlink:href="${inp.artwork}" x="0" y="0" width="${W}" height="${bandTop}" preserveAspectRatio="xMidYMid slice"/></svg>`
       : `<image xlink:href="${inp.artwork}" x="${((W - drawW) / 2).toFixed(1)}" y="0" width="${drawW.toFixed(1)}" height="${drawH.toFixed(1)}" preserveAspectRatio="xMidYMin slice"/>`) +
     /* crop mode: the band over the painting's foot, with a soft 5 % seam */
@@ -248,7 +259,7 @@ export async function composeLabel(inp: ComposeInput): Promise<ComposeOutput> {
   const png = await sharp(Buffer.from(svg), { density: (12 * 25.4) }).resize(W, H).png().toBuffer();
   return {
     svg, png: `data:image/png;base64,${png.toString("base64")}`,
-    faces: `${roles.hero.face.family} ${roles.hero.face.weight} / ${roles.secondary.face.family} / ${roles.small.face.family}${artScale < 1 ? ` · art ${(artScale * 100).toFixed(0)}%` : ""} · ground ${ground}${wineInk ? ` · ${wineRole} in ${wineInk}` : ""}${zone ? ` · type on the painting (foot lum ${zone.lum.toFixed(2)})` : ""}${top ? " · picture on top, band in its foot colour" : ""}`,
+    faces: `${roles.hero.face.family} ${roles.hero.face.weight} / ${roles.secondary.face.family} / ${roles.small.face.family}${artScale < 1 ? ` · art ${(artScale * 100).toFixed(0)}%` : ""} · ground ${ground}${wineInk ? ` · ${wineRole} in ${wineInk}` : ""}${zone ? ` · type on the painting (foot lum ${zone.lum.toFixed(2)})` : ""}${top ? " · picture on top, band in its foot colour" : ""}${vig ? ` · vignette ${(vig.box.w * 100).toFixed(0)}×${(vig.box.h * 100).toFixed(0)}% on ${vig.ground}` : ""}`,
     ink: colour,
     layout: { W, H, ground, art: top ? { x: 0, y: 0, w: W, h: bandTop } : { x: (W - drawW) / 2, y: 0, w: drawW, h: drawH }, lines: laid },
   };

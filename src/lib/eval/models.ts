@@ -158,7 +158,12 @@ export async function buildArtworkPrompt(brief: EvalBrief, style: string, seed =
          asked for one. They paint the PICTURE ONLY, shaped for its space
          (a wide strip); the type goes UNDER it, on the painting's own foot
          colour, and nothing is ever cut or covered. */
-      ? `COMPOSITION: the illustration fills this whole frame edge to edge — a complete picture, composed for this wide format, with its own ground running to the bottom edge. Nothing will be written on it; the wine's name is set BELOW the picture, outside this frame. `
+      /* ROUND 100: a VIGNETTE — the one composition every model knows:
+         an isolated spot illustration on a flat plain ground with air
+         around it. The code then trims the air and places the drawing
+         above the type, on that same flat colour: no seam, no cut, the
+         drawing ends where the artist ended it. */
+      ? `COMPOSITION: a SPOT ILLUSTRATION — one self-contained drawing, isolated on a completely flat, plain, single-colour background that runs to every edge of the picture, with generous empty margin around the drawing on all sides (nothing touches the edges). The drawing's own edges finish naturally, feathering out into the plain ground — no scene filling the frame, no horizon running edge to edge, no border, no frame, no vignette shading, no gradient. The wine's name will be set beside the drawing on that same plain ground. `
       : `COMPOSITION: the illustration lives in the upper part of the picture; the ${zone.where} (${zone.share}) is left as EMPTY, flat, even paper ground — one continuous plain colour with nothing drawn on it — because the wine's name and details will be typeset there afterwards. Keep every drawn element clear of that zone; the illustration may reach the top and side edges if the style wants it, never the type zone. `);
   const styleLine = `STYLE: ${ART_STYLE[style] || ART_STYLE.traditional}.`;
   const subject =
@@ -246,16 +251,14 @@ export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt, extra
     }
     return generateOpenAIImage({ prompt: ap.prompt + sketchLine, size, ...(sketch ? { reference: sketch } : {}) } as never);
   }
-  const key = process.env.FAL_KEY;
-  if (!key) throw new Error("FAL_KEY is not set");
   /* Recraft caps the prompt at 1000 characters (422 otherwise) */
   const body: Record<string, unknown> = { prompt: model.id === "recraft-3" ? ap.short : ap.prompt.slice(0, 1900), num_images: 1 };
   const canvasLine = " Paint the illustration into the open area of the canvas; the rest of the canvas is finished paper and must stay exactly as it is.";
   switch (model.id) {
     case "flux-pro": Object.assign(body, { image_size: FAL_SIZE[ap.aspect], output_format: "png", safety_tolerance: "2" }); break;
-    case "ideogram-3": Object.assign(body, { image_size: ap.wholeFrame ? (ap.aspect === "portrait" ? "landscape_4_3" : "landscape_16_9") : FAL_SIZE[ap.aspect], rendering_speed: "BALANCED" }); break;
+    case "ideogram-3": Object.assign(body, { image_size: FAL_SIZE[ap.aspect], rendering_speed: "BALANCED" }); break;
     case "recraft-3": Object.assign(body, { image_size: FAL_SIZE[ap.aspect], style: "digital_illustration" }); break;
-    case "nano-banana": Object.assign(body, { aspect_ratio: ap.wholeFrame ? (ap.aspect === "portrait" ? "4:3" : "16:9") : FAL_RATIO[ap.aspect], output_format: "png" }); break;
+    case "nano-banana": Object.assign(body, { aspect_ratio: FAL_RATIO[ap.aspect], output_format: "png" }); break;
     /* round 90: our canvas goes in; Ideogram takes the white mask, nano-
        banana only the instruction (no mask on that endpoint) */
     case "ideogram-3-edit": {
@@ -278,18 +281,59 @@ export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt, extra
       break;
     }
   }
-  const res = await fetch(`https://fal.run/${model.endpoint}`, {
+  return falCall(model.endpoint!, body, model.name);
+}
+
+async function falCall(endpoint: string, body: Record<string, unknown>, name: string): Promise<string> {
+  const key = process.env.FAL_KEY;
+  if (!key) throw new Error("FAL_KEY is not set");
+  const res = await fetch(`https://fal.run/${endpoint}`, {
     method: "POST",
     headers: { Authorization: `Key ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   const out = (await res.json().catch(() => ({}))) as { images?: { url?: string; content_type?: string }[]; detail?: unknown; error?: string };
   if (!res.ok || !out.images?.length)
-    throw new Error(`${model.name} failed (${res.status}): ${JSON.stringify(out.detail || out.error || out).slice(0, 240)}`);
+    throw new Error(`${name} failed (${res.status}): ${JSON.stringify(out.detail || out.error || out).slice(0, 240)}`);
   const url = out.images[0].url;
-  if (!url) throw new Error(`${model.name} returned no image url`);
+  if (!url) throw new Error(`${name} returned no image url`);
   const img = await fetch(url);
-  if (!img.ok) throw new Error(`${model.name} image download failed (${img.status})`);
+  if (!img.ok) throw new Error(`${name} image download failed (${img.status})`);
   const mime = img.headers.get("content-type") || out.images[0].content_type || "image/png";
   return `data:${mime};base64,${Buffer.from(await img.arrayBuffer()).toString("base64")}`;
+}
+
+/* ROUND 100 (owner: "the illustration must END naturally, not be cut by
+   a background — and I love Ideogram's look"). The free painter's strip
+   (the picture, whole) is placed on a label-sized canvas whose lower part
+   is the strip's own bottom-edge colour; then Ideogram's INPAINTING is
+   asked to continue the drawing's lower edge into that quiet ground —
+   the mask opens the band plus a 12 % overlap into the picture, so the
+   seam is painted, not pasted. Out: a full label-size picture with a
+   quiet foot, exactly what the composer's normal (yield) path expects. */
+export const LAST_FOOT_GROUND = new Map<string, string>();
+async function finishFoot(strip: string, aspect: ArtworkPrompt["aspect"]): Promise<string> {
+  const sharp = (await import("sharp")).default;
+  const { sliceColourOf } = await import("@/lib/typeset/palette");
+  const W = aspect === "portrait" ? 1024 : aspect === "square" ? 1024 : 1536;
+  const H = aspect === "portrait" ? 1536 : aspect === "square" ? 1024 : 1024;
+  const picH = Math.round(H * (aspect === "portrait" ? 0.62 : 0.6));
+  const ground = await sliceColourOf(strip, 0.9, 1);
+  const n = parseInt(ground.slice(1), 16);
+  const stripBuf = Buffer.from(strip.slice(strip.indexOf(",") + 1), "base64");
+  const pic = await sharp(stripBuf).resize(W, picH, { fit: "cover", position: "centre" }).png().toBuffer();
+  const canvas = await sharp({ create: { width: W, height: H, channels: 3, background: { r: n >> 16, g: (n >> 8) & 255, b: n & 255 } } })
+    .composite([{ input: pic, left: 0, top: 0 }]).png().toBuffer();
+  const openTop = Math.round(picH - H * 0.12);
+  const white = await sharp({ create: { width: W, height: H - openTop, channels: 3, background: "#fff" } }).png().toBuffer();
+  const mask = await sharp({ create: { width: W, height: H, channels: 3, background: "#000" } }).composite([{ input: white, left: 0, top: openTop }]).png().toBuffer();
+  const prompt =
+    "Continue this picture downward. In the open area let the drawing's lower edge FINISH naturally — its ground, shadows and last strokes taper off — and then leave nothing but the flat, even, plain ground colour already there, empty and quiet, running to the bottom edge. Same medium, same inks, same hand as the picture above. ABSOLUTELY NO new objects, no figures, no plants, no patterns, no texture, no gradient, no vignette, no text, no letters, no border, no frame. The empty ground must stay one flat colour.";
+  const finished = await falCall("fal-ai/ideogram/v3/edit", {
+    prompt, image_url: `data:image/png;base64,${canvas.toString("base64")}`, mask_url: `data:image/png;base64,${mask.toString("base64")}`,
+    rendering_speed: "BALANCED", expand_prompt: false, num_images: 1,
+    negative_prompt: "text, letters, words, typography, objects, figures, plants, pattern, texture, gradient, vignette, border, frame",
+  }, "Ideogram 3 (foot)");
+  LAST_FOOT_GROUND.set(finished.slice(-64), ground);
+  return finished;
 }

@@ -142,3 +142,36 @@ export async function zoneStatsOf(dataUrl: string, fracTop: number, fracBottom =
   const spread = Math.sqrt(lums.reduce((a, b) => a + (b - mean) * (b - mean), 0) / Math.max(1, lums.length));
   return { lum: mean, spread, colour: n ? hex(sr / n, sg / n, sb / n) : "#F4EFE3" };
 }
+
+/* ROUND 100: a vignette's ground is the border's colour; its drawing is
+   the bounding box of everything that differs from that ground. Fractions
+   of the image, with a small padding, so the drawing keeps its own air. */
+export async function vignetteOf(dataUrl: string): Promise<{ ground: string; box: { x: number; y: number; w: number; h: number } }> {
+  const buf = Buffer.from(dataUrl.slice(dataUrl.indexOf(",") + 1), "base64");
+  const { data, info } = await sharp(buf).resize(240, 240, { fit: "fill" }).flatten({ background: "#F4EFE3" }).raw().toBuffer({ resolveWithObject: true });
+  const W = info.width, H = info.height, C = info.channels;
+  /* the ground: mode of a 6 % border ring */
+  const ring = Math.round(W * 0.06);
+  const bins = new Map<string, { n: number; r: number; g: number; b: number }>();
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    if (x >= ring && x < W - ring && y >= ring && y < H - ring) continue;
+    const i = (y * W + x) * C; const k = `${data[i] >> 4}-${data[i + 1] >> 4}-${data[i + 2] >> 4}`;
+    const e = bins.get(k) || { n: 0, r: 0, g: 0, b: 0 }; e.n++; e.r += data[i]; e.g += data[i + 1]; e.b += data[i + 2]; bins.set(k, e);
+  }
+  const top = [...bins.values()].sort((a, b) => b.n - a.n)[0];
+  const gr = top.r / top.n, gg = top.g / top.n, gb = top.b / top.n;
+  let x0 = W, y0 = H, x1 = 0, y1 = 0;
+  const rows = new Array(H).fill(0), cols = new Array(W).fill(0);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = (y * W + x) * C;
+    if (Math.abs(data[i] - gr) + Math.abs(data[i + 1] - gg) + Math.abs(data[i + 2] - gb) > 60) { rows[y]++; cols[x]++; }
+  }
+  /* a row/column counts when at least 0.8 % of it is ink — stray specks don't stretch the box */
+  for (let y = 0; y < H; y++) if (rows[y] > W * 0.008) { y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+  for (let x = 0; x < W; x++) if (cols[x] > H * 0.008) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); }
+  if (x1 <= x0 || y1 <= y0) { x0 = 0; y0 = 0; x1 = W - 1; y1 = H - 1; }
+  const pad = 0.03;
+  const box = { x: Math.max(0, x0 / W - pad), y: Math.max(0, y0 / H - pad), w: 0, h: 0 };
+  box.w = Math.min(1, (x1 + 1) / W + pad) - box.x; box.h = Math.min(1, (y1 + 1) / H + pad) - box.y;
+  return { ground: hex(gr, gg, gb), box };
+}
