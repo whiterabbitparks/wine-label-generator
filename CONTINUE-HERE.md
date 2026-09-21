@@ -2013,6 +2013,28 @@ composition-contract tightening, then customer wiring.
   artists' versions, artists earn a share per label. Live (2.28.48.43)
   stays on POPIKA_Back_To_Vector. Decisions: start with ONE artist, all
   three columns show her; no smart selection yet; share % undecided.
+- ROUND 110 — THE PLUSES SIT ON THE CROSSINGS (2026-09-21, owner, asked
+  many times). THREE causes, all fixed. (1) GEOMETRY: a dashed box was a
+  stroked rect inset half a unit, so its edge centres were x+0.5 and
+  x+w-0.5 while the plus sat on x and x+w; dashRule was half a unit off
+  the coordinate too. Every dashed stroke's CENTRE is now exactly the
+  coordinate it is given. (2) SNAPPING: even then, `shapeRendering:
+  crispEdges` rounds each SVG ELEMENT on its own, so a line and a plus
+  over the same coordinate could land on different device rows. So
+  anything that must line up is now drawn INSIDE ONE element —
+  `dashGrid(x, y, w, h, cols, key, sides?)` draws a whole frame (top and
+  bottom rules, the column rules and every plus) in one SVG, and
+  `dashedBox(..., pluses)` / `dashRule(..., ends)` do the same for a box
+  and a single rule. (3) DOUBLING: the bottle board BAKES its own dashed
+  frame and pluses, and we drew ours on top a pixel away — the baked
+  frame is now wiped (patches over y160-186 and y572-598, and the bzone
+  patch widened to 341.6 so the baked 342.86 divider goes too) and the
+  whole grid is ours. Verified by reading pixels: every plus stem on the
+  bottle page is ONE column of one weight, and on the assets page the
+  plus arm and the dashed edge share a row. The vision page's size
+  preview (round 108 #5) is drawn the same way now: dashed rule, a plus
+  on each corner. `cross()` survives for corner marks that stand alone
+  (the unselected option columns).
 - ROUND 109 — THE RE-CUT BAR AND CARD (2026-09-21, owner's updated
   artboards in NEW UI/Comments/New). Station labels PULLED DOWN to
   baseline 794.68 and set at the artboard's 15px (Georgian 12). The red

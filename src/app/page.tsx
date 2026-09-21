@@ -1791,20 +1791,76 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
      its own, so at fractional page scales a side could land on two rows
      or lose one. ONE SVG rectangle with a dash pattern, its edges on
      half-pixels, draws every side with the same hairline. */
-  const dashedBox = (x: number, y: number, w: number, h: number, key?: string) => (
-    <svg key={key} style={{ ...px(x - 1, y - 1, w + 2, h + 2), pointerEvents: "none", overflow: "visible" }} viewBox={`0 0 ${w + 2} ${h + 2}`}>
-      <rect x="1.5" y="1.5" width={w - 1} height={h - 1} fill="none" stroke="#000" strokeWidth="1" strokeDasharray="4.12 4.12" shapeRendering="crispEdges" />
-    </svg>
+  /* ROUND 110 (owner, asked many times: "the pluses never sit exactly on
+     the crossing"): every dashed stroke's CENTRE now lands exactly on the
+     coordinate it is given, and so does every plus arm — the two shapes
+     then cover the SAME half-unit band and crispEdges snaps them to the
+     same device pixel. (Before: a box edge's centre sat at x+0.5 and a
+     right edge's at x+w-0.5, while the plus sat on x and x+w — half a
+     unit out on every corner, which rounded to a whole pixel on screen.) */
+  /* ROUND 110 (owner, asked many times: "the pluses never sit exactly on
+     the crossing"). Two causes, both fixed here:
+       · the dashed edge's stroke used to sit HALF A UNIT off the corner it
+         was given (a rect inset by 0.5), while the plus sat on it exactly;
+       · and even once they agreed, crispEdges snaps each SVG ELEMENT on
+         its own, so two elements over the same line could land on
+         different device rows — which is what stayed visible.
+     So a dashed edge and the pluses that mark it are now drawn INSIDE ONE
+     element: one raster space, one snap, no drift at any page scale. */
+  const PLUS_ARM = 9;
+  const dashLine = (x1: number, y1: number, x2: number, y2: number, i: number | string, dashed = true) => (
+    <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#000" strokeWidth="1"
+      strokeDasharray={dashed ? "4.12 4.12" : undefined} shapeRendering="crispEdges" />
   );
+  const plusAt = (cx: number, cy: number, i: number | string) => (
+    <g key={"p" + i}>
+      {dashLine(cx, cy - PLUS_ARM, cx, cy + PLUS_ARM, "v" + i, false)}
+      {dashLine(cx - PLUS_ARM, cy, cx + PLUS_ARM, cy, "h" + i, false)}
+    </g>
+  );
+  /* a whole dashed frame — top and bottom rules, the inner column rules
+     and EVERY plus — in one element. Anything that has to line up is drawn
+     together; nothing lines up reliably across two elements. */
+  const dashGrid = (x: number, y: number, w: number, h: number, cols: number[], key: string, sides = false) => {
+    const T = 0.5, B = h + 0.5, L = 0.5, R = w + 0.5;
+    const at = (c: number) => c - x + 0.5;
+    return (
+      <svg key={key} style={{ ...px(x - 0.5, y - 0.5, w + 1, h + 1), pointerEvents: "none", overflow: "visible" }} viewBox={`0 0 ${w + 1} ${h + 1}`}>
+        {dashLine(L, T, R, T, "t")}{dashLine(L, B, R, B, "b")}
+        {sides && (<>{dashLine(L, T, L, B, "l")}{dashLine(R, T, R, B, "r")}</>)}
+        {cols.map((c, i) => dashLine(at(c), T, at(c), B, "c" + i))}
+        {[L, ...cols.map(at), R].map((cx, i) => (
+          <g key={"g" + i}>{plusAt(cx, T, "t" + i)}{plusAt(cx, B, "b" + i)}</g>
+        ))}
+      </svg>
+    );
+  };
+  const dashedBox = (x: number, y: number, w: number, h: number, key?: string, pluses = false) => {
+    const L = 0.5, R = w + 0.5, T = 0.5, B = h + 0.5;
+    return (
+      <svg key={key} style={{ ...px(x - 0.5, y - 0.5, w + 1, h + 1), pointerEvents: "none", overflow: "visible" }} viewBox={`0 0 ${w + 1} ${h + 1}`}>
+        {dashLine(L, T, R, T, 0)}{dashLine(L, B, R, B, 1)}
+        {dashLine(L, T, L, B, 2)}{dashLine(R, T, R, B, 3)}
+        {pluses && ([[L, T], [R, T], [L, B], [R, B]] as const).map(([cx, cy], i) => plusAt(cx, cy, i))}
+      </svg>
+    );
+  };
   /* ROUND 85 #2 (owner, fourth time: "FIX THE DOTS INSIDE THE CIRCLES"):
      a CSS dot centred with translate(-50%,-50%) inside a CSS ring rounds
      to the pixel grid separately from the ring, so at most page scales the
      dot sat a hair off. Two SVG circles on the SAME centre cannot drift —
      the renderer places both from one fractional point. */
   /* one dashed hairline (round 85 #7): same pattern, same crisp pixel row */
-  const dashRule = (x: number, y: number, len: number, vertical = false, key?: string, color = "#000") => (
-    <svg key={key} style={{ ...px(x, y, vertical ? 1 : len, vertical ? len : 1), pointerEvents: "none", overflow: "visible" }} viewBox={`0 0 ${vertical ? 1 : len} ${vertical ? len : 1}`}>
+  /* one dashed hairline; `ends` marks both of its ends with a plus, in the
+     SAME element (see dashedBox above for why that matters) */
+  const dashRule = (x: number, y: number, len: number, vertical = false, key?: string, color = "#000", ends = false) => (
+    /* the element is pulled back half a unit across the line, so the
+       stroke straddles the coordinate instead of sitting beside it */
+    <svg key={key} style={{ ...px(vertical ? x - 0.5 : x, vertical ? y : y - 0.5, vertical ? 1 : len, vertical ? len : 1), pointerEvents: "none", overflow: "visible" }} viewBox={`0 0 ${vertical ? 1 : len} ${vertical ? len : 1}`}>
       <line x1={vertical ? 0.5 : 0} y1={vertical ? 0 : 0.5} x2={vertical ? 0.5 : len} y2={vertical ? len : 0.5} stroke={color} strokeWidth="1" strokeDasharray="4.12 4.12" shapeRendering="crispEdges" />
+      {ends && (vertical
+        ? (<>{plusAt(0.5, 0, "a")}{plusAt(0.5, len, "b")}</>)
+        : (<>{plusAt(0, 0.5, "a")}{plusAt(len, 0.5, "b")}</>))}
     </svg>
   );
   const ringSvg = (size: number, on: boolean, o?: { stroke?: number; color?: string; dot?: number; noRing?: boolean }) => {
@@ -1993,7 +2049,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             const maxH = FOOT - (BOX.y + BOX.h + GAP);
             const sc = Math.min(maxH / h0, MAX_W / w0);
             const w2 = Math.max(6, w0 * sc), h2 = Math.max(6, h0 * sc);
-            return <div key="sizeprev" style={{ ...px(BOX.x + BOX.w - w2, FOOT - h2, w2, h2), border: `1px solid ${HAIRLINE}`, boxSizing: "border-box", transition: `all 220ms ${EASE}` }} />;
+            /* ROUND 110 (owner): drawn like every other proportion box on
+               the site — a dashed rule with a plus on each corner */
+            const rx = BOX.x + BOX.w - w2, ry = FOOT - h2;
+            return (
+              <span key="sizeprev">
+                {dashedBox(rx, ry, w2, h2, "szbox", true)}
+              </span>
+            );
           })()}
           {/* the dashed column rule */}
           {dashRule(788, 133, 522, true, "vrule")}
@@ -2133,9 +2196,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 {/* ROUND 85 #6 (owner's board): the selection frame stands
                     OFF the label — 10px out on every side — and the corner
                     crosses sit on the frame's corners, not the label's */}
-                {selected === fi && dashedBox(lx - 10, ly - 10, lw + 20, lh + 20, "selD" + fi)}
-                {cross(lx - 10, ly - 10, `tl${fi}`)}{cross(lx + lw + 10, ly - 10, `tr${fi}`)}
-                {cross(lx - 10, ly + lh + 10, `bl${fi}`)}{cross(lx + lw + 10, ly + lh + 10, `br${fi}`)}
+                {selected === fi
+                  ? dashedBox(lx - 10, ly - 10, lw + 20, lh + 20, "selD" + fi, true)
+                  : (<span key={"plain" + fi}>
+                      {cross(lx - 10, ly - 10, `tl${fi}`)}{cross(lx + lw + 10, ly - 10, `tr${fi}`)}
+                      {cross(lx - 10, ly + lh + 10, `bl${fi}`)}{cross(lx + lw + 10, ly + lh + 10, `br${fi}`)}
+                    </span>)}
                 {/* the column's dot switcher, centered to the label — round
                     88 #9: up to two rows of 15, the rows centred on the
                     midline between label and button */}
@@ -2390,8 +2456,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               onClick={() => setGallery({ items: [backPng], index: 0, save: () => { setBackSaved((v) => { flyToFolder([{ src: backPng, x: lx, y: ly, w: fit.w, h: fit.h }], v); return !v; }); }, saved: backSaved })}
               style={{ ...px(lx, ly, fit.w, fit.h), objectFit: "fill", cursor: "pointer" }} />
             {/* round 88 #8: the frame stands 10px off the label, crosses on its corners */}
-            {cross(lx - 10, ly - 10, "b1")}{cross(lx + fit.w + 10, ly - 10, "b2")}{cross(lx - 10, ly + fit.h + 10, "b3")}{cross(lx + fit.w + 10, ly + fit.h + 10, "b4")}
-            {dashedBox(lx - 10, ly - 10, fit.w + 20, fit.h + 20, "bdD")}
+            {dashedBox(lx - 10, ly - 10, fit.w + 20, fit.h + 20, "bdD", true)}
             <button onClick={() => go("backdetails", -1)}
               style={{ ...px(548.6, 589, 341.4, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>{t("Edit")}</button>
             {/* round 88 #7 (owner): SAVE under Edit — flies the back label into the folder */}
@@ -2467,15 +2532,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             .concat(CROWN_TYPES.includes(bottle.type) ? ["Crown Cap"] : [])
             .concat(["No Capsule"]);
         return (<>
-          {/* wipe the baked column content (frame lines stay) */}
-          {patch(344.4, 173.3, 956.5, 408.5, "bzone")}
-          {/* live dividers + thin crosses at the new column boundaries */}
-          {COLS_X.slice(1).map((dx, i) => (
-            <span key={"dv" + i}>
-              {dashRule(dx, 171.71, 411.43, true, "bdrule")}
-              {cross(dx, 171.77, "dvt" + i)}{cross(dx, 583.41, "dvb" + i)}
-            </span>
-          ))}
+          {/* wipe the baked column content AND the baked frame: the board
+              draws its own dashed rules and pluses, which sat a pixel off
+              ours and doubled them (round 110). Ours are the only ones now. */}
+          {patch(341.6, 171, 959.3, 413, "bzone")}
+          {patch(126, 160, 1194, 26, "btopwipe")}
+          {patch(126, 572, 1194, 26, "bbotwipe")}
+          {dashGrid(137.14, 171.71, 1302.86 - 137.14, 583.41 - 171.71, COLS_X, "bgrid")}
           {colHead(0, "Wine Color")}
           {["Red", "White", "Amber", "Rosé"].map((c, i) => optRow(0, i, c, wineColor === c, () => setWineColor(c)))}
           {colHead(1, "Bottle Type")}
@@ -2588,8 +2651,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               {labelEl}
             </>);
           })()}
-          {/* round 12 #3: corner pluses back ON TOP of the photo */}
-          {cross(137.14, 172, "bt1")}{cross(342.84, 172, "bt2")}{cross(137.14, 583.41, "bt3")}{cross(342.84, 583.41, "bt4")}
+          {/* round 12 #3: the frame back ON TOP of the photo — round 110:
+              one element for the whole grid, so every plus sits on its
+              crossing to the pixel */}
+          {dashGrid(137.14, 171.71, 1302.86 - 137.14, 583.41 - 171.71, COLS_X, "bgrid2")}
           {/* ROUND 47 (owner): customers who already have their labels
               upload one here and go straight to marketing assets.
               ROUND 48: the confirmation is GREEN like every other ✓, and
@@ -2711,12 +2776,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         const thumbs = landingCol
           ? Array.from({ length: 4 }, (_, k) => ({ x: 757.5, y: Y0 + k * 70.83, s: 62 }))
           : Array.from({ length: 4 }, (_, k) => ({ x: 754 + (k % 2) * 152, y: Y0 + Math.floor(k / 2) * 152, s: 122 }));
-        const vrule = (x: number, key: string) => (
-          <span key={key}>
-            {dashRule(x, BOX.y, BOX.h, true, "boxrule" + x)}
-            {cross(x, BOX.y, key + "a")}{cross(x, BOX.y + BOX.h, key + "b")}
-          </span>
-        );
         return (<>
           {patch(0, 160, W, 500, "aswipe")}
           {custom
@@ -2731,12 +2790,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             <span style={{ ...px(0, 678.2, W, 16), font: `italic 12px ${HNW}`, color: "#BA141A", lineHeight: "15px", textAlign: "center", display: "block" }}>
               {t("Creating your marketing assets")} — {tStage(assetsStage)}…</span>
           )}
-          {dashedBox(BOX.x, BOX.y, BOX.w, BOX.h, "asd1")}
-          {!custom && vrule(R1, "asr1")}
-          {vrule(R2, "asr2")}
-          {landingCol && vrule(R3, "asr3")}
-          {cross(BOX.x, BOX.y, "as1")}{cross(BOX.x, BOX.y + BOX.h, "as2")}
-          {cross(BOX.x + BOX.w, BOX.y, "as3")}{cross(BOX.x + BOX.w, BOX.y + BOX.h, "as4")}
+          {dashGrid(BOX.x, BOX.y, BOX.w, BOX.h, [...(custom ? [] : [R1]), R2, ...(landingCol ? [R3] : [])], "asgrid", true)}
           {/* product shots — split col 1, centred in each half */}
           {custom
             ? slot((BOX.x + R2) / 2 - 60, Y0, 120, CH, assets.front, "front shot", "contain", false, assets.front ? () => setGallery({ items: assetItems, index: 0 }) : undefined, SHOT_ZOOM)
