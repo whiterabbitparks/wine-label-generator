@@ -2013,6 +2013,22 @@ composition-contract tightening, then customer wiring.
   artists' versions, artists earn a share per label. Live (2.28.48.43)
   stays on POPIKA_Back_To_Vector. Decisions: start with ONE artist, all
   three columns show her; no smart selection yet; share % undecided.
+- ROUND 109 — THE RE-CUT BAR AND CARD (2026-09-21, owner's updated
+  artboards in NEW UI/Comments/New). Station labels PULLED DOWN to
+  baseline 794.68 and set at the artboard's 15px (Georgian 12). The red
+  button is SMALLER AGAIN: NEXT_R 27 → 18.09 (a 36.18 circle), with the
+  artboard's own small arrow (18.25 long, 1.6 stroke, head 5.6 deep);
+  the pay and download marks stepped down with it. THE WALKTHROUGH CARD
+  is tied to the bar: the station's own label IS the title, so the card
+  is only "STEP N" in red (baseline 823.61) and two italic 12px lines
+  (+18.4/+32.8), its LEFT EDGE on the left edge of that label — the
+  label is centred on its stop, so its width is measured with a canvas
+  (textW, memoised). TUT_CARDS lost their `title`. The stop the button
+  stands on is now NAMED (the rule was `i >= tut`, now `i > tut`) — the
+  name is what the card explains. The closing card is ONE red word,
+  "START", on the labels' own baseline, centred under the button at the
+  end of the bar (GE "ᲓᲐᲬᲧᲔᲑᲐ"). Artboard "copy 8" is EMPTY — ask the
+  owner what was meant for it.
 - ROUND 108 — TWENTY-TWO FIXES (2026-09-21, owner's list). (1) The
   walkthrough's size-row taps follow the row to its new left-hand place
   (TAP.width/height = 237/410 at y650). (2) The closing card's word is

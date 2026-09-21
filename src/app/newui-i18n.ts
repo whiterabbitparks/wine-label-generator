@@ -179,6 +179,7 @@ export const UI_GE: Record<string, string> = {
   "Marketing assets": "სამარკეტინგო მასალა",
   "Two product shots, five marketing images,": "ორი პროდუქტის ფოტო, ხუთი სამარკეტინგო ფოტო",
   "and your product page if you asked for one.": "და თქვენი პროდუქტის გვერდი, თუ მოითხოვეთ.",
+  "START": "ᲓᲐᲬᲧᲔᲑᲐ",
   "Start": "დაწყება",
   "Your Vision &": "თქვენი ხედვა და",
   "Tell me what you picture,": "მიამბეთ, რას წარმოიდგენთ,",

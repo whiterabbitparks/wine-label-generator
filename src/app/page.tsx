@@ -125,13 +125,16 @@ const START_R = 4.92;
 const DOT_BIG = 4.92;
 const DOT_SMALL = 3.15;
 const LINE_H = 4;
-const LABEL_BASE = 788.6;      /* station labels' baseline (round 106: black on white) */
+const LABEL_BASE = 794.68;     /* station labels' baseline (round 109: pulled down) */
 const FOOT_RULE_Y = 753.96;    /* the footer's 1px hairline, straight off the artboard */
 /* ROUND 106: the walkthrough's card, set flush-left under the station it
    explains — "STEP N /" in red, the title in black beside it, the body in
    italic below. All three baselines are the artboard's. */
-const CARD_BASE = 828.01, CARD_BODY = [22.4, 36.8], CARD_FS = 15, CARD_BODY_FS = 12;
-const NEXT_R = 27;             /* red round button — round 87: 20% smaller (was 34) */
+/* ROUND 109 (owner's re-cut artboards): the card lost its title — the
+   station's own label above it IS the title, so the card is "STEP N" in
+   red and two italic lines, left-aligned with that label. */
+const CARD_BASE = 823.61, CARD_BODY = [18.4, 32.8], CARD_FS = 15, CARD_BODY_FS = 12;
+const NEXT_R = 18.09;          /* red round button — round 109: smaller again (was 27) */
 const NEXT_X = 1302.86;        /* its centre on working pages … */
 const WELCOME_X = 168.1;       /* … and on the welcome page */
 const STEPS: { x: number; label: string; page: PageKey; big: boolean }[] = [
@@ -290,15 +293,17 @@ const TUT_PAGES: PageKey[] = ["vision", "options", "backdetails", "backdesign", 
    set flush-left under the station it explains, so each line runs as long
    as it needs to. Copy verbatim off the artboards, typos fixed. The last
    card is a single red word under the button at the end of the bar. */
-const TUT_CARDS: { step: string; title: string; body: string[] }[] = [
-  { step: "STEP 1", title: "Your Vision & front label details", body: ["Tell me what you picture, and the details", "that belong on your front label."] },
-  { step: "STEP 2", title: "Front label", body: ["Voilà — three designs to choose from.", "Pick your favourite."] },
-  { step: "STEP 3", title: "Back label details, Barcode & QR code", body: ["A few more details, and I'll build a back label", "that meets your market's rules."] },
-  { step: "STEP 4", title: "Back label", body: ["Done. Print-ready, and compliant with", "the markets you chose."] },
-  { step: "STEP 5", title: "Bottle details", body: ["Tell me about the bottle and the closure, so I can", "photograph your wine exactly as it will look on the shelf."] },
+const TUT_CARDS: { step: string; body: string[] }[] = [
+  { step: "STEP 1", body: ["Tell me what you picture, and the details", "that belong on your front label."] },
+  { step: "STEP 2", body: ["Voilà — three designs to choose from.", "Pick your favourite."] },
+  { step: "STEP 3", body: ["A few more details, and I'll build a back label", "that meets your market's rules."] },
+  { step: "STEP 4", body: ["Done. Print-ready, and compliant with", "the markets you chose."] },
+  { step: "STEP 5", body: ["Tell me about the bottle and the closure, so I can", "photograph your wine exactly as it will look on the shelf."] },
   /* the artboard reads "four marketing images" — the product makes five */
-  { step: "STEP 6", title: "Marketing assets", body: ["Two product shots, five marketing images,", "and your product page if you asked for one."] },
-  { step: "", title: "Start", body: [] },
+  { step: "STEP 6", body: ["Two product shots, five marketing images,", "and your product page if you asked for one."] },
+  /* the closing state: the button at the end of the bar and ONE red word
+     where a station's name would be */
+  { step: "START", body: [] },
 ];
 const DEMO_VISION = "The village cat walking along the top of a stone wall at dusk";
 const DEMO_DESC = "A dry, naturally sparkling pét-nat from Rkatsiteli. Pale straw with a fine, lively bead; green apple, white peach and a touch of bread crust on the nose; crisp acidity and a clean, saline finish. Bottled unfiltered, before the first fermentation ended.";
@@ -799,6 +804,22 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   /* ROUND 63 #4 (owner): markets are picked from a dropdown now */
   const [marketOpen, setMarketOpen] = useState(false);
   useEffect(() => { if (page !== "backdetails") setMarketOpen(false); }, [page]);
+  /* ROUND 109: the walkthrough's card is left-aligned with the station's
+     LABEL, and a label is centred on its stop — so its width has to be
+     measured. One canvas, memoised per string+font. */
+  const textWCache = useRef(new Map<string, number>());
+  const textW = (text: string, font: string) => {
+    const k = font + "|" + text;
+    const hit = textWCache.current.get(k);
+    if (hit !== undefined) return hit;
+    let w = text.length * 7;
+    try {
+      const c = document.createElement("canvas").getContext("2d");
+      if (c) { c.font = font; w = c.measureText(text).width; }
+    } catch { /* the estimate stands */ }
+    textWCache.current.set(k, w);
+    return w;
+  };
   /* live font metrics of 'italic 15px HNW' (per-browser; Safari ≠ Chrome) */
   const [fm, setFm] = useState({ a: 14.28, d: 3.19 });
   useEffect(() => {
@@ -3082,7 +3103,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const step = tut >= 0 ? tut : STEP_OF[barPage];
   /* round 71: Mtavruli runs much wider than Latin — six stops 166.6 apart
      only clear each other in Georgian at a smaller size */
-  const BAR_FS = lang === "ge" ? 11 : 13;
+  const BAR_FS = lang === "ge" ? 12 : 15;
   /* round 71 #4: while the walkthrough runs, the bar follows IT — the
      button rides the stop being explained and the line follows it home */
   const tutLast = TUT_CARDS.length - 1;
@@ -3348,39 +3369,38 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     font: `${st.big ? 700 : 300} ${BAR_FS}px ${HNW}`, lineHeight: `${BAR_FS}px`,
                     color: INK, textAlign: "center", textTransform: "none", whiteSpace: "nowrap",
                     /* round 72 #6: in the walkthrough a stop stays unnamed
-                       until the button moves OFF it — the name fades in as
-                       the button travels on. Outside it, every name shows. */
-                    opacity: tut >= 0 && i >= tut ? 0 : 1,
+                       until it is REACHED. Round 109 (the owner's artboards):
+                       the stop the button stands on is named — its name is
+                       the card's title. Outside the walkthrough, all show. */
+                    opacity: tut >= 0 && i > tut ? 0 : 1,
                     transition: `opacity ${SLIDE_MS}ms ${EASE}`,
                   }}>
                   {t(st.label)}</button>
               ))}
             </>)}
-            {/* ROUND 106 (owner's artboards): the walkthrough's card is set
-                UNDER the bar, flush-left with the station it explains —
-                "STEP N /" in red, the title beside it in black, two italic
-                lines below. It travels with the button. The closing card is
-                one red word, "Start", under the button at the end. */}
+            {/* ROUND 109 (owner's re-cut artboards): the walkthrough's card
+                sits under the bar, its left edge on the left edge of the
+                station's own LABEL — that label is the title, so the card
+                is just "STEP N" in red and two italic lines. The closing
+                card is ONE red word on the labels' own baseline, centred
+                under the button at the end of the bar. */}
             {tut >= 0 && tutX !== null && (() => {
               const card = TUT_CARDS[Math.min(tut, TUT_CARDS.length - 1)];
               const solo = card.body.length === 0;          /* the closing card */
               const fs = lang === "ge" ? CARD_FS - 2 : CARD_FS;
               const bfs = lang === "ge" ? CARD_BODY_FS - 1 : CARD_BODY_FS;
-              /* the last card's word sits ON the button; the step cards
-                 start at the station and read to the right */
-              const L = solo ? tutX - 110 : tutX;
+              const st = STEPS[tut];
+              /* the label is centred on its stop; the card starts where the
+                 label starts */
+              const labelW = st ? textW(t(st.label), `${st.big ? 700 : 300} ${BAR_FS}px ${HNW}`) : 0;
+              const L = solo ? tutX - 110 : tutX - labelW / 2;
               return (
                 <div key={"tut" + tut} style={{ position: "absolute", left: L, top: 0, width: W - L, height: PAGE_H, pointerEvents: "none", animation: `nuiFadeIn 320ms ${EASE} both`, transition: `left ${SLIDE_MS}ms ${EASE}` }}>
                   {solo ? (
-                    /* round 108 #2: centred under the button, whatever the language */
-                    <span style={{ position: "absolute", left: 0, top: baseTop(CARD_BASE + 0.85, 23), width: 220, textAlign: "center", font: `700 23px ${HNW}`, lineHeight: "23px", color: BAR_RED, whiteSpace: "nowrap" }}>{t(card.title)}</span>
+                    /* on the labels' baseline, centred under the button */
+                    <span style={{ position: "absolute", left: 0, top: baseTop(LABEL_BASE + 0.22, fs), width: 220, textAlign: "center", font: `700 ${fs}px ${HNW}`, lineHeight: `${fs}px`, color: BAR_RED, whiteSpace: "nowrap" }}>{t(card.step)}</span>
                   ) : (<>
-                    {/* round 107 #3 (owner): the whole title line is BOLD —
-                        the inner spans do not inherit the shorthand's weight */}
-                    <span style={{ position: "absolute", left: 0, top: baseTop(CARD_BASE, fs), font: `700 ${fs}px ${HNW}`, lineHeight: `${fs}px`, whiteSpace: "nowrap" }}>
-                      <span style={{ color: BAR_RED, fontWeight: 700 }}>{t(card.step)} /</span>
-                      <span style={{ color: INK, fontWeight: 700 }}>{" "}{t(card.title)}</span>
-                    </span>
+                    <span style={{ position: "absolute", left: 0, top: baseTop(CARD_BASE, fs), font: `700 ${fs}px ${HNW}`, lineHeight: `${fs}px`, color: BAR_RED, fontWeight: 700, whiteSpace: "nowrap" }}>{t(card.step)}</span>
                     {card.body.map((ln, i) => (
                       <span key={"b" + i} style={{ position: "absolute", left: 0, top: baseTop(CARD_BASE + CARD_BODY[i], bfs), font: `italic ${bfs}px ${HNW}`, lineHeight: `${bfs}px`, color: INK, whiteSpace: "nowrap" }}>{t(ln)}</span>
                     ))}
@@ -3467,26 +3487,27 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     : ((tut >= 0 && tut >= tutLast) || page === "checkout") && nudge > 0 ? `nuiNudge 1200ms ${EASE} both`
                     : pressed > 0 ? `nuiPress 260ms ${EASE} both` : "none",
                 }}>
-                {/* round 71: the artboard's arrow — 34.3 long, 3px stroke,
-                    its head 10.52 deep */}
+                {/* ROUND 109: the artboard's smaller arrow — 18.25 long,
+                    1.6 stroke, its head 5.6 deep; the pay and download
+                    marks step down with it */}
                 {page === "checkout" && !gensMode && paid ? (
                   /* the owner's download tray (Red_Buttons_Pay&Download.svg) */
-                  <svg viewBox="0 0 40 40" width="32" height="32">
-                    <path d="M8 20 V32 H32 V20" fill="none" stroke="#fff" strokeWidth="3" strokeLinejoin="miter" />
-                    <line x1="20" y1="6" x2="20" y2="24" stroke="#fff" strokeWidth="3" />
-                    <polyline points="13,17 20,24.5 27,17" fill="none" stroke="#fff" strokeWidth="3" />
+                  <svg viewBox="0 0 40 40" width="21" height="21">
+                    <path d="M8 20 V32 H32 V20" fill="none" stroke="#fff" strokeWidth="3.4" strokeLinejoin="miter" />
+                    <line x1="20" y1="6" x2="20" y2="24" stroke="#fff" strokeWidth="3.4" />
+                    <polyline points="13,17 20,24.5 27,17" fill="none" stroke="#fff" strokeWidth="3.4" />
                   </svg>
                 ) : page === "checkout" ? (
                   /* the owner's card */
-                  <svg viewBox="0 0 44 32" width="35" height="25.5">
-                    <rect x="2.5" y="2.5" width="39" height="27" rx="3.5" fill="none" stroke="#fff" strokeWidth="3" />
-                    <line x1="2.5" y1="11" x2="41.5" y2="11" stroke="#fff" strokeWidth="3" />
+                  <svg viewBox="0 0 44 32" width="23.5" height="17">
+                    <rect x="2.5" y="2.5" width="39" height="27" rx="3.5" fill="none" stroke="#fff" strokeWidth="3.4" />
+                    <line x1="2.5" y1="11" x2="41.5" y2="11" stroke="#fff" strokeWidth="3.4" />
                     <rect x="29" y="19" width="7" height="4" fill="#fff" />
                   </svg>
                 ) : (
-                  <svg viewBox="-1.5 -12.02 37.3 24.04" width="29.8" height="19.2">
-                    <line x1="0" y1="0" x2="34.3" y2="0" stroke="#fff" strokeWidth="3" />
-                    <polyline points="23.78,-10.52 34.3,0 23.78,10.52" fill="none" stroke="#fff" strokeWidth="3" />
+                  <svg viewBox="-9.93 -6.4 20.05 12.8" width="20.05" height="12.8">
+                    <line x1="-9.13" y1="0" x2="9.12" y2="0" stroke="#fff" strokeWidth="1.6" strokeMiterlimit="10" />
+                    <polyline points="3.52,5.6 9.12,0 3.52,-5.6" fill="none" stroke="#fff" strokeWidth="1.6" strokeMiterlimit="10" />
                   </svg>
                 )}
               </button>
