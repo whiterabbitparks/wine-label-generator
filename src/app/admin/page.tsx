@@ -18,12 +18,12 @@
    (LegacyAdmin.tsx) stays as the source of the shared cards. */
 
 import { useCallback, useEffect, useState } from "react";
-import { UsersTab, LoginForm, StylesTab, AdminStyles as S } from "../legacy/LegacyAdmin";
+import { UsersTab, LoginForm, AdminStyles as S } from "../legacy/LegacyAdmin";
 import { RegionsCard } from "./RegionsCard";
 import { PaintersCard } from "./PaintersCard";
 import { EvalPanel } from "./EvalPanel";
 
-const TABS = ["Painters & Rules", "References", "Evaluate", "System"] as const;
+const TABS = ["Artists & Rules", "Marketing", "Evaluate", "System"] as const;
 type Tab = (typeof TABS)[number];
 
 function LinesRulesCard({ title, note, api }: { title: string; note: string; api: string }) {
@@ -39,37 +39,6 @@ function LinesRulesCard({ title, note, api }: { title: string; note: string; api
       <label style={{ ...S.label, margin: 0 }}>{title}</label>
       <p style={{ fontSize: 12, color: "#8a887e", margin: "6px 0 10px" }}>{note}</p>
       <textarea style={{ ...S.input, minHeight: 70 }} value={text} onChange={(e) => setText(e.target.value)} />
-      <button style={{ ...S.btn, marginTop: 8 }} onClick={save}>{saved ? "Saved ✓" : "Save"}</button>
-    </div>
-  );
-}
-
-function IllustrationRulesCard() {
-  const [rules, setRules] = useState<{ global: string; perStyle: Record<string, string> } | null>(null);
-  const [saved, setSaved] = useState(false);
-  useEffect(() => { fetch("/api/admin/image-rules").then((r) => r.json()).then((b) => setRules({ global: b.rules?.global || "", perStyle: b.rules?.perStyle || {} })); }, []);
-  async function save() {
-    if (!rules) return;
-    const r = await fetch("/api/admin/image-rules", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(rules) });
-    if (r.ok) { setSaved(true); setTimeout(() => setSaved(false), 2500); }
-  }
-  if (!rules) return <div style={S.card}>Loading illustration rules…</div>;
-  return (
-    <div style={S.card}>
-      <label style={{ ...S.label, margin: 0 }}>Illustration rules</label>
-      <p style={{ fontSize: 12, color: "#8a887e", margin: "6px 0 10px" }}>
-        One rule per line — steers the <b>Image Play test batches</b> and is checked on them by a vision model
-        (the wizard&rsquo;s artwork ask carries its own style lines and the no-text law). Global first, then per style.
-      </p>
-      <label style={S.label}>Global — every style</label>
-      <textarea style={{ ...S.input, minHeight: 60 }} value={rules.global} onChange={(e) => setRules({ ...rules, global: e.target.value })} />
-      {["traditional", "contemporary", "punk"].map((st) => (
-        <div key={st}>
-          <label style={S.label}>{st === "punk" ? "Funky" : st}</label>
-          <textarea style={{ ...S.input, minHeight: 40 }} value={rules.perStyle[st] || ""}
-            onChange={(e) => setRules({ ...rules, perStyle: { ...rules.perStyle, [st]: e.target.value } })} />
-        </div>
-      ))}
       <button style={{ ...S.btn, marginTop: 8 }} onClick={save}>{saved ? "Saved ✓" : "Save"}</button>
     </div>
   );
@@ -180,132 +149,6 @@ function MarketingRefsCard() {
   );
 }
 
-function IllustrationTextsCard() {
-  const [style, setStyle] = useState<string>("traditional");
-  const [charter, setCharter] = useState("");
-  const [variants, setVariants] = useState<{ key: string; language: string }[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [err, setErr] = useState("");
-  const [thumbs, setThumbs] = useState<Record<string, string>>({});
-  const load = useCallback(async (st: string) => {
-    const r = await fetch("/api/admin/style-refs");
-    if (!r.ok) return;
-    const b = await r.json();
-    const prof = (b.profiles || {})[st] as { charter?: string; variants?: { key: string; language?: string; medium?: string; mood?: string }[] } | undefined;
-    setCharter(prof?.charter || "");
-    setVariants((prof?.variants || []).map((v) => ({ key: v.key, language: v.language || [v.medium, v.mood].filter(Boolean).join("; ") })));
-    const tm: Record<string, string> = {};
-    for (const ref of (b.refs || []) as { id: string; thumb?: string; style?: string }[]) if (ref.thumb) tm[ref.id] = ref.thumb;
-    setThumbs(tm);
-  }, []);
-  useEffect(() => { load(style); }, [style, load]);
-  async function save() {
-    setBusy(true); setErr("");
-    const r = await fetch("/api/admin/style-refs", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ saveTexts: true, style, charter, variants }),
-    });
-    if (!r.ok) setErr((await r.json().catch(() => ({}))).error || "save failed");
-    else { setSaved(true); setTimeout(() => setSaved(false), 2500); }
-    setBusy(false);
-  }
-  return (
-    <div style={S.card}>
-      <b style={{ fontSize: 13 }}>Illustration steering texts</b>
-      <span style={{ fontSize: 11.5, color: "#8a887e", marginLeft: 8 }}>
-        edit freely — the style cards feed the dream&rsquo;s illustration line verbatim; ⚠ Analyze overwrites edits
-      </span>
-      <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-        {DREAM_STYLES.map((st) => (
-          <button key={st} onClick={() => setStyle(st)}
-            style={{ font: "inherit", fontSize: 12, padding: "4px 12px", borderRadius: 12, cursor: "pointer", border: "1px solid #111", background: style === st ? "#111" : "transparent", color: style === st ? "#fff" : "#111" }}>
-            {st}
-          </button>
-        ))}
-      </div>
-      {err && <p style={{ color: "#a33", fontSize: 12 }}>{err}</p>}
-      <label style={{ ...S.label, marginTop: 8 }}>Illustration charter</label>
-      <textarea style={{ ...S.input, minHeight: 80, fontSize: 12 }} value={charter} onChange={(e) => setCharter(e.target.value)} />
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))", gap: 12, marginTop: 8 }}>
-        {variants.map((v, i) => (
-          <div key={v.key} style={{ border: "1px solid #ddd", padding: 8 }}>
-            <div style={{ position: "relative" }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              {thumbs[v.key] ? <img src={thumbs[v.key]} alt="" style={{ height: 110, maxWidth: "100%", border: "1px solid #ddd", display: "block" }} />
-                : <div style={{ height: 110, background: "#f4f3ee" }} />}
-              <span style={{ position: "absolute", bottom: 2, left: 2, fontSize: 11, background: "#111", color: "#fff", padding: "0 5px", lineHeight: 1.6 }}>{i + 1}</span>
-            </div>
-            <textarea style={{ ...S.input, minHeight: 84, fontSize: 11.5, marginTop: 6 }} value={v.language}
-              onChange={(e) => setVariants((vs) => vs.map((x) => (x.key === v.key ? { ...x, language: e.target.value } : x)))} />
-          </div>
-        ))}
-      </div>
-      <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 8 }}>
-        <button style={S.btn} disabled={busy} onClick={save}>{busy ? "Saving…" : "Save illustration texts"}</button>
-        {saved && <span style={{ fontSize: 12, color: "#3f6d2a" }}>Saved ✓ — applies to the next dream</span>}
-      </div>
-    </div>
-  );
-}
-
-
-/* THE ART DIRECTOR'S NOTES (was Dream Studio's "saved comments"): the
-   praised / criticised notes per style that ride every artwork ask
-   (artworkGuidance quotes the latest twelve). Same store, same effect —
-   only the whole-label "dream a label" generator around it is gone. */
-function ArtNotesCard() {
-  const [rows, setRows] = useState<{ id: string; at: string; verdict: string; comment: string; style: string; wine?: string }[]>([]);
-  const [style, setStyle] = useState("traditional");
-  const [verdict, setVerdict] = useState<"approve" | "reject">("approve");
-  const [comment, setComment] = useState("");
-  const load = useCallback(async () => {
-    const r = await fetch("/api/admin/dream-feedback"); if (r.ok) setRows(((await r.json()).rows || []).filter((x: { comment: string }) => x.comment));
-  }, []);
-  useEffect(() => { load(); }, [load]);
-  async function add() {
-    if (!comment.trim()) return;
-    await fetch("/api/admin/dream-feedback", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ verdict, comment, style }) });
-    setComment(""); load();
-  }
-  const NAMES: Record<string, string> = { traditional: "Traditional", contemporary: "Contemporary", punk: "Funky" };
-  return (
-    <div style={S.card}>
-      <label style={{ ...S.label, margin: 0 }}>Art director&rsquo;s notes — what the painter is told every time</label>
-      <p style={{ fontSize: 12, color: "#8a887e", margin: "6px 0 10px" }}>
-        Per style: what you praised and what you criticised. The latest twelve notes of a style ride every artwork ask for it, verbatim (&ldquo;the art director praised… / criticised… — avoid these&rdquo;). Delete what no longer applies.
-      </p>
-      <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-        <select value={style} onChange={(e) => setStyle(e.target.value)} style={{ ...S.input, width: 160 }}>
-          {Object.entries(NAMES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-        </select>
-        <select value={verdict} onChange={(e) => setVerdict(e.target.value as "approve" | "reject")} style={{ ...S.input, width: 140 }}>
-          <option value="approve">praise</option><option value="reject">criticism</option>
-        </select>
-        <input value={comment} placeholder="e.g. keep the sky empty above the subject" onChange={(e) => setComment(e.target.value)} style={{ ...S.input, flex: "1 1 300px" }} />
-        <button style={S.btn} onClick={add}>Add note</button>
-      </div>
-      {["traditional", "contemporary", "punk"].map((st) => {
-        const mine = rows.filter((r) => r.style === st);
-        if (!mine.length) return null;
-        return (
-          <div key={st} style={{ marginTop: 14 }}>
-            <label style={{ ...S.label, marginTop: 0 }}>{NAMES[st]} ({mine.length})</label>
-            {mine.map((r) => (
-              <div key={r.id} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "6px 0", borderBottom: "1px solid #E3E3E1", fontSize: 13 }}>
-                <span style={{ width: 70, flex: "0 0 auto", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.3, color: r.verdict === "approve" ? "#3f6d2a" : "#BA141A", paddingTop: 2 }}>{r.verdict === "approve" ? "praise" : "criticism"}</span>
-                <span style={{ flex: 1 }}>{r.comment}{r.wine ? <span style={{ color: "#8a887e" }}> — {r.wine}</span> : null}</span>
-                <span style={{ fontSize: 11, color: "#8a887e", whiteSpace: "nowrap" }}>{r.at.slice(0, 10)}</span>
-                <button title="delete" onClick={async () => { await fetch(`/api/admin/dream-feedback?id=${r.id}`, { method: "DELETE" }); load(); }} style={{ ...S.linkBtn, fontSize: 14, textDecoration: "none" }}>✕</button>
-              </div>
-            ))}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 /* ROUND 98 #2: the hybrid engine's own log — the labels under data/labels */
 function RecentLabelsCard() {
   const [rows, setRows] = useState<{ id: string; style: string; widthMm: number; heightMm: number; faces: string; createdAt: string; fit?: string }[]>([]);
@@ -340,7 +183,7 @@ function Section({ title, note, children }: { title: string; note?: string; chil
 
 export default function AdminPage() {
   const [authed, setAuthed] = useState<boolean | null>(null);
-  const [tab, setTabState] = useState<Tab>("Painters & Rules");
+  const [tab, setTabState] = useState<Tab>("Artists & Rules");
   /* the tab rides the URL (?tab=Evaluate), so /eval and bookmarks land right */
   useEffect(() => {
     try { const q = new URLSearchParams(window.location.search).get("tab"); if (q && (TABS as readonly string[]).includes(q)) setTabState(q as Tab); } catch {}
@@ -371,7 +214,7 @@ export default function AdminPage() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
           <div>
             <h1 style={S.h1}>8K LABELS — ADMIN</h1>
-            <span style={{ fontSize: 12, color: "#8a887e" }}>the art director&rsquo;s desk · painters, rules, references, evaluation</span>
+            <span style={{ fontSize: 12, color: "#8a887e" }}>the art director&rsquo;s desk · artists, rules, marketing, evaluation</span>
           </div>
           <div style={{ display: "flex", gap: 16, alignItems: "baseline" }}>
             <a href="/" style={{ fontSize: 12 }}>the site →</a>
@@ -385,8 +228,8 @@ export default function AdminPage() {
           ))}
         </nav>
 
-        {tab === "Painters & Rules" && (<>
-          <Section title="Painters" note="Which painter paints the artwork of each style. The type is always set by code.">
+        {tab === "Artists & Rules" && (<>
+          <Section title="Artists" note="Which artist paints each column of the wizard. The type is always set by code.">
             <PaintersCard />
           </Section>
           <Section title="Regions" note="What each region looks like — read by the ask whenever a wine's region matches.">
@@ -398,31 +241,23 @@ export default function AdminPage() {
               note="One rule per line, plain English — rides EVERY marketing prompt (studio shots and lifestyle scenes) as the art director's standing orders. Example: 'never show drinking glasses half-empty' or 'always natural daylight'."
               api="/api/admin/marketing-rules"
             />
-            <IllustrationRulesCard />
           </Section>
         </>)}
 
-        {tab === "References" && (<>
-          <Section title="Illustration references" note="The boards per style and the style cards derived from them — the sub-styles the painter is dealt.">
-            <IllustrationTextsCard />
-            <StylesTab />
-          </Section>
+        {tab === "Marketing" && (
           <Section title="Marketing references" note="The photographic world per style: boards, charters and scenes for product shots and lifestyle images.">
             <MarketingRefsCard />
           </Section>
-        </>)}
+        )}
 
-        {tab === "Evaluate" && (<>
+        {tab === "Evaluate" && (
           <Section title="Evaluation runs">
             <EvalPanel />
           </Section>
-          <Section title="Art director's notes">
-            <ArtNotesCard />
-          </Section>
-        </>)}
+        )}
 
         {tab === "System" && (<>
-          <Section title="Recent labels" note="What the wizard painted lately — painter, faces, ground, the foot decision."><RecentLabelsCard /></Section>
+          <Section title="Recent labels" note="What the wizard painted lately — artist, faces, ground."><RecentLabelsCard /></Section>
           <Section title="Users"><UsersTab onSessionLost={() => setAuthed(false)} /></Section>
         </>)}
       </div>

@@ -1,21 +1,18 @@
-import { buildArtworkPrompt, evalModel, generateArtworkChecked } from "@/lib/eval/models";
+import { buildArtworkPrompt, evalModel, generateArtwork, artistModels } from "@/lib/eval/models";
 import { composeLabel } from "@/lib/typeset/compose";
-import { flatGroundOf } from "@/lib/typeset/palette";
 import { faceFile, pickRoles, mix } from "@/lib/typeset/fonts";
 import type { Layout } from "@/lib/typeset/compose";
-import { gen429 } from "@/lib/dream/engine";
 import { painterFor } from "./painters";
 
 /* THE HYBRID ENGINE for the wizard (branch POPIKA_Back_To_Vector, round
-   84, 2026-09-19). What /eval proved in rounds 79–83, as ONE call:
+   84; round 105 on POPIKA_Artists). One call:
 
-     the painter paints the ARTWORK ONLY, into a reserved zone
-       · traditional: on a paper tone we choose, the type zone masked off
-       · contemporary / punk: on a flat ground of the painter's own
-         choosing, told the KIND of ground the style wants (way 1)
-     the composer reads the ground off the picture and sets the TYPE by
-     code — Google faces, grouped blocks, 120 % leading, measured fit —
-     so the label comes back as live type (SVG) and a print PNG.
+     the ARTIST paints the picture — gpt-image paints the story shown her
+       works, FLUX + her LoRA repaints it in her hand (models.ts) — as a
+       spot illustration on plain paper;
+     the composer trims the air and sets the TYPE by code — Google faces,
+       grouped blocks, 120 % leading, measured fit — so the label comes
+       back as live type (SVG) and a print PNG.
 
    No text is ever painted, so no proofreading, no strict redream. */
 
@@ -50,39 +47,33 @@ export function textsOf(d: Record<string, string>) {
   };
 }
 
-export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput & { tag: string; painter: string; artist?: string }> {
+/* three columns paint in parallel from the wizard — a burst can trip the
+   images rate limit; honour the hint and retry once */
+async function gen429<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (!/429|rate.?limit/i.test(msg)) throw e;
+    const hinted = msg.match(/try again in (\d+(?:\.\d+)?)s/i);
+    await new Promise((r) => setTimeout(r, hinted ? Math.ceil(parseFloat(hinted[1]) * 1000) + 1000 : 20000));
+    return fn();
+  }
+}
+
+export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput & { tag: string; painter: string; artist?: string; repainted: boolean }> {
   const style = ["traditional", "contemporary", "punk"].includes(inp.style) ? inp.style : "traditional";
   const seed = inp.seed ?? (Math.random() * 0xffffffff) >>> 0;
   const widthMm = Math.min(300, Math.max(30, inp.widthMm || 110));
   const heightMm = Math.min(300, Math.max(30, inp.heightMm || 80));
   const brief = { id: "wizard", title: "wizard", vision: inp.vision, data: inp.data, width: widthMm, height: heightMm };
-  /* round 90: the painter is the owner's choice per style (admin → Rules
-     → Painters); canvas painters get a paper tone, the own-ground painter
-     chooses its own */
-  let model = evalModel(await painterFor(style)) || evalModel("gpt-image-own")!;
-  /* round 96: a FREE painter (Ideogram, nano-banana without a canvas) gets
-     the very ask the owner rated 5 in the bake-off, and the composer CROPS
-     — the painting stays whole, the band sits over its foot */
-  let free = model.via === "fal" && !model.canvas;
-  let ap = await buildArtworkPrompt(brief, style, seed, { ownGround: model.id === "gpt-image-own", softGround: !!model.canvas, wholeFrame: free, artist: model.artist });
-  let art: string;
-  try {
-    art = (await gen429(() => generateArtworkChecked(model, ap, { sketch: inp.sketch || null }))).art;
-  } catch (e) {
-    /* ROUND 100: a fal painter that cannot paint (balance locked, outage)
-       must never leave the customer without a label — gpt-image steps in
-       and the reason is logged for the owner */
-    if (model.via !== "fal") throw e;
-    console.error(`[painter] ${model.id} failed for ${style}: ${e instanceof Error ? e.message : e} — falling back to gpt-image-own`);
-    model = evalModel("gpt-image-own")!; free = false;
-    ap = await buildArtworkPrompt(brief, style, seed, { ownGround: true });
-    art = (await gen429(() => generateArtworkChecked(model, ap, { sketch: inp.sketch || null }))).art;
-  }
-  /* no paper given (contemporary / punk): the ground is read off the picture */
-  /* a finished free painting carries its foot ground (LAST_FOOT_GROUND) */
-  const ground = free ? "" : (ap.paper || (await flatGroundOf(art)).colour);
-  const out = await composeLabel({ artwork: art, style, texts: textsOf(inp.data), widthMm, heightMm, seed, paper: ground || undefined, wineColour: inp.data.wineColorName, fit: free ? "vignette" : "yield" });
-  return { png: out.png, svg: out.svg, art, faces: out.faces, ink: out.ink, ground: out.layout.ground, prompt: ap.prompt, layout: out.layout, tag: layoutTag(style, seed), fit: free ? "vignette" : "yield", painter: model.id, artist: model.artist?.name };
+  /* the column's artist (admin → Artists); any artist with a LoRA if unset */
+  const model = evalModel(await painterFor(style)) || artistModels().find((m) => m.lora) || artistModels()[0];
+  if (!model) throw new Error("no artist is set up yet (data/artists/<id>/profile.json + lora.json)");
+  const ap = await buildArtworkPrompt(brief, model.artist);
+  const painted = await gen429(() => generateArtwork(model, ap, { sketch: inp.sketch || null }));
+  const out = await composeLabel({ artwork: painted.art, style, texts: textsOf(inp.data), widthMm, heightMm, seed, wineColour: inp.data.wineColorName, fit: "vignette" });
+  return { png: out.png, svg: out.svg, art: painted.art, faces: out.faces, ink: out.ink, ground: out.layout.ground, prompt: ap.prompt, layout: out.layout, tag: layoutTag(style, seed), fit: "vignette", painter: model.id, artist: model.artist.name, repainted: painted.repainted };
 }
 
 /* ROUND 86 #3 (owner: "keep the image, just change the layout — tons of

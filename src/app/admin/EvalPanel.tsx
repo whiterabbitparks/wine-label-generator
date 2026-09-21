@@ -122,7 +122,7 @@ export function EvalPanel() {
       <div key={item.id} style={{ width: 300 }}>
         <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={painterName(item.painter)}>
           {painterName(item.painter) || "—"}
-          {(showStyle || count > 1) && <span style={{ fontWeight: 400, color: "#8a887e" }}>{showStyle ? ` · ${STYLE_TITLE[item.style] || item.style}` : ""}{count > 1 ? ` · ${item.n}` : ""}</span>}
+          {showStyle && <span style={{ fontWeight: 400, color: "#8a887e" }}> · {STYLE_TITLE[item.style] || item.style}{count > 1 ? ` · ${item.n}` : ""}</span>}
         </div>
         {item.error ? <div style={{ ...box, color: "#a33", fontSize: 12, border: "1px solid #e2e1da", padding: 10 }}>failed: {item.error.slice(0, 160)}</div> : (
           /* eslint-disable-next-line @next/next/no-img-element */

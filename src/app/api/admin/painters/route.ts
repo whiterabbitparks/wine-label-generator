@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
 import { requestIsAuthenticated } from "@/lib/admin/session";
 import { getDb } from "@/lib/db";
-import { EVAL_MODELS, artistModels } from "@/lib/eval/models";
-import { DEFAULT_PAINTERS, WIZARD_PAINTERS } from "@/lib/label/painters";
+import { artistModels } from "@/lib/eval/models";
+import { COLUMNS, defaultPainters } from "@/lib/label/painters";
 
-/* THE PAINTERS (round 90, owner: "why aren't we using the other
-   models?"): which painter paints each style in the wizard. Saved in
-   settings/_id "painters" as { traditional, contemporary, punk } → a
-   painter id from WIZARD_PAINTERS. Defaults to gpt-image on its own
-   ground until the owner chooses otherwise in /admin → Rules. */
+/* THE ARTISTS PER COLUMN (round 90 → 105): which artist paints each of
+   the wizard's three columns. Saved in settings/_id "painters" as
+   { traditional, contemporary, punk } → "artist:<id>". Without a saved
+   map the first three artists with a trained LoRA take the columns. */
 
 const DOC = "painters";
 
@@ -17,8 +16,8 @@ export async function GET() {
   try {
     const db = await getDb();
     const doc = (await db.collection("settings").findOne({ _id: DOC } as never)) as { map?: Record<string, string> } | null;
-    const options = [...EVAL_MODELS.filter((m) => WIZARD_PAINTERS.includes(m.id)), ...artistModels()].map((m) => ({ id: m.id, name: m.name }));
-    return NextResponse.json({ map: { ...DEFAULT_PAINTERS, ...(doc?.map || {}) }, options, saved: !!doc?.map });
+    const options = artistModels().map((m) => ({ id: m.id, name: m.name + (m.lora ? "" : " (no LoRA yet)") }));
+    return NextResponse.json({ map: { ...defaultPainters(), ...(doc?.map || {}) }, options, saved: !!doc?.map });
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 503 });
   }
@@ -28,10 +27,12 @@ export async function POST(req: Request) {
   if (!(await requestIsAuthenticated())) return NextResponse.json({ error: "not authenticated" }, { status: 401 });
   let body: { map?: Record<string, string> };
   try { body = await req.json(); } catch { return NextResponse.json({ error: "invalid JSON" }, { status: 400 }); }
+  const ids = new Set(artistModels().map((m) => m.id));
+  const fallback = defaultPainters();
   const map: Record<string, string> = {};
-  for (const style of ["traditional", "contemporary", "punk"]) {
-    const v = String(body.map?.[style] || "");
-    map[style] = WIZARD_PAINTERS.includes(v) || v.startsWith("artist:") ? v : DEFAULT_PAINTERS[style];
+  for (const col of COLUMNS) {
+    const v = String(body.map?.[col] || "");
+    map[col] = ids.has(v) ? v : fallback[col];
   }
   const db = await getDb();
   await db.collection("settings").updateOne({ _id: DOC } as never, { $set: { map } }, { upsert: true });

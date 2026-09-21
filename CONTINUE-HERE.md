@@ -2013,6 +2013,44 @@ composition-contract tightening, then customer wiring.
   artists' versions, artists earn a share per label. Live (2.28.48.43)
   stays on POPIKA_Back_To_Vector. Decisions: start with ONE artist, all
   three columns show her; no smart selection yet; share % undecided.
+- ROUND 105 — THE ONE PAINTER (2026-09-20/21, owner after nine story
+  tests, #1–#9 in Evaluate: "we have a winner: gpt-image → FLUX + LoRA
+  0.60; make it the main model, remove every other model and interface
+  part we no longer need; tomorrow the layouts"). THE PIPELINE, always an
+  ARTIST (models.ts): (1) STORY — gpt-image (medium) paints the brief,
+  shown FOUR of the artist's works as references (profile.refs, else
+  four spread through works/) + her charter, as a spot illustration on
+  plain paper; (2) HAND — FLUX + her LoRA repaints it image-to-image,
+  strength 0.60, LoRA scale 1.0 (REPAINT_STRENGTH / LORA_SCALE). If FLUX
+  fails the story picture ships (repainted:false, reason in the item
+  prompt / server log). Composer fit = vignette always. LoRA v2 for
+  Mariam and Keta: trained WITH captions ("<TRIGGER> style, a <medium>
+  by <TRIGGER>"; Keta's 8 charcoal works captioned "charcoal drawing",
+  14 oils "oil painting"), 1500 steps, is_style:false, create_masks:false
+  (scratch train-lora-v2.mjs); lora-v1.json kept beside. Tal still v1.
+  WHAT THE TESTS SAID (owner's marks, Mariam+Keta, visual/story):
+  Ideogram→FLUX+LoRA 4.0/3.9 · Ideogram alone 3.7/4.0 · gpt→FLUX+LoRA
+  3.7/3.5 · Recraft 3.3/3.0 · FLUX+LoRA alone 2.3/3.6 · gpt/Nano Banana
+  with 4 works 1.2–1.5 visual (story 4.2) · sketch→FLUX 2.2/2.8 ·
+  Seedream refuses Mariam's works. gpt→FLUX chosen over Ideogram→FLUX
+  because gpt-image leaves plain paper around the drawing (the type's
+  room) while Ideogram fills the frame — "the background question would
+  have tormented us". Strengths: 0.65+ loses the story (rooster, hand,
+  deer vanish); 0.45 barely changes the hand; 0.60 with LoRA v2 chosen.
+  REMOVED: EVAL_MODELS (gpt-image own/masked/cutout, flux-pro, ideogram-3
+  (+edit), nano-banana (+edit), recraft), WIZARD_PAINTERS, GROUNDS /
+  groundFor / wineMood / OWN_GROUND_KIND / paperAndMask / finishFoot /
+  the no-text vision gate, eval modes label/artwork, the dream engine's
+  artworkGuidance from the ask (dream/engine.ts itself stays for the
+  legacy configurator API), admin: Illustration rules, Illustration
+  steering texts + style boards (StylesTab), Art director's notes.
+  Admin tabs now: Artists & Rules (artists per column, regions,
+  marketing rules) · Marketing · Evaluate · System. painters map values
+  are "artist:<id>" only; default = first three artists with a LoRA.
+  Eval runs file `--art.png` and `--story.png` per item; run names
+  renamed "#N · who · models" (old engine runs prefixed "old engine ·").
+  Smoke #10 (wizard, 1 brief): 48 s, repainted, label composed. Ideas
+  for the morning are in the owner's chat (layouts next).
 - ROUND 104 — EVALUATE MADE PLAIN (2026-09-20, owner: "slick and clean;
   just prompt, the picture, two marks — Visual and Story — a note, and
   the model's name"). EvalPanel rewritten: per brief ONE ROW of every

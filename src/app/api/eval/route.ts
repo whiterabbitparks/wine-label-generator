@@ -3,25 +3,22 @@ import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { requestIsAuthenticated } from "@/lib/admin/session";
-import { runDreamPhase } from "@/lib/dream/engine";
-import { EVAL_BRIEFS, EVAL_STYLES, EVAL_FAULTS, aspectOf, type EvalBrief, type EvalItem, type EvalRun, type EvalRating, type EvalFault, type EvalMode } from "@/lib/eval/briefs";
-import { EVAL_MODELS, evalModel, artistModels, buildArtworkPrompt, generateArtwork, generateArtworkChecked, type EvalModel } from "@/lib/eval/models";
+import { EVAL_BRIEFS, EVAL_STYLES, EVAL_FAULTS, type EvalBrief, type EvalItem, type EvalRun, type EvalRating, type EvalFault } from "@/lib/eval/briefs";
+import { evalModel, artistModels, buildArtworkPrompt, generateArtwork, type EvalModel } from "@/lib/eval/models";
 import { composeLabel } from "@/lib/typeset/compose";
-import { flatGroundOf } from "@/lib/typeset/palette";
 import { textsOf } from "@/lib/label/hybrid";
-import { WIZARD_PAINTERS, painterFor } from "@/lib/label/painters";
+import { painterFor } from "@/lib/label/painters";
 import { listRuns, readRun, writeRun, readRatings, writeRating, saveImage, runDir } from "@/lib/eval/store";
 
-/* THE EVALUATION LOOP (branch POPIKA_Back_To_Vector, 2026-09-18/19).
-   GET  → runs (with ratings), the reference boards, the models — for /eval.
-   POST {action:"generate", name, note?, mode, model, perBrief?, smoke?}
-        streams NDJSON while it paints the six frozen briefs through every
-        style and files the results as a run. Modes:
-        "label"   today's whole-label dream (gpt-image paints the type too);
-        "artwork" the hybrid's ask — illustration only, a zone kept for type;
-        "hybrid"  the NEW ENGINE end to end — masked artwork, then the type
-                  set by code into the band. The SVG (live type) is filed
-                  next to the PNG: it is the future PDF.
+/* THE EVALUATION LOOP (2026-09-18 → round 105).
+   GET  → runs (with ratings), the artists — for /admin → Evaluate.
+   POST {action:"generate", name, note?, model, perBrief?, smoke?, styles?}
+        streams NDJSON while it paints the six frozen briefs through the
+        three columns and files the results as a run. `model` is an artist
+        ("artist:<id>") for every column, or "wizard" = each column's own
+        artist, exactly as the wizard paints. The artwork alone is filed
+        next to the label (`<id>--art.png`, plus `--story.png` before the
+        repaint) — the Evaluate panel shows the artwork.
         Real model calls — this costs money, hence the admin session.
    POST {action:"retry", run} → re-attempts only a run's failed items.
    POST {action:"rate", run, item, rating|null} → the owner's mark. */
@@ -33,42 +30,20 @@ function gitInfo(): { commit: string; branch: string } {
   return { commit: sh("git rev-parse --short HEAD"), branch: sh("git rev-parse --abbrev-ref HEAD") };
 }
 
-
-/* ONE picture, in whichever mode — shared by generate and retry */
+/* ONE picture — the wizard's own path: story, hand, then the composer */
 async function paintItem(run: EvalRun, model: EvalModel, brief: EvalBrief, item: EvalItem): Promise<void> {
   const t0 = Date.now();
   try {
-    if (run.mode === "label") {
-      const d = await runDreamPhase({ vision: brief.vision, style: item.style, data: brief.data, sketch: null, aspect: aspectOf(brief) });
-      item.file = saveImage(run.id, item.id, d.dream); item.prompt = d.prompt;
-    } else if (run.mode === "artwork") {
-      const ap = await buildArtworkPrompt(brief, item.style);
-      item.prompt = ap.prompt; item.card = ap.card;
-      item.file = saveImage(run.id, item.id, await generateArtwork(model, ap));
-    } else {
-      /* hybrid: the masked painter, then the composer */
-      const seed = [...item.id].reduce((h, c) => ((h * 33) ^ c.charCodeAt(0)) >>> 0, 5381);
-      /* way 1 for the own-ground painter AND every fal painter (they take
-         no mask — the ground is read off their picture) */
-      const free = model.via === "fal" && !model.canvas;
-      const ap = await buildArtworkPrompt(brief, item.style, seed, { ownGround: model.id === "gpt-image-own", softGround: !!model.canvas, wholeFrame: free, artist: model.artist });
-      item.prompt = ap.prompt; item.card = ap.card;
-      const { art, retried } = await generateArtworkChecked(model, ap);
-      /* way 1: no paper was given, so the ground is read off the picture */
-      let paper = ap.paper, own = retried ? " · repainted (text seen)" : "";
-      if (free) { paper = ""; own += " · vignette"; }
-      else if (!paper) {
-        const g = await flatGroundOf(art);
-        paper = g.colour;
-        own = ` · own ground ${g.flat ? "flat" : "NOT flat"} ${(g.coverage * 100).toFixed(0)}%`;
-      }
-      const out = await composeLabel({ artwork: art, style: item.style, texts: textsOf(brief.data), widthMm: brief.width, heightMm: brief.height, seed, paper: paper || undefined, wineColour: brief.data.wineColorName, fit: free ? "vignette" : "yield" });
-      item.file = saveImage(run.id, item.id, out.png);
-      fs.writeFileSync(path.join(runDir(run.id), `${item.id}.svg`), out.svg);
-      saveImage(run.id, `${item.id}--art`, art);
-      item.prompt = `[faces: ${out.faces} · ink ${out.ink}${own}]\n` + item.prompt;
-      item.painter = model.id;
-    }
+    const seed = [...item.id].reduce((h, c) => ((h * 33) ^ c.charCodeAt(0)) >>> 0, 5381);
+    const ap = await buildArtworkPrompt(brief, model.artist);
+    const painted = await generateArtwork(model, ap);
+    const out = await composeLabel({ artwork: painted.art, style: item.style, texts: textsOf(brief.data), widthMm: brief.width, heightMm: brief.height, seed, wineColour: brief.data.wineColorName, fit: "vignette" });
+    item.file = saveImage(run.id, item.id, out.png);
+    fs.writeFileSync(path.join(runDir(run.id), `${item.id}.svg`), out.svg);
+    saveImage(run.id, `${item.id}--art`, painted.art);
+    saveImage(run.id, `${item.id}--story`, painted.story);
+    item.prompt = `[faces: ${out.faces} · ink ${out.ink}${painted.repainted ? "" : " · NOT repainted: " + painted.error}]\n` + ap.prompt;
+    item.painter = model.name;
     delete item.error;
   } catch (e) {
     item.error = e instanceof Error ? e.message : String(e);
@@ -76,20 +51,24 @@ async function paintItem(run: EvalRun, model: EvalModel, brief: EvalBrief, item:
   item.ms = Date.now() - t0;
 }
 
+async function modelFor(style: string, asked: string): Promise<EvalModel | null> {
+  return asked === "wizard" ? evalModel(await painterFor(style)) : evalModel(asked);
+}
+
 export async function GET() {
   if (!(await requestIsAuthenticated())) return NextResponse.json({ error: "not authenticated" }, { status: 401 });
-  /* round 104: each item says whether its artwork alone is on file — the
-     panel shows that, not the composed label, unless asked */
+  /* each item says whether its artwork alone is on file — the panel shows
+     that, not the composed label, unless asked */
   const runs = listRuns().map((r) => ({
     ...r, mode: r.mode || "label", model: r.model || "gpt-image", ratings: readRatings(r.id),
     items: r.items.map((i) => ({ ...i, art: fs.existsSync(path.join(runDir(r.id), `${i.id}--art.png`)) })),
   }));
-  return NextResponse.json({ briefs: EVAL_BRIEFS, styles: EVAL_STYLES, models: [...EVAL_MODELS.filter((m) => WIZARD_PAINTERS.includes(m.id)), ...artistModels()], runs });
+  return NextResponse.json({ briefs: EVAL_BRIEFS, styles: EVAL_STYLES, models: artistModels().map((m) => ({ id: m.id, name: m.name + (m.lora ? "" : " (no LoRA yet)") })), runs });
 }
 
 export async function POST(req: Request) {
   if (!(await requestIsAuthenticated())) return NextResponse.json({ error: "not authenticated" }, { status: 401 });
-  let body: { action?: string; name?: string; note?: string; run?: string; item?: string; rating?: EvalRating | null; perBrief?: number; mode?: string; model?: string; smoke?: boolean; styles?: string[] };
+  let body: { action?: string; name?: string; note?: string; run?: string; item?: string; rating?: EvalRating | null; perBrief?: number; model?: string; smoke?: boolean; styles?: string[] };
   try { body = await req.json(); } catch { return NextResponse.json({ error: "invalid JSON" }, { status: 400 }); }
 
   if (body.action === "rate") {
@@ -125,20 +104,17 @@ export async function POST(req: Request) {
   if (body.action === "retry") {
     const run = readRun(String(body.run || ""));
     if (!run) return NextResponse.json({ error: "no such run" }, { status: 404 });
-    run.mode = run.mode || "label";
-    const model = evalModel(run.model || "gpt-image");
-    if (!model) return NextResponse.json({ error: "unknown model" }, { status: 400 });
     return ndjson(async (send) => {
       const failed = run.items.filter((i) => i.error);
       send({ type: "start", run: run.id, total: failed.length });
       let done = 0;
       for (const item of failed) {
         const brief = EVAL_BRIEFS.find((b) => b.id === item.briefId);
-        if (!brief) continue;
-        await paintItem(run, wizard ? (evalModel(await painterFor(item.style)) || model) : model, brief, item);
+        const model = await modelFor(item.style, run.model || "wizard");
+        if (!brief || !model) continue;
+        await paintItem(run, model, brief, item);
         writeRun(run);
         send({ type: "item", done: ++done, total: failed.length, item: { ...item, prompt: undefined } });
-        await new Promise((r) => setTimeout(r, 4000));   /* breathe — the limits asked for it */
       }
       send({ type: "done", run: run.id });
     });
@@ -146,13 +122,8 @@ export async function POST(req: Request) {
 
   if (body.action !== "generate") return NextResponse.json({ error: "unknown action" }, { status: 400 });
 
-  const mode: EvalMode = body.mode === "artwork" ? "artwork" : body.mode === "hybrid" ? "hybrid" : "label";
-  /* round 102: model "wizard" = exactly what the wizard does — each
-     style's painter from the Painters setting (three artists, one per
-     column) */
-  const wizard = body.model === "wizard";
-  const model = wizard ? evalModel(await painterFor("traditional")) || evalModel("gpt-image-own")! : mode === "label" ? evalModel("gpt-image")! : mode === "hybrid" ? evalModel(String(body.model || "gpt-image-masked")) : evalModel(String(body.model || ""));
-  if (!model) return NextResponse.json({ error: "unknown model" }, { status: 400 });
+  const asked = String(body.model || "wizard");
+  if (asked !== "wizard" && !evalModel(asked)) return NextResponse.json({ error: "unknown artist" }, { status: 400 });
   const perBrief = Math.min(3, Math.max(1, Number(body.perBrief) || 1));
   const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
   const run: EvalRun = {
@@ -161,34 +132,33 @@ export async function POST(req: Request) {
     note: body.note ? String(body.note).slice(0, 600) : undefined,
     createdAt: new Date().toISOString(),
     ...gitInfo(),
-    mode, model: wizard ? "wizard" : model.id,
+    mode: "hybrid", model: asked,
     items: [],
   };
   writeRun(run);
 
   return ndjson(async (send) => {
     const briefs = body.smoke ? EVAL_BRIEFS.slice(0, 1) : EVAL_BRIEFS;
-    /* `styles` narrows a run to the styles under test (e.g. punk + contemporary) */
-    const asked = Array.isArray(body.styles) ? EVAL_STYLES.filter((s) => (body.styles as string[]).includes(s)) : [];
-    const styles = body.smoke ? EVAL_STYLES.slice(0, 1) : asked.length ? asked : EVAL_STYLES;
+    /* `styles` narrows a run to some columns */
+    const wanted = Array.isArray(body.styles) ? EVAL_STYLES.filter((s) => (body.styles as string[]).includes(s)) : [];
+    const styles = body.smoke ? EVAL_STYLES.slice(0, 1) : wanted.length ? wanted : EVAL_STYLES;
     const total = briefs.length * styles.length * perBrief;
     let done = 0;
     send({ type: "start", run: run.id, total });
-    /* OpenAI's per-minute image quota trips on THREE at once (every masked
-       run did) — its styles go one after another with a breath between;
-       the fal painters still take a brief's three styles in parallel */
-    const sequential = model.via === "openai";
+    /* the three columns of a brief paint together; OpenAI's per-minute
+       quota copes with three, the briefs go one after another */
     for (const brief of briefs) {
       for (let n = 1; n <= perBrief; n++) {
-        const one = async (style: string) => {
+        await Promise.all(styles.map(async (style) => {
           const item: EvalItem = { id: `${brief.id}--${style}--${n}`, briefId: brief.id, style, n, file: "", prompt: "", ms: 0 };
-          await paintItem(run, wizard ? (evalModel(await painterFor(item.style)) || model) : model, brief, item);
+          const model = await modelFor(style, asked);
+          if (model) await paintItem(run, model, brief, item);
+          else { item.error = "no artist for this column"; }
           run.items.push(item);
           writeRun(run);
           send({ type: "item", done: ++done, total, item: { ...item, prompt: undefined } });
-        };
-        if (sequential) { for (const style of styles) { await one(style); await new Promise((r) => setTimeout(r, 3000)); } }
-        else await Promise.all(styles.map(one));
+        }));
+        await new Promise((r) => setTimeout(r, 2000));
       }
     }
     send({ type: "done", run: run.id });

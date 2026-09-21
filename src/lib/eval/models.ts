@@ -1,135 +1,47 @@
 import { generateOpenAIImage } from "@/lib/image-provider/openai";
-import { artworkGuidance } from "@/lib/dream/engine";
+import { falUpload } from "@/lib/image-provider/flux";
 import { getDb } from "@/lib/db";
 import { DEFAULT_REGIONS } from "./regions";
 import type { EvalBrief } from "./briefs";
 import { aspectOf } from "./briefs";
-import { mix } from "@/lib/typeset/fonts";
-import { verifyImage, NO_TEXT_RULE } from "@/lib/admin/image-rules";
-import { readArtist, listArtists, artistStyleLine, type ArtistProfile } from "@/lib/label/artists";
+import { readArtist, listArtists, artistRefs, artistCharter, type ArtistProfile } from "@/lib/label/artists";
 
-/* THE PAINTERS (branch POPIKA_Back_To_Vector, 2026-09-18).
+/* THE PAINTER (round 105, 2026-09-20 — the owner, after nine story
+   tests: "we have a winner: gpt-image → FLUX + LoRA at 0.60; drop every
+   other model").
 
-   The coming hybrid engine asks a model for ONE thing: the illustration,
-   with a zone left empty for the type that code will set. This module is
-   that ask, put to five models the same way, so the evaluation page can
-   show them side by side on the six frozen briefs and the owner can pick
-   the painter blind. gpt-image speaks to OpenAI directly; the other four
-   go through fal.ai's blocking endpoint (FAL_KEY), exactly like the FLUX
-   LoRA path always has. Imagen 4 was on the list — fal no longer serves it
-   (probed 2026-09-18: 404 on every known id).
+   ONE pipeline, two steps, always an artist:
+     1. STORY  gpt-image paints the brief's story, shown four of the
+               artist's works as references and her charter — it
+               understands the story best of every model tried and hands
+               back a spot illustration on plain paper (the type's room).
+     2. HAND   FLUX + the artist's LoRA repaints that picture image-to-
+               image at strength 0.60 — the story stays, the hand becomes
+               hers. If FLUX cannot paint (balance, outage) the story
+               picture ships as it is, so the customer always gets a label.
+   Nothing else paints. The test scripts that found this live in
+   data/experiments/ (git-ignored); the marks in data/eval/. */
 
-   Each model gets the SAME prompt; only the request shape differs. */
+export const REPAINT_STRENGTH = 0.60;
+export const LORA_SCALE = 1.0;
 
 export interface EvalModel {
-  id: string;
+  id: string;              /* "artist:<id>" */
   name: string;
-  via: "openai" | "fal";
-  endpoint?: string;
-  canvas?: boolean;        /* takes OUR paper canvas (the type zone stays ours) */
-  artist?: ArtistProfile;  /* an artist painter: FLUX + this artist's LoRA */
-  lora?: { url: string; trigger: string };
+  artist: ArtistProfile;
+  lora: { url: string; trigger: string } | null;
 }
-
-export const EVAL_MODELS: EvalModel[] = [
-  { id: "gpt-image", name: "OpenAI gpt-image", via: "openai" },
-  /* two ways of ASKING the same painter, both aimed at the free-space
-     problem (owner 2026-09-18: "the problem is the free space for text"):
-     cutout — the illustration alone on a transparent ground, so the
-     layout engine owns the paper and places art and type itself;
-     masked — a paper canvas with the type zone masked OFF, so the model
-     physically cannot paint there. */
-  { id: "gpt-image-cutout", name: "gpt-image · cut-out on transparent", via: "openai" },
-  { id: "gpt-image-masked", name: "gpt-image · type zone masked off", via: "openai" },
-  /* way 1 (owner 2026-09-19): contemporary and punk paint on a flat ground
-     of the PAINTER's choosing, unmasked; the composer reads that colour
-     off the picture and grows the band out of it. Traditional keeps its
-     paper tones and the mask. */
-  { id: "gpt-image-own", name: "gpt-image · painter's own ground (way 1)", via: "openai" },
-  { id: "flux-pro", name: "FLUX 1.1 Pro", via: "fal", endpoint: "fal-ai/flux-pro/v1.1" },
-  { id: "ideogram-3", name: "Ideogram 3 · free painting, cropped", via: "fal", endpoint: "fal-ai/ideogram/v3" },
-  /* ROUND 90 (owner: "why aren't we using the other painters?"): the two
-     fal painters that can take OUR CANVAS — Ideogram's edit endpoint with
-     a real mask (white = paint here), and nano-banana's edit (the canvas
-     as an input image, the band by instruction only) */
-  { id: "ideogram-3-edit", name: "Ideogram 3 · on our canvas (mask)", via: "fal", endpoint: "fal-ai/ideogram/v3/edit", canvas: true },
-  { id: "nano-banana-edit", name: "Nano Banana · on our canvas", via: "fal", endpoint: "fal-ai/nano-banana/edit", canvas: true },
-  { id: "recraft-3", name: "Recraft V3", via: "fal", endpoint: "fal-ai/recraft/v3/text-to-image" },
-  { id: "nano-banana", name: "Nano Banana · free painting, cropped", via: "fal", endpoint: "fal-ai/nano-banana" },
-];
 
 export function evalModel(id: string): EvalModel | null {
-  if (id.startsWith("artist:")) return artistModel(id.slice(7));
-  return EVAL_MODELS.find((m) => m.id === id) || null;
+  return id.startsWith("artist:") ? artistModel(id.slice(7)) : null;
 }
-/* ROUND 101: an artist as a painter — "artist:<id>" */
 export function artistModel(artistId: string): EvalModel | null {
   const a = readArtist(artistId);
-  if (!a || !a.lora) return null;
-  return { id: `artist:${a.profile.id}`, name: `${a.profile.name} · AI artist`, via: "fal", endpoint: "fal-ai/flux-lora", artist: a.profile, lora: { url: a.lora.url, trigger: a.lora.trigger } };
+  if (!a) return null;
+  return { id: `artist:${a.profile.id}`, name: a.profile.name, artist: a.profile, lora: a.lora ? { url: a.lora.url, trigger: a.lora.trigger } : null };
 }
 export function artistModels(): EvalModel[] {
   return listArtists().map((a) => artistModel(a.profile.id)).filter((m): m is EvalModel => !!m);
-}
-
-/* artwork-only style lines — the dream's STYLE_MOOD with every
-   typographic word taken out, since type is no longer the model's job */
-const ART_STYLE: Record<string, string> = {
-  traditional:
-    "classic European wine-label engraving — etched or woodcut line work, fine hatching, a restrained palette of one or two inks on paper, the calm of a nineteenth-century print",
-  contemporary:
-    "modern boutique wine-label illustration — linocut, silkscreen, cut-paper collage or gouache; bold flat shapes, confident emptiness around the subject, two to four inks",
-  punk:
-    "raw expressive wine-label art — rough brush, scratchy ink, screenprint misregistration, loud colour, energy over polish",
-};
-
-/* how much of the picture the type will need, by label proportion */
-function zoneOf(aspect: "landscape" | "portrait" | "square"): { where: string; share: string } {
-  return aspect === "portrait"
-    ? { where: "bottom third", share: "roughly the bottom 35%" }
-    : { where: "bottom part", share: "roughly the bottom 40%" };
-}
-
-export interface ArtworkPrompt { prompt: string; short: string; card: string | null; aspect: "landscape" | "portrait" | "square"; paper: string; wholeFrame?: boolean }
-
-/* THE GROUND, chosen before the ask (owner 2026-09-19: "a beautiful
-   colourful illustration on top and a boring beige ground painted under
-   it"). Traditional stays on paper tones; contemporary may take a pale
-   colour; punk takes bold flat colour outright. The painter is handed
-   this exact colour as its canvas, the composer draws the band in it, and
-   the type is set for contrast — one ground, no seam. */
-const GROUNDS: Record<string, string[]> = {
-  traditional: ["#F4EFE3", "#F1EBDC", "#EFE6D3", "#F6F2EA", "#EAE3D2"],
-  contemporary: ["#F4EFE3", "#FAF7F1", "#E9E4D6", "#DCE3DA", "#E8DFD0", "#F2E7D8"],
-  punk: ["#1E2A44", "#B71318", "#D9A400", "#0F0F0F", "#2E6B4F", "#E85D2C", "#F4EFE3", "#7A2E8E"],
-};
-/* way 1, second pass: left entirely free, gpt-image went back to cream on
-   four punk labels of six (run #14). The painter still chooses the colour,
-   but is told what KIND of ground the style wants. */
-const OWN_GROUND_KIND: Record<string, string> = {
-  punk: "For this style the ground is a BOLD, saturated or deep colour — a loud flat ink, never paper, never cream, never white, never beige; the drawing sits on it in one or two contrasting inks. ",
-  contemporary: "For this style the ground is either clean paper-white or ONE quiet tint (a pale or mid tone — dusty, chalky, mineral); never a busy or dark colour. ",
-};
-/* ROUND 85 #11 (owner): the palette should feel like the WINE — a loud
-   red ground on a white wine reads wrong; the colour family may lean the
-   way the wine does, without being a rule for every label */
-function wineMood(colour?: string): string {
-  const c = (colour || "").toLowerCase();
-  if (/ros/.test(c)) return "PALETTE: this is a rosé — the ground and inks may lean toward coral, blush, salmon, dusty pink or warm sand; a heavy dark-red or brown palette would read as another wine. ";
-  if (/amber|orange|skin/.test(c)) return "PALETTE: this is an amber (skin-contact) wine — the ground and inks may lean toward ochre, terracotta, honey, rust, earth; not pink, not cold blue-white. ";
-  if (/red/.test(c)) return "PALETTE: this is a red wine — deep reds, burgundy, black, ochre, dark green or navy suit it; avoid a palette that reads as a white or rosé (pale straw, mint, blush). ";
-  if (/white/.test(c)) return "PALETTE: this is a white wine — the ground and inks may lean toward greens, straw, chalk, stone, sea-blue, soft yellow; a dominant blood-red or burgundy palette would read as a red wine. ";
-  if (/spark/.test(c)) return "PALETTE: a sparkling wine — light, airy: pale gold, chalk, green, sky; nothing heavy or dark-red. ";
-  return "";
-}
-export function groundFor(style: string, seed: number, soft = false): string {
-  /* round 91 (owner: "the backgrounds are ruined — small pictures locked in
-     weird bright colours"): a CANVAS painter (Ideogram / nano-banana) never
-     gets the bold punk list — paper and pale tones only; the colour lives
-     in the picture, which now bleeds to the edges */
-  const list = soft ? (style === "traditional" ? GROUNDS.traditional : GROUNDS.contemporary) : (GROUNDS[style] || GROUNDS.traditional);
-  /* salt 7: the ground must not move in lockstep with the faces (1–3) */
-  return list[mix(seed, 7) % list.length];
 }
 
 /* THE GAZETTEER (owner 2026-09-19: Svaneti towers on a Racha label — a
@@ -148,216 +60,64 @@ export async function regionNote(region: string): Promise<string> {
   return key && map[key]?.trim() ? ` ${region.trim()} looks like this: ${map[key].trim()} ` : "";
 }
 
-/* THE ASK. Same words to every model. The reserved zone is the whole
-   idea: the picture is composed to receive type, so art and type are
-   planned together instead of fighting afterwards.
-   `short` is the same ask without the house-feedback tail, for painters
-   that cap the prompt (Recraft: 1000 characters). */
-export async function buildArtworkPrompt(brief: EvalBrief, style: string, seed = 0, opts: { ownGround?: boolean; softGround?: boolean; wholeFrame?: boolean; artist?: ArtistProfile } = {}): Promise<ArtworkPrompt> {
-  const aspect = aspectOf(brief);
-  const zone = zoneOf(aspect);
-  const g = await artworkGuidance(style);
+export interface ArtworkPrompt { prompt: string; subject: string; aspect: "landscape" | "portrait" | "square" }
+
+/* THE VIGNETTE — the one composition every model knows: an isolated spot
+   illustration on a flat plain ground with air around it. The composer
+   trims the air and sets the type on that same paper: nothing is ever
+   cut or covered, the drawing ends where the artist ended it. */
+const VIGNETTE = "A spot illustration: one self-contained drawing isolated on a flat, plain, single-colour background with empty margin all around; the drawing's edges finish naturally.";
+
+/* THE ASK, exactly as test 5/7/8/9 put it (the words the owner marked) */
+export async function buildArtworkPrompt(brief: EvalBrief, artist: ArtistProfile): Promise<ArtworkPrompt> {
   const d = brief.data;
   const place = [d.region, d.country].filter(Boolean).join(", ");
-  /* paper "" = the painter chooses (way 1); traditional always gets paper */
-  const paper = opts.ownGround && style !== "traditional" ? "" : groundFor(style, seed, !!opts.softGround);
-  const dark = !!paper && (() => { const n = parseInt(paper.slice(1), 16); return (0.2126 * (n >> 16) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)) / 255 < 0.45; })();
   const gaz = await regionNote(d.region);
-  const head =
-    `Illustration for a wine label — the ARTWORK ONLY. No text, no lettering, no words, no numbers, no logo, no monogram, no border, no frame, no badge. ` +
-    `Format: ${aspect === "portrait" ? "portrait 2:3" : aspect === "square" ? "square" : "landscape 3:2"}, the flat printed label itself, not a bottle, not a mockup. ` +
-    (opts.wholeFrame
-      /* ROUND 99: the free painters never left the zone — so they are not
-         asked for one. They paint the PICTURE ONLY, shaped for its space
-         (a wide strip); the type goes UNDER it, on the painting's own foot
-         colour, and nothing is ever cut or covered. */
-      /* ROUND 100: a VIGNETTE — the one composition every model knows:
-         an isolated spot illustration on a flat plain ground with air
-         around it. The code then trims the air and places the drawing
-         above the type, on that same flat colour: no seam, no cut, the
-         drawing ends where the artist ended it. */
-      ? `COMPOSITION: a SPOT ILLUSTRATION — one self-contained drawing, isolated on a completely flat, plain, single-colour background that runs to every edge of the picture, with generous empty margin around the drawing on all sides (nothing touches the edges). The drawing's own edges finish naturally, feathering out into the plain ground — no scene filling the frame, no horizon running edge to edge, no border, no frame, no vignette shading, no gradient. The wine's name will be set beside the drawing on that same plain ground. `
-      : `COMPOSITION: the illustration lives in the upper part of the picture; the ${zone.where} (${zone.share}) is left as EMPTY, flat, even paper ground — one continuous plain colour with nothing drawn on it — because the wine's name and details will be typeset there afterwards. Keep every drawn element clear of that zone; the illustration may reach the top and side edges if the style wants it, never the type zone. `);
-  /* an artist's own words replace the house style line; the house
-     guidance (sub-style cards, feedback) stays out — the artist IS the style */
-  const styleLine = opts.artist ? `STYLE: ${artistStyleLine(opts.artist)}.` : `STYLE: ${ART_STYLE[style] || ART_STYLE.traditional}.`;
-  const subject =
-    ` SUBJECT: ${brief.vision} ` +
-    (place ? `The wine comes from ${place} — if the setting shows a landscape, it must be true to ${place}, never another region's.${gaz}` : "") +
-    /* owner 2026-09-19 (x4 on the bake-off): painters invent churches, towers, châteaux */
-    `Do NOT add buildings, towers, churches, castles or any architecture unless the story itself names them. ` +
-    `A ${[d.sweetness, d.wineColorName].filter(Boolean).join(" ").toLowerCase()} ${(d.wineType || "wine").toLowerCase()}. `;
-  const finish = paper
-    ? `FINISH: handmade print on paper, not a photograph, not 3D, not airbrushed; discrete inks, honest imperfection; the ground is the plain ${dark ? "dark coloured" : "paper-coloured"} canvas you are given (${paper}) — keep it flat and untouched around the drawing.`
-    : `FINISH: handmade print, not a photograph, not 3D, not airbrushed; discrete inks, honest imperfection. THE GROUND: choose ONE flat, solid, even colour that belongs to this illustration — the colour it is printed on — and fill the whole picture with it edge to edge, so that it continues unchanged into the empty type zone. ${OWN_GROUND_KIND[style] || ""}${wineMood(d.wineColorName)}Absolutely no gradient, no texture, no vignette, no paper grain, no second colour in the ground; the type zone is nothing but that one flat colour.`;
-  const prompt = head + styleLine + (opts.artist ? "" : g.text) + subject + finish;
-  /* the short form keeps the ask, the style and the subject; the house
-     feedback goes first, then the finish line, then the geography note */
-  let short = head + styleLine + subject + finish;
-  if (short.length > 1000) short = head + styleLine + subject;
-  if (short.length > 1000) short = (head + styleLine + ` SUBJECT: ${brief.vision}`).slice(0, 1000);
-  return { prompt, short, card: g.card, aspect, paper, wholeFrame: !!opts.wholeFrame };
+  const subject = `${brief.vision} ${place ? `Set in ${place}.${gaz}` : ""} No buildings unless the story names them. No text, no letters, no border.`;
+  const inStyle = `Painted by ${artist.name}, whose works are the reference images: ${artistCharter(artist)}. Paint a NEW picture in exactly her manner, medium and palette (do not copy the reference subjects).`;
+  return { prompt: `${inStyle} ${VIGNETTE} ${subject}`, subject, aspect: aspectOf(brief) };
 }
 
-const FAL_SIZE: Record<ArtworkPrompt["aspect"], string> = { landscape: "landscape_4_3", portrait: "portrait_4_3", square: "square_hd" };
-const FAL_RATIO: Record<ArtworkPrompt["aspect"], string> = { landscape: "4:3", portrait: "3:4", square: "1:1" };
+const GPT_SIZE = { landscape: { w: 1536, h: 1024 }, portrait: { w: 1024, h: 1536 }, square: { w: 1024, h: 1024 } } as const;
 
-/* one painting from one model — a data URL, like every provider here */
-/* a plain paper canvas and a mask that opens ONLY the art region — the
-   type zone (the same bottom band the prompt asks for) stays opaque, so
-   the edit endpoint hands it back untouched */
-async function paperAndMask(aspect: ArtworkPrompt["aspect"], colour: string, marginFrac = 0.04): Promise<{ paper: string; mask: string; maskWhite: string }> {
-  const sharp = (await import("sharp")).default;
-  const W = aspect === "portrait" ? 1024 : aspect === "square" ? 1024 : 1536;
-  const H = aspect === "portrait" ? 1536 : aspect === "square" ? 1024 : 1024;
-  const n = parseInt(colour.slice(1), 16);
-  const paper = await sharp({ create: { width: W, height: H, channels: 4, background: { r: n >> 16, g: (n >> 8) & 255, b: n & 255, alpha: 1 } } }).png().toBuffer();
-  /* the open (transparent) window: top ~60% for landscape/square, ~65% for
-     portrait, with a 4% margin at the top and sides */
-  const m = Math.round(W * marginFrac);
-  const openH = Math.round(H * (aspect === "portrait" ? 0.65 : 0.6)) - m;
-  const window = await sharp({ create: { width: W - 2 * m, height: openH, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } }).png().toBuffer();
-  const mask = await sharp({ create: { width: W, height: H, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 1 } } })
-    .composite([{ input: window, left: m, top: m, blend: "dest-out" }]).png().toBuffer();
-  /* the same window as a WHITE-on-black mask — Ideogram's convention
-     (white = paint here, black = keep) */
-  const white = await sharp({ create: { width: W - 2 * m, height: openH, channels: 3, background: "#fff" } }).png().toBuffer();
-  const maskWhite = await sharp({ create: { width: W, height: H, channels: 3, background: "#000" } })
-    .composite([{ input: white, left: m, top: m }]).png().toBuffer();
-  return { paper: `data:image/png;base64,${paper.toString("base64")}`, mask: `data:image/png;base64,${mask.toString("base64")}`, maskWhite: `data:image/png;base64,${maskWhite.toString("base64")}` };
+/* STEP 1 — the story, by gpt-image, with the artist's four works beside
+   the ask (and the customer's own sketch, when there is one) */
+export async function paintStory(model: EvalModel, ap: ArtworkPrompt, extra: { sketch?: string | null } = {}): Promise<string> {
+  const sketch = extra.sketch && extra.sketch.startsWith("data:image/") ? extra.sketch : null;
+  const refs = artistRefs(model.artist.id);
+  return generateOpenAIImage({
+    prompt: ap.prompt + (sketch ? " The last image is the customer's own sketch: follow its subject and arrangement." : ""),
+    references: [...refs, ...(sketch ? [sketch] : [])],
+    size: GPT_SIZE[ap.aspect], quality: "medium",
+  } as never);
 }
 
-/* THE NO-TEXT GATE (round 90): Ideogram wrote lettering on 5/18, then
-   3/18 with the law in the ask — so a canvas painter's picture is LOOKED
-   AT (gpt-4o-mini vision, the old engine's verifyImage) and repainted
-   once if any text is seen. gpt-image needs no gate (0 text in ~100). */
-export async function generateArtworkChecked(model: EvalModel, ap: ArtworkPrompt, extra: { sketch?: string | null } = {}): Promise<{ art: string; retried: boolean }> {
-  let art = await generateArtwork(model, ap, extra);
-  if (model.via !== "fal") return { art, retried: false };
-  try {
-    const v = await verifyImage(art, [NO_TEXT_RULE]);
-    if (!v.ok) { art = await generateArtwork(model, ap, extra); return { art, retried: true }; }
-  } catch { /* the gate never blocks a painting */ }
-  return { art, retried: false };
-}
-
-export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt, extra: { sketch?: string | null } = {}): Promise<string> {
-  if (model.via === "openai") {
-    const size = ap.aspect === "portrait" ? { w: 1024, h: 1536 } : ap.aspect === "square" ? { w: 1024, h: 1024 } : { w: 1536, h: 1024 };
-    /* the customer's sketch (wizard) rides along as an image input — after
-       the paper canvas when there is a mask, so the mask keeps applying to
-       the canvas */
-    const sketch = extra.sketch && extra.sketch.startsWith("data:image/") ? extra.sketch : null;
-    const sketchLine = sketch ? " The customer's own sketch is attached: follow its subject and arrangement, rendered in the style described." : "";
-    if (model.id === "gpt-image-cutout") {
-      return generateOpenAIImage({
-        prompt: ap.prompt + " Deliver the illustration as a CUT-OUT on a fully transparent background — nothing but the drawn subject, no paper, no ground, no vignette." + sketchLine,
-        size, transparent: true, ...(sketch ? { reference: sketch } : {}),
-      } as never);
-    }
-    /* way 1: with a paper (traditional) the mask still guards the band;
-       without one the painter is free and the composer reads the ground */
-    if (model.id === "gpt-image-masked" || (model.id === "gpt-image-own" && ap.paper)) {
-      const { paper, mask } = await paperAndMask(ap.aspect, ap.paper);
-      return generateOpenAIImage({
-        prompt: ap.prompt + " Paint the illustration into the open area of the canvas; the rest of the canvas is finished paper and must stay exactly as it is." + sketchLine,
-        size, reference: paper, mask, ...(sketch ? { references: [sketch] } : {}),
-      } as never);
-    }
-    return generateOpenAIImage({ prompt: ap.prompt + sketchLine, size, ...(sketch ? { reference: sketch } : {}) } as never);
-  }
-  /* Recraft caps the prompt at 1000 characters (422 otherwise) */
-  const body: Record<string, unknown> = { prompt: model.id === "recraft-3" ? ap.short : ap.prompt.slice(0, 1900), num_images: 1 };
-  const canvasLine = " Paint the illustration into the open area of the canvas; the rest of the canvas is finished paper and must stay exactly as it is.";
-  if (model.lora) {
-    /* FLUX + the artist's LoRA: the trigger word first, the vignette ask,
-       the label's aspect */
-    Object.assign(body, {
-      prompt: `${model.lora.trigger} style. ${ap.prompt}`.slice(0, 1900),
-      image_size: FAL_SIZE[ap.aspect], num_inference_steps: 28, guidance_scale: 3.5, output_format: "png",
-      loras: [{ path: model.lora.url, scale: 1.0 }],
-    });
-  }
-  switch (model.id) {
-    case "flux-pro": Object.assign(body, { image_size: FAL_SIZE[ap.aspect], output_format: "png", safety_tolerance: "2" }); break;
-    case "ideogram-3": Object.assign(body, { image_size: FAL_SIZE[ap.aspect], rendering_speed: "BALANCED" }); break;
-    case "recraft-3": Object.assign(body, { image_size: FAL_SIZE[ap.aspect], style: "digital_illustration" }); break;
-    case "nano-banana": Object.assign(body, { aspect_ratio: FAL_RATIO[ap.aspect], output_format: "png" }); break;
-    /* round 90: our canvas goes in; Ideogram takes the white mask, nano-
-       banana only the instruction (no mask on that endpoint) */
-    case "ideogram-3-edit": {
-      /* run #17: Ideogram loves lettering — it wrote paragraphs of gibberish
-         and echoed "RACHA" into the picture on 5 of 18. The no-text law goes
-         FIRST (early tokens weigh most) and again as a negative prompt. */
-      /* round 91: the window runs edge to edge (no 4 % frame) so the
-         picture bleeds like the own-ground painter's, not a framed plate */
-      const { paper, maskWhite } = await paperAndMask(ap.aspect, ap.paper || "#F4EFE3", 0);
-      const noText = "ABSOLUTELY NO TEXT: no letters, no words, no numbers, no captions, no signs, no paragraphs, no lorem ipsum, no watermark, no border, no frame — a pure wordless illustration. ";
-      Object.assign(body, {
-        prompt: (noText + ap.prompt + canvasLine).slice(0, 1900), image_url: paper, mask_url: maskWhite, rendering_speed: "BALANCED", expand_prompt: false,
-        negative_prompt: "text, letters, words, lettering, typography, caption, label, sign, paragraph, watermark, signature, border, frame",
-      });
-      break;
-    }
-    case "nano-banana-edit": {
-      const { paper } = await paperAndMask(ap.aspect, ap.paper || "#F4EFE3", 0);
-      Object.assign(body, { prompt: (ap.prompt + canvasLine + " The illustration fills the upper part of the canvas from edge to edge — never a smaller picture sitting inside the canvas, never a frame. Keep the canvas's exact size and proportions.").slice(0, 1900), image_urls: [paper], output_format: "png" });
-      break;
-    }
-  }
-  return falCall(model.endpoint!, body, model.name);
-}
-
-async function falCall(endpoint: string, body: Record<string, unknown>, name: string): Promise<string> {
+/* STEP 2 — the hand: FLUX + the artist's LoRA repaints the story picture */
+export async function repaintInHand(model: EvalModel, story: string, ap: ArtworkPrompt): Promise<string> {
+  if (!model.lora) throw new Error(`${model.name} has no trained LoRA yet`);
   const key = process.env.FAL_KEY;
   if (!key) throw new Error("FAL_KEY is not set");
-  const res = await fetch(`https://fal.run/${endpoint}`, {
-    method: "POST",
-    headers: { Authorization: `Key ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+  const url = await falUpload(Buffer.from(story.slice(story.indexOf(",") + 1), "base64"), "story.png", "image/png");
+  const prompt = `${model.lora.trigger} style. Repaint this picture in your own hand — same scene, same subjects in the same places, your own colours and brush: ${ap.subject} Painted as ${artistCharter(model.artist)}. Keep the plain, empty paper around the drawing.`.slice(0, 1900);
+  const res = await fetch("https://fal.run/fal-ai/flux-lora/image-to-image", {
+    method: "POST", headers: { Authorization: `Key ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt, image_url: url, strength: REPAINT_STRENGTH, num_inference_steps: 28, guidance_scale: 3.5, num_images: 1, output_format: "png", loras: [{ path: model.lora.url, scale: LORA_SCALE }] }),
   });
   const out = (await res.json().catch(() => ({}))) as { images?: { url?: string; content_type?: string }[]; detail?: unknown; error?: string };
-  if (!res.ok || !out.images?.length)
-    throw new Error(`${name} failed (${res.status}): ${JSON.stringify(out.detail || out.error || out).slice(0, 240)}`);
-  const url = out.images[0].url;
-  if (!url) throw new Error(`${name} returned no image url`);
-  const img = await fetch(url);
-  if (!img.ok) throw new Error(`${name} image download failed (${img.status})`);
-  const mime = img.headers.get("content-type") || out.images[0].content_type || "image/png";
-  return `data:${mime};base64,${Buffer.from(await img.arrayBuffer()).toString("base64")}`;
+  if (!res.ok || !out.images?.[0]?.url) throw new Error(`FLUX + LoRA failed (${res.status}): ${JSON.stringify(out.detail || out.error || out).slice(0, 240)}`);
+  const img = await fetch(out.images[0].url);
+  if (!img.ok) throw new Error(`FLUX + LoRA image download failed (${img.status})`);
+  return `data:${img.headers.get("content-type") || "image/png"};base64,${Buffer.from(await img.arrayBuffer()).toString("base64")}`;
 }
 
-/* ROUND 100 (owner: "the illustration must END naturally, not be cut by
-   a background — and I love Ideogram's look"). The free painter's strip
-   (the picture, whole) is placed on a label-sized canvas whose lower part
-   is the strip's own bottom-edge colour; then Ideogram's INPAINTING is
-   asked to continue the drawing's lower edge into that quiet ground —
-   the mask opens the band plus a 12 % overlap into the picture, so the
-   seam is painted, not pasted. Out: a full label-size picture with a
-   quiet foot, exactly what the composer's normal (yield) path expects. */
-export const LAST_FOOT_GROUND = new Map<string, string>();
-async function finishFoot(strip: string, aspect: ArtworkPrompt["aspect"]): Promise<string> {
-  const sharp = (await import("sharp")).default;
-  const { sliceColourOf } = await import("@/lib/typeset/palette");
-  const W = aspect === "portrait" ? 1024 : aspect === "square" ? 1024 : 1536;
-  const H = aspect === "portrait" ? 1536 : aspect === "square" ? 1024 : 1024;
-  const picH = Math.round(H * (aspect === "portrait" ? 0.62 : 0.6));
-  const ground = await sliceColourOf(strip, 0.9, 1);
-  const n = parseInt(ground.slice(1), 16);
-  const stripBuf = Buffer.from(strip.slice(strip.indexOf(",") + 1), "base64");
-  const pic = await sharp(stripBuf).resize(W, picH, { fit: "cover", position: "centre" }).png().toBuffer();
-  const canvas = await sharp({ create: { width: W, height: H, channels: 3, background: { r: n >> 16, g: (n >> 8) & 255, b: n & 255 } } })
-    .composite([{ input: pic, left: 0, top: 0 }]).png().toBuffer();
-  const openTop = Math.round(picH - H * 0.12);
-  const white = await sharp({ create: { width: W, height: H - openTop, channels: 3, background: "#fff" } }).png().toBuffer();
-  const mask = await sharp({ create: { width: W, height: H, channels: 3, background: "#000" } }).composite([{ input: white, left: 0, top: openTop }]).png().toBuffer();
-  const prompt =
-    "Continue this picture downward. In the open area let the drawing's lower edge FINISH naturally — its ground, shadows and last strokes taper off — and then leave nothing but the flat, even, plain ground colour already there, empty and quiet, running to the bottom edge. Same medium, same inks, same hand as the picture above. ABSOLUTELY NO new objects, no figures, no plants, no patterns, no texture, no gradient, no vignette, no text, no letters, no border, no frame. The empty ground must stay one flat colour.";
-  const finished = await falCall("fal-ai/ideogram/v3/edit", {
-    prompt, image_url: `data:image/png;base64,${canvas.toString("base64")}`, mask_url: `data:image/png;base64,${mask.toString("base64")}`,
-    rendering_speed: "BALANCED", expand_prompt: false, num_images: 1,
-    negative_prompt: "text, letters, words, typography, objects, figures, plants, pattern, texture, gradient, vignette, border, frame",
-  }, "Ideogram 3 (foot)");
-  LAST_FOOT_GROUND.set(finished.slice(-64), ground);
-  return finished;
+/* both steps; `story` is kept so a failed repaint still yields a picture */
+export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt, extra: { sketch?: string | null } = {}): Promise<{ art: string; story: string; repainted: boolean; error?: string }> {
+  const story = await paintStory(model, ap, extra);
+  try {
+    return { art: await repaintInHand(model, story, ap), story, repainted: true };
+  } catch (e) {
+    const error = e instanceof Error ? e.message : String(e);
+    console.error(`[painter] FLUX + LoRA failed for ${model.id}: ${error} — the story picture ships as painted`);
+    return { art: story, story, repainted: false, error };
+  }
 }
