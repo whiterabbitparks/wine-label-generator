@@ -23,8 +23,35 @@ const PAGE_H = 932;
 const HAIRLINE = "#000";      /* header rule, footer rule, folder, README — one weight (1px) */
 const INK = "#231f20";        /* the artboards' black for type */
 /* the folder mark hangs lower off the rule than it did on the black
-   header (artboard: its path starts at y114.2 where it used to be 103.1) */
-const FOLDER_DROP = 11.1, FOLDER_TOP = 33.9 + FOLDER_DROP;
+   header (artboard: its path starts at y114.2 where it used to be 103.1).
+   ROUND 107 #5 (owner): it is a fifth smaller, and every icon drawn from
+   it — the Final Pack tree's folders and its Read Me sheet — shrinks by
+   the same factor, so the family keeps its proportions. */
+const ICON_SCALE = 0.8;
+const ICON_W = 85.1 * ICON_SCALE, ICON_H = 70 * ICON_SCALE;
+const FOLDER_CX = 1275.05;                                   /* its centre, unchanged */
+const FOLDER_TOP = 68.57 - (68.57 - 45) * ICON_SCALE;        /* the rule still crosses its tab */
+const FOLDER_X = FOLDER_CX - ICON_W / 2;
+/* drawn smaller, so the stroke is widened in the viewBox to come out at
+   the same ONE page unit as the header and footer rules */
+const ICON_STROKE = 1 / ICON_SCALE;
+/* the two marks, drawn once and used by the header and the Final Pack
+   tree: the owner's folder (viewBox 1232.5 33.9 85.1 70) and the owner's
+   ReadMe.svg mapped into an 85x70 box */
+const FOLDER_MARK = (
+  <g fill="#fff" stroke={HAIRLINE} strokeWidth={ICON_STROKE} strokeMiterlimit="10">
+    <path d="M1233.31,103.1V38.26c0-1.98,1.34-3.59,2.99-3.59h25.27c.79,0,1.55.38,2.11,1.05l7.74,9.3c.56.67,1.32,1.05,2.11,1.05h25.27c1.65,0,2.99,1.61,2.99,3.59v7.81" />
+    <path d="M1233.31,103.1h68.49l15.03-40.57c.88-2.38-.57-5.05-2.73-5.05h-61.95c-1.18,0-2.25.84-2.73,2.13l-16.11,43.49" />
+  </g>
+);
+const README_MARK = (
+  <g fill="none" stroke={HAIRLINE} strokeWidth={ICON_STROKE} strokeMiterlimit="10">
+    <polyline points="70.08,51.99 70.08,1 2.08,1 2.08,62.58" />
+    {[18, 26.5, 35, 43.5, 52].map((yy) => <line key={yy} x1="14.92" y1={yy} x2="58.6" y2={yy} />)}
+    <path d="M14.92,62.58a6.42,6.42 0 0 1-12.84,0" />
+    <path d="M8.5,69h67.99a6.42,6.42 0 0 0 6.43,-6.42V52H14.92v10.58" />
+  </g>
+);
 const HEADER_H = 68.57, FOOTER_Y = 754.07;
 const BAND_TOP = HEADER_H;
 const EASE = "cubic-bezier(0.33, 1, 0.68, 1)";
@@ -411,7 +438,7 @@ export default function NewUI() {
   const [flights, setFlights] = useState<{ id: number; src: string; x: number; y: number; w: number; h: number; delay: number; back?: boolean }[]>([]);
   const flightN = useRef(0);
   const [folderBump, setFolderBump] = useState(0);
-  const FOLDER_C = { x: 1275, y: 66 + FOLDER_DROP };
+  const FOLDER_C = { x: FOLDER_CX, y: FOLDER_TOP + ICON_H * 0.4586 };
   /* round 94 (owner): `back` plays the film in REVERSE — the thing leaves
      the folder and glides back to its place on the page (a second press
      of Save un-saves; a third saves again) */
@@ -1901,7 +1928,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           <textarea value={vision} onChange={(e) => setVision(e.target.value)} maxLength={2200}
             style={{ ...px(BOX.x + 14, BOX.y + 12, BOX.w - 28, BOX.h - 40), ...inputStyle, fontStyle: "normal", fontSize: 14, textDecoration: "none", resize: "none", lineHeight: 1.5, overflow: "auto", background: "transparent", padding: 0 }} />
           <span style={{ ...px(BOX.x + BOX.w - 174, baseTop(BOX.y + BOX.h - 13, 11), 160, 14), font: `11px ${HNW}`, lineHeight: "11px", color: "#8a8a8a", textAlign: "right" }}>{words} / 300 {t("words")}</span>
-          <div style={{ position: "absolute", right: W - 686.8, top: baseTop(650.8, 14), display: "flex", alignItems: "baseline" }}>
+          {/* round 107 #1 (owner): the size row starts at the prompt box's
+              LEFT edge (it used to hang off its right edge) */}
+          <div style={{ position: "absolute", left: BOX.x, top: baseTop(650.8, 14), display: "flex", alignItems: "baseline" }}>
             {([["Label Width:", "width"], ["Label Height:", "height"]] as const).map(([cap, key2], gi) => (
               <span key={key2} style={{ display: "flex", alignItems: "baseline", marginLeft: gi ? 28 : 0 }}>
                 <span style={{ font: `700 14px ${HNW}`, lineHeight: "14px" }}>{t(cap)}</span>
@@ -2039,7 +2068,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     style={{ ...px(lx, ly, lw, lh), cursor: "pointer", objectFit: "fill" }} />
                 ) : (
                   /* a variation is being born — label-shaped loader */
-                  <div style={{ ...px(lx, ly, lw, lh), background: "#F4F3EE", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div style={{ ...px(lx, ly, lw, lh), background: "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     {/* round 86 #3: a re-layout takes seconds, not a minute */}
                     {miniGlass("var" + fi, Math.min(0.9, 0.2 + ((Date.now() - varT.current) / 6000) * 0.7 + tick * 0))}
                   </div>
@@ -2600,7 +2629,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             /* round 86 #4 (owner): in the SMALL thumbs the dots sat on the
                box's bottom edge — there the group rides higher, the dots
                closer under the glass */
-            <div key={loadKey} style={{ ...px(x, y, w2, h2), background: assetsStage ? "#F4F3EE" : "#ECECEA", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", paddingBottom: h2 < 80 ? 10 : 0, boxSizing: "border-box" }}>
+            <div key={loadKey} style={{ ...px(x, y, w2, h2), background: assetsStage ? "transparent" : "#ECECEA", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", paddingBottom: h2 < 80 ? 10 : 0, boxSizing: "border-box" }}>
               {assetsStage ? (<>
                 {miniGlass(loadKey, assetFill(loadKey))}
                 <span style={{ marginTop: h2 < 80 ? 2 : 8, font: `14px ${HNW}`, color: "#111", letterSpacing: 2, lineHeight: "10px" }}>
@@ -2696,7 +2725,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             /* round 71 #4: the walkthrough has no published page to frame —
                it shows the sample one, and its QR, as a picture */
             if (tut >= 0 && !tutLanding) return (
-              <div style={{ ...px(921.5, 310.5, BW, BH), background: "#F4F3EE", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ ...px(921.5, 310.5, BW, BH), background: "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
                 {miniGlass("landing", Math.min(0.92, 0.2 + assets.life.filter(Boolean).length * 0.16))}
               </div>
             );
@@ -2718,7 +2747,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   <iframe src={productUrl} title="product page" onLoad={() => setPpLoaded(true)} style={{ width: W, height: 823, transform: `scale(${BW / W})`, transformOrigin: "0 0", border: 0, pointerEvents: "none" }} />
                 </>)}
                 {(!ready || !ppLoaded) && (
-                  <div style={{ position: "absolute", inset: 0, background: assetsStage || ready ? "#F4F3EE" : "#ECECEA", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div style={{ position: "absolute", inset: 0, background: assetsStage || ready ? "transparent" : "#ECECEA", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     {assetsStage || ready
                       ? miniGlass("landing", ready ? Math.max(ppFill, 0.55) : Math.min(0.9, assetFill("lifestyle 5/5")))
                       : <button onClick={() => go("vision", -1)} style={{ ...ghost, position: "relative", width: "100%", height: "100%", font: `12px ${HNW}`, color: "#8a887e", textTransform: "none", cursor: "pointer" }}>{t("Create front label")}</button>}
@@ -2821,12 +2850,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             const TX = 1275, BAR_Y = 205, TRUNK_TOP = 152;
             const leftX = Math.min(...branches.map((b2) => b2.x));
             const A = (delay: number, name: string, ms = 320): React.CSSProperties => ({ animation: `${name} ${ms}ms ${EASE} ${delay}ms both` });
-            const folderPath = (
-              <>
-                <path d="M1233.31,103.1V38.26c0-1.98,1.34-3.59,2.99-3.59h25.27c.79,0,1.55.38,2.11,1.05l7.74,9.3c.56.67,1.32,1.05,2.11,1.05h25.27c1.65,0,2.99,1.61,2.99,3.59v7.81" fill="#fff" stroke={HAIRLINE} strokeWidth="1" strokeMiterlimit="10" />
-                <path d="M1233.31,103.1h68.49l15.03-40.57c.88-2.38-.57-5.05-2.73-5.05h-61.95c-1.18,0-2.25.84-2.73,2.13l-16.11,43.49" fill="#fff" stroke={HAIRLINE} strokeWidth="1" strokeMiterlimit="10" />
-              </>
-            );
             return (
               <div key={"tree" + treeN}>
                 {/* the caption under the folder mark */}
@@ -2841,23 +2864,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   <span key={b2.name[0]} style={{ opacity: (b2.name[0] === "LABELS" ? madeRow[0] : b2.name[0] === "MARKETING" ? madeRow[2] : true) ? 1 : 0.32 }}>
                     <div style={{ ...px(b2.x - 0.5, BAR_Y, 1, 44), transformOrigin: "top", ...A(600 + i * 90, "nuiGrowY", 220) }}>{dashRule(0, 0, 44, true)}</div>
                     <div style={{ ...px(b2.x - 4, BAR_Y + 43, 8, 1), background: "#000", ...A(780 + i * 90, "nuiFadeIn", 160) }} />
-                    {/* the icon */}
-                    <div style={{ ...px(b2.x - 42.5, 255, 85, 70), ...A(880 + i * 120, "nuiPop", 360) }}>
-                      {b2.kind === "folder"
-                        ? <svg viewBox="1232.5 33.9 85.1 70" width="85" height="70" style={{ display: "block" }}>{folderPath}</svg>
-                        : <svg viewBox="0 0 85 70" width="85" height="70" style={{ display: "block" }}>
-                            {/* ROUND 106 (owner: "the Read Me icon still isn't shown
-                                properly"): the owner's own ReadMe.svg, its geometry
-                                mapped into this 85x70 box so the outline is 1px —
-                                the same weight as the folder mark beside it. A sheet
-                                whose foot rolls into a band running out to the right. */}
-                            <g fill="none" stroke={HAIRLINE} strokeWidth="1" strokeMiterlimit="10">
-                              <polyline points="70.08,51.99 70.08,1 2.08,1 2.08,62.58" />
-                              {[18, 26.5, 35, 43.5, 52].map((yy) => <line key={yy} x1="14.92" y1={yy} x2="58.6" y2={yy} />)}
-                              <path d="M14.92,62.58a6.42,6.42 0 0 1-12.84,0" />
-                              <path d="M8.5,69h67.99a6.42,6.42 0 0 0 6.43,-6.42V52H14.92v10.58" />
-                            </g>
-                          </svg>}
+                    {/* the icon — ROUND 106: the owner's own ReadMe.svg beside
+                        the folder mark; ROUND 107 #5: both a fifth smaller,
+                        like the mark in the header, on the same centre */}
+                    <div style={{ ...px(b2.x - ICON_W / 2, 255 + (70 - ICON_H) / 2, ICON_W, ICON_H), ...A(880 + i * 120, "nuiPop", 360) }}>
+                      <svg viewBox={b2.kind === "folder" ? "1232.5 33.9 85.1 70" : "0 0 85 70"} width={ICON_W} height={ICON_H} style={{ display: "block" }}>
+                        {b2.kind === "folder" ? FOLDER_MARK : README_MARK}
+                      </svg>
                     </div>
                     {/* the name */}
                     {b2.name.map((ln, j) => (
@@ -3054,8 +3067,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         .nui-next { transition: transform 200ms cubic-bezier(0.33, 1, 0.68, 1); }
         .nui-next:hover { transform: scale(1.09); }
         .nui-next:active { transform: scale(1.02); }
-        .nui-folder { transition: transform 180ms cubic-bezier(0.33, 1, 0.68, 1); }
-        .nui-folder:hover { transform: scale(1.08); }
         .nui-noscroll { scrollbar-width: none; -ms-overflow-style: none; }
         .nui-noscroll::-webkit-scrollbar { display: none; }
         @keyframes nuiDot { 0% { opacity: 0.15 } 30% { opacity: 1 } 60%, 100% { opacity: 0.15 } }
@@ -3189,22 +3200,18 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             <img key={"fly" + fl.id} src={fl.src} alt=""
               style={{ ...px(fl.x, fl.y, fl.w, fl.h), objectFit: "contain", zIndex: 60, pointerEvents: "none", transformOrigin: "center",
                 animation: `${fl.back ? "nuiFlyBack" : "nuiFly"} 1150ms cubic-bezier(.5,.02,.18,1) ${fl.delay}ms both`,
-                ...({ "--dx": `${FOLDER_C.x - (fl.x + fl.w / 2)}px`, "--dy": `${FOLDER_C.y - (fl.y + fl.h / 2)}px`, "--s": `${Math.min(0.14, 52 / Math.max(fl.w, fl.h)).toFixed(3)}` } as React.CSSProperties) }} />
+                ...({ "--dx": `${FOLDER_C.x - (fl.x + fl.w / 2)}px`, "--dy": `${FOLDER_C.y - (fl.y + fl.h / 2)}px`, "--s": `${Math.min(0.14 * ICON_SCALE, (52 * ICON_SCALE) / Math.max(fl.w, fl.h)).toFixed(3)}` } as React.CSSProperties) }} />
           ))}
-          {/* ROUND 93 #11/#20 (owner): the folder mark is a BUTTON to the Final
-              Pack, and what has been saved peeks out of it as a little deck
-              of thumbnails between the folder's back and its front flap */}
-          <button key={"fm" + folderBump} aria-label="final pack" className="nui-folder" onClick={() => { if (tut < 0 && pageNow.current !== "checkout" && dreams.length) go("checkout"); }}
-            style={{ ...px(1232.5, FOLDER_TOP, 85.1, 70), zIndex: 55, ...ghost, cursor: "pointer", transformOrigin: "50% 62%", animation: folderBump > 0 ? `nuiFolderBump 560ms ${EASE} both` : "none", overflow: "visible" }}>
-            {/* round 94 #15: no thumbnails inside — the mark stays clean.
-                ROUND 106: it sits 11.1 lower than before (the new artboard
-                hangs it off the rule by its tab) and its outline is 1px,
-                the same weight as the header and footer rules. */}
-            <svg viewBox="1232.5 33.9 85.1 70" style={{ position: "absolute", left: 0, top: 0, width: 85.1, height: 70, pointerEvents: "none" }}>
-              <path d="M1233.31,103.1V38.26c0-1.98,1.34-3.59,2.99-3.59h25.27c.79,0,1.55.38,2.11,1.05l7.74,9.3c.56.67,1.32,1.05,2.11,1.05h25.27c1.65,0,2.99,1.61,2.99,3.59v7.81" fill="#fff" stroke={HAIRLINE} strokeWidth="1" strokeMiterlimit="10" />
-              <path d="M1233.31,103.1h68.49l15.03-40.57c.88-2.38-.57-5.05-2.73-5.05h-61.95c-1.18,0-2.25.84-2.73,2.13l-16.11,43.49" fill="#fff" stroke={HAIRLINE} strokeWidth="1" strokeMiterlimit="10" />
-            </svg>
-          </button>
+          {/* the folder mark. Round 93 made it a button to the Final Pack;
+              ROUND 107 #4 (owner) takes the click back off — it is a MARK,
+              the place saved things fly into, nothing to press.
+              round 94 #15: no thumbnails inside — the mark stays clean.
+              ROUND 106/107: it hangs off the rule by its tab, its outline
+              is 1px like the rules, and it is a fifth smaller. */}
+          <div key={"fm" + folderBump} aria-hidden
+            style={{ ...px(FOLDER_X, FOLDER_TOP, ICON_W, ICON_H), zIndex: 55, pointerEvents: "none", transformOrigin: "50% 62%", animation: folderBump > 0 ? `nuiFolderBump 560ms ${EASE} both` : "none", overflow: "visible" }}>
+            <svg viewBox="1232.5 33.9 85.1 70" style={{ position: "absolute", left: 0, top: 0, width: ICON_W, height: ICON_H }}>{FOLDER_MARK}</svg>
+          </div>
           {/* STATIC header (real fonts, extracted geometry). ROUND 106: no
               ground of its own — the white band behind it carries the rule */}
           <div style={{ ...px(0, 0, W, HEADER_H), background: "transparent" }}>
@@ -3310,9 +3317,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   {solo ? (
                     <span style={{ position: "absolute", left: 0, top: baseTop(CARD_BASE + 0.85, 23), font: `700 23px ${HNW}`, lineHeight: "23px", color: BAR_RED, whiteSpace: "nowrap" }}>{t(card.title)}</span>
                   ) : (<>
+                    {/* round 107 #3 (owner): the whole title line is BOLD —
+                        the inner spans do not inherit the shorthand's weight */}
                     <span style={{ position: "absolute", left: 0, top: baseTop(CARD_BASE, fs), font: `700 ${fs}px ${HNW}`, lineHeight: `${fs}px`, whiteSpace: "nowrap" }}>
-                      <span style={{ color: BAR_RED }}>{t(card.step)} /</span>
-                      <span style={{ color: INK }}>{" "}{t(card.title)}</span>
+                      <span style={{ color: BAR_RED, fontWeight: 700 }}>{t(card.step)} /</span>
+                      <span style={{ color: INK, fontWeight: 700 }}>{" "}{t(card.title)}</span>
                     </span>
                     {card.body.map((ln, i) => (
                       <span key={"b" + i} style={{ position: "absolute", left: 0, top: baseTop(CARD_BASE + CARD_BODY[i], bfs), font: `italic ${bfs}px ${HNW}`, lineHeight: `${bfs}px`, color: INK, whiteSpace: "nowrap" }}>{t(ln)}</span>

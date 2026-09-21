@@ -2013,6 +2013,23 @@ composition-contract tightening, then customer wiring.
   artists' versions, artists earn a share per label. Live (2.28.48.43)
   stays on POPIKA_Back_To_Vector. Decisions: start with ONE artist, all
   three columns show her; no smart selection yet; share % undecided.
+- ROUND 107 — FIVE FIXES (2026-09-21, owner). (1) The vision page's
+  LABEL SIZE row is flush with the prompt box's LEFT edge (it was hung
+  off the right). (2) The loader-glass placeholders lost their grey
+  rectangles — the boxes that hold a filling glass are transparent now
+  (F4F3EE gone from all four: the variation box, the asset thumbs, the
+  walkthrough's landing box and the live landing box); the grey
+  "Create front label" placeholders stay. (3) The walkthrough card's
+  whole title line is BOLD — the inner spans were not inheriting the
+  font shorthand's weight, so each carries fontWeight 700. (4) The
+  folder mark is NOT clickable any more (round 93 made it a button to
+  the Final Pack): a plain div, no hover, no cursor; it still bumps
+  when a save lands. (5) ICON_SCALE 0.8 — the header's folder mark and
+  BOTH Final Pack tree icons (folders and the Read Me sheet) are a
+  fifth smaller, on their old centres, with their strokes widened in
+  the viewBox (ICON_STROKE = 1/0.8) so the outline still comes out at
+  one page unit; FOLDER_C and the save-flight's landing scale moved
+  with it. The two marks now live once as FOLDER_MARK / README_MARK.
 - ROUND 106 — WHITE CHROME + THE NEW WALKTHROUGH CARD (2026-09-21,
   owner's New_Progressbar_Tutorial_Header_Footer artboards in NEW UI/
   Comments/New). (1) HEADER AND FOOTER ARE WHITE: the black bands are
