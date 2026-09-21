@@ -2013,6 +2013,20 @@ composition-contract tightening, then customer wiring.
   artists' versions, artists earn a share per label. Live (2.28.48.43)
   stays on POPIKA_Back_To_Vector. Decisions: start with ONE artist, all
   three columns show her; no smart selection yet; share % undecided.
+- ROUND 111 — ONE BOTTOM LINE ON YOUR VISION, AND A FROZEN BAR
+  (2026-09-21, owner). (1) The page now has a single foot, VIS_FOOT =
+  655 — the dashed column rule's own end (133 + 522). Three things end
+  on that exact device row: the front-details list (its rows are laid
+  from the foot back, `VIS_FOOT - 3.5 - (n-1-i)*30`, so the last rule
+  lands there), the size row's TEXT (not the underline under the
+  numbers — the flex aligns on the INPUT's baseline, which sits 7 lower
+  than a bare 14px line, so the row is lifted by that measured 7), and
+  the size preview's bottom dashed rule (a stroke is snapped by its
+  CENTRE, so its foot is set a unit above VIS_FOOT to paint the same
+  row). Checked by reading pixels: all four end on device row 523.
+  (2) While the walkthrough plays the progress bar takes NO clicks —
+  its stops and its names are pointerEvents:none and their handlers
+  return early (they used to jump the story to that step).
 - ROUND 110 — THE PLUSES SIT ON THE CROSSINGS (2026-09-21, owner, asked
   many times). THREE causes, all fixed. (1) GEOMETRY: a dashed box was a
   stroked rect inset half a unit, so its edge centres were x+0.5 and

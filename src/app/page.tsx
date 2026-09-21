@@ -1997,6 +1997,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
            split by a dashed column rule at x788. Everything is drawn live
            — the old baked board is covered wholesale. */
         const BOX = { x: 136, y: 342, w: 551, h: 207 };
+        /* ROUND 111 (owner): the page has ONE bottom line — the foot of the
+           dashed column rule (133 + 522). The details list's last rule, the
+           size row's text and the size box's foot all end on it. */
+        const VIS_FOOT = 655;
         const words = vision.trim() ? vision.trim().split(/\s+/).length : 0;
         return (<>
           {patch(0, HEADER_H, W, FOOTER_Y - HEADER_H, "viswipe")}
@@ -2029,7 +2033,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           <span style={{ ...px(BOX.x + BOX.w - 174, baseTop(BOX.y + BOX.h - 13, 11), 160, 14), font: `11px ${HNW}`, lineHeight: "11px", color: "#8a8a8a", textAlign: "right" }}>{words} / 300 {t("words")}</span>
           {/* round 107 #1 (owner): the size row starts at the prompt box's
               LEFT edge (it used to hang off its right edge) */}
-          <div style={{ position: "absolute", left: BOX.x, top: baseTop(650.8, 14), display: "flex", alignItems: "baseline" }}>
+          {/* the row is a flex that aligns on the INPUT's baseline, and an
+              input's box sits 7 lower than a bare 14px line (measured) —
+              so the row is lifted by that much to put its TEXT on the
+              page's bottom line */}
+          <div style={{ position: "absolute", left: BOX.x, top: baseTop(VIS_FOOT - 7, 14), display: "flex", alignItems: "baseline" }}>
             {([["Label Width:", "width"], ["Label Height:", "height"]] as const).map(([cap, key2], gi) => (
               <span key={key2} style={{ display: "flex", alignItems: "baseline", marginLeft: gi ? 28 : 0 }}>
                 <span style={{ font: `700 14px ${HNW}`, lineHeight: "14px" }}>{t(cap)}</span>
@@ -2045,7 +2053,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               of the details list (30), and always the typed proportions. */}
           {(() => {
             const w0 = Math.min(999, Math.max(1, Number(f.width) || 110)), h0 = Math.min(999, Math.max(1, Number(f.height) || 80));
-            const FOOT = 664, GAP = 30, MAX_W = 220;
+            /* the box's foot is a 1-unit STROKE, and crispEdges snaps a
+               stroke by its CENTRE — so the centre sits a unit above the
+               page's bottom line to paint the same device row as the
+               column rule, the list's last rule and the text. Verified by
+               reading the pixels, not by eye. */
+            const FOOT = VIS_FOOT - 1, GAP = 30, MAX_W = 220;
             const maxH = FOOT - (BOX.y + BOX.h + GAP);
             const sc = Math.min(maxH / h0, MAX_W / w0);
             const w2 = Math.max(6, w0 * sc), h2 = Math.max(6, h0 * sc);
@@ -2069,7 +2082,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             {t("Feel free to leave out fields you don't want on your front label.")}{" "}
             {t("Type each field exactly as it should print: capitals, spelling and language stay as you enter them.")}</span>
           {FRONT_ROWS.map((k2, i) => {
-            const base = 284.5 + i * 30;
+            /* ROUND 111 (owner): the list's last rule ends on the SAME pixel
+               as the page's dashed column rule (its foot is y655, and a
+               row's rule is drawn at base+2.5 and is one unit deep) */
+            const base = VIS_FOOT - 3.5 - (FRONT_ROWS.length - 1 - i) * 30;
             return (
               <span key={k2}>
                 <span style={{ ...px(891.8, baseTop(base, 14), 130, 14), font: `700 ${lang === "ge" ? 13 : 14}px ${HNW}`, lineHeight: "14px", color: "#111", whiteSpace: "nowrap" }}>{t(FRONT_LABELS[i])}</span>
@@ -3403,8 +3419,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 const done = step >= i;
                 return (
                   <button key={"d" + i} aria-label={st.label}
-                    onClick={() => { if (tut >= 0) { if (i !== tut) { setTut(i); go(TUT_PAGES[i], i > tut ? 1 : -1); } } else if (st.page !== page) { barJumped.current = true; go(st.page, ORDER.indexOf(st.page) > ORDER.indexOf(page) ? 1 : -1); } }}
-                    style={{ ...px(st.x - 13, PROG_Y - 13, 26, 26), ...ghost, pointerEvents: modalOpen ? "none" : "auto" }}>
+                    /* round 111 (owner): while the walkthrough plays, the bar
+                       is a picture — its stops and names take no clicks */
+                    onClick={() => { if (tut >= 0) return; if (st.page !== page) { barJumped.current = true; go(st.page, ORDER.indexOf(st.page) > ORDER.indexOf(page) ? 1 : -1); } }}
+                    style={{ ...px(st.x - 13, PROG_Y - 13, 26, 26), ...ghost, pointerEvents: modalOpen || tut >= 0 ? "none" : "auto" }}>
                     <span style={{
                       position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)",
                       width: r * 2, height: r * 2, borderRadius: r, boxSizing: "border-box",
@@ -3416,10 +3434,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 );
               })}
               {STEPS.map((st, i) => (
-                <button key={st.label + i} onClick={() => { if (tut >= 0) { if (i !== tut) { setTut(i); go(TUT_PAGES[i], i > tut ? 1 : -1); } } else if (st.page !== page) { barJumped.current = true; go(st.page, ORDER.indexOf(st.page) > ORDER.indexOf(page) ? 1 : -1); } }}
+                <button key={st.label + i} onClick={() => { if (tut >= 0) return; if (st.page !== page) { barJumped.current = true; go(st.page, ORDER.indexOf(st.page) > ORDER.indexOf(page) ? 1 : -1); } }}
                   style={{
                     ...px(st.x - 130, baseTop(LABEL_BASE, BAR_FS), 260, 20), ...ghost,
-                    pointerEvents: modalOpen ? "none" : "auto",
+                    pointerEvents: modalOpen || tut >= 0 ? "none" : "auto",
                     font: `${st.big ? 700 : 300} ${BAR_FS}px ${HNW}`, lineHeight: `${BAR_FS}px`,
                     color: INK, textAlign: "center", textTransform: "none", whiteSpace: "nowrap",
                     /* round 72 #6: in the walkthrough a stop stays unnamed
