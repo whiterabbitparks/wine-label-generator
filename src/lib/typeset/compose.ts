@@ -38,7 +38,7 @@ export interface ComposeInput {
 }
 /* every set line, in label pixels — what the PDF is drawn from */
 export interface LaidLine { text: string; x: number; y: number; size: number; tracking: number; family: string; weight: number; italic: boolean; anchor: "start" | "middle"; colour: string }
-export interface Layout { W: number; H: number; ground: string; art: { x: number; y: number; w: number; h: number }; lines: LaidLine[] }
+export interface Layout { W: number; H: number; ground: string; art: { x: number; y: number; w: number; h: number }; artCrop?: { x: number; y: number; w: number; h: number }; lines: LaidLine[] }
 export interface ComposeOutput { svg: string; png: string; faces: string; ink: string; layout: Layout }
 
 const PX_PER_MM = 12;                       /* 110 mm → 1320 px */
@@ -230,22 +230,25 @@ export async function composeLabel(inp: ComposeInput): Promise<ComposeOutput> {
   els.push(blockEl(legal, H - M - blockH(legal)));
 
   const drawW = W * artScale, drawH = H * artScale;
+  /* ROUND 108 #18 (owner: "the PDF's image covered the whole artboard
+     while the SVG was right"): the vignette's placement is worked out
+     ONCE — the SVG draws it and the layout carries it, source crop and
+     all, so the PDF puts the drawing exactly where the SVG does. */
+  const vigPlace = vig ? (() => {
+    const bx = vig.box.x * aw, by = vig.box.y * ah, bw = vig.box.w * aw, bh = vig.box.h * ah;
+    const areaW = W - 2 * M, areaH = bandTop - M * 0.6;
+    const k = Math.min(areaW / bw, areaH / bh);
+    const pw = bw * k, ph = bh * k;
+    return { bx, by, bw, bh, pw, ph, px: (W - pw) / 2, py: M * 0.6 + (areaH - ph) / 2 };
+  })() : null;
   /* ROUND 85 #8: the file carries its PHYSICAL size — width/height in mm,
      the pixel grid only in the viewBox — so Illustrator opens a 110 × 80
      label at 110 × 80, not at 1320 × 960 points */
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${inp.widthMm}mm" height="${inp.heightMm}mm" viewBox="0 0 ${W} ${H}">` +
     `<rect width="${W}" height="${H}" fill="${ground}"/>` +
-    (vig
-      ? (() => {
-          /* the drawing's box in image px → fitted into the top area */
-          const bx = vig.box.x * aw, by = vig.box.y * ah, bw = vig.box.w * aw, bh = vig.box.h * ah;
-          const areaW = W - 2 * M, areaH = bandTop - M * 0.6;
-          const k = Math.min(areaW / bw, areaH / bh);
-          const pw = bw * k, ph = bh * k;
-          const px = (W - pw) / 2, py = M * 0.6 + (areaH - ph) / 2;
-          return `<svg x="${px.toFixed(1)}" y="${py.toFixed(1)}" width="${pw.toFixed(1)}" height="${ph.toFixed(1)}" viewBox="${bx.toFixed(1)} ${by.toFixed(1)} ${bw.toFixed(1)} ${bh.toFixed(1)}" preserveAspectRatio="xMidYMid meet"><image xlink:href="${inp.artwork}" x="0" y="0" width="${aw}" height="${ah}"/></svg>`;
-        })()
+    (vigPlace
+      ? `<svg x="${vigPlace.px.toFixed(1)}" y="${vigPlace.py.toFixed(1)}" width="${vigPlace.pw.toFixed(1)}" height="${vigPlace.ph.toFixed(1)}" viewBox="${vigPlace.bx.toFixed(1)} ${vigPlace.by.toFixed(1)} ${vigPlace.bw.toFixed(1)} ${vigPlace.bh.toFixed(1)}" preserveAspectRatio="xMidYMid meet"><image xlink:href="${inp.artwork}" x="0" y="0" width="${aw}" height="${ah}"/></svg>`
       : top
       ? `<svg x="0" y="0" width="${W}" height="${bandTop}" viewBox="0 0 ${W} ${bandTop}"><image xlink:href="${inp.artwork}" x="0" y="0" width="${W}" height="${bandTop}" preserveAspectRatio="xMidYMid slice"/></svg>`
       : `<image xlink:href="${inp.artwork}" x="${((W - drawW) / 2).toFixed(1)}" y="0" width="${drawW.toFixed(1)}" height="${drawH.toFixed(1)}" preserveAspectRatio="xMidYMin slice"/>`) +
@@ -261,6 +264,13 @@ export async function composeLabel(inp: ComposeInput): Promise<ComposeOutput> {
     svg, png: `data:image/png;base64,${png.toString("base64")}`,
     faces: `${roles.hero.face.family} ${roles.hero.face.weight} / ${roles.secondary.face.family} / ${roles.small.face.family}${artScale < 1 ? ` · art ${(artScale * 100).toFixed(0)}%` : ""} · ground ${ground}${wineInk ? ` · ${wineRole} in ${wineInk}` : ""}${zone ? ` · type on the painting (foot lum ${zone.lum.toFixed(2)})` : ""}${top ? " · picture on top, band in its foot colour" : ""}${vig ? ` · vignette ${(vig.box.w * 100).toFixed(0)}×${(vig.box.h * 100).toFixed(0)}% on ${vig.ground}` : ""}`,
     ink: colour,
-    layout: { W, H, ground, art: top ? { x: 0, y: 0, w: W, h: bandTop } : { x: (W - drawW) / 2, y: 0, w: drawW, h: drawH }, lines: laid },
+    layout: {
+      W, H, ground,
+      art: vigPlace ? { x: vigPlace.px, y: vigPlace.py, w: vigPlace.pw, h: vigPlace.ph }
+        : top ? { x: 0, y: 0, w: W, h: bandTop }
+        : { x: (W - drawW) / 2, y: 0, w: drawW, h: drawH },
+      ...(vigPlace ? { artCrop: { x: vigPlace.bx, y: vigPlace.by, w: vigPlace.bw, h: vigPlace.bh } } : {}),
+      lines: laid,
+    },
   };
 }

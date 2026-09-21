@@ -29,14 +29,26 @@ export async function labelPdf(layout: Layout, artPng: Buffer, widthMm: number, 
 
   page.drawRectangle({ x: 0, y: 0, width: Wpt, height: Hpt, color: hexRgb(layout.ground) });
 
-  /* the artwork, cropped exactly as the SVG's "xMidYMin slice" shows it */
+  /* the artwork, cropped exactly as the SVG shows it. ROUND 108 #18: a
+     VIGNETTE label carries its own source crop (the drawing trimmed off
+     its plain ground) and the box it is drawn into — without it the PDF
+     fell back to the old full-bleed cover and the picture swallowed the
+     whole artboard while the SVG was right. */
   const meta = await sharp(artPng).metadata();
   const aw = meta.width || 1, ah = meta.height || 1;
   const a = layout.art;
-  const cover = Math.max(a.w / aw, a.h / ah);
-  const cw = Math.min(aw, Math.round(a.w / cover)), ch = Math.min(ah, Math.round(a.h / cover));
-  const cx = Math.max(0, Math.round((aw - cw) / 2));
-  const cropped = await sharp(artPng).extract({ left: cx, top: 0, width: cw, height: ch }).png().toBuffer();
+  const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, Math.round(v)));
+  let cropped: Buffer;
+  if (layout.artCrop) {
+    const c = layout.artCrop;
+    const left = clamp(c.x, 0, aw - 1), top = clamp(c.y, 0, ah - 1);
+    cropped = await sharp(artPng).extract({ left, top, width: clamp(c.w, 1, aw - left), height: clamp(c.h, 1, ah - top) }).png().toBuffer();
+  } else {
+    const cover = Math.max(a.w / aw, a.h / ah);
+    const cw = Math.min(aw, Math.round(a.w / cover)), ch = Math.min(ah, Math.round(a.h / cover));
+    const cx = Math.max(0, Math.round((aw - cw) / 2));
+    cropped = await sharp(artPng).extract({ left: cx, top: 0, width: cw, height: ch }).png().toBuffer();
+  }
   const img = await doc.embedPng(cropped);
   page.drawImage(img, { x: a.x * s, y: Hpt - (a.y + a.h) * s, width: a.w * s, height: a.h * s });
 

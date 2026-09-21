@@ -2013,6 +2013,47 @@ composition-contract tightening, then customer wiring.
   artists' versions, artists earn a share per label. Live (2.28.48.43)
   stays on POPIKA_Back_To_Vector. Decisions: start with ONE artist, all
   three columns show her; no smart selection yet; share % undecided.
+- ROUND 108 — TWENTY-TWO FIXES (2026-09-21, owner's list). (1) The
+  walkthrough's size-row taps follow the row to its new left-hand place
+  (TAP.width/height = 237/410 at y650). (2) The closing card's word is
+  CENTRED on the button (Georgian "დაწყება" is wider than "Start").
+  (3) The front-details intro is one flowing paragraph — the forced <br>
+  left Georgian with a half-empty line. (4) GE: "მომეცი იდეა", not
+  "გამაკვირვე". (5) A live PROPORTION RECTANGLE beside the size row:
+  1px, right edge on the prompt box's right edge, foot on the row's
+  rule (664), never nearer the box than one details-row pitch (30),
+  capped 220 wide — it redraws as the mm are typed. (6) The check
+  popup's rows had their descenders clipped by a 15px line box (LH =
+  fs+6). (7) Its prompt is never cut: 15 → 10px, then the block grows
+  (and the popup with it) up to 260, then scrolls. (8) Its two buttons
+  centre their label like every other button. (9) The market-compliance
+  paragraph reads 13px, the size of the GTIN note opposite. (10)
+  "Upload Another Label" up to y551. (11) The assets status line sits
+  midway between the dashed box's foot and the bar (678.2). (12)
+  LABEL ANGLE leads the lifestyle prompt: the label is always at the
+  bottle's own angle, a pouring bottle's label lies with it. (13) The
+  GALLERY rebuilt: picture centred in the band, the board's own
+  chevrons on the margins (a little outside), the cross on the right
+  margin, Save and counter inside the band, and z 30/31/32 so the
+  header (now z44), the folder and the bar are never covered. (14) The
+  assets Save on the page's centre line. (15) checkout bakes the OLD
+  folder mark — wiped; the Total's baseline moved to the dashed rule's
+  foot (685.71). (16) The grow-on-hover moved to a WRAPPER — the
+  button's own `animation … both` outranked :hover, so after one pulse
+  it stopped answering. (17) checkout also bakes its own r34 red
+  button under our r27 one — that baked ring was the "bigger circle
+  above the line"; wiped. (18) THE PDF: a vignette label's placement
+  (source crop + target box) is computed once in compose and carried in
+  the layout (`artCrop`), so the PDF draws the picture exactly where
+  the SVG does — it used to fall back to the old full-bleed cover and
+  swallow the artboard. (19) The Final Pack tree plays its full reveal
+  only when the page OPENS; a pack item toggled later just fades
+  (treeReveal ref, 2.8s window). (20) fullSlide is GONE — every
+  transition moves inside the content band, so nothing ever slides over
+  the header, the rules or the bar. (21) Browser Back during the
+  walkthrough stops the story (stopTutorial, called from popstate).
+  (22) Between steps the ghost pointer now travels to the red arrow and
+  presses it, instead of the button clicking itself.
 - ROUND 107 — FIVE FIXES (2026-09-21, owner). (1) The vision page's
   LABEL SIZE row is flush with the prompt box's LEFT edge (it was hung
   off the right). (2) The loader-glass placeholders lost their grey

@@ -318,7 +318,7 @@ const DEMO_WHEEL = { x: 0.44, y: 0.1, rgb: [250, 27, 31] };   /* the pick; the s
 const DEMO_SHADE = 0.97;
 /* round 72 #8: the ghost taps — a red ring blooms where a hand would be */
 const TAP = {
-  visionBox: [250, 400], width: [476, 645], height: [650, 645],
+  visionBox: [250, 400], width: [237, 650], height: [410, 650],   /* round 108 #1: the size row moved left */
   firstField: [1060, 279],          /* round 76 #3: on "GRAND VIN" itself */
   optSelect: [720, 654],            /* round 94 #1: ON the Save button, column 2 */
   bdSave: [719.3, 674.8],           /* round 94 #7: the back label's Save */
@@ -453,6 +453,9 @@ export default function NewUI() {
   const [backSaved, setBackSaved] = useState(false);
   const [assetsSaved, setAssetsSaved] = useState(false);
   const [treeN, setTreeN] = useState(0);        /* round 88 #1: replays the tree reveal */
+  /* round 108 #19 (owner): the reveal plays when the page OPENS; a pack
+     item switched on or off afterwards only fades in or out */
+  const treeReveal = useRef(false);
   const [styleView, setStyleView] = useState<number[]>([0, 0, 0]);
   const [varBusyCol, setVarBusyCol] = useState(-1);
   const STYLES3 = ["traditional", "contemporary", "punk"];
@@ -770,7 +773,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const id = setTimeout(() => setNudge((n) => n + 1), SLIDE_MS + 120);
     return () => clearTimeout(id);
   }, [page, paid]);
-  useEffect(() => { if (page === "checkout") setTreeN((n) => n + 1); }, [page]);
+  useEffect(() => {
+    if (page !== "checkout") { treeReveal.current = false; return; }
+    setTreeN((n) => n + 1);
+    treeReveal.current = true;
+    const id = setTimeout(() => { treeReveal.current = false; }, 2800);
+    return () => clearTimeout(id);
+  }, [page]);
   useEffect(() => { setBackSaved(false); }, [backPng]);
   useEffect(() => { setAssetsSaved(false); }, [assetsSig]);
   const [warn, setWarn] = useState("");
@@ -1114,10 +1123,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   }, []);
 
   /* ROUND 65: Back/Forward in the browser drive the same navigation */
+  /* round 108 #21 (owner): Back during the walkthrough used to leave the
+     story running behind the page it landed on — it stops the story first */
+  const stopTutRef = useRef<() => void>(() => {});
   useEffect(() => {
     const onPop = (e: PopStateEvent) => {
       const st = (e.state || {}) as { page?: string };
       const target = st.page && (ORDER as readonly string[]).includes(st.page) ? (st.page as PageKey) : "welcome";
+      if (tutRef.current >= 0) stopTutRef.current();
       if (target === pageNow.current) return;
       setGensMode(false);
       /* a history jump must never start a paid generation */
@@ -1162,14 +1175,19 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     go("vision");
   }, [go, tutReset]);
 
-  const endTutorial = useCallback(() => {
+  const stopTutorial = useCallback(() => {
     tutTok.current++;
     tutRef.current = -1; setTut(-1);
     tutReset(); setRipple(null); setCursor(null); setTutLanding(false);
+  }, [tutReset]);
+  useEffect(() => { stopTutRef.current = stopTutorial; }, [stopTutorial]);
+
+  const endTutorial = useCallback(() => {
+    stopTutorial();
     /* round 72 #2: straight into the real Your Vision page, not the home
        page — they have just watched the whole story, so they start work */
     go("vision");
-  }, [go, tutReset]);
+  }, [go, stopTutorial]);
 
   useEffect(() => {
     if (tut < 0) return;
@@ -1419,9 +1437,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
          waits, and only there the button keeps its double pulse. */
       if (!live()) return;
       if (tut >= TUT_CARDS.length - 1) { setNudge((n) => n + 1); return; }
-      if (!(await hold(1400))) return;
-      setPressed((n) => n + 1);
-      if (!(await hold(260))) return;
+      /* round 108 #22 (owner: "it looks as if somebody else clicks"): the
+         pointer travels to the red arrow and presses it, like every other
+         move in the story */
+      if (!(await hold(900))) return;
+      const arrowX = tut < STEPS.length ? STEPS[tut].x : NEXT_X;
+      if (!(await tap([arrowX, PROG_Y], 60, 560, () => setPressed((n) => n + 1)))) return;
+      if (!(await hold(200))) return;
       const nx = tut + 1;
       setTut(nx);
       const pg: PageKey = nx === 1 ? "loader" : TUT_PAGES[nx];
@@ -1940,13 +1962,27 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               </span>
             ))}
           </div>
+          {/* ROUND 108 #5 (owner): a live thumbnail of the label's shape —
+              its right edge on the prompt box's right edge, its foot on the
+              size row's rule, never rising closer to the box than one row
+              of the details list (30), and always the typed proportions. */}
+          {(() => {
+            const w0 = Math.min(999, Math.max(1, Number(f.width) || 110)), h0 = Math.min(999, Math.max(1, Number(f.height) || 80));
+            const FOOT = 664, GAP = 30, MAX_W = 220;
+            const maxH = FOOT - (BOX.y + BOX.h + GAP);
+            const sc = Math.min(maxH / h0, MAX_W / w0);
+            const w2 = Math.max(6, w0 * sc), h2 = Math.max(6, h0 * sc);
+            return <div key="sizeprev" style={{ ...px(BOX.x + BOX.w - w2, FOOT - h2, w2, h2), border: `1px solid ${HAIRLINE}`, boxSizing: "border-box", transition: `all 220ms ${EASE}` }} />;
+          })()}
           {/* the dashed column rule */}
           {dashRule(788, 133, 522, true, "vrule")}
           {/* ── right: the label's own details ── */}
           <span style={{ ...px(891.8, baseTop(149.08, 24), 500, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t("FRONT LABEL DETAILS")}</span>
           <span style={{ ...px(891.8, baseTop(183, 14), 410, 76), font: `italic 14px ${HNW}`, lineHeight: "18px", color: "#111" }}>
-            {t("Feel free to leave out fields you don't want on your front label.")}<br />
-            {/* round 95 #2 (owner): what they type is what prints — case and language */}
+            {/* round 95 #2 (owner): what they type is what prints — case and
+                language. Round 108 #3: ONE flowing paragraph — the forced
+                break left Georgian with a half-empty first line. */}
+            {t("Feel free to leave out fields you don't want on your front label.")}{" "}
             {t("Type each field exactly as it should print: capitals, spelling and language stay as you enter them.")}</span>
           {FRONT_ROWS.map((k2, i) => {
             const base = 284.5 + i * 30;
@@ -2217,7 +2253,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               live: 17.54 at 700 24px, 10.23 at 14px (+2px of the 18px line
               box, which baseTop does not know about) */}
           <span style={{ ...px(139, baseTop(670.54, 24), 500, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t("MARKET COMPLIANCE")}</span>
-          <span style={{ ...px(lang === "ge" ? 139 : 446.2, baseTop(lang === "ge" ? 700.34 : 661.23, 14), lang === "ge" ? 560 : 270, 60), font: `14px ${HNW}`, lineHeight: "18px", color: "#111" }}>
+          {/* round 108 #9 (owner): the same size as the GTIN note opposite */}
+          <span style={{ ...px(lang === "ge" ? 139 : 446.2, baseTop(lang === "ge" ? 700.34 : 661.23, 13), lang === "ge" ? 560 : 270, 60), font: `13px ${HNW}`, lineHeight: "18px", color: "#111" }}>
             {t("Select the market(s) where your wine will be sold, and we’ll incorporate required regulatory information.")}</span>
           {/* ROUND 67 (owner's Unclicked / Opened / Selected references):
               the market picker is a BLACK button the size of the QR ones —
@@ -2537,7 +2574,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               ROUND 48: the confirmation is GREEN like every other ✓, and
               a fresh upload UNSELECTS every section — the customer picks
               each one before the next arrow lets them through. */}
-          <label style={{ ...px(137.14, 562, 205.7, 18), font: `13px ${HNW}`, color: customLabel ? "#3f6d2a" : "#111", textDecoration: "underline", textTransform: "none", textAlign: "center", cursor: "pointer", display: "block", lineHeight: "18px" }}>
+          <label style={{ ...px(137.14, 551, 205.7, 18), font: `13px ${HNW}`, color: customLabel ? "#3f6d2a" : "#111", textDecoration: "underline", textTransform: "none", textAlign: "center", cursor: "pointer", display: "block", lineHeight: "18px" }}>
             <input type="file" accept="image/png,image/jpeg,image/webp,image/*" style={{ display: "none" }} onChange={(e) => {
               const input = e.currentTarget;
               const file = input.files?.[0]; if (!file) return;
@@ -2668,7 +2705,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {landingCol && head(R3 + 0.3, "Product Landing Page", "You will be provided with the link\nto your product page.", "")}
           {/* status line above the progress bar (round 47) */}
           {assetsStage && (
-            <span style={{ ...px(0, 646, W, 16), font: `italic 12px ${HNW}`, color: "#BA141A", lineHeight: "15px", textAlign: "center", display: "block" }}>
+            /* round 108 #11 (owner): midway between the dashed box's foot
+               (617.4) and the progress line (753.96) */
+            <span style={{ ...px(0, 678.2, W, 16), font: `italic 12px ${HNW}`, color: "#BA141A", lineHeight: "15px", textAlign: "center", display: "block" }}>
               {t("Creating your marketing assets")} — {tStage(assetsStage)}…</span>
           )}
           {dashedBox(BOX.x, BOX.y, BOX.w, BOX.h, "asd1")}
@@ -2701,7 +2740,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               thumbs.forEach((th, k) => { const it = assets.life[lifeOrder[k + 1]]; if (it) items.push({ src: it.prev, x: th.x, y: th.y, w: th.s, h: th.s }); });
               flyToFolder(unsave ? [...items].reverse() : items, unsave);
             }}
-              style={{ ...px(BOX.x + BOX.w - 274, 657.6, 274, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: assetsSaved ? "#fff" : "#111", color: assetsSaved ? "#111" : "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, transition: `background 240ms ${EASE}, color 240ms ${EASE}` }}>
+              /* round 108 #14 (owner): on the page's centre line */
+              style={{ ...px(W / 2 - 137, 657.6, 274, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: assetsSaved ? "#fff" : "#111", color: assetsSaved ? "#111" : "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, transition: `background 240ms ${EASE}, color 240ms ${EASE}` }}>
               {assetsSaved ? t("Saved") : t("Save")}</button>
           )}
           {/* the hero, then its four thumbs */}
@@ -2784,7 +2824,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         const CAR_MID = 308.57;
         const TC_B = 468.28;
         const ROWB = [502.2, 536.49, 570.64, 605.06];
-        const TOT_B = 639.48;
+        const TOT_B = 639.48, TOT_FOOT = 685.71;   /* the dashed rule's own foot */
         const RING_X = 171.15, RING_DY = 6.13, LBL_X = 205.71;
         const PRICE_R = 617.14;
         const BTN = { y: 651.43, h: 34.29 };
@@ -2814,8 +2854,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         const bigTotal = (v: string) => (
           <span key="bigtotal">
             {patch(LBL_X - 2, TOT_B - 20, PRICE_R - LBL_X + 4, 28, "totwipe")}
-            <span style={{ ...px(LBL_X, baseTop(TOT_B + 24, 30), 240, 34), font: `700 30px ${HNW}`, lineHeight: "30px" }}>{t("Total:")}</span>
-            <span style={{ ...px(PRICE_R - 240, baseTop(TOT_B + 24, 30), 240, 34), font: `700 30px ${HNW}`, lineHeight: "30px", textAlign: "right", display: "block" }}>{v}</span>
+            {/* round 108 #15 (owner): the total's baseline lands on the foot
+                of the page's dashed rule (685.71) */}
+            <span style={{ ...px(LBL_X, baseTop(TOT_FOOT, 30), 240, 34), font: `700 30px ${HNW}`, lineHeight: "30px" }}>{t("Total:")}</span>
+            <span style={{ ...px(PRICE_R - 240, baseTop(TOT_FOOT, 30), 240, 34), font: `700 30px ${HNW}`, lineHeight: "30px", textAlign: "right", display: "block" }}>{v}</span>
           </span>
         );
         const madeRow = [selected >= 0 && !!backPng, qrMode === "create", !!assets.front, true];
@@ -2849,7 +2891,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             ];
             const TX = 1275, BAR_Y = 205, TRUNK_TOP = 152;
             const leftX = Math.min(...branches.map((b2) => b2.x));
-            const A = (delay: number, name: string, ms = 320): React.CSSProperties => ({ animation: `${name} ${ms}ms ${EASE} ${delay}ms both` });
+            const A = (delay: number, name: string, ms = 320): React.CSSProperties =>
+              treeReveal.current ? { animation: `${name} ${ms}ms ${EASE} ${delay}ms both` } : { animation: `nuiFadeIn 260ms ${EASE} both` };
             return (
               <div key={"tree" + treeN}>
                 {/* the caption under the folder mark */}
@@ -3046,7 +3089,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const tutX = tut < 0 ? null : tut < STEPS.length ? STEPS[tut].x : NEXT_X;
   const thick = tut >= 0 ? (tut < STEPS.length ? STEPS[tut].x : CIRCLE_X[CIRCLE_X.length - 1]) : THICK[barPage];
   const bandBottom = BAND_BOTTOM[page];
-  const fullSlide = (page === "vision" && prev === "welcome") || page === "welcome";
+  /* ROUND 108 #20 (owner): NOTHING ever slides over the header, the rules
+     or the bar — so every transition, the welcome page's included, moves
+     inside the content band only (it used to slide the whole 1440x823,
+     which dragged the boards' own baked chrome across ours). */
+  const fullSlide = false;
 
   return (
     <main style={{ background: "#fff", minHeight: "100vh", margin: 0, padding: 0, maxWidth: "none", width: "100%" }}>
@@ -3064,9 +3111,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         @font-face { font-family: 'Helvetica Neue World'; src: url('/newui/fonts/HNW-75Bold.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: block; }
         @font-face { font-family: 'Helvetica Neue World'; src: url('/newui/fonts/HNW-45Lt.woff2') format('woff2'); font-weight: 300; font-style: normal; font-display: block; }
         input::placeholder, textarea::placeholder { color: #B3B3B3; opacity: 1; font-style: italic; }
-        .nui-next { transition: transform 200ms cubic-bezier(0.33, 1, 0.68, 1); }
         .nui-next:hover { transform: scale(1.09); }
-        .nui-next:active { transform: scale(1.02); }
+        .nui-next:active { transform: scale(1.03); }
         .nui-noscroll { scrollbar-width: none; -ms-overflow-style: none; }
         .nui-noscroll::-webkit-scrollbar { display: none; }
         @keyframes nuiDot { 0% { opacity: 0.15 } 30% { opacity: 1 } 60%, 100% { opacity: 0.15 } }
@@ -3130,7 +3176,18 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 {/* ROUND 106: the boards also bake the OLD black header
                     band; on a full-page slide it would show above the
                     content, so it is wiped the same way */}
-                {fullSlide ? patch(0, 0, W, HEADER_H, "hdrwipe") : null}
+                {/* round 108 #20: a hair wider than the baked band, so no
+                    sliver of it survives at a slice's clipped edge */}
+                {fullSlide ? patch(-2, -2, W + 4, HEADER_H + 2, "hdrwipe") : null}
+                {/* round 108 #15: checkout also bakes the old, bigger folder
+                    mark — its edges stuck out around the live one */}
+                {p === "checkout" ? patch(1210, HEADER_H, 128, 54, "fldwipe") : null}
+                {/* round 108 #17 (owner: "the red circle is bigger above the
+                    line than below"): the board bakes its own r34 button at
+                    1268.86,719.89 — the live r27 one sat inside it, so the
+                    baked ring showed above the rule (below it the white
+                    footer hid it). Wiped. */}
+                {p === "checkout" ? patch(1262, 700, 82, FOOTER_Y - 700, "btnwipe") : null}
                 {/* ROUND 63 (owner): page titles grew with the merged pages —
                     the baked 19px title is covered and redrawn live at 24 */}
                 {PAGE_TITLE[p] && (<>
@@ -3214,7 +3271,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           </div>
           {/* STATIC header (real fonts, extracted geometry). ROUND 106: no
               ground of its own — the white band behind it carries the rule */}
-          <div style={{ ...px(0, 0, W, HEADER_H), background: "transparent" }}>
+          <div style={{ ...px(0, 0, W, HEADER_H), background: "transparent", zIndex: 44 }}>
             {/* round 56 #3 — TEMP DEV SWITCH (remove before launch); ROUND 63
                 moved out of the footer, to the left of the logo */}
             <button aria-label="toggle live generation"
@@ -3311,11 +3368,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               const bfs = lang === "ge" ? CARD_BODY_FS - 1 : CARD_BODY_FS;
               /* the last card's word sits ON the button; the step cards
                  start at the station and read to the right */
-              const L = solo ? tutX - 27 : tutX;
+              const L = solo ? tutX - 110 : tutX;
               return (
                 <div key={"tut" + tut} style={{ position: "absolute", left: L, top: 0, width: W - L, height: PAGE_H, pointerEvents: "none", animation: `nuiFadeIn 320ms ${EASE} both`, transition: `left ${SLIDE_MS}ms ${EASE}` }}>
                   {solo ? (
-                    <span style={{ position: "absolute", left: 0, top: baseTop(CARD_BASE + 0.85, 23), font: `700 23px ${HNW}`, lineHeight: "23px", color: BAR_RED, whiteSpace: "nowrap" }}>{t(card.title)}</span>
+                    /* round 108 #2: centred under the button, whatever the language */
+                    <span style={{ position: "absolute", left: 0, top: baseTop(CARD_BASE + 0.85, 23), width: 220, textAlign: "center", font: `700 23px ${HNW}`, lineHeight: "23px", color: BAR_RED, whiteSpace: "nowrap" }}>{t(card.title)}</span>
                   ) : (<>
                     {/* round 107 #3 (owner): the whole title line is BOLD —
                         the inner spans do not inherit the shorthand's weight */}
@@ -3335,9 +3393,19 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 </div>
               );
             })()}
-            {/* the red round NEXT button */}
+            {/* the red round NEXT button. ROUND 108 #16 (owner): the grow-on-
+                hover lives on a WRAPPER — the button's own pulse animation
+                (`both`) outranks any :hover transform, so after one pulse the
+                button had stopped answering the mouse. */}
             {(page !== "loader" || tut >= 0) && (
-              <button key={"next" + nudge + "-" + pressed} aria-label={page === "welcome" ? "start" : "next"} className="nui-next"
+              <div className="nui-next"
+                style={{
+                  position: "absolute", left: (tutX !== null ? tutX : page === "welcome" ? WELCOME_X : NEXT_X) - NEXT_R, top: PROG_Y - NEXT_R,
+                  width: NEXT_R * 2, height: NEXT_R * 2, borderRadius: NEXT_R,
+                  transition: `${arrowFly ? "" : `left ${SLIDE_MS}ms ${EASE}, `}transform 200ms cubic-bezier(0.33, 1, 0.68, 1)`,
+                  pointerEvents: modalOpen ? "none" : "auto",
+                }}>
+              <button key={"next" + nudge + "-" + pressed} aria-label={page === "welcome" ? "start" : "next"}
                 onClick={() => {
                   barJumped.current = false;
                   /* round 71 #4: inside the walkthrough the arrow only ever
@@ -3392,10 +3460,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   }
                 }}
                 style={{
-                  position: "absolute", left: (tutX !== null ? tutX : page === "welcome" ? WELCOME_X : NEXT_X) - NEXT_R, top: PROG_Y - NEXT_R,
-                  transition: arrowFly ? "none" : `left ${SLIDE_MS}ms ${EASE}`,
-                  width: NEXT_R * 2, height: NEXT_R * 2, borderRadius: NEXT_R, background: BAR_RED, border: "none",
-                  padding: 0, cursor: "pointer", pointerEvents: modalOpen ? "none" : "auto", display: "flex", alignItems: "center", justifyContent: "center",
+                  position: "absolute", inset: 0,
+                  borderRadius: NEXT_R, background: BAR_RED, border: "none",
+                  padding: 0, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
                   animation: arrowFly ? `btnFly ${SLIDE_MS}ms ${EASE} both`
                     : ((tut >= 0 && tut >= tutLast) || page === "checkout") && nudge > 0 ? `nuiNudge 1200ms ${EASE} both`
                     : pressed > 0 ? `nuiPress 260ms ${EASE} both` : "none",
@@ -3423,6 +3490,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   </svg>
                 )}
               </button>
+              </div>
             )}
           </div>
 
@@ -3476,20 +3544,42 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             const src = gallery.items[gallery.index] || "";
             const many = gallery.items.length > 1;
             const step = (d: number) => setGallery((g) => g ? { ...g, index: (g.index + d + g.items.length) % g.items.length } : g);
+            /* ROUND 108 #13 (owner): the picture sits in the MIDDLE of the
+               band between the two rules; the arrows are the Final Pack's
+               own chevrons, on the page margins and a little outside them,
+               at that same middle; the cross sits on the right margin. The
+               veil covers the band ONLY — the header, the folder mark and
+               the progress bar are never covered by anything (z 30/31/32
+               all pass under the bar's 45 and the header's 44). */
+            const GTOP = HEADER_H, GBOT = FOOT_RULE_Y;
+            const res = gallery.save ? 78 : many ? 34 : 0;    /* room kept for the furniture */
+            /* the same air top and bottom, so the picture sits on the
+               band's own middle whatever furniture is under it */
+            const pad = Math.max(18, res);
+            const boxY = GTOP + pad, boxH = (GBOT - pad) - boxY;
+            const MID = GTOP + (GBOT - GTOP) / 2;
+            const chev = (dir: -1 | 1) => (
+              <svg viewBox="0 0 16 16" width="16" height="16" style={{ display: "block" }}>
+                <polyline points={dir < 0 ? "12.74,1.83 6,8.57 12.74,15.31" : "3.26,1.83 10,8.57 3.26,15.31"}
+                  fill="none" stroke="#111" strokeWidth="1.92" strokeMiterlimit="10" />
+              </svg>
+            );
             return (<>
-              <div style={{ ...px(0, 0, W, H), zIndex: 44 }} onClick={() => setGallery(null)} />
-              <div style={{ ...px(0, HEADER_H, W, FOOTER_Y - HEADER_H), background: "rgba(255,255,255,0.94)", zIndex: 44, pointerEvents: "none" }} />
+              <div style={{ ...px(0, GTOP, W, GBOT - GTOP), zIndex: 30 }} onClick={() => setGallery(null)} />
+              <div style={{ ...px(0, GTOP, W, GBOT - GTOP), background: "rgba(255,255,255,0.94)", zIndex: 30, pointerEvents: "none" }} />
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={src} alt="" style={{ ...px(220, 110, 1000, 520), objectFit: "contain", zIndex: 45, animation: `nuiFadeIn 220ms ${EASE} both` }} />
+              <img src={src} alt="" style={{ ...px(210, boxY, 1020, boxH), objectFit: "contain", zIndex: 31, animation: `nuiFadeIn 220ms ${EASE} both` }} />
               {many && (<>
-                <button aria-label="previous" onClick={() => step(-1)} style={{ ...px(150, 340, 50, 60), ...ghost, zIndex: 46, cursor: "pointer", font: `300 40px ${HNW}`, color: "#111" }}>‹</button>
-                <button aria-label="next" onClick={() => step(1)} style={{ ...px(1240, 340, 50, 60), ...ghost, zIndex: 46, cursor: "pointer", font: `300 40px ${HNW}`, color: "#111" }}>›</button>
-                <span style={{ ...px(0, 640, W, 16), font: `13px ${HNW}`, color: "#8a887e", textAlign: "center", display: "block", zIndex: 46 }}>{gallery.index + 1} / {gallery.items.length}</span>
+                <button aria-label="previous" onClick={() => step(-1)} style={{ ...px(137.14 - 46, MID - 22, 44, 44), ...ghost, zIndex: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>{chev(-1)}</button>
+                <button aria-label="next" onClick={() => step(1)} style={{ ...px(1302.86 + 2, MID - 22, 44, 44), ...ghost, zIndex: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>{chev(1)}</button>
+                <span style={{ ...px(0, GBOT - res - 2, W, 16), font: `13px ${HNW}`, color: "#8a887e", textAlign: "center", display: "block", zIndex: 32 }}>{gallery.index + 1} / {gallery.items.length}</span>
               </>)}
-              <button aria-label="close gallery" onClick={() => setGallery(null)} style={{ ...px(1180, 96, 30, 30), ...ghost, zIndex: 46, cursor: "pointer", font: `20px ${HNW}`, color: "#111" }}>✕</button>
+              <button aria-label="close gallery" onClick={() => setGallery(null)} style={{ ...px(1302.86 - 20, GTOP + 42, 24, 24), ...ghost, zIndex: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg viewBox="0 0 20 20" width="18" height="18"><line x1="2" y1="2" x2="18" y2="18" stroke="#111" strokeWidth="1.92" /><line x1="18" y1="2" x2="2" y2="18" stroke="#111" strokeWidth="1.92" /></svg>
+              </button>
               {gallery.save && (
                 <button onClick={() => { gallery.save?.(); setGallery((g) => g ? { ...g, saved: !g.saved } : g); }}
-                  style={{ ...px(W / 2 - 120, 664, 240, 34.3), zIndex: 46, cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: gallery.saved ? "#fff" : "#111", color: gallery.saved ? "#111" : "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
+                  style={{ ...px(W / 2 - 120, GBOT - 48, 240, 34.3), zIndex: 32, cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: gallery.saved ? "#fff" : "#111", color: gallery.saved ? "#111" : "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
                   {gallery.saved ? t("Saved") : t("Save")}</button>
               )}
             </>);
@@ -3553,8 +3643,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             /* the assets column is narrower (three blocks sit left of it),
                so its type steps down a notch */
             const fs = isL ? 15 : 14;
-            const cap = (txt: string) => <span style={{ font: `700 ${lang === "ge" ? fs - 2 : fs}px ${HNW}`, lineHeight: "15px", whiteSpace: "nowrap" }}>{txt}</span>;
-            const val = (txt: string) => <span style={{ font: `italic ${fs}px ${HNW}`, lineHeight: "15px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{txt}</span>;
+            /* round 108 #6 (owner: "the details list has its text cut off
+               at the bottom"): a 15px line box clipped Georgian descenders —
+               the line box now has the room the face asks for */
+            const LH = `${fs + 6}px`;
+            const cap = (txt: string) => <span style={{ font: `700 ${lang === "ge" ? fs - 2 : fs}px ${HNW}`, lineHeight: LH, whiteSpace: "nowrap" }}>{txt}</span>;
+            const val = (txt: string) => <span style={{ font: `italic ${fs}px ${HNW}`, lineHeight: LH, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{txt}</span>;
             const colTitle = (x: number, txt: string) => (
               <span style={{ position: "absolute", left: x, top: baseTop(162.8, 21), font: `700 ${lang === "ge" ? 15 : 18}px ${HNW}`, lineHeight: "21px", whiteSpace: "nowrap" }}>{txt}</span>
             );
@@ -3602,9 +3696,23 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             if (isL) {
               let y = 162.8;
               if (prompt) {
+                /* round 108 #7 (owner: "never cut the text"): the prompt
+                   steps down 15 → 10px until it fits the 68 it was given,
+                   and if it still does not, the block itself grows (the
+                   popup is measured from it) up to a sane ceiling. */
+                const PW = 329, NAT = 68;
+                const fit = (() => {
+                  for (const sz of [15, 14, 13, 12, 11, 10]) {
+                    const lh = Math.round(sz * 1.18);
+                    const lines = Math.ceil(prompt.length / Math.max(1, Math.floor(PW / (sz * 0.5))));
+                    if (lines * lh <= NAT) return { sz, lh, h: NAT };
+                    if (sz === 10) return { sz, lh, h: Math.min(260, lines * lh) };
+                  }
+                  return { sz: 10, lh: 12, h: NAT };
+                })();
                 left.push(<span key="pt">{colTitle(32, t("Prompt:"))}</span>);
-                left.push(<span key="pv" style={{ position: "absolute", left: 32, top: baseTop(y + 43, 15), width: 329, maxHeight: 68, font: `15px ${HNW}`, lineHeight: "17px", overflow: "hidden" }}>{prompt}</span>);
-                y += 127;
+                left.push(<span key="pv" className="nui-noscroll" style={{ position: "absolute", left: 32, top: baseTop(y + 43, fit.sz), width: PW, maxHeight: fit.h, font: `${fit.sz}px ${HNW}`, lineHeight: `${fit.lh}px`, overflowY: "auto" }}>{prompt}</span>);
+                y += 59 + fit.h;
                 leftBottom = y - 4;
               }
               if (sketch) {
@@ -3672,7 +3780,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   <span key={c}>
                     <span style={{ position: "absolute", left: detX, top: baseTop(212 + i * 19.2, 15), width: 150 }}>{cap(t(c).endsWith(":") ? t(c) : t(c) + ":")}</span>
                     <span style={{ position: "absolute", left: valX, top: baseTop(212 + i * 19.2, 15), width: B.w - valX - 32, display: "flex", alignItems: "center", columnGap: 6 }}>
-                      {v ? val(t(v)) : <span style={{ font: `italic ${fs}px ${HNW}`, lineHeight: "15px", color: "#B3B3B3", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ph}</span>}
+                      {v ? val(t(v)) : <span style={{ font: `italic ${fs}px ${HNW}`, lineHeight: LH, color: "#B3B3B3", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ph}</span>}
                       {v && c === "Closure Color" && (
                         <span style={{ width: 13, height: 13, background: shadeRgb(), border: "1px solid #111", flex: "0 0 auto" }} />
                       )}
@@ -3680,11 +3788,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   </span>
                 ))}
                 <button onClick={onEdit}
-                  style={{ position: "absolute", left: 32, top: btnTop, width: 329, height: 30, cursor: "pointer", font: `13px ${HNW}`, letterSpacing: 0.3, background: "#fff", color: "#111", border: "1px solid #111", boxSizing: "border-box", paddingBottom: 3, textTransform: "none" }}>
+                  style={{ position: "absolute", left: 32, top: btnTop, width: 329, height: 30, cursor: "pointer", font: `13px ${HNW}`, letterSpacing: 0.3, background: "#fff", color: "#111", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, textTransform: "none" }}>
                   {t("Edit Details")}</button>
                 <button onClick={onCreate}
-                  style={{ position: "absolute", left: 385.5, top: btnTop, width: 328.5, height: 30, cursor: "pointer", font: `700 13px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", paddingBottom: 3, textTransform: "none" }}>
-                  {t("Create")} <span style={{ fontWeight: 400, fontStyle: "italic" }}>({cost} {cost === 1 ? t("Credit") : t("Credits")})</span></button>
+                  style={{ position: "absolute", left: 385.5, top: btnTop, width: 328.5, height: 30, cursor: "pointer", font: `700 13px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", columnGap: 4, paddingBottom: 4, textTransform: "none" }}>
+                  <span>{t("Create")}</span><span style={{ fontWeight: 400, fontStyle: "italic" }}>({cost} {cost === 1 ? t("Credit") : t("Credits")})</span></button>
               </div>
             </>);
           })()}

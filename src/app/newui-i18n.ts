@@ -25,7 +25,7 @@ export const SVG_GE: Record<string, string> = {
   /* vision */
   "YOUR VISION": "ᲗᲥᲕᲔᲜᲘ ᲮᲔᲓᲕᲐ",
   "If you have a specific idea for the front label, describe it in simple words": "თუ ეტიკეტის იდეა უკვე გაქვთ, აღწერეთ მარტივი სიტყვებით. შეგიძლიათ ატვირთოთ ესკიზი ან ფოტო ნიმუში.",
-  "or upload a sketch or photo reference. Or, let us suggest ideas for you.": "ან დააჭირეთ \"გამაკვირვე\"-ს და ჩვენ შემოგთავაზებთ იდეებს.",
+  "or upload a sketch or photo reference. Or, let us suggest ideas for you.": "ან დააჭირეთ \"მომეცი იდეა\"-ს და ჩვენ შემოგთავაზებთ იდეებს.",
   "Upload a sketch or a reference photo": "ატვირთეთ ესკიზი ან ფოტო ნიმუში",
   "Give me an idea": "მომეცი იდეა",
   "Next idea": "შემდეგი იდეა",
