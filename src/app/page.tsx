@@ -13,6 +13,18 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { UI_GE, SVG_GE, translateSvg } from "./newui-i18n";
 
 const W = 1440, H = 823;
+/* ROUND 106 (owner's New_Progressbar_Tutorial_Header_Footer artboards,
+   2026-09-21): the chrome turned WHITE — header and footer are now plain
+   white with ONE 1px black hairline each, and the walkthrough's card is
+   set under the bar instead of in a black balloon. The artboard is 931.97
+   tall, so the page box grows below the bar to hold that card; the pages
+   themselves still live in the old 1440x823 frame. */
+const PAGE_H = 932;
+const HAIRLINE = "#000";      /* header rule, footer rule, folder, README — one weight (1px) */
+const INK = "#231f20";        /* the artboards' black for type */
+/* the folder mark hangs lower off the rule than it did on the black
+   header (artboard: its path starts at y114.2 where it used to be 103.1) */
+const FOLDER_DROP = 11.1, FOLDER_TOP = 33.9 + FOLDER_DROP;
 const HEADER_H = 68.57, FOOTER_Y = 754.07;
 const BAND_TOP = HEADER_H;
 const EASE = "cubic-bezier(0.33, 1, 0.68, 1)";
@@ -86,7 +98,12 @@ const START_R = 4.92;
 const DOT_BIG = 4.92;
 const DOT_SMALL = 3.15;
 const LINE_H = 4;
-const LABEL_BASE = 788.6;      /* white station labels' baseline */
+const LABEL_BASE = 788.6;      /* station labels' baseline (round 106: black on white) */
+const FOOT_RULE_Y = 753.96;    /* the footer's 1px hairline, straight off the artboard */
+/* ROUND 106: the walkthrough's card, set flush-left under the station it
+   explains — "STEP N /" in red, the title in black beside it, the body in
+   italic below. All three baselines are the artboard's. */
+const CARD_BASE = 828.01, CARD_BODY = [22.4, 36.8], CARD_FS = 15, CARD_BODY_FS = 12;
 const NEXT_R = 27;             /* red round button — round 87: 20% smaller (was 34) */
 const NEXT_X = 1302.86;        /* its centre on working pages … */
 const WELCOME_X = 168.1;       /* … and on the welcome page */
@@ -242,16 +259,19 @@ const TUT_LIFE = [1, 2, 3, 4, 5].map((n) => `${TUT_D}life${n}.jpg`);
 /* round 72 #1: the closing card sits on a BLANK page — the walkthrough
    stays on the assets page and a white sheet covers the band */
 const TUT_PAGES: PageKey[] = ["vision", "options", "backdetails", "backdesign", "bottle", "assets", "assets"];
-/* the black card above the arrow — copy as approved, typos fixed */
-const TUT_CARDS: { step: string; title: string[]; body: string[] }[] = [
-  { step: "STEP 1", title: ["Your Vision &", "Front Label Details"], body: ["Tell me what you picture,", "and the details that belong", "on your front label."] },
-  { step: "STEP 2", title: ["Front Label"], body: ["Voilà — three designs to", "choose from.", "Pick your favourite."] },
-  { step: "STEP 3", title: ["Back Label Details,", "Barcode & QR Code"], body: ["A few more details, and I'll", "build a back label that meets", "your market's rules."] },
-  { step: "STEP 4", title: ["Back Label"], body: ["Done. Print-ready, and", "compliant with the markets", "you chose."] },
-  /* round 73 #5: three lines each — a fourth line crowded the card's foot */
-  { step: "STEP 5", title: ["Bottle Details"], body: ["Tell me about the bottle and", "the closure — I'll shoot it", "as it will look on the shelf."] },
-  { step: "STEP 6", title: ["Marketing Assets"], body: ["Two product shots, five", "marketing images, and your", "product page if you asked."] },
-  { step: "", title: ["Let's build", "your pack!"], body: [] },
+/* ROUND 106 (owner's artboards): the card is no longer a balloon — it is
+   set flush-left under the station it explains, so each line runs as long
+   as it needs to. Copy verbatim off the artboards, typos fixed. The last
+   card is a single red word under the button at the end of the bar. */
+const TUT_CARDS: { step: string; title: string; body: string[] }[] = [
+  { step: "STEP 1", title: "Your Vision & front label details", body: ["Tell me what you picture, and the details", "that belong on your front label."] },
+  { step: "STEP 2", title: "Front label", body: ["Voilà — three designs to choose from.", "Pick your favourite."] },
+  { step: "STEP 3", title: "Back label details, Barcode & QR code", body: ["A few more details, and I'll build a back label", "that meets your market's rules."] },
+  { step: "STEP 4", title: "Back label", body: ["Done. Print-ready, and compliant with", "the markets you chose."] },
+  { step: "STEP 5", title: "Bottle details", body: ["Tell me about the bottle and the closure, so I can", "photograph your wine exactly as it will look on the shelf."] },
+  /* the artboard reads "four marketing images" — the product makes five */
+  { step: "STEP 6", title: "Marketing assets", body: ["Two product shots, five marketing images,", "and your product page if you asked for one."] },
+  { step: "", title: "Start", body: [] },
 ];
 const DEMO_VISION = "The village cat walking along the top of a stone wall at dusk";
 const DEMO_DESC = "A dry, naturally sparkling pét-nat from Rkatsiteli. Pale straw with a fine, lively bead; green apple, white peach and a touch of bread crust on the nose; crisp acidity and a clean, saline finish. Bottled unfiltered, before the first fermentation ended.";
@@ -289,11 +309,6 @@ const TAP = {
    knob cx = 1144.83 + shade * 121.64 on y 532.5 */
 const BRING = (ci: number, row: number) => [[342.86, 534.78, 726.7, 918.62, 1110.54][ci] + 43.2, 283.57 + row * 29.8] as [number, number];
 const SHADE_X = (v: number) => 1144.83 + v * 121.64;
-/* the card's own geometry, straight off the artboard */
-const TB = {
-  w: 191.2, bottom: 685.72, pad: 16.4, full: 171.43, short: 102.86,
-  tipY: 706.31, tipW: 20.6, rule: 155.5,
-};
 
 /* round 52 #3: placeholder terms text — long enough to need the scroll */
 const TERMS_TEXT = Array.from({ length: 9 }, (_, i) => (
@@ -396,7 +411,7 @@ export default function NewUI() {
   const [flights, setFlights] = useState<{ id: number; src: string; x: number; y: number; w: number; h: number; delay: number; back?: boolean }[]>([]);
   const flightN = useRef(0);
   const [folderBump, setFolderBump] = useState(0);
-  const FOLDER_C = { x: 1275, y: 66 };
+  const FOLDER_C = { x: 1275, y: 66 + FOLDER_DROP };
   /* round 94 (owner): `back` plays the film in REVERSE — the thing leaves
      the folder and glides back to its place on the page (a second press
      of Save un-saves; a third saves again) */
@@ -2808,8 +2823,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             const A = (delay: number, name: string, ms = 320): React.CSSProperties => ({ animation: `${name} ${ms}ms ${EASE} ${delay}ms both` });
             const folderPath = (
               <>
-                <path d="M1233.31,103.1V38.26c0-1.98,1.34-3.59,2.99-3.59h25.27c.79,0,1.55.38,2.11,1.05l7.74,9.3c.56.67,1.32,1.05,2.11,1.05h25.27c1.65,0,2.99,1.61,2.99,3.59v7.81" fill="#fff" stroke="#000" strokeWidth="0.75" strokeMiterlimit="10" />
-                <path d="M1233.31,103.1h68.49l15.03-40.57c.88-2.38-.57-5.05-2.73-5.05h-61.95c-1.18,0-2.25.84-2.73,2.13l-16.11,43.49" fill="#fff" stroke="#000" strokeWidth="0.75" strokeMiterlimit="10" />
+                <path d="M1233.31,103.1V38.26c0-1.98,1.34-3.59,2.99-3.59h25.27c.79,0,1.55.38,2.11,1.05l7.74,9.3c.56.67,1.32,1.05,2.11,1.05h25.27c1.65,0,2.99,1.61,2.99,3.59v7.81" fill="#fff" stroke={HAIRLINE} strokeWidth="1" strokeMiterlimit="10" />
+                <path d="M1233.31,103.1h68.49l15.03-40.57c.88-2.38-.57-5.05-2.73-5.05h-61.95c-1.18,0-2.25.84-2.73,2.13l-16.11,43.49" fill="#fff" stroke={HAIRLINE} strokeWidth="1" strokeMiterlimit="10" />
               </>
             );
             return (
@@ -2831,14 +2846,17 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                       {b2.kind === "folder"
                         ? <svg viewBox="1232.5 33.9 85.1 70" width="85" height="70" style={{ display: "block" }}>{folderPath}</svg>
                         : <svg viewBox="0 0 85 70" width="85" height="70" style={{ display: "block" }}>
-                            {/* round 94 #13 (owner's drawing, traced): a straight sheet
-                                whose left edge curls at the foot into a rolled band that
-                                runs out to the right, past the sheet's edge */}
-                            <path d="M19 9.4 H65.6 V44.4" fill="none" stroke="#000" strokeWidth="0.9" strokeLinejoin="round" />
-                            <path d="M19 9.4 V50 Q19 55.6 24.6 55.6 H68.8 A5.6 5.6 0 0 0 68.8 44.4 H28.5 Q23.5 44.4 21 49" fill="#fff" stroke="#000" strokeWidth="0.9" strokeLinejoin="round" />
-                            <path d="M19 9.4 H65.6 V44.4 H28.5" fill="#fff" stroke="none" />
-                            <path d="M19 9.4 H65.6 V44.4" fill="none" stroke="#000" strokeWidth="0.9" />
-                            {[18, 24, 30, 36].map((yy) => <line key={yy} x1="27.5" y1={yy} x2="57.5" y2={yy} stroke="#000" strokeWidth="0.9" />)}
+                            {/* ROUND 106 (owner: "the Read Me icon still isn't shown
+                                properly"): the owner's own ReadMe.svg, its geometry
+                                mapped into this 85x70 box so the outline is 1px —
+                                the same weight as the folder mark beside it. A sheet
+                                whose foot rolls into a band running out to the right. */}
+                            <g fill="none" stroke={HAIRLINE} strokeWidth="1" strokeMiterlimit="10">
+                              <polyline points="70.08,51.99 70.08,1 2.08,1 2.08,62.58" />
+                              {[18, 26.5, 35, 43.5, 52].map((yy) => <line key={yy} x1="14.92" y1={yy} x2="58.6" y2={yy} />)}
+                              <path d="M14.92,62.58a6.42,6.42 0 0 1-12.84,0" />
+                              <path d="M8.5,69h67.99a6.42,6.42 0 0 0 6.43,-6.42V52H14.92v10.58" />
+                            </g>
                           </svg>}
                     </div>
                     {/* the name */}
@@ -3018,7 +3036,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const fullSlide = (page === "vision" && prev === "welcome") || page === "welcome";
 
   return (
-    <main style={{ background: "#000", minHeight: "100vh", margin: 0, padding: 0, maxWidth: "none", width: "100%" }}>
+    <main style={{ background: "#fff", minHeight: "100vh", margin: 0, padding: 0, maxWidth: "none", width: "100%" }}>
       <style>{`html, body { margin: 0; padding: 0; background: #000; font-synthesis: none; }
         @font-face { font-family: 'HNW'; src: url('/newui/fonts/HNW-55Roman.woff2') format('woff2'), url('/newui/fonts/HNW-55Roman.ttf'); font-weight: 400; font-style: normal; font-display: block; }
         @font-face { font-family: 'HNW'; src: url('/newui/fonts/HNW-56It.woff2') format('woff2'), url('/newui/fonts/HNW-56It.ttf'); font-weight: 400; font-style: italic; font-display: block; }
@@ -3061,12 +3079,28 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         @keyframes nuiFadeOut { from { opacity: 1 } to { opacity: 0 } }
         @keyframes szGrow { from { transform: scale(0) } to { transform: scale(1) } }`}</style>
       {/* round 40: the page bands extend to the window edges so the 80%
-          artboard doesn't float like a card — black header stripe, white
-          content stripe, black below (the main background) */}
-      <div style={{ position: "absolute", left: 0, top: 0, width: "100%", height: HEADER_H * scale, background: "#000" }} />
-      <div style={{ position: "absolute", left: 0, top: HEADER_H * scale, width: "100%", height: (FOOTER_Y - HEADER_H) * scale, background: "#fff" }} />
-      <div style={{ width: W * scale, height: H * scale, position: "relative", margin: "0 auto" }}>
-        <div style={{ width: W, height: H, transform: `scale(${scale})`, transformOrigin: "top left", position: "absolute", overflow: "hidden", background: "#fff" }}>
+          artboard doesn't float like a card. ROUND 106 (owner's new
+          artboards): the bands are all WHITE now — the header and the
+          footer are told apart by ONE 1px black rule each, drawn out here
+          at window width so they stay exactly one device pixel at any
+          page scale (the same weight as the folder mark's outline). */}
+      <div style={{ position: "absolute", left: 0, top: 0, width: "100%", height: FOOT_RULE_Y * scale, background: "#fff" }} />
+      {/* the two rules run the whole width of the window. They are drawn
+          in a layer carrying the PAGE'S OWN transform, so the stretch in
+          the margins rasterises exactly like the stretch across the page
+          (the page redraws them over its boards, which cover this one) */}
+      {(["left", "right"] as const).map((side) => (
+        <div key={side} style={{ position: "absolute", [side]: 0, top: 0, width: `calc(50% - ${(W * scale) / 2}px)`, height: FOOT_RULE_Y * scale + 2, overflow: "hidden", pointerEvents: "none" }}>
+          <div style={{ position: "absolute", left: 0, top: 0, width: 4000, height: PAGE_H, transform: `scale(${scale})`, transformOrigin: "top left" }}>
+            <div style={{ position: "absolute", left: 0, top: HEADER_H - 0.5, width: 4000, height: 1, background: HAIRLINE }} />
+            <div style={{ position: "absolute", left: 0, top: FOOT_RULE_Y - 0.5, width: 4000, height: 1, background: HAIRLINE }} />
+          </div>
+        </div>
+      ))}
+      <div style={{ width: W * scale, height: PAGE_H * scale, position: "relative", margin: "0 auto" }}>
+        {/* the page box paints no ground of its own: the bands above are
+            the white, so the two hairlines are never covered */}
+        <div style={{ width: W, height: PAGE_H, transform: `scale(${scale})`, transformOrigin: "top left", position: "absolute", overflow: "hidden" }}>
 
           {/* sliding zone: every layer carries its board AND its live
               content, so nothing pops in after the slide; slides move as
@@ -3082,6 +3116,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     rides the band edge. The Final-Pack board has no bar, only
                     a baked back arrow to hide. */}
                 {p === "checkout" ? null : patch(0, 660, W, FOOTER_Y - 660, "barwipe")}
+                {/* ROUND 106: the boards also bake the OLD black header
+                    band; on a full-page slide it would show above the
+                    content, so it is wiped the same way */}
+                {fullSlide ? patch(0, 0, W, HEADER_H, "hdrwipe") : null}
                 {/* ROUND 63 (owner): page titles grew with the merged pages —
                     the baked 19px title is covered and redrawn live at 24 */}
                 {PAGE_TITLE[p] && (<>
@@ -3133,6 +3171,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             );
           })()}
 
+          {/* ROUND 106: the header and footer rules again, over the pages
+              (the boards paint their own ground over the ones behind the
+              box) — one page unit, the folder mark passes in front */}
+          <div style={{ ...px(0, HEADER_H - 0.5, W, 1), background: HAIRLINE, zIndex: 13 }} />
+          <div style={{ ...px(0, FOOT_RULE_Y - 0.5, W, 1), background: HAIRLINE, zIndex: 13 }} />
+
           {/* ROUND 71 #2 (owner): the folder mark, traced verbatim out of the
               artboard (two st4 paths: white fill, 0.75 black stroke) and
               placed at its own coordinates — it straddles the header edge,
@@ -3151,32 +3195,36 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               Pack, and what has been saved peeks out of it as a little deck
               of thumbnails between the folder's back and its front flap */}
           <button key={"fm" + folderBump} aria-label="final pack" className="nui-folder" onClick={() => { if (tut < 0 && pageNow.current !== "checkout" && dreams.length) go("checkout"); }}
-            style={{ ...px(1232.5, 33.9, 85.1, 70), zIndex: 55, ...ghost, cursor: "pointer", transformOrigin: "50% 62%", animation: folderBump > 0 ? `nuiFolderBump 560ms ${EASE} both` : "none", overflow: "visible" }}>
-            {/* round 94 #15: no thumbnails inside — the mark stays clean */}
+            style={{ ...px(1232.5, FOLDER_TOP, 85.1, 70), zIndex: 55, ...ghost, cursor: "pointer", transformOrigin: "50% 62%", animation: folderBump > 0 ? `nuiFolderBump 560ms ${EASE} both` : "none", overflow: "visible" }}>
+            {/* round 94 #15: no thumbnails inside — the mark stays clean.
+                ROUND 106: it sits 11.1 lower than before (the new artboard
+                hangs it off the rule by its tab) and its outline is 1px,
+                the same weight as the header and footer rules. */}
             <svg viewBox="1232.5 33.9 85.1 70" style={{ position: "absolute", left: 0, top: 0, width: 85.1, height: 70, pointerEvents: "none" }}>
-              <path d="M1233.31,103.1V38.26c0-1.98,1.34-3.59,2.99-3.59h25.27c.79,0,1.55.38,2.11,1.05l7.74,9.3c.56.67,1.32,1.05,2.11,1.05h25.27c1.65,0,2.99,1.61,2.99,3.59v7.81" fill="#fff" stroke="#000" strokeWidth="0.75" strokeMiterlimit="10" />
-              <path d="M1233.31,103.1h68.49l15.03-40.57c.88-2.38-.57-5.05-2.73-5.05h-61.95c-1.18,0-2.25.84-2.73,2.13l-16.11,43.49" fill="#fff" stroke="#000" strokeWidth="0.75" strokeMiterlimit="10" />
+              <path d="M1233.31,103.1V38.26c0-1.98,1.34-3.59,2.99-3.59h25.27c.79,0,1.55.38,2.11,1.05l7.74,9.3c.56.67,1.32,1.05,2.11,1.05h25.27c1.65,0,2.99,1.61,2.99,3.59v7.81" fill="#fff" stroke={HAIRLINE} strokeWidth="1" strokeMiterlimit="10" />
+              <path d="M1233.31,103.1h68.49l15.03-40.57c.88-2.38-.57-5.05-2.73-5.05h-61.95c-1.18,0-2.25.84-2.73,2.13l-16.11,43.49" fill="#fff" stroke={HAIRLINE} strokeWidth="1" strokeMiterlimit="10" />
             </svg>
           </button>
-          {/* STATIC header (real fonts, extracted geometry) */}
-          <div style={{ ...px(0, 0, W, HEADER_H), background: "#000" }}>
+          {/* STATIC header (real fonts, extracted geometry). ROUND 106: no
+              ground of its own — the white band behind it carries the rule */}
+          <div style={{ ...px(0, 0, W, HEADER_H), background: "transparent" }}>
             {/* round 56 #3 — TEMP DEV SWITCH (remove before launch); ROUND 63
                 moved out of the footer, to the left of the logo */}
             <button aria-label="toggle live generation"
               onClick={() => { const v = !liveGen; setLiveGen(v); liveGenRef.current = v; try { localStorage.setItem("nui-live-gen", v ? "1" : "0"); } catch { } }}
               style={{ ...px(18, 26, 110, 16), ...ghost, display: "flex", alignItems: "center", columnGap: 6, textTransform: "none" }}>
-              <span style={{ width: 22, height: 12, borderRadius: 7, border: "1px solid #666", position: "relative", background: "#111", boxSizing: "border-box", flex: "0 0 auto" }}>
-                <span style={{ position: "absolute", top: 1.5, left: liveGen ? 11.5 : 1.5, width: 7, height: 7, borderRadius: 4, background: liveGen ? "#3fd05e" : "#666", transition: "left 160ms" }} />
+              <span style={{ width: 22, height: 12, borderRadius: 7, border: "1px solid #bbb", position: "relative", background: "#fff", boxSizing: "border-box", flex: "0 0 auto" }}>
+                <span style={{ position: "absolute", top: 1.5, left: liveGen ? 11.5 : 1.5, width: 7, height: 7, borderRadius: 4, background: liveGen ? "#3fd05e" : "#bbb", transition: "left 160ms" }} />
               </span>
-              <span style={{ font: `300 9px ${HNW}`, color: "#666", whiteSpace: "nowrap" }}>live gen</span>
+              <span style={{ font: `300 9px ${HNW}`, color: "#aaa", whiteSpace: "nowrap" }}>live gen</span>
             </button>
-            <button onClick={() => go("welcome", -1)} style={{ ...px(138.2, 25.5, 100, 20), ...ghost, font: `700 19px ${HNW}`, color: "#fff", textAlign: "left", textTransform: "none" }}>8K</button>
+            <button onClick={() => go("welcome", -1)} style={{ ...px(138.2, 25.5, 100, 20), ...ghost, font: `700 19px ${HNW}`, color: INK, textAlign: "left", textTransform: "none" }}>8K</button>
             {/* menu + ENG/GEO: one baseline, even gaps, right edge on the
                progress line's right edge x1303 (round 22 #11) */}
             <div style={{ position: "absolute", right: W - 1200, top: 27.5, display: "flex", alignItems: "baseline", columnGap: 44 }}>
               {/* ROUND 63: the credit balance rides the header now (the
                   footer holds nothing but the bar) */}
-              <span style={{ font: `700 13px ${HNW}`, color: "#fff", whiteSpace: "nowrap" }}>
+              <span style={{ font: `700 13px ${HNW}`, color: INK, whiteSpace: "nowrap" }}>
                 {t("Credits available:")}{" "}
                 {spinning ? (
                   <span style={{ color: BAR_RED, fontWeight: 700 }}>{spinDigit}</span>
@@ -3187,13 +3235,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   <span style={{ color: BAR_RED, fontWeight: 700 }}>{genCredits}</span>
                 )}
               </span>
-              <span style={{ font: `700 13px ${HNW}`, color: "#fff", whiteSpace: "nowrap" }}>{t("About Us")}</span>
-              <span style={{ font: `700 13px ${HNW}`, color: "#fff", whiteSpace: "nowrap" }}>{t("Gallery")}</span>
-              <span style={{ font: `700 13px ${HNW}`, color: "#fff", whiteSpace: "nowrap" }}>{t("Contact")}</span>
+              <span style={{ font: `700 13px ${HNW}`, color: INK, whiteSpace: "nowrap" }}>{t("About Us")}</span>
+              <span style={{ font: `700 13px ${HNW}`, color: INK, whiteSpace: "nowrap" }}>{t("Gallery")}</span>
+              <span style={{ font: `700 13px ${HNW}`, color: INK, whiteSpace: "nowrap" }}>{t("Contact")}</span>
               <span style={{ display: "flex", alignItems: "baseline", columnGap: 5, whiteSpace: "nowrap" }}>
-                <button onClick={() => pickLang("en")} style={{ ...ghost, font: `${lang === "en" ? 700 : 300} 13px ${HNW}`, color: lang === "en" ? "#fff" : "#8a8a8a" }}>ENG</button>
+                <button onClick={() => pickLang("en")} style={{ ...ghost, font: `${lang === "en" ? 700 : 300} 13px ${HNW}`, color: lang === "en" ? INK : "#8a8a8a" }}>ENG</button>
                 <span style={{ font: `300 13px ${HNW}`, color: "#8a8a8a" }}>/</span>
-                <button onClick={() => pickLang("ge")} style={{ ...ghost, font: `${lang === "ge" ? 700 : 300} 13px ${HNW}`, color: lang === "ge" ? "#fff" : "#8a8a8a" }}>GEO</button>
+                <button onClick={() => pickLang("ge")} style={{ ...ghost, font: `${lang === "ge" ? 700 : 300} 13px ${HNW}`, color: lang === "ge" ? INK : "#8a8a8a" }}>GEO</button>
               </span>
             </div>
           </div>
@@ -3234,7 +3282,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     ...px(st.x - 130, baseTop(LABEL_BASE, BAR_FS), 260, 20), ...ghost,
                     pointerEvents: modalOpen ? "none" : "auto",
                     font: `${st.big ? 700 : 300} ${BAR_FS}px ${HNW}`, lineHeight: `${BAR_FS}px`,
-                    color: "#fff", textAlign: "center", textTransform: "none", whiteSpace: "nowrap",
+                    color: INK, textAlign: "center", textTransform: "none", whiteSpace: "nowrap",
                     /* round 72 #6: in the walkthrough a stop stays unnamed
                        until the button moves OFF it — the name fades in as
                        the button travels on. Outside it, every name shows. */
@@ -3244,49 +3292,36 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   {t(st.label)}</button>
               ))}
             </>)}
-            {/* ROUND 71 #4: the walkthrough's black card — geometry lifted
-                straight off the artboard (191.2 wide, its foot on 685.72,
-                a 20.6 pointer down to 706.31), centred on the arrow and
-                travelling with it. */}
+            {/* ROUND 106 (owner's artboards): the walkthrough's card is set
+                UNDER the bar, flush-left with the station it explains —
+                "STEP N /" in red, the title beside it in black, two italic
+                lines below. It travels with the button. The closing card is
+                one red word, "Start", under the button at the end. */}
             {tut >= 0 && tutX !== null && (() => {
               const card = TUT_CARDS[Math.min(tut, TUT_CARDS.length - 1)];
               const solo = card.body.length === 0;          /* the closing card */
-              /* round 73 #6: same box as every other card, text still
-                 sitting in its top-left corner */
-              const h = TB.full;
-              const top = TB.bottom - h;
-              const L = tutX - TB.w / 2;
+              const fs = lang === "ge" ? CARD_FS - 2 : CARD_FS;
+              const bfs = lang === "ge" ? CARD_BODY_FS - 1 : CARD_BODY_FS;
+              /* the last card's word sits ON the button; the step cards
+                 start at the station and read to the right */
+              const L = solo ? tutX - 27 : tutX;
               return (
-                <div key={"tut" + tut} style={{ ...px(L, top, TB.w, TB.bottom + (TB.tipY - TB.bottom) - top), pointerEvents: "none", animation: `nuiFadeIn 320ms ${EASE} both`, transition: `left ${SLIDE_MS}ms ${EASE}` }}>
-                  <div style={{ position: "absolute", left: 0, top: 0, width: TB.w, height: h, background: "#111" }} />
-                  {/* the pointer. ROUND 76 #4: it used to be a CSS triangle
-                      butted against the card, and at fractional page scales
-                      the two shapes left a hairline between them — one SVG
-                      path, overlapping the card by a pixel, cannot. */}
-                  <svg width={TB.w} height={TB.tipY - TB.bottom + 2} viewBox={`0 0 ${TB.w} ${TB.tipY - TB.bottom + 2}`}
-                    style={{ position: "absolute", left: 0, top: h - 1, display: "block" }}>
-                    <path d={`M${TB.w / 2 - TB.tipW} 0 H${TB.w / 2 + TB.tipW} L${TB.w / 2} ${TB.tipY - TB.bottom + 1} Z`} fill="#111" />
-                  </svg>
-                  {/* round 72 #4: a way out at any point — but not on the
-                      closing card, whose own arrow does exactly that */}
-                  {!solo && <button onClick={endTutorial}
-                    style={{ position: "absolute", right: TB.pad, top: baseTop(solo ? 22 : 26, 12), ...ghost, pointerEvents: "auto", font: `12px ${HNW}`, color: BAR_RED, textDecoration: "underline", textTransform: "none", cursor: "pointer", lineHeight: "12px" }}>
-                    {t("Skip")}</button>}
+                <div key={"tut" + tut} style={{ position: "absolute", left: L, top: 0, width: W - L, height: PAGE_H, pointerEvents: "none", animation: `nuiFadeIn 320ms ${EASE} both`, transition: `left ${SLIDE_MS}ms ${EASE}` }}>
                   {solo ? (
-                    card.title.map((ln, i) => (
-                      <span key={i} style={{ position: "absolute", left: TB.pad, top: baseTop(34.71 + i * 27.6, 23), width: TB.w - TB.pad, font: `700 ${lang === "ge" ? 18 : 23}px ${HNW}`, lineHeight: "23px", color: "#fff", whiteSpace: "nowrap" }}>{t(ln)}</span>
-                    ))
+                    <span style={{ position: "absolute", left: 0, top: baseTop(CARD_BASE + 0.85, 23), font: `700 23px ${HNW}`, lineHeight: "23px", color: BAR_RED, whiteSpace: "nowrap" }}>{t(card.title)}</span>
                   ) : (<>
-                    <span style={{ position: "absolute", left: TB.pad, top: baseTop(32.06, 23), width: TB.w - TB.pad, font: `700 ${lang === "ge" ? 19 : 23}px ${HNW}`, lineHeight: "23px", color: "#fff" }}>{t(card.step)}</span>
-                    {card.title.map((ln, i) => (
-                      <span key={"t" + i} style={{ position: "absolute", left: TB.pad, top: baseTop(58.06 + i * 18, 15), width: TB.w - TB.pad, font: `700 ${lang === "ge" ? 11 : 15}px ${HNW}`, lineHeight: "15px", color: "#fff", whiteSpace: "nowrap" }}>{t(ln)}</span>
+                    <span style={{ position: "absolute", left: 0, top: baseTop(CARD_BASE, fs), font: `700 ${fs}px ${HNW}`, lineHeight: `${fs}px`, whiteSpace: "nowrap" }}>
+                      <span style={{ color: BAR_RED }}>{t(card.step)} /</span>
+                      <span style={{ color: INK }}>{" "}{t(card.title)}</span>
+                    </span>
+                    {card.body.map((ln, i) => (
+                      <span key={"b" + i} style={{ position: "absolute", left: 0, top: baseTop(CARD_BASE + CARD_BODY[i], bfs), font: `italic ${bfs}px ${HNW}`, lineHeight: `${bfs}px`, color: INK, whiteSpace: "nowrap" }}>{t(ln)}</span>
                     ))}
-                    <div style={{ position: "absolute", left: TB.pad + 0.63, top: 93.67, width: TB.rule, height: 1, backgroundImage: "repeating-linear-gradient(90deg,#fff 0 5px,transparent 5px 10px)" }} />
-                    {lang === "ge" ? (
-                      <span style={{ position: "absolute", left: TB.pad, top: baseTop(118.57, 12), width: TB.w - TB.pad * 2 + 4, font: `italic 9.5px ${HNW}`, lineHeight: "14.4px", color: "#fff" }}>{card.body.map((ln) => t(ln)).join(" ")}</span>
-                    ) : card.body.map((ln, i) => (
-                      <span key={"b" + i} style={{ position: "absolute", left: TB.pad, top: baseTop(118.57 + i * 14.4, 12), width: TB.w - TB.pad + 6, font: `italic 12px ${HNW}`, lineHeight: "12px", color: "#fff", whiteSpace: "nowrap" }}>{t(ln)}</span>
-                    ))}
+                    {/* round 72 #4: a way out at any point — the last line
+                        of the card, so it never runs into the copy */}
+                    <button onClick={endTutorial}
+                      style={{ position: "absolute", left: 0, top: baseTop(CARD_BASE + CARD_BODY[1] + 16.4, 12), ...ghost, pointerEvents: "auto", font: `12px ${HNW}`, color: BAR_RED, textDecoration: "underline", textTransform: "none", cursor: "pointer", lineHeight: "12px" }}>
+                      {t("Skip")}</button>
                   </>)}
                 </div>
               );
@@ -3417,9 +3452,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             <span style={{ ...px(0, 700, W, 16), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block", zIndex: 7, position: "absolute" }}>{warn}</span>
           )}
 
-          {/* STATIC footer bar — ROUND 63: empty; the progress bar (drawn
-              after it, so it paints on top) is the only thing down here */}
-          <div style={{ ...px(0, FOOTER_Y, W, H - FOOTER_Y + 4), background: "#000" }} />
+          {/* STATIC footer — ROUND 63: empty; the progress bar (drawn after
+              it, so it paints on top) is the only thing down here.
+              ROUND 106: white, and it covers the boards' own baked black
+              footer; its rule is the one drawn at window width behind. */}
+          <div style={{ ...px(0, FOOT_RULE_Y, W, PAGE_H - FOOT_RULE_Y), background: "#fff" }} />
 
           {busyMsg && <div style={{ ...px(1090, 78, 320, 20), font: `13px ${HNW}`, color: "#8a887e", textAlign: "right" }}>{busyMsg}</div>}
 

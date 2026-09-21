@@ -2013,6 +2013,34 @@ composition-contract tightening, then customer wiring.
   artists' versions, artists earn a share per label. Live (2.28.48.43)
   stays on POPIKA_Back_To_Vector. Decisions: start with ONE artist, all
   three columns show her; no smart selection yet; share % undecided.
+- ROUND 106 — WHITE CHROME + THE NEW WALKTHROUGH CARD (2026-09-21,
+  owner's New_Progressbar_Tutorial_Header_Footer artboards in NEW UI/
+  Comments/New). (1) HEADER AND FOOTER ARE WHITE: the black bands are
+  gone; each is told by ONE 1px black rule (header y68.57, footer
+  y753.96 = FOOT_RULE_Y). The rules are drawn TWICE — once inside the
+  page box (1 page unit, z13, under the bar and the folder) and once in
+  each window margin inside a layer carrying the page's own transform,
+  so both halves rasterise identically and the seam is invisible; the
+  margins are clipped so the middle is never drawn twice (it read
+  heavier). Menu, logo and station labels are INK (#231f20); the dev
+  live-gen switch went pale grey. main + page box paint no black.
+  (2) THE PAGE BOX IS 932 TALL (PAGE_H) — the artboard's height; the
+  pages still live in the 1440x823 frame, the extra 109 is footer room
+  for the card. The boards' own baked black header is wiped on a full
+  slide (hdrwipe) as the baked bar always was. (3) THE FOLDER MARK sits
+  11.1 lower (FOLDER_DROP) so the rule crosses its tab, and its outline
+  is 1px like everything else; FOLDER_C (the save-flight target) moved
+  with it. (4) THE WALKTHROUGH CARD is no longer a black balloon: it is
+  set flush-left UNDER the station it explains — "STEP N /" red + the
+  title black, 15px bold, on CARD_BASE 828.01, two italic 12px lines at
+  +22.4/+36.8, then Skip. The last card is one red word, "Start", 23px
+  under the button at the end of the bar. TUT_CARDS is now one-line
+  titles; Georgian added for every new string. (5) THE READ ME ICON is
+  the owner's own ReadMe.svg (round 94's hand-traced sheet is gone),
+  its geometry mapped into the tree's 85x70 box at 1px stroke. NOT
+  changed: the red stays #B71318 (the boards are painted in it; the new
+  artboards use #c70001), and outside the walkthrough every station
+  keeps its name (the artboards only show walkthrough states).
 - ROUND 105 — THE ONE PAINTER (2026-09-20/21, owner after nine story
   tests, #1–#9 in Evaluate: "we have a winner: gpt-image → FLUX + LoRA
   0.60; make it the main model, remove every other model and interface
