@@ -84,14 +84,22 @@ export async function buildArtworkPrompt(brief: EvalBrief, artist: ArtistProfile
 const GPT_SIZE = { landscape: { w: 1536, h: 1024 }, portrait: { w: 1024, h: 1536 }, square: { w: 1024, h: 1024 } } as const;
 
 /* STEP 1 — the story, by gpt-image, with the artist's four works beside
-   the ask (and the customer's own sketch, when there is one) */
-export async function paintStory(model: EvalModel, ap: ArtworkPrompt, extra: { sketch?: string | null } = {}): Promise<string> {
+   the ask (and the customer's own sketch, when there is one).
+
+   2026-09-22 (the owner, on cost: "the gpt image is the dearest thing on
+   the bill, and as I understand it is only a sketch for FLUX to repaint
+   — is a big gpt image not a waste?"). It IS only a sketch: FLUX repaints
+   it at strength 0.60, so what survives into the label is the story and
+   the arrangement, not gpt-image's own rendering. The quality is a knob,
+   not a constant, so it can be proven and then set — see STORY_QUALITY. */
+export const STORY_QUALITY = (process.env.STORY_QUALITY as "low" | "medium" | "high") || "medium";
+export async function paintStory(model: EvalModel, ap: ArtworkPrompt, extra: { sketch?: string | null; quality?: "low" | "medium" | "high" } = {}): Promise<string> {
   const sketch = extra.sketch && extra.sketch.startsWith("data:image/") ? extra.sketch : null;
   const refs = artistRefs(model.artist.id);
   return generateOpenAIImage({
     prompt: ap.prompt + (sketch ? " The last image is the customer's own sketch: follow its subject and arrangement." : ""),
     references: [...refs, ...(sketch ? [sketch] : [])],
-    size: GPT_SIZE[ap.aspect], quality: "medium",
+    size: GPT_SIZE[ap.aspect], quality: extra.quality || STORY_QUALITY,
   } as never);
 }
 
@@ -114,7 +122,7 @@ export async function repaintInHand(model: EvalModel, story: string, ap: Artwork
 }
 
 /* both steps; `story` is kept so a failed repaint still yields a picture */
-export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt, extra: { sketch?: string | null } = {}): Promise<{ art: string; story: string; repainted: boolean; error?: string }> {
+export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt, extra: { sketch?: string | null; quality?: "low" | "medium" | "high" } = {}): Promise<{ art: string; story: string; repainted: boolean; error?: string }> {
   const story = await paintStory(model, ap, extra);
   try {
     return { art: await repaintInHand(model, story, ap), story, repainted: true };
