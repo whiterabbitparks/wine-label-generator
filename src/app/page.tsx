@@ -1843,6 +1843,27 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   };
   /* owner #15 / round 7 #2: input text italic (design st16); the underline is
      a SEPARATE fixed-length row line, not text-decoration */
+  /* 2026-09-22 (owner: "in the wine name field the address book pops up,
+     and the same on Region, Country"). The browser guesses what a field
+     is from the WORDS BESIDE IT — "Wine Name:" reads as a person's name,
+     "Region, Country:" as an address — and then offers the address book.
+     Nothing here is a person or an address, so every field says so:
+     an autocomplete token the browser does not recognise (which it must
+     treat as off), a name that matches none of its patterns, and the
+     opt-out each password manager reads. */
+  const noFill = (key: string) => ({
+    name: `fld-${key}`,
+    id: `fld-${key}`,
+    autoComplete: "off",
+    autoCorrect: "off",
+    autoCapitalize: "off",
+    spellCheck: false,
+    "data-lpignore": "true",
+    "data-1p-ignore": "",
+    "data-bwignore": "true",
+    "data-form-type": "other",
+  });
+
   const inputStyle: React.CSSProperties = { font: `italic 15px ${HNW}`, border: "none", outline: "none", background: "transparent", padding: "0 0 0 5px", color: "#111", lineHeight: "20px" };
   /* baseline offset of a 15px/20px-line input, computed from the REAL
      font metrics at runtime (round 8 #2): Safari and Chrome center line
@@ -2113,7 +2134,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             {t("Give me an idea")}
           </button>
           <div style={{ ...px(BOX.x, BOX.y, BOX.w, BOX.h), border: "1px solid #111", borderTopWidth: 2, borderLeftWidth: 2, boxSizing: "border-box", pointerEvents: "none" }} />
-          <textarea value={vision} onChange={(e) => setVision(e.target.value)} maxLength={2200}
+          <textarea value={vision} onChange={(e) => setVision(e.target.value)} maxLength={2200} {...noFill("vision")}
             style={{ ...px(BOX.x + 14, BOX.y + 12, BOX.w - 28, BOX.h - 40), ...inputStyle, fontStyle: "normal", fontSize: 14, textDecoration: "none", resize: "none", lineHeight: 1.5, overflow: "auto", background: "transparent", padding: 0 }} />
           <span style={{ ...px(BOX.x + BOX.w - 174, baseTop(BOX.y + BOX.h - 13, 11), 160, 14), font: `11px ${HNW}`, lineHeight: "11px", color: "#8a8a8a", textAlign: "right" }}>{words} / 300 {t("words")}</span>
           {/* round 107 #1 (owner): the size row starts at the prompt box's
@@ -2126,7 +2147,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             {([["Label Width:", "width"], ["Label Height:", "height"]] as const).map(([cap, key2], gi) => (
               <span key={key2} style={{ display: "flex", alignItems: "baseline", marginLeft: gi ? 28 : 0 }}>
                 <span style={{ font: `700 14px ${HNW}`, lineHeight: "14px" }}>{t(cap)}</span>
-                <input value={f[key2]} onChange={(e) => setF((m) => ({ ...m, [key2]: e.target.value.replace(/[^\d.]/g, "") }))}
+                <input value={f[key2]} {...noFill(key2)} onChange={(e) => setF((m) => ({ ...m, [key2]: e.target.value.replace(/[^\d.]/g, "") }))}
                   style={{ width: Math.max(1, (f[key2] || "").length) * 8.2 + 4, font: `italic 14px ${HNW}`, lineHeight: "14px", border: "none", borderBottom: "1px solid #111", outline: "none", background: "transparent", padding: 0, textAlign: "center", marginLeft: 4 }} />
                 <span style={{ font: `italic 14px ${HNW}`, lineHeight: "14px", marginLeft: 4 }}>{t("mm")}</span>
               </span>
@@ -2174,7 +2195,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             return (
               <span key={k2}>
                 <span style={{ ...px(891.8, baseTop(base, 14), 130, 14), font: `700 ${lang === "ge" ? 13 : 14}px ${HNW}`, lineHeight: "14px", color: "#111", whiteSpace: "nowrap" }}>{t(FRONT_LABELS[i])}</span>
-                <input value={f[k2] || ""} placeholder={t(FRONT_PH[i])}
+                <input value={f[k2] || ""} placeholder={t(FRONT_PH[i])} {...noFill(k2)}
                   onChange={(e) => setF((m) => ({ ...m, [k2]: e.target.value }))}
                   /* round 87 (owner): typed text sat ON its rule line — 2px up */
                   style={{ ...px(1012, base - IN_BASE * (14 / 15) - 2, 288, 20), ...inputStyle, fontSize: 14 }} />
@@ -2396,7 +2417,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {/* ROUND 76 #5 (owner): the caption sits ABOVE the box now, on its
               left edge and close to it — the whole box is writing space */}
           <span style={{ ...px(BOX.x, baseTop(196, 15), 300, 16), font: `700 15px ${HNW}`, lineHeight: "15px", color: "#111" }}>{t("Wine Description")}</span>
-          <textarea value={b.description || ""}
+          <textarea value={b.description || ""} {...noFill("description")}
             onChange={(e) => setB((m) => ({ ...m, description: e.target.value }))}
             style={{ ...px(BOX.x + 17, BOX.y + 16, BOX.w - 34, BOX.h - 48), ...inputStyle, fontStyle: "normal", textDecoration: "none", fontSize: 14, resize: "none", lineHeight: 1.45, overflow: "auto", background: "transparent", padding: 0 }} />
           <span style={{ ...px(BOX.x + BOX.w - 174, baseTop(BOX.y + BOX.h - 11, 11), 160, 14), font: `11px ${HNW}`, lineHeight: "11px", color: "#8a8a8a", textAlign: "right" }}>{dwords} / 300 {t("words")}</span>
@@ -2406,7 +2427,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             return (
               <span key={k}>
                 <span style={{ ...px(755.5, baseTop(base, 14), 230, 14), font: `700 ${lang === "ge" ? 13 : 14}px ${HNW}`, lineHeight: "14px", color: "#111", whiteSpace: "nowrap" }}>{t(BACK_LABELS[i])}</span>
-                <input value={b[k] || ""} placeholder={t(BACK_PH[i])}
+                <input value={b[k] || ""} placeholder={t(BACK_PH[i])} {...noFill(k)}
                   onChange={(e) => setB((m) => ({ ...m, [k]: e.target.value }))}
                   style={{ ...px(989, base - IN_BASE * (14 / 15) - 2, 311, 20), ...inputStyle, fontSize: 14 }} />
                 {rowLine(990, base + 2.5, 1302.86 - 990, `bln${i}`)}
@@ -2415,7 +2436,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           })}
           {/* ── barcode (ROUND 27's honest GTIN, in the mock's button row) ── */}
           <span style={{ ...px(139, baseTop(472, 14), 112, 14), font: `700 14px ${HNW}`, lineHeight: "14px" }}>{t("Barcode:")}</span>
-          <input value={gtin} onChange={(e) => setGtin(e.target.value)} placeholder="E.g. 4860012345676"
+          <input value={gtin} onChange={(e) => setGtin(e.target.value)} placeholder="E.g. 4860012345676" {...noFill("gtin")}
             style={{ ...px(232, 472 - IN_BASE * (14 / 15) - 2, 450, 20), ...inputStyle, fontSize: 14 }} />
           {rowLine(233, 474.5, 686 - 233, "gtln")}
           {gtin.trim() && (
