@@ -2013,6 +2013,28 @@ composition-contract tightening, then customer wiring.
   artists' versions, artists earn a share per label. Live (2.28.48.43)
   stays on POPIKA_Back_To_Vector. Decisions: start with ONE artist, all
   three columns show her; no smart selection yet; share % undecided.
+- CLEAN PAPER IS A RULE, NOT A TOUCH-UP (2026-09-22, owner: "Mariam's
+  generated images have the wrinkled paper background, it ruins the
+  seamless merging of the image into the label background colour… in
+  general, if we are using the ink area for the image, meaning leaving
+  some area of the image clean, it should be clean indeed, no paper
+  texture, no shadings, otherwise it will always create an unnecessary
+  visual edge between the image and the background"). The artist's LoRA
+  learns her PAPER as well as her hand, so FLUX returns the picture on
+  wrinkled, unevenly lit stock; the label paints one flat colour behind
+  it and the picture's rectangle shows. cleanPaper() (typeset/palette.ts)
+  now runs on every painting before it is composed: the ground is the
+  mode of a 5 % border ring, every pixel within a measured threshold is
+  set to EXACTLY that colour, and the band above it fades in over a
+  smoothstep so a wash still dissolves into paper — into a FLAT paper.
+  The drawing is never touched, and the pass refuses to run when the
+  border is not paper at all (a full-bleed painting), so nothing is ever
+  scrubbed out. Measured before writing it: the border ring of Mariam's
+  and Keta's paintings strays 6–17 levels from its own mode, which is
+  exactly the edge the owner could see. Thresholds adapt per picture
+  (t0 = clamp(p90×1.5+4, 14, 28), t1 = t0+24). Verified on all twelve
+  rated paintings of both artists, before and after, composed side by
+  side. A re-layout of a picture stored before this pass cleans it too.
 - AN ARTIST CAN BE SWITCHED OFF (2026-09-22, owner: "remove Tal's model
   at the moment, let's use Mariam and Keta's art"). profile.json carries
   `active`; false takes her out of everything — no column paints in her

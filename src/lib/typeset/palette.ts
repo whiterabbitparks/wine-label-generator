@@ -175,3 +175,81 @@ export async function vignetteOf(dataUrl: string): Promise<{ ground: string; box
   box.w = Math.min(1, (x1 + 1) / W + pad) - box.x; box.h = Math.min(1, (y1 + 1) / H + pad) - box.y;
   return { ground: hex(gr, gg, gb), box };
 }
+
+/* CLEAN PAPER (2026-09-22, the owner: "Mariam's generated images have the
+   wrinkled paper background, it ruins the seamless merging of the image
+   into the label background colour… if we are using the ink area for the
+   image, meaning leaving some area of the image clean, it should be clean
+   indeed, no paper texture, no shading — otherwise it will always create
+   an unnecessary visual edge between the image and the background").
+
+   The artist's LoRA learned her paper as well as her hand, so the picture
+   comes back on wrinkled, unevenly lit stock. The label then paints ONE
+   flat colour behind it and the picture's rectangle shows: its paper is a
+   few levels off the flat colour, and it is shaded across.
+
+   This pass makes the clean part of the picture actually clean. The
+   ground is the mode of a 5 % border ring; every pixel close to it is set
+   to EXACTLY that colour, and the band above it fades in over a soft
+   ramp, so a wash that dissolves into paper keeps dissolving — it just
+   dissolves into a flat colour. The drawing itself is never touched.
+
+   It refuses to run on a picture whose border is not paper at all (a
+   painting that fills its frame), so nothing is ever scrubbed out of a
+   full-bleed image. */
+export async function cleanPaper(dataUrl: string): Promise<{ art: string; ground: string; cleaned: boolean }> {
+  const buf = Buffer.from(dataUrl.slice(dataUrl.indexOf(",") + 1), "base64");
+  const { data, info } = await sharp(buf).flatten({ background: "#ffffff" }).raw().toBuffer({ resolveWithObject: true });
+  const W = info.width, H = info.height, C = info.channels;
+  const ring = Math.max(2, Math.round(Math.min(W, H) * 0.05));
+  const onRing = (x: number, y: number) => x < ring || x >= W - ring || y < ring || y >= H - ring;
+
+  /* the ground: the commonest colour on the border ring */
+  const bins = new Map<string, { n: number; r: number; g: number; b: number }>();
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    if (!onRing(x, y)) continue;
+    const i = (y * W + x) * C, k = `${data[i] >> 3}-${data[i + 1] >> 3}-${data[i + 2] >> 3}`;
+    const e = bins.get(k) || { n: 0, r: 0, g: 0, b: 0 };
+    e.n++; e.r += data[i]; e.g += data[i + 1]; e.b += data[i + 2]; bins.set(k, e);
+  }
+  const top = [...bins.values()].sort((a, b) => b.n - a.n)[0];
+  if (!top) return { art: dataUrl, ground: "#F4EFE3", cleaned: false };
+  const gr = top.r / top.n, gg = top.g / top.n, gb = top.b / top.n;
+  const ground = hex(gr, gg, gb);
+
+  /* how far the paper itself strays — the 90th percentile of the ring,
+     which stays honest even when the drawing runs off one edge */
+  const dist = (i: number) => Math.max(Math.abs(data[i] - gr), Math.abs(data[i + 1] - gg), Math.abs(data[i + 2] - gb));
+  const hist = new Uint32Array(256);
+  let ringN = 0;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    if (!onRing(x, y)) continue;
+    hist[Math.min(255, Math.round(dist((y * W + x) * C)))]++; ringN++;
+  }
+  let acc = 0, p90 = 0;
+  for (let d = 0; d < 256; d++) { acc += hist[d]; if (acc >= ringN * 0.9) { p90 = d; break; } }
+
+  /* the soft ramp: everything within t0 is paper, everything past t1 is
+     drawing, and the gap between them fades */
+  const t0 = Math.max(14, Math.min(28, p90 * 1.5 + 4));
+  const t1 = t0 + 24;
+
+  /* a border that is mostly NOT near the ground is not paper — leave the
+     picture exactly as the artist painted it */
+  let near = 0;
+  for (let d = 0; d <= Math.round(t0); d++) near += hist[d];
+  if (near < ringN * 0.6) return { art: dataUrl, ground, cleaned: false };
+
+  const out = Buffer.from(data);
+  for (let p = 0; p < W * H; p++) {
+    const i = p * C, d = dist(i);
+    if (d >= t1) continue;
+    let a = d <= t0 ? 0 : (d - t0) / (t1 - t0);
+    a = a * a * (3 - 2 * a);                       /* smoothstep, no banding */
+    out[i] = Math.round(gr + (data[i] - gr) * a);
+    out[i + 1] = Math.round(gg + (data[i + 1] - gg) * a);
+    out[i + 2] = Math.round(gb + (data[i + 2] - gb) * a);
+  }
+  const png = await sharp(out, { raw: { width: W, height: H, channels: C as 1 | 2 | 3 | 4 } }).png().toBuffer();
+  return { art: `data:image/png;base64,${png.toString("base64")}`, ground, cleaned: true };
+}

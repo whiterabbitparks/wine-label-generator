@@ -1,5 +1,6 @@
 import { buildArtworkPrompt, evalModel, generateArtwork, artistModels } from "@/lib/eval/models";
 import { composeLabel } from "@/lib/typeset/compose";
+import { cleanPaper } from "@/lib/typeset/palette";
 import { faceFile, pickRoles, mix } from "@/lib/typeset/fonts";
 import type { Layout } from "@/lib/typeset/compose";
 import { painterFor } from "./painters";
@@ -75,8 +76,13 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
   if (!model) throw new Error("no artist is set up yet (data/artists/<id>/profile.json + lora.json)");
   const ap = await buildArtworkPrompt(brief, model.artist);
   const painted = await gen429(() => generateArtwork(model, ap, { sketch: inp.sketch || null }));
-  const out = await composeLabel({ artwork: painted.art, style, texts: textsOf(inp.data), widthMm, heightMm, seed, wineColour: inp.data.wineColorName, fit: "vignette" });
-  return { png: out.png, svg: out.svg, art: painted.art, faces: out.faces, ink: out.ink, ground: out.layout.ground, prompt: ap.prompt, layout: out.layout, tag: layoutTag(style, seed), fit: "vignette", painter: model.id, artist: model.artist.name, repainted: painted.repainted };
+  /* 2026-09-22 (owner): the artist's LoRA learned her PAPER as well as
+     her hand, so the picture arrives wrinkled and unevenly lit, and its
+     rectangle then shows against the label's one flat colour. The clean
+     part of a picture must be clean — see cleanPaper. */
+  const art = (await cleanPaper(painted.art)).art;
+  const out = await composeLabel({ artwork: art, style, texts: textsOf(inp.data), widthMm, heightMm, seed, wineColour: inp.data.wineColorName, fit: "vignette" });
+  return { png: out.png, svg: out.svg, art, faces: out.faces, ink: out.ink, ground: out.layout.ground, prompt: ap.prompt, layout: out.layout, tag: layoutTag(style, seed), fit: "vignette", painter: model.id, artist: model.artist.name, repainted: painted.repainted };
 }
 
 /* ROUND 86 #3 (owner: "keep the image, just change the layout — tons of
@@ -105,7 +111,10 @@ export async function relayoutLabel(stored: { art: Buffer; meta: { style: string
     if (!fams.has(fam) && (i >= 20 || !buckets.has(b)) && bigOk) break;
     seed = (Math.random() * 0xffffffff) >>> 0;
   }
-  const art = `data:image/png;base64,${stored.art.toString("base64")}`;
+  const raw = `data:image/png;base64,${stored.art.toString("base64")}`;
+  /* a picture stored before the clean-paper pass still has its wrinkles;
+     a re-layout is the moment to take them out */
+  const art = (stored.meta.fit || "yield") === "vignette" ? (await cleanPaper(raw)).art : raw;
   const align = recipe.flip ? (pickRoles(style, seed).align === "center" ? "left" : "center") : undefined;
   const out = await composeLabel({ artwork: art, style, texts: textsOf(data), widthMm, heightMm, seed, paper: stored.meta.fit === "crop" ? undefined : ground, wineColour: data.wineColorName, align, fit: stored.meta.fit || "yield" });
   return { png: out.png, svg: out.svg, art, faces: out.faces, ink: out.ink, ground, prompt: "(re-layout of an existing painting)", layout: out.layout, tag: layoutTag(style, seed), fit: stored.meta.fit || "yield" };
