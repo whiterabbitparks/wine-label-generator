@@ -18,15 +18,24 @@ export interface ArtistProfile {
      works/); when absent, four are picked evenly through the folder */
   refs?: string[];
   status?: string;
+  /* 2026-09-22 (owner: "remove Tal's model at the moment, let's use
+     Mariam and Keta's art"). An artist set to false is OUT of the whole
+     site — no column paints in her hand, no page, no admin option — but
+     her works, her charter and her trained LoRA stay on disk, so
+     switching her back on is one word in this file. Missing = on. */
+  active?: boolean;
 }
+export const isActive = (p: ArtistProfile) => p.active !== false;
 export interface ArtistLora { url: string; trigger: string; steps: number; works: number; captions?: boolean; trainedAt: string }
 export interface Artist { profile: ArtistProfile; lora: ArtistLora | null; works: number }
 
 const safe = (s: string) => path.basename(String(s)).replace(/[^a-z0-9-]/g, "");
 
+/* every artist the site works with — an inactive one is left out of all
+   of them (readArtist still opens her by name, for the tools) */
 export function listArtists(): Artist[] {
   if (!fs.existsSync(ARTISTS_DIR)) return [];
-  return fs.readdirSync(ARTISTS_DIR).map((d) => readArtist(d)).filter((a): a is Artist => !!a);
+  return fs.readdirSync(ARTISTS_DIR).map((d) => readArtist(d)).filter((a): a is Artist => !!a && isActive(a.profile));
 }
 
 export function readArtist(id: string): Artist | null {

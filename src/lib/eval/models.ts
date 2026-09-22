@@ -4,7 +4,7 @@ import { getDb } from "@/lib/db";
 import { DEFAULT_REGIONS } from "./regions";
 import type { EvalBrief } from "./briefs";
 import { aspectOf } from "./briefs";
-import { readArtist, listArtists, artistRefs, artistCharter, type ArtistProfile } from "@/lib/label/artists";
+import { readArtist, listArtists, artistRefs, artistCharter, isActive, type ArtistProfile } from "@/lib/label/artists";
 
 /* THE PAINTER (round 105, 2026-09-20 — the owner, after nine story
    tests: "we have a winner: gpt-image → FLUX + LoRA at 0.60; drop every
@@ -37,7 +37,10 @@ export function evalModel(id: string): EvalModel | null {
 }
 export function artistModel(artistId: string): EvalModel | null {
   const a = readArtist(artistId);
-  if (!a) return null;
+  /* an artist switched off (profile.json "active": false) has no model,
+     so even a saved column map pointing at her falls through to one of
+     the artists who are on */
+  if (!a || !isActive(a.profile)) return null;
   return { id: `artist:${a.profile.id}`, name: a.profile.name, artist: a.profile, lora: a.lora ? { url: a.lora.url, trigger: a.lora.trigger } : null };
 }
 export function artistModels(): EvalModel[] {

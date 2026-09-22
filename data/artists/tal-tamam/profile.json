@@ -23,5 +23,6 @@
   ],
   "page": false,
   "pageOrder": 3,
-  "crop": "50% 40%"
+  "crop": "50% 40%",
+  "active": false
 }
