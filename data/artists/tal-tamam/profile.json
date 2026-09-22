@@ -20,5 +20,8 @@
     "work-10.jpg",
     "work-17.jpg",
     "work-23.jpg"
-  ]
+  ],
+  "page": false,
+  "pageOrder": 3,
+  "crop": "50% 40%"
 }

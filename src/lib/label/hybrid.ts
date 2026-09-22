@@ -24,6 +24,8 @@ export interface HybridInput {
   heightMm: number;
   sketch?: string | null;
   seed?: number;
+  /* round 112 #4: paint in THIS artist's hand, whatever the column says */
+  artistId?: string;
 }
 export interface HybridOutput {
   png: string;          /* data URL — the print bitmap at 12 px/mm */
@@ -68,7 +70,8 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
   const heightMm = Math.min(300, Math.max(30, inp.heightMm || 80));
   const brief = { id: "wizard", title: "wizard", vision: inp.vision, data: inp.data, width: widthMm, height: heightMm };
   /* the column's artist (admin → Artists); any artist with a LoRA if unset */
-  const model = evalModel(await painterFor(style)) || artistModels().find((m) => m.lora) || artistModels()[0];
+  const model = (inp.artistId ? evalModel(`artist:${inp.artistId}`) : null)
+    || evalModel(await painterFor(style)) || artistModels().find((m) => m.lora) || artistModels()[0];
   if (!model) throw new Error("no artist is set up yet (data/artists/<id>/profile.json + lora.json)");
   const ap = await buildArtworkPrompt(brief, model.artist);
   const painted = await gen429(() => generateArtwork(model, ap, { sketch: inp.sketch || null }));

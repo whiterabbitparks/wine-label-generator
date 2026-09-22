@@ -20,7 +20,7 @@ const DATA_KEYS = [
 ] as const;
 
 export async function POST(req: Request) {
-  let body: { vision?: string; style?: string; data?: Record<string, string>; sketch?: string | null; width?: number; height?: number; relayout?: string; variants?: number };
+  let body: { vision?: string; style?: string; data?: Record<string, string>; sketch?: string | null; width?: number; height?: number; relayout?: string; variants?: number; artist?: string };
   try {
     body = await req.json();
   } catch {
@@ -36,6 +36,9 @@ export async function POST(req: Request) {
   const sketch = typeof body.sketch === "string" && body.sketch.startsWith("data:image/") && body.sketch.length < 8_000_000
     ? body.sketch : null;
   const widthMm = Number(body.width) || 110, heightMm = Number(body.height) || 80;
+  /* ROUND 112 #4: a visitor who started from an artist's page has every
+     column painted in THAT artist's hand, whoever the admin set */
+  const artist = /^[a-z0-9-]{1,40}$/.test(String(body.artist || "")) ? String(body.artist) : "";
 
   const enc = new TextEncoder();
   const stream = new ReadableStream({
@@ -47,7 +50,7 @@ export async function POST(req: Request) {
         send({ type: "progress", stage: base ? "setting" : "painting" });
         const out = base
           ? await relayoutLabel(base, data)
-          : await paintHybridLabel({ vision, style, data, widthMm, heightMm, sketch });
+          : await paintHybridLabel({ vision, style, data, widthMm, heightMm, sketch, artistId: artist || undefined });
         const m = base ? base.meta : { style, widthMm, heightMm, fit: out.fit };
         const id = saveLabel({ style: m.style, widthMm: m.widthMm, heightMm: m.heightMm, faces: out.faces, ground: out.ground, svg: out.svg, png: out.png, art: out.art, prompt: out.prompt, layout: out.layout, fit: m.fit });
         /* medium-res JPEG for the page's views — the PNG stays the print source */

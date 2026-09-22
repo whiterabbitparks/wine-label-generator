@@ -2013,6 +2013,36 @@ composition-contract tightening, then customer wiring.
   artists' versions, artists earn a share per label. Live (2.28.48.43)
   stays on POPIKA_Back_To_Vector. Decisions: start with ONE artist, all
   three columns show her; no smart selection yet; share % undecided.
+- ROUND 112 — VEILS, POINTER, NO CREDITS, AND THE ARTISTS' PAGES
+  (2026-09-22, owner). (1) A modal's white veil ran from HEADER_H to
+  FOOTER_Y, which is INSIDE both 1px rules, so opening a popup made the
+  black lines look thin. Every band overlay (confirm, gallery, empty-
+  fields, the walkthrough's blank page and its click-blocker) now runs
+  VEIL_TOP..VEIL_BOT — a unit clear of each rule. Verified by pixels:
+  the rules read the same weight under a popup as beside it. (2) The
+  walkthrough's POINTER is the one exception to "nothing over the bar":
+  z70 (its tap ring z69), so it is seen pressing the red button instead
+  of hiding behind it. (3) THE CREDIT ECONOMY IS OUT of this branch —
+  GENS, gensMode, genCredits, requestCredit, the purchase page, the
+  mailing-list gift modal, the header balance and the popup's "costs N
+  credits" lines are all gone; making a label is free for now. The
+  Final Pack's own prices are untouched. (4) THE ARTISTS' PAGES, from
+  the owner's artboards: the header's "Gallery" became ARTISTS, which
+  opens an index (title, paragraph, contact line, a 6x2 grid of round
+  portraits, empty slots grey #e6e6e6) and each artist's own page
+  (portrait banner 342.86x137.14, name, biography, the black "Create
+  label with X's art" button, Original art / Labels from X, her link,
+  and six works in 205.71 squares). Both are ORDER pages with no
+  progress bar; the red button becomes a BACK arrow at the rule's left
+  end (BACK_X). Content comes from the public /api/artists, which reads
+  data/artists/<id>/profile.json (new fields: bio, page, pageOrder,
+  crop) and the pictures prepared from the artboards into
+  public/newui/artists/<id>/ (portrait.jpg + work1-6.jpg, 1.2MB total).
+  "Create label with X's art" sets `artist` on the label request, which
+  paintHybridLabel honours over the column's own painter — all three
+  columns then paint in that artist's hand. NOTE FOR THE OWNER: the
+  biography on Keta Dvali's artboard names "Keta Shashiashvili"; it is
+  live as written and needs his check.
 - ROUND 111 — ONE BOTTOM LINE ON YOUR VISION, AND A FROZEN BAR
   (2026-09-21, owner). (1) The page now has a single foot, VIS_FOOT =
   655 — the dashed column rule's own end (133 + 522). Three things end

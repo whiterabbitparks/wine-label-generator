@@ -152,6 +152,20 @@ export const SVG_GE: Record<string, string> = {
 
 export const UI_GE: Record<string, string> = {
   "Skip": "გამოტოვება",
+  /* round 112 #4: the artists' pages */
+  "Artists": "ხელოვანები",
+  "ARTISTS WHO TRAINED OUR MODELS": "ᲮᲔᲚᲝᲕᲐᲜᲔᲑᲘ, ᲠᲝᲛᲚᲔᲑᲛᲐᲪ ᲒᲐᲬᲕᲠᲗᲜᲔᲡ ᲩᲕᲔᲜᲘ ᲛᲝᲓᲔᲚᲔᲑᲘ",
+  "Our platform brings together AI and a carefully curated group of human artists.": "ჩვენი პლატფორმა აერთიანებს AI-ს და საგულდაგულოდ შერჩეულ ხელოვანებს.",
+  "Each of our AI artists is developed in collaboration with one specific human artist,": "თითოეული ჩვენი AI ხელოვანი იქმნება ერთ კონკრეტულ ხელოვანთან ერთად,",
+  "trained on their work, visual language, and creative approach.": "მის ნამუშევრებზე, ვიზუალურ ენასა და მიდგომაზე დაყრდნობით.",
+  "Explore the master artists behind our models and discover their original work.": "გაეცანით ხელოვანებს ჩვენი მოდელების უკან და მათ ორიგინალურ ნამუშევრებს.",
+  "Please": "გთხოვთ,",
+  "contact": "დაგვიკავშირდეთ",
+  ", if you are an artist and want to participate.": ", თუ ხელოვანი ხართ და მონაწილეობა გსურთ.",
+  "Create label with": "შექმენი ეტიკეტი",
+  "’s art": "-ს ხელით",
+  "Original art": "ორიგინალური ნამუშევრები",
+  "Labels from": "ეტიკეტები —",
   /* round 75: the Final Pack paragraph (outlined on the board, drawn live) */
   "After payment, you\u2019ll be able to download your": "გადახდის შემდეგ შეძლებთ ჩამოტვირთოთ თქვენი",
   "Final Pack with high-resolution, print-ready files,": "საბოლოო პაკეტი — მაღალი გარჩევადობის, საბეჭდად მზა",

@@ -69,7 +69,11 @@ const HNW = "'HNW', 'Helvetica Neue', Helvetica, sans-serif";
    Your Vision second — generation fires from the vision page now */
 /* ROUND 63 (owner's new mocks): Your Vision + Front Label Details are ONE
    page, and Back Label Details + Market Compliance are ONE page. */
-const ORDER = ["welcome", "vision", "loader", "options", "backdetails", "backdesign", "bottle", "assets", "checkout", "blank"] as const;
+const ORDER = ["welcome", "vision", "loader", "options", "backdetails", "backdesign", "bottle", "assets", "checkout", "blank",
+  /* ROUND 112 #4 (owner's artboards): the people behind the paintings —
+     an index of everyone who trained a model, and a page each. They are
+     not wizard steps: no progress bar, and the red button walks back. */
+  "artists", "artist"] as const;
 /* round 38 #1: crown caps exist only on these bottles */
 const CROWN_TYPES = ["Burgundy", "Sparkling", "Alsace / Rhine"];
 /* round 38 #2: label anchors from the owner's positioning charts (same
@@ -127,6 +131,11 @@ const DOT_SMALL = 3.15;
 const LINE_H = 4;
 const LABEL_BASE = 794.68;     /* station labels' baseline (round 109: pulled down) */
 const FOOT_RULE_Y = 753.96;    /* the footer's 1px hairline, straight off the artboard */
+/* ROUND 112 #1 (owner: "the black line goes thin when a popup opens"):
+   a modal's white veil ran from HEADER_H to FOOTER_Y — INSIDE both rules
+   (each is a unit thick, centred on its line), so it washed out the half
+   it covered. Every veil now stops a unit clear of them. */
+const VEIL_TOP = HEADER_H + 1.5, VEIL_BOT = FOOT_RULE_Y - 1.5;
 /* ROUND 106: the walkthrough's card, set flush-left under the station it
    explains — "STEP N /" in red, the title in black beside it, the body in
    italic below. All three baselines are the artboard's. */
@@ -137,6 +146,7 @@ const CARD_BASE = 823.61, CARD_BODY = [18.4, 32.8], CARD_FS = 15, CARD_BODY_FS =
 const NEXT_R = 18.09;          /* red round button — round 109: smaller again (was 27) */
 const NEXT_X = 1302.86;        /* its centre on working pages … */
 const WELCOME_X = 168.1;       /* … and on the welcome page */
+const BACK_X = 155.23;         /* round 112 #4: artists' pages — a BACK button at the rule's left end */
 const STEPS: { x: number; label: string; page: PageKey; big: boolean }[] = [
   { x: 303.38, label: "Front Label Details", page: "vision", big: false },
   { x: 469.98, label: "FRONT LABEL", page: "options", big: true },
@@ -169,9 +179,10 @@ const THICK: Record<PageKey, number | null> = {
   assets: CIRCLE_X[5],
   checkout: CIRCLE_X[5],                         /* round 93 #7: to the last station, not into the button */
   blank: null,                                    /* round 94 #2: takes the page it stands in for */
+  artists: null, artist: null,                    /* round 112 #4: no bar on the artists' pages */
 };
 /* highest station index REACHED — that dot (and earlier ones) turn red */
-const STEP_OF: Record<PageKey, number> = { welcome: -1, vision: 0, loader: 0, options: 1, backdetails: 2, backdesign: 3, bottle: 4, assets: 5, checkout: 5, blank: 0 };
+const STEP_OF: Record<PageKey, number> = { welcome: -1, vision: 0, loader: 0, options: 1, backdetails: 2, backdesign: 3, bottle: 4, assets: 5, checkout: 5, blank: 0, artists: -1, artist: -1 };
 
 /* ROUND 63: the bar no longer eats a white strip — every page's content
    band runs to the footer edge and the bar paints on top of it. */
@@ -184,6 +195,7 @@ const STRIP_BOUNDS: Record<PageKey, [number, number]> = {
   welcome: [360, 560], vision: [225, 460], loader: [225, 460],
   options: [225, 543], backdetails: [225, 468],
   backdesign: [165, 540], bottle: [225, 515], assets: [165, 540], checkout: [250, 500], blank: [225, 460],
+  artists: [300, 560], artist: [330, 560],
 };
 
 /* CONTENT-AWARE PARALLAX (owner round 16 #3): these pages slice by their
@@ -470,27 +482,6 @@ export default function NewUI() {
     return v === 0 ? dreams[col] || null : styleVars[col]?.[v - 1] || null;
   };
   const varT = useRef(0);
-  /* ROUND 49 #2 (owner): the variations buttons never disappear — the
-     FIRST run is free, every later run asks for an email once (kept in
-     localStorage; real send-a-code verification needs an email provider
-     and plugs in here later). emailModal holds the pending style. */
-  const [varEmail, setVarEmail] = useState("");
-  const [emailModal, setEmailModal] = useState("");
-  const [emailInput, setEmailInput] = useState("");
-  const [emailErr, setEmailErr] = useState(false);
-  useEffect(() => { try { const e = localStorage.getItem("nui-var-email"); if (e) setVarEmail(e); } catch { } }, []);
-  /* ROUND 50 #2 (owner): from the THIRD variations run on, generation is
-     paid — a generation-credit balance (1 credit = 1 image, one run = 3)
-     bought on the checkout page via a single-select top-up list. TEMP:
-     Pay simply adds the credits (no real payment yet, "before IP reset"). */
-  /* round 54: CREDITS — 1 credit = one 3-label run OR one assets pack */
-  const GENS = [
-    { name: "3 Credits", price: 2.99, gens: 3 },
-    { name: "5 Credits", price: 3.99, gens: 5 },
-    { name: "10 Credits", price: 7.99, gens: 10 },
-    { name: "100 Credits", price: 69.99, gens: 100 },
-  ];
-  const [gensMode, setGensMode] = useState(false);
   /* ROUND 54 #2: pre-generation confirmation popups — a run starts only
      after the customer reviews everything that shapes the result */
   const [confirmModal, setConfirmModal] = useState<"" | "labels" | "assets">("");
@@ -515,38 +506,10 @@ export default function NewUI() {
   const [termsOpen, setTermsOpen] = useState(false);
   const [termsPos, setTermsPos] = useState(0);
   const termsRef = useRef<HTMLDivElement | null>(null);
-  const [gensSel, setGensSel] = useState(0);
-  const [genCredits, setGenCredits] = useState(0);
-  /* ROUND 56 #7 (owner): every visitor STARTS with 3 credits; every
-     generation (labels run, variations run, assets pack, more
-     variations) costs 1. At zero: no email yet → the mailing-list gift
-     modal (+1); email known → the CREDITS purchase page. */
-  /* round 57 #1 (owner): every browser refresh starts the balance over */
-  useEffect(() => { setGenCredits(5); }, []);
-  const saveCredits = (n: number) => setGenCredits(n);
-  const gensReturn = useRef<PageKey>("options");
-  /* round 56 #8: the mailing-list gift spins the indicator like a slot
-     machine up to the new balance */
-  const [spinning, setSpinning] = useState(false);
-  const [spinDigit, setSpinDigit] = useState(0);
-  const grantCredit = (n: number) => {
-    saveCredits(genCredits + n);
-    setSpinning(true);
-    let k = 0;
-    const iv = setInterval(() => {
-      k++; setSpinDigit(Math.floor(Math.random() * 10));
-      if (k > 13) { clearInterval(iv); setSpinning(false); }
-    }, 65);
-  };
-  /* ONE gate for every paid action: spends a credit or routes to the
-     gift modal / purchase page. Returns true when the action may run. */
-  const requestCredit = (from: PageKey, cost = 1): boolean => {
-    /* round 62 #3: 1 credit = 1 label — the initial 3-label run costs 3 */
-    if (genCredits >= cost) { saveCredits(genCredits - cost); return true; }
-    if (!varEmail) { setEmailInput(""); setEmailErr(false); setEmailModal("gift"); return false; }
-    gensReturn.current = from; setGensMode(true); setGensSel(0); go("checkout");
-    return false;
-  };
+  /* ROUND 112 #3 (owner): the CREDIT ECONOMY is out of the artists'
+     branch — no balance in the header, no purchase page, no mailing-list
+     gift, no "costs N credits" line. Making a label is free for now; the
+     Final Pack's own prices are untouched. */
   /* round 56 #3 (owner, TEMP DEV TOOL — remove before launch): the
      footer switch fakes every generation with already-made images */
   const [liveGen, setLiveGen] = useState(true);
@@ -1006,7 +969,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     if (assetsRunning.current || moreRunning.current || assetsStage) return;
     const sel = customLabel ? { style: "contemporary", dream: customLabel, preview: null as string | null } : viewedDream(selected);
     if (!sel) return;
-    if (!requestCredit("assets")) return;
     const base = lifeTarget;
     const batch = Math.floor(base / 5);
     setLifeTarget(base + 5);
@@ -1067,12 +1029,26 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   /* round 18 #5: every order gets a product code — the QR points to its
      future landing page (domain configurable when it exists) */
   const productCode = useRef(Math.random().toString(36).slice(2, 10));
+  /* ROUND 112 #4 (owner's artboards): the ARTISTS pages — an index of
+     everyone who trained a model, and a page each. Read from the public
+     /api/artists (name, biography, link and the pictures on disk). */
+  interface SiteArtist { id: string; name: string; bio: string; link: string; linkKind: "instagram" | "site" | ""; portrait: string; crop: string; works: string[] }
+  const [siteArtists, setSiteArtists] = useState<SiteArtist[]>([]);
+  const [artistId, setArtistId] = useState("");
+  const artistsFrom = useRef<PageKey>("welcome");
+  /* the artist a visitor chose on that page: every column then paints in
+     her hand instead of the three the admin set */
+  const [chosenArtist, setChosenArtist] = useState("");
+  useEffect(() => {
+    fetch("/api/artists").then((r) => r.json()).then((b) => setSiteArtists(b.artists || [])).catch(() => { });
+  }, []);
+  const openArtists = () => { if (page !== "artists" && page !== "artist") artistsFrom.current = pageNow.current; go("artists"); };
   const [boards, setBoards] = useState<Record<string, string>>({});
   const [boardsGe, setBoardsGe] = useState<Record<string, string>>({});
   useEffect(() => {
     /* inline the artboards: SVG-in-<img> cannot use page fonts (the
        owner's Safari font complaint) — inline SVG can */
-    ORDER.forEach((p) => {
+    ORDER.filter((p) => p !== "artists" && p !== "artist").forEach((p) => {
       fetch(`/newui/${p}.svg`).then((r) => r.text()).then((t) =>
         {
           const processed = namespaceSvg(t, p).replace(/<\?xml[^>]*\?>/, "").replace(/<svg /, '<svg preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%" ')
@@ -1153,7 +1129,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       const target = st.page && (ORDER as readonly string[]).includes(st.page) ? (st.page as PageKey) : "welcome";
       if (tutRef.current >= 0) stopTutRef.current();
       if (target === pageNow.current) return;
-      setGensMode(false);
       /* a history jump must never start a paid generation */
       barJumped.current = true;
       go(target, ORDER.indexOf(target) > ORDER.indexOf(pageNow.current) ? 1 : -1, false);
@@ -1491,6 +1466,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const fx = (k: string) => f[k]?.trim() || "";
     return {
       aspectKey,
+      /* round 112 #4: a visitor who came from an artist's page has ALL
+         three columns painted in that artist's hand */
+      artist: chosenArtist || undefined,
       /* round 84: the hybrid engine sets type to the label's real mm */
       width: Number(f.width) || 110, height: Number(f.height) || 80,
       data: {
@@ -1514,7 +1492,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       const d0 = pool[Math.floor(Math.random() * Math.max(1, pool.length))];
       return { style, dream: d0?.dream || FAKE_IMG, preview: d0?.preview || null };
     }
-    const { data, aspectKey, width, height } = buildDreamPayload();
+    const { data, aspectKey, width, height, artist } = buildDreamPayload();
     /* round 86 #3: a variation keeps the column's painting and only
        re-sets the type (the server needs the label's id); a label without
        an id (pre-hybrid) is painted afresh */
@@ -1559,7 +1537,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     setVarBusyCol(-1);
   }
   /* ROUND 86 #3 (owner): a variation re-sets the type on the SAME painting
-     — no model call, so no credit (round 56 #7's gate is lifted here) */
+     — no model call at all */
   const requestVariations = (fi: number) => {
     if (varBusyCol >= 0) return;
     if ((styleVars[fi]?.length || 0) >= MAX_VARS) return;   /* round 88 #9: two rows, full */
@@ -1594,25 +1572,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     setTimeout(() => setWarn(""), 3200);
     return false;
   };
-  /* TEMP (owner, "before IP reset"): Pay just adds the credits; if a
-     style click brought us here, that run fires right away (minus its 3) */
-  const payForGenerations = () => {
-    /* ROUND 51 #4 (owner): buying does NOT auto-generate — back to
-       where they came from; they press the button themselves */
-    saveCredits(genCredits + GENS[gensSel].gens);
-    setGensMode(false);
-    go(gensReturn.current || "options", -1);
-  };
-  const submitVarEmail = () => {
-    const e = emailInput.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e)) { setEmailErr(true); return; }
-    setVarEmail(e); try { localStorage.setItem("nui-var-email", e); } catch { }
-    setEmailModal("");
-    /* round 56 #8: the gift button NEVER generates — it grants the
-       credit and the indicator rolls up like a slot machine */
-    grantCredit(1);
-  };
-
   async function nextFromFront() {
     /* owner #14: regenerate ONLY when inputs changed */
     if (dreams.length && frontSig === sigFront()) { go("options"); return; }
@@ -1621,7 +1580,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const genT0 = Date.now();   /* round 46: feed the loader's REAL average */
     /* round 84: ONE payload builder — this copy still carried the demo
        fallback that round 78 removed from buildDreamPayload */
-    const { data, aspectKey, width, height } = buildDreamPayload();
+    const { data, aspectKey, width, height, artist } = buildDreamPayload();
     const one = async (style: string): Promise<Dream> => {
       /* round 56 #3 (TEMP dev switch): fake the run with existing art */
       if (!liveGenRef.current) {
@@ -1634,7 +1593,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       }
       const r = await fetch("/api/dream-label", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ vision, style, data, sketch, aspect: aspectKey, width, height, variants: 3 }),
+        body: JSON.stringify({ vision, style, data, sketch, aspect: aspectKey, width, height, variants: 3, artist }),
       });
       if (!r.ok || !r.body) throw new Error(`generation failed (${r.status})`);
       const reader = r.body.getReader(); const dec = new TextDecoder();
@@ -1990,6 +1949,89 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       case "welcome":
         /* ROUND 63: the start action is the red round button on the bar */
         return patch(118, 658, 70, 54, "welarrow");
+
+      /* ================= ROUND 112 #4: THE ARTISTS =================
+         Straight off the owner's artboards. The index: a title, the
+         paragraph, the contact line, and a six-by-two grid of round
+         portraits with the names under them — a slot the platform has
+         not filled yet is an empty grey disc. Press one and that
+         artist's own page opens. */
+      case "artists": {
+        const R = 68.57, CX0 = 205.71, DX = 205.71, CY0 = 342.86, DY = 240, NAME_B = 445.51;
+        const slots = 12;
+        return (<>
+          <span style={{ ...px(137.14, baseTop(151.08, 19), 700, 22), font: `700 19px ${HNW}`, lineHeight: "19px", color: INK, whiteSpace: "nowrap" }}>{t("ARTISTS WHO TRAINED OUR MODELS")}</span>
+          {[
+            "Our platform brings together AI and a carefully curated group of human artists.",
+            "Each of our AI artists is developed in collaboration with one specific human artist,",
+            "trained on their work, visual language, and creative approach.",
+            "Explore the master artists behind our models and discover their original work.",
+          ].map((ln, i) => (
+            <span key={"ai" + i} style={{ ...px(136.97, baseTop(183.62 + i * 18, 15), 640, 18), font: `15px ${HNW}`, lineHeight: "15px", color: INK, whiteSpace: "nowrap" }}>{t(ln)}</span>
+          ))}
+          <span style={{ ...px(754.29, baseTop(183.62, 15), 560, 18), font: `15px ${HNW}`, lineHeight: "15px", color: INK, whiteSpace: "nowrap" }}>
+            {t("Please")}{" "}
+            <a href="mailto:hello@8klabels.com" style={{ font: `700 15px ${HNW}`, color: INK, textDecoration: "underline" }}>{t("contact")}</a>
+            {t(", if you are an artist and want to participate.")}
+          </span>
+          {Array.from({ length: slots }, (_, i) => {
+            const cx = CX0 + (i % 6) * DX, cy = CY0 + Math.floor(i / 6) * DY;
+            const a2 = siteArtists[i];
+            if (!a2) return <span key={"slot" + i} style={{ ...px(cx - R, cy - R, R * 2, R * 2), borderRadius: R, background: "#e6e6e6" }} />;
+            const parts = a2.name.split(" ");
+            return (
+              <button key={a2.id} onClick={() => { setArtistId(a2.id); go("artist"); }}
+                style={{ ...px(cx - 110, cy - R, 220, R * 2 + 90), ...ghost, cursor: "pointer", textTransform: "none" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={a2.portrait} alt={a2.name}
+                  style={{ position: "absolute", left: 110 - R, top: 0, width: R * 2, height: R * 2, borderRadius: R, objectFit: "cover", objectPosition: a2.crop, display: "block" }} />
+                {parts.map((w, k) => (
+                  <span key={k} style={{ position: "absolute", left: 0, top: baseTop(NAME_B - cy + R + k * 22.8, 19), width: 220, textAlign: "center", font: `700 19px ${HNW}`, lineHeight: "19px", color: INK, whiteSpace: "nowrap", textTransform: "uppercase" }}>{w}</span>
+                ))}
+              </button>
+            );
+          })}
+        </>);
+      }
+
+      /* one artist: her portrait, her words, the button that starts a
+         label in her hand, and six of her own paintings */
+      case "artist": {
+        const a2 = siteArtists.find((x) => x.id === artistId) || siteArtists[0];
+        if (!a2) return null;
+        const first = a2.name.split(" ")[0];
+        const BX = 137.14, BW = 342.86;
+        const WK = 205.71, WGAP = 274.29, WX = 548.57, WY = 171.37;
+        return (<>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={a2.portrait} alt={a2.name} style={{ ...px(BX, 171.43, BW, 137.14), objectFit: "cover", objectPosition: a2.crop, display: "block" }} />
+          <span style={{ ...px(BX, baseTop(357.95, 19), BW + 200, 22), font: `700 19px ${HNW}`, lineHeight: "19px", color: INK, whiteSpace: "nowrap", textTransform: "uppercase" }}>{a2.name}</span>
+          <span style={{ ...px(BX, baseTop(384, 15), BW, 200), font: `15px ${HNW}`, lineHeight: "18px", color: INK, textAlign: "justify" }}>{a2.bio}</span>
+          <button onClick={() => { setChosenArtist(a2.id); go("vision"); }}
+            style={{ ...px(136.96, 548.57, 343.21, 34.29), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, textTransform: "none" }}>
+            {t("Create label with")} {first}{t("’s art")}</button>
+          <span style={{ ...px(BX, baseTop(628.19, 17), 300, 20), font: `700 17px ${HNW}`, lineHeight: "17px", color: INK, whiteSpace: "nowrap" }}>{t("Original art")}</span>
+          {/* the second view is drawn as the owner has it; it lights up
+              when we have labels painted in her hand to show */}
+          <span style={{ ...px(BX, baseTop(651.35, 17), 300, 20), font: `700 17px ${HNW}`, lineHeight: "17px", color: "#b3b3b3", whiteSpace: "nowrap" }}>{t("Labels from")} {first}</span>
+          {a2.link && (
+            <a href={a2.link} target="_blank" rel="noreferrer" aria-label={a2.linkKind === "instagram" ? "instagram" : "website"}
+              style={{ ...px(424, 630, 22, 22), display: "block" }}>
+              {a2.linkKind === "instagram" ? (
+                <svg viewBox="0 0 22 22" width="22" height="22"><rect x="1.6" y="1.6" width="18.8" height="18.8" rx="5.4" fill="none" stroke={INK} strokeWidth="1.5" /><circle cx="11" cy="11" r="4.6" fill="none" stroke={INK} strokeWidth="1.5" /><circle cx="16.6" cy="5.4" r="1.2" fill={INK} /></svg>
+              ) : (
+                <svg viewBox="0 0 22 22" width="22" height="22"><g fill="none" stroke={INK} strokeWidth="1.5" strokeLinecap="round"><path d="M9 13a4 4 0 0 0 5.66 0l3-3A4 4 0 0 0 12 4.34l-1.2 1.2" /><path d="M13 9a4 4 0 0 0-5.66 0l-3 3A4 4 0 0 0 10 17.66l1.2-1.2" /></g></svg>
+              )}
+            </a>
+          )}
+          {a2.works.slice(0, 6).map((w, i) => (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img key={w} src={w} alt=""
+              style={{ ...px(WX + (i % 3) * WGAP, WY + Math.floor(i / 3) * WGAP, WK, WK), objectFit: "cover", display: "block", cursor: "pointer" }}
+              onClick={() => setGallery({ items: a2.works, index: i })} />
+          ))}
+        </>);
+      }
 
       case "vision": {
         /* ROUND 63 (owner's "Your Vision@3x" mock, measured off the 3x
@@ -2960,8 +3002,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {/* ── the right-hand column: what the pack contains ───────────── */}
           {/* the artboard's paragraph is OUTLINED, so it cannot follow the
               language switch — it is covered and redrawn as live text */}
-          {!gensMode && patch(COL_R, 542, COL_W, 82, "parawipe")}
-          {!gensMode && ["After payment, you’ll be able to download your", "Final Pack with high-resolution, print-ready files,", "instructions, and a Read Me containing", "the link to your published product page."].map((ln, i) => (
+          {patch(COL_R, 542, COL_W, 82, "parawipe")}
+          {["After payment, you’ll be able to download your", "Final Pack with high-resolution, print-ready files,", "instructions, and a Read Me containing", "the link to your published product page."].map((ln, i) => (
             <span key={"pp" + i} style={{ ...px(COL_R, baseTop(559.8 + i * 18, 15), COL_W, 20), font: `italic 15px ${HNW}`, lineHeight: "15px", color: "#111", whiteSpace: "nowrap" }}>{t(ln)}</span>
           ))}
           {/* ROUND 88 #1 (owner): the baked tree is wiped and REDRAWN LIVE —
@@ -2970,8 +3012,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               the REAL files of the ZIP under the wine's name (Wine_Name
               until one is typed). Unselected rows drop their branch; an
               own-label order has no tree (round 50). */}
-          {!gensMode && patch(760, 92, 600, 450, "notree")}
-          {!gensMode && !customLabel && (() => {
+          {patch(760, 92, 600, 450, "notree")}
+          {!customLabel && (() => {
             const base = (f.wine || "").trim().replace(/[^\w]+/g, "_").replace(/^_+|_+$/g, "") || "Wine_Name";
             const slug = (f.wine || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "wine-name";
             type Branch = { x: number; kind: "doc" | "folder"; name: string[]; files: string[] };
@@ -3024,20 +3066,20 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             );
           })()}
           {/* an own-label (assets-only) order buys no labels: no tree, no caption (round 50) */}
-          {customLabel && !gensMode && patch(1225, 108, 120, 40, "nofpcap")}
+          {customLabel && patch(1225, 108, 120, 40, "nofpcap")}
           {/* ROUND 85 #3 (owner): no "Proceed to payment" bar, no "Download"
               bar — the red round button does both: a card until the payment
               lands, a download tray after. Both baked bars are wiped. */}
-          {!gensMode && patch(COL_R - 2, BTN.y - 2, COL_W + 4, BTN.h + 4, "dlwipe")}
+          {patch(COL_R - 2, BTN.y - 2, COL_W + 4, BTN.h + 4, "dlwipe")}
           {patch(COL_L - 2, BTN.y - 2, COL_W + 4, BTN.h + 4, "paywipe")}
           {/* ROUND 93 #11 (owner): what is already made reads crisp, what is
               not yet made reads pale — the rows here and the tree's branches */}
-          {!gensMode && !customLabel && PACK.map((it, i) => (!madeRow[i] && (
+          {!customLabel && PACK.map((it, i) => (!madeRow[i] && (
             <div key={"pale" + i} style={{ ...px(COL_L, ROWB[i] - 20, COL_W, 30), background: "rgba(255,255,255,0.62)", pointerEvents: "none", zIndex: 2 }} />
           )))}
           {/* ── the left-hand column: the order ─────────────────────────── */}
           {/* the live slide, centred between the baked chevrons */}
-          {gensMode ? null : sl.landing ? (
+          {sl.landing ? (
             productUrl && selected >= 0 ? (
               <div style={{ ...px(CAR.x + (CAR.w - 320) / 2, CAR.y, 320, 320 / W * 823 + 13), background: "#fff", borderRadius: 5, boxShadow: "0 8px 22px rgba(0,0,0,0.2)", overflow: "hidden" }}>
                 <div style={{ height: 13, background: "#E8E8E6", display: "flex", alignItems: "center", gap: 3, padding: "0 6px" }}>
@@ -3051,7 +3093,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             /* eslint-disable-next-line @next/next/no-img-element */
             <img src={sl.img} alt={sl.name} style={{ ...px(CAR.x, CAR.y, CAR.w, CAR.h), objectFit: "contain" }} />
           ) : notMade(CAR.x + 40, CAR.y, CAR.w - 80, CAR.h, sl.kind || "front", "nmCar")}
-          {!gensMode && (<>
+          {(<>
             {/* the baked chevrons get their click zones */}
             <button aria-label="prev slide" onClick={() => setCarIdx((c) => (c + slides.length - 1) % slides.length)}
               style={{ ...px(COL_L - 8, CAR_MID - 22, 44, 44), ...ghost }} />
@@ -3062,37 +3104,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             <button onClick={() => setAgree((a) => !a)} style={{ ...px(206, TC_B - 15, 94, 20), ...ghost }} />
             <button aria-label="terms" onClick={() => { setTermsOpen(true); setTermsPos(0); }} style={{ ...px(298, TC_B - 15, 130, 20), ...ghost, cursor: "pointer" }} />
           </>)}
-          {gensMode ? (() => {
-            /* ROUND 93 #5 (owner: "the credits page is a mess"): the whole
-               board content is wiped and the four bundles are drawn live at
-               the page's centre — no carousel, no frame, no T&C row */
-            const GX = 480, GW = 480, GR = GX + GW, y0 = 300, pitch = 40;
-            return (<>
-              {patch(0, 92, W, FOOTER_Y - 92, "gwipe")}
-              <span style={{ ...px(GX, baseTop(230, 24), GW, 26), font: `700 24px ${HNW}`, lineHeight: "24px", textAlign: "center" }}>{t("CREDITS")}</span>
-              {/* round 94 #14: the gate message sits centred BEFORE the list */}
-              {warn && <span style={{ ...px(GX, baseTop(y0 - 60, 13), GW, 16), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block" }}>{warn}</span>}
-              {/* the T&C row, back (owner) */}
-              {dashRule(GX, y0 - 62, GW, false, "gr-tc0")}
-              {dotBtn(GX + 16, y0 - 46, agree, () => setAgree((a) => !a), "gagree", { ring: true, r: 9 })}
-              <button onClick={() => setAgree((a) => !a)} style={{ ...px(GX + 40, y0 - 57, 90, 24), ...ghost, textAlign: "left", textTransform: "none", font: `italic 15px ${HNW}`, color: "#111", display: "flex", alignItems: "center", whiteSpace: "nowrap" }}>{t("I agree to the")}</button>
-              <button aria-label="terms" onClick={() => { setTermsOpen(true); setTermsPos(0); }} style={{ ...px(GX + 40 + (lang === "ge" ? 118 : 96), y0 - 57, 220, 24), ...ghost, textAlign: "left", textTransform: "none", font: `italic 15px ${HNW}`, color: "#111", textDecoration: "underline", display: "flex", alignItems: "center", whiteSpace: "nowrap" }}>{t("Terms & Conditions")}</button>
-              {dashRule(GX, y0 - 22, GW, false, "gr-top")}
-              {GENS.map((g, i) => {
-                const by = y0 + i * pitch;
-                return (
-                  <span key={g.name}>
-                    {dotBtn(GX + 16, by - 6, gensSel === i, () => setGensSel(i), "gen" + i, { ring: true, r: 9 })}
-                    <button onClick={() => setGensSel(i)} style={{ ...px(GX + 40, by - 17, 300, 24), ...ghost, textAlign: "left", textTransform: "none", font: `15px ${HNW}`, color: "#111", display: "flex", alignItems: "center" }}>{t(g.name)}</button>
-                    <span style={{ ...px(GR - 160, baseTop(by, 15), 160, 18), font: `15px ${HNW}`, lineHeight: "15px", textAlign: "right", display: "block" }}>{"$" + g.price.toFixed(2)}</span>
-                    {dashRule(GX, by + 12, GW, false, "gr" + i)}
-                  </span>
-                );
-              })}
-              <span style={{ ...px(GX, baseTop(y0 + GENS.length * pitch + 26, 30), 240, 34), font: `700 30px ${HNW}`, lineHeight: "30px" }}>{t("Total:")}</span>
-              <span style={{ ...px(GR - 240, baseTop(y0 + GENS.length * pitch + 26, 30), 240, 34), font: `700 30px ${HNW}`, lineHeight: "30px", textAlign: "right", display: "block" }}>{"$" + GENS[gensSel].price.toFixed(2)}</span>
-            </>);
-          })() : customLabel ? (<>
+          {customLabel ? (<>
             {/* own-label order: only Marketing Assets and its price */}
             {patch(LBL_X - 2, 486, 380, 134, "custrows")}
             {patch(PRICE_R - 160, 486, 160, 134, "custprices")}
@@ -3115,7 +3127,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           </>)}
           {/* round 52 #1: the agree gate message under the Pay bar */}
           {warn && (
-            !gensMode && <span style={{ ...px(137.14, 694, 480, 16), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block" }}>{warn}</span>
+            <span style={{ ...px(137.14, 694, 480, 16), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block" }}>{warn}</span>
           )}
           {/* ROUND 52 #3: Terms & Conditions modal — lorem body behind the
               house-style scroll (1px track + black dot, draggable), black
@@ -3130,7 +3142,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             };
             return (<>
               <div style={{ ...px(0, 0, W, H), zIndex: 30 }} onClick={() => setTermsOpen(false)} />
-              <div style={{ ...px(0, HEADER_H, W, FOOTER_Y - HEADER_H), background: "rgba(255,255,255,0.88)", zIndex: 30, pointerEvents: "none" }} />
+              <div style={{ ...px(0, VEIL_TOP, W, VEIL_BOT - VEIL_TOP), background: "rgba(255,255,255,0.88)", zIndex: 30, pointerEvents: "none" }} />
               <div style={{ ...px(W / 2 - 340, 144, 680, 440), background: "#fff", border: "1px solid #111", zIndex: 31, boxSizing: "border-box" }}>
                 <button aria-label="close terms" onClick={() => setTermsOpen(false)}
                   style={{ position: "absolute", right: 6, top: 4, ...ghost, font: `15px ${HNW}`, color: "#111", width: 24, height: 24 }}>✕</button>
@@ -3168,7 +3180,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   };
 
   /* round 68 #1: any open modal freezes the bar (it still paints on top) */
-  const modalOpen = !!confirmModal || !!emailModal || termsOpen || marketOpen;
+  const modalOpen = !!confirmModal || termsOpen || marketOpen;
   const barPage: PageKey = page === "blank" ? blankFrom.current : page;
   const step = tut >= 0 ? tut : STEP_OF[barPage];
   /* round 71: Mtavruli runs much wider than Latin — six stops 166.6 apart
@@ -3179,6 +3191,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const tutLast = TUT_CARDS.length - 1;
   const tutX = tut < 0 ? null : tut < STEPS.length ? STEPS[tut].x : NEXT_X;
   const thick = tut >= 0 ? (tut < STEPS.length ? STEPS[tut].x : CIRCLE_X[CIRCLE_X.length - 1]) : THICK[barPage];
+  const onArtists = page === "artists" || page === "artist";
   const bandBottom = BAND_BOTTOM[page];
   /* ROUND 108 #20 (owner): NOTHING ever slides over the header, the rules
      or the bar — so every transition, the welcome page's included, moves
@@ -3377,21 +3390,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             {/* menu + ENG/GEO: one baseline, even gaps, right edge on the
                progress line's right edge x1303 (round 22 #11) */}
             <div style={{ position: "absolute", right: W - 1200, top: 27.5, display: "flex", alignItems: "baseline", columnGap: 44 }}>
-              {/* ROUND 63: the credit balance rides the header now (the
-                  footer holds nothing but the bar) */}
-              <span style={{ font: `700 13px ${HNW}`, color: INK, whiteSpace: "nowrap" }}>
-                {t("Credits available:")}{" "}
-                {spinning ? (
-                  <span style={{ color: BAR_RED, fontWeight: 700 }}>{spinDigit}</span>
-                ) : genCredits === 0 ? (
-                  <button onClick={() => { gensReturn.current = pageNow.current; setGensMode(true); setGensSel(0); go("checkout"); }}
-                    style={{ ...ghost, font: `700 13px ${HNW}`, color: BAR_RED, textDecoration: "underline", textTransform: "none", display: "inline" }}>{t("Add credit")}</button>
-                ) : (
-                  <span style={{ color: BAR_RED, fontWeight: 700 }}>{genCredits}</span>
-                )}
-              </span>
               <span style={{ font: `700 13px ${HNW}`, color: INK, whiteSpace: "nowrap" }}>{t("About Us")}</span>
-              <span style={{ font: `700 13px ${HNW}`, color: INK, whiteSpace: "nowrap" }}>{t("Gallery")}</span>
+              {/* ROUND 112 #4 (owner): Gallery became ARTISTS — the people
+                  whose hands the labels are painted in */}
+              <button onClick={openArtists}
+                style={{ ...ghost, font: `700 13px ${HNW}`, color: page === "artists" || page === "artist" ? BAR_RED : INK, whiteSpace: "nowrap", textTransform: "none" }}>{t("Artists")}</button>
               <span style={{ font: `700 13px ${HNW}`, color: INK, whiteSpace: "nowrap" }}>{t("Contact")}</span>
               <span style={{ display: "flex", alignItems: "baseline", columnGap: 5, whiteSpace: "nowrap" }}>
                 <button onClick={() => pickLang("en")} style={{ ...ghost, font: `${lang === "en" ? 700 : 300} 13px ${HNW}`, color: lang === "en" ? INK : "#8a8a8a" }}>ENG</button>
@@ -3492,7 +3495,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             {(page !== "loader" || tut >= 0) && (
               <div className="nui-next"
                 style={{
-                  position: "absolute", left: (tutX !== null ? tutX : page === "welcome" ? WELCOME_X : NEXT_X) - NEXT_R, top: PROG_Y - NEXT_R,
+                  position: "absolute", left: (tutX !== null ? tutX : page === "welcome" ? WELCOME_X : onArtists ? BACK_X : NEXT_X) - NEXT_R, top: PROG_Y - NEXT_R,
                   width: NEXT_R * 2, height: NEXT_R * 2, borderRadius: NEXT_R,
                   transition: `${arrowFly ? "" : `left ${SLIDE_MS}ms ${EASE}, `}transform 200ms cubic-bezier(0.33, 1, 0.68, 1)`,
                   pointerEvents: modalOpen ? "none" : "auto",
@@ -3511,6 +3514,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     if (pg !== page) go(pg);
                     return;
                   }
+                  /* round 112 #4: on the artists' pages it walks back —
+                     the artist's page to the index, the index to wherever
+                     the visitor pressed ARTISTS */
+                  if (page === "artist") { go("artists", -1); return; }
+                  if (page === "artists") { go(artistsFrom.current || "welcome", -1); return; }
                   if (page === "welcome") {
                     /* round 72 #3 (owner, TEMP while we test): EVERY arrival
                        gets the walkthrough, refresh included. Later this
@@ -3546,8 +3554,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   /* round 85 #3: on the Final Pack the button is the payment,
                      then the download */
                   else if (page === "checkout") {
-                    if (gensMode) { if (requireAgree()) payForGenerations(); }
-                    else if (!paid) { if (requireAgree()) setPaid(true); }
+                    if (!paid) { if (requireAgree()) setPaid(true); }
                     else proceedToPayment();
                   }
                 }}
@@ -3562,7 +3569,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 {/* ROUND 109: the artboard's smaller arrow — 18.25 long,
                     1.6 stroke, its head 5.6 deep; the pay and download
                     marks step down with it */}
-                {page === "checkout" && !gensMode && paid ? (
+                {onArtists ? (
+                  /* the artboard's back arrow: the same 18.25 line, flipped */
+                  <svg viewBox="-9.93 -6.4 20.05 12.8" width="20.05" height="12.8">
+                    <line x1="9.12" y1="0" x2="-9.13" y2="0" stroke="#fff" strokeWidth="1.6" strokeMiterlimit="10" />
+                    <polyline points="-3.53,5.6 -9.13,0 -3.53,-5.6" fill="none" stroke="#fff" strokeWidth="1.6" strokeMiterlimit="10" />
+                  </svg>
+                ) : page === "checkout" && paid ? (
                   /* the owner's download tray (Red_Buttons_Pay&Download.svg) */
                   <svg viewBox="0 0 40 40" width="21" height="21">
                     <path d="M8 20 V32 H32 V20" fill="none" stroke="#fff" strokeWidth="3.4" strokeLinejoin="miter" />
@@ -3589,12 +3602,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
           {/* ROUND 72 #1: the closing card stands on a clean white page */}
           {tut === TUT_CARDS.length - 1 && (
-            <div style={{ ...px(0, HEADER_H, W, FOOTER_Y - HEADER_H), background: "#fff", zIndex: 11, animation: `nuiFadeIn 280ms ${EASE} both` }} />
+            <div style={{ ...px(0, VEIL_TOP, W, VEIL_BOT - VEIL_TOP), background: "#fff", zIndex: 11, animation: `nuiFadeIn 280ms ${EASE} both` }} />
           )}
           {/* ROUND 72 #11: the pointer doing the work */}
           {tut >= 0 && cursor && (
             <svg viewBox="0 0 24 24" width="21" height="21" style={{
-              position: "absolute", left: cursor.x - 2, top: cursor.y - 1, zIndex: 14, pointerEvents: "none",
+              /* round 112 #2 (owner): the ONE exception to "nothing over the
+                 bar" — the story's pointer must be seen pressing the button */
+              position: "absolute", left: cursor.x - 2, top: cursor.y - 1, zIndex: 70, pointerEvents: "none",
               transition: `left ${cursor.ms}ms cubic-bezier(.33,0,.2,1), top ${cursor.ms}ms cubic-bezier(.33,0,.2,1)`,
               willChange: "left, top",
             }}>
@@ -3607,13 +3622,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             <div key={ripple.n} style={{
               position: "absolute", left: ripple.x - 19, top: ripple.y - 19, width: 38, height: 38,
               borderRadius: 19, border: `2px solid ${BAR_RED}`, boxSizing: "border-box",
-              pointerEvents: "none", zIndex: 13, animation: `nuiTap 700ms ${EASE} both`,
+              pointerEvents: "none", zIndex: 69, animation: `nuiTap 700ms ${EASE} both`,
             }} />
           )}
           {/* ROUND 71 #4: while the walkthrough plays, the page is a film —
               it swallows clicks so nothing the visitor prods can derail the
               story. The bar (z45) still takes its own. */}
-          {tut >= 0 && <div style={{ ...px(0, HEADER_H, W, FOOTER_Y - HEADER_H), zIndex: 12, background: "transparent" }} />}
+          {tut >= 0 && <div style={{ ...px(0, VEIL_TOP, W, VEIL_BOT - VEIL_TOP), zIndex: 12, background: "transparent" }} />}
           {/* ROUND 59 #2: the gate message floats at ROOT level so it can
               sit truly midway between the selection row and the bar line */}
           {/* round 76 #2: checkout prints its own gate message under the
@@ -3644,7 +3659,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                veil covers the band ONLY — the header, the folder mark and
                the progress bar are never covered by anything (z 30/31/32
                all pass under the bar's 45 and the header's 44). */
-            const GTOP = HEADER_H, GBOT = FOOT_RULE_Y;
+            const GTOP = VEIL_TOP, GBOT = VEIL_BOT;
             const res = gallery.save ? 78 : many ? 34 : 0;    /* room kept for the furniture */
             /* the same air top and bottom, so the picture sits on the
                band's own middle whatever furniture is under it */
@@ -3686,7 +3701,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             const B2 = { x: 420, y: 250, w: 600, h: 250 };
             return (<>
               <div style={{ ...px(0, 0, W, H), zIndex: 40 }} onClick={() => setEmptyWarn("")} />
-              <div style={{ ...px(0, HEADER_H, W, FOOTER_Y - HEADER_H), background: "rgba(255,255,255,0.88)", zIndex: 40, pointerEvents: "none" }} />
+              <div style={{ ...px(0, VEIL_TOP, W, VEIL_BOT - VEIL_TOP), background: "rgba(255,255,255,0.88)", zIndex: 40, pointerEvents: "none" }} />
               <div style={{ ...px(B2.x, B2.y, B2.w, B2.h), background: "#fff", border: "1px solid #111", zIndex: 41, boxSizing: "border-box" }}>
                 <span style={{ position: "absolute", left: 32, top: baseTop(52, 23), font: `700 23px ${HNW}`, lineHeight: "23px", whiteSpace: "nowrap" }}>{t("All fields are empty").toUpperCase()}</span>
                 <span style={{ position: "absolute", left: 32, top: 78, width: B2.w - 64, font: `italic 15px ${HNW}`, lineHeight: "21px", color: "#111" }}>
@@ -3699,32 +3714,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               </div>
             </>);
           })()}
-          {/* ROUND 56 #7/#8: the mailing-list GIFT modal — global, because
-              the credit gate can fire from vision, options or assets */}
-          {emailModal && (<>
-            <div style={{ ...px(0, 0, W, H), zIndex: 20 }} onClick={() => setEmailModal("")} />
-            <div style={{ ...px(0, HEADER_H, W, FOOTER_Y - HEADER_H), background: "rgba(255,255,255,0.88)", zIndex: 20, pointerEvents: "none" }} />
-            <div style={{ ...px(W / 2 - 290, 240, 580, 248), background: "#fff", border: "1px solid #111", zIndex: 21, boxSizing: "border-box" }}>
-              <button aria-label="close" onClick={() => setEmailModal("")}
-                style={{ position: "absolute", right: 6, top: 4, ...ghost, font: `15px ${HNW}`, color: "#111", width: 24, height: 24 }}>✕</button>
-              <span style={{ position: "absolute", left: 32, top: 22, font: `700 60px ${HNW}`, lineHeight: "64px", whiteSpace: "nowrap" }}>{t("1 free credit")}</span>
-              <span style={{ position: "absolute", left: 32, top: 100, width: 516, font: `13px ${HNW}`, lineHeight: "18px" }}>
-                {t("Join our mailing list and we'll gift you 1 extra credit.")}</span>
-              <input value={emailInput} placeholder="your@email.com" autoFocus
-                onChange={(e) => { setEmailInput(e.target.value); setEmailErr(false); }}
-                onKeyDown={(e) => { if (e.key === "Enter") submitVarEmail(); }}
-                style={{ position: "absolute", left: 32, top: 152, width: 320, font: `italic 15px ${HNW}`, border: "none", outline: "none", background: "transparent", padding: "0 0 2px 2px", color: "#111" }} />
-              <div style={{ position: "absolute", left: 32, top: 174, width: 324, height: 1, background: "#111" }} />
-              {emailErr && <span style={{ position: "absolute", left: 32, top: 180, font: `11px ${HNW}`, color: "#8e2b2b" }}>{t("Enter a valid email")}</span>}
-              <button onClick={submitVarEmail}
-                style={{ position: "absolute", left: 402, top: 144, width: 146, height: 34.3, cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", paddingBottom: 4 }}>
-                {t("Add credit")}</button>
-            </div>
-          </>)}
-
           {confirmModal && (() => {
             /* ROUND 65/66 (owner's two reference screens): one chrome —
-               uppercase title, credits line, dashed rule, Edit/Create —
+               uppercase title, dashed rule, Edit/Create —
                with a layout per kind. LABELS: prompt + sketch on the left,
                the typed fields on the right. ASSETS: the bottle drawing,
                the two label boxes and the product list. ROUND 66 #3:
@@ -3732,7 +3724,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                missing (and its title) simply isn't there, and the box
                shrinks to fit what remains. */
             const isL = confirmModal === "labels";
-            const cost = isL ? 3 : 1;
             /* the assets column is narrower (three blocks sit left of it),
                so its type steps down a notch */
             const fs = isL ? 15 : 14;
@@ -3842,30 +3833,20 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             const H2 = btnTop + 30 + 46;
             const B = { x: 350, w: 740, h: H2, y: (HEADER_H + FOOTER_Y) / 2 - H2 / 2 };
             const onCreate = () => {
-              /* round 56 #7: creating SPENDS credits (or routes to the gift
-                 modal / purchase page) */
               setConfirmModal("");
-              if (isL) {
-                if (requestCredit("vision", 3)) nextFromFront();
-                /* no credit: the gift modal or the checkout took over — never leave a blank page behind */
-                else if (pageNow.current === "blank") go(blankFrom.current, -1, false);
-              }
-              else if (requestCredit("assets")) { confirmedAssetsSig.current = pendingAssetsSig.current; setAssetsTick((t2) => t2 + 1); }
+              if (isL) nextFromFront();
+              else { confirmedAssetsSig.current = pendingAssetsSig.current; setAssetsTick((t2) => t2 + 1); }
             };
             const onEdit = () => { setConfirmModal(""); if (isL) go("vision", -1, false); else go("bottle", -1); };
             return (<>
               <div style={{ ...px(0, 0, W, H), zIndex: 40 }} onClick={closeConfirm} />
-              <div style={{ ...px(0, HEADER_H, W, FOOTER_Y - HEADER_H), background: "rgba(255,255,255,0.88)", zIndex: 40, pointerEvents: "none" }} />
+              <div style={{ ...px(0, VEIL_TOP, W, VEIL_BOT - VEIL_TOP), background: "rgba(255,255,255,0.88)", zIndex: 40, pointerEvents: "none" }} />
               <div style={{ ...px(B.x, B.y, B.w, B.h), background: "#fff", border: "1px solid #111", zIndex: 41, boxSizing: "border-box" }}>
                 <span style={{ position: "absolute", left: 32, top: baseTop(52, 23), font: `700 23px ${HNW}`, lineHeight: "23px", whiteSpace: "nowrap" }}>{t("CHECK YOUR DETAILS")}</span>
                 <button aria-label="close confirm" onClick={closeConfirm}
                   style={{ position: "absolute", right: 24, top: 28, ...ghost, width: 26, height: 26 }}>
                   <svg viewBox="0 0 20 20" width="20" height="20"><line x1="2" y1="2" x2="18" y2="18" stroke="#111" strokeWidth="2" /><line x1="18" y1="2" x2="2" y2="18" stroke="#111" strokeWidth="2" /></svg>
                 </button>
-                <span style={{ position: "absolute", left: 32, top: baseTop(104, 13), font: `italic 13px ${HNW}`, lineHeight: "13px" }}>
-                  {t("Each creation costs")} {cost} {cost === 1 ? t("credit") : t("credits")}</span>
-                <span style={{ position: "absolute", left: 300, top: baseTop(104, 13), width: B.w - 332, textAlign: "right", font: `italic 13px ${HNW}`, lineHeight: "13px" }}>
-                  {t("You have")} <span style={{ fontWeight: 700, fontStyle: "normal", color: BAR_RED }}>{genCredits}</span> {t("Credits")}</span>
                 {dashRule(32, 120, B.w - 64, false, "cfrule")}
                 {left}
                 {rows.length > 0 && colTitle(detX, t(isL ? "Label Details" : "Product Details"))}
@@ -3885,7 +3866,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   {t("Edit Details")}</button>
                 <button onClick={onCreate}
                   style={{ position: "absolute", left: 385.5, top: btnTop, width: 328.5, height: 30, cursor: "pointer", font: `700 13px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", columnGap: 4, paddingBottom: 4, textTransform: "none" }}>
-                  <span>{t("Create")}</span><span style={{ fontWeight: 400, fontStyle: "italic" }}>({cost} {cost === 1 ? t("Credit") : t("Credits")})</span></button>
+                  <span>{t("Create")}</span></button>
               </div>
             </>);
           })()}

@@ -20,5 +20,9 @@
     "work-09.jpg",
     "work-14.jpg",
     "work-20.jpg"
-  ]
+  ],
+  "bio": "Keta Shashiashvili is a Georgian figurative artist who completed the Certificate of Fine Arts program at the New York Academy of Art in 2025. Her work combines traditional academic training with a personal, evolving visual language. Her paintings Gazelle and Great Escape were featured in the Academy’s 2025 Certificate of Fine Arts Exhibition.",
+  "page": true,
+  "pageOrder": 2,
+  "crop": "60% 45%"
 }
