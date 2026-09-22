@@ -2013,6 +2013,23 @@ composition-contract tightening, then customer wiring.
   artists' versions, artists earn a share per label. Live (2.28.48.43)
   stays on POPIKA_Back_To_Vector. Decisions: start with ONE artist, all
   three columns show her; no smart selection yet; share % undecided.
+- LEVAN AMASHUKELI IS THE THIRD PAINTER (2026-09-22, owner). 18 works,
+  LoRA LVNAM trained on the v2 settings (flux-lora-fast-training, 1500
+  steps, a caption per work, is_style false) by
+  data/experiments/train-lora.ts, which queues on fal and can resume its
+  own run. His hand is flat, loud and graphic — sky blue, chrome yellow,
+  pure black, simplified figures — so he is nothing like Mariam's
+  watercolour or Keta's oil, which is exactly the spread the owner asked
+  for. THE THREE COLUMNS NOW CARRY THREE ARTISTS: Mariam classical, Keta
+  contemporary, Levan free. Two fixes went with it: the saved column map
+  in Mongo still pointed at Tal, who is switched off, which silently
+  collapsed two columns onto one artist — painterFor now checks the saved
+  painter still exists, and defaultPainters orders by the owner's own
+  pageOrder. The artists API no longer requires a portrait, only work to
+  show. OPEN: his charter is CLAUDE'S DRAFT from the paintings, not his
+  own seven answers, and his consent is NOT OBTAINED — the works were
+  collected as screenshots; nothing may be published or sold until he
+  agrees in writing.
 - CLEAN PAPER IS A RULE, NOT A TOUCH-UP (2026-09-22, owner: "Mariam's
   generated images have the wrinkled paper background, it ruins the
   seamless merging of the image into the label background colour… in

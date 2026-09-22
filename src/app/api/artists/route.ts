@@ -36,7 +36,11 @@ export async function GET() {
   for (const a of listArtists()) {
     const p = a.profile as typeof a.profile & { bio?: string; page?: boolean; pageOrder?: number; crop?: string; instagram?: string; website?: string };
     const dir = path.join(PUB, p.id);
-    if (p.page === false || !fs.existsSync(path.join(dir, "portrait.jpg"))) continue;
+    /* 2026-09-22 (owner, adding Levan): an artist may arrive with her
+       paintings and nothing else. What she MUST have to get a page is
+       work to show; the portrait and the biography can follow. */
+    const portrait = fs.existsSync(path.join(dir, "portrait.jpg"));
+    if (p.page === false || !fs.existsSync(path.join(dir, "work1.jpg"))) continue;
     const works: string[] = [], labels: string[] = [];
     for (let i = 1; i <= 12; i++) {
       const f = path.join(dir, `work${i}.jpg`);
@@ -54,7 +58,7 @@ export async function GET() {
       bio: (p.bio || "").trim(),
       link,
       linkKind: isIg ? "instagram" : link ? "site" : "",
-      portrait: `/newui/artists/${p.id}/portrait.jpg`,
+      portrait: portrait ? `/newui/artists/${p.id}/portrait.jpg` : "",
       crop: p.crop || "50% 40%",
       works,
       labels,
