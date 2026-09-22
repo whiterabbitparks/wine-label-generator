@@ -197,7 +197,7 @@ export async function vignetteOf(dataUrl: string): Promise<{ ground: string; box
    It refuses to run on a picture whose border is not paper at all (a
    painting that fills its frame), so nothing is ever scrubbed out of a
    full-bleed image. */
-export async function cleanPaper(dataUrl: string): Promise<{ art: string; ground: string; cleaned: boolean }> {
+export async function cleanPaper(dataUrl: string, to?: string): Promise<{ art: string; ground: string; cleaned: boolean }> {
   const buf = Buffer.from(dataUrl.slice(dataUrl.indexOf(",") + 1), "base64");
   const { data, info } = await sharp(buf).flatten({ background: "#ffffff" }).raw().toBuffer({ resolveWithObject: true });
   const W = info.width, H = info.height, C = info.channels;
@@ -240,16 +240,23 @@ export async function cleanPaper(dataUrl: string): Promise<{ art: string; ground
   for (let d = 0; d <= Math.round(t0); d++) near += hist[d];
   if (near < ringN * 0.6) return { art: dataUrl, ground, cleaned: false };
 
+  /* 2026-09-22 (owner: "let us take the grounds off — make every ground
+     ivory white"): the paper may be repainted to a GIVEN colour, not only
+     flattened to its own. The label then paints that same ivory behind
+     it, so the join is still invisible and every label shares one paper. */
+  const tr = to ? parseInt(to.slice(1, 3), 16) : gr;
+  const tg = to ? parseInt(to.slice(3, 5), 16) : gg;
+  const tb = to ? parseInt(to.slice(5, 7), 16) : gb;
   const out = Buffer.from(data);
   for (let p = 0; p < W * H; p++) {
     const i = p * C, d = dist(i);
     if (d >= t1) continue;
     let a = d <= t0 ? 0 : (d - t0) / (t1 - t0);
     a = a * a * (3 - 2 * a);                       /* smoothstep, no banding */
-    out[i] = Math.round(gr + (data[i] - gr) * a);
-    out[i + 1] = Math.round(gg + (data[i + 1] - gg) * a);
-    out[i + 2] = Math.round(gb + (data[i + 2] - gb) * a);
+    out[i] = Math.round(tr + (data[i] - gr) * a);
+    out[i + 1] = Math.round(tg + (data[i + 1] - gg) * a);
+    out[i + 2] = Math.round(tb + (data[i + 2] - gb) * a);
   }
   const png = await sharp(out, { raw: { width: W, height: H, channels: C as 1 | 2 | 3 | 4 } }).png().toBuffer();
-  return { art: `data:image/png;base64,${png.toString("base64")}`, ground, cleaned: true };
+  return { art: `data:image/png;base64,${png.toString("base64")}`, ground: to || ground, cleaned: true };
 }

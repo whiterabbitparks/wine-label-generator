@@ -14,6 +14,8 @@ import type { ComposeOutput } from "./compose";
    is fitted inside it and never cropped, which keeps the standing rule
    that a painting is never cut and never framed. */
 
+export const IVORY = "#F5F1E6";
+
 export interface TemplateComposeInput {
   artwork: string;               /* data URL — the painter's picture */
   template?: string;             /* template id; otherwise picked from the band */
@@ -39,8 +41,29 @@ const WINE_ACCENT: Record<string, string> = {
   red: "#8B1A1A", amber: "#8A5A16", white: "#3F5C2E", rose: "#A8425C", rosé: "#A8425C", orange: "#9A4E14",
 };
 function accentFor(artAccent: string | null, wineColour?: string): string {
-  if (artAccent) return artAccent;
-  return WINE_ACCENT[(wineColour || "").toLowerCase()] || "#8B1A1A";
+  return readable(artAccent || WINE_ACCENT[(wineColour || "").toLowerCase()] || "#8B1A1A");
+}
+
+/* TYPE MUST READ ON THE PAPER (2026-09-22). The ink and the accent are
+   taken off the painting, and a high-key painting hands back a colour
+   that vanishes on ivory — Levan's yellow did exactly that. Any colour
+   is darkened until it stands clear of the paper; the hue is kept, only
+   the brightness moves. */
+const lumOf = (hex: string) => {
+  const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+};
+export function readable(hex: string, on = IVORY, want = 4.5): string {
+  const L2 = lumOf(on);
+  let [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  for (let i = 0; i < 24; i++) {
+    const ratio = (Math.max(lumOf(`#${[r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("")}`), L2) + 0.05)
+      / (Math.min(lumOf(`#${[r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("")}`), L2) + 0.05);
+    if (ratio >= want) break;
+    r = Math.round(r * 0.88); g = Math.round(g * 0.88); b = Math.round(b * 0.88);
+  }
+  return `#${[r, g, b].map((v) => Math.max(0, Math.min(255, v)).toString(16).padStart(2, "0")).join("")}`;
 }
 
 export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<ComposeOutput & { template: string; warnings: string[] }> {
@@ -51,8 +74,11 @@ export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<C
 
   const vig = await vignetteOf(inp.artwork);
   const inks = await inkOf(inp.artwork);
-  const ground = vig.ground;
-  const ink = inks.ink;
+  /* ONE PAPER (owner, 2026-09-22: "let us take the grounds off… make
+     every ground ivory white"). One less variable while the layouts are
+     being settled, and a printer's paper does not change per bottle. */
+  const ground = IVORY;
+  const ink = readable(inks.ink, IVORY, 7);      /* the body text wants more than the accent */
   const accent = accentFor(inks.accent, inp.wineColour);
 
   const { layout, art, faces, warnings } = layoutFromTemplate({
@@ -62,17 +88,24 @@ export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<C
     seed: inp.seed, ground, ink, accent,
   });
 
-  /* the drawing, trimmed off its paper, fitted into the template's room.
-     An oval box is the room's SHAPE, not a cookie cutter — the drawing is
-     never clipped (standing rule: a painting is never cut). */
+  /* THE PICTURE FILLS ITS ZONE (owner, 2026-09-22: "several templates had
+     the picture as a small spot and many had it filling the top, the
+     bottom or the middle of the label — what I generated only ever showed
+     the centred spot version").
+
+     He was right and this was the cause: the drawing was FITTED inside
+     its zone at 90 %, so whatever shape he drew — a full-bleed band, a
+     half panel, an oval — came out as the same small spot floating on the
+     ground, and every template looked alike. The zone is the picture's
+     room and the picture takes it: scaled to COVER, centred, and clipped
+     to the shape he drew. What hangs over the edge is his bleed. */
   const meta = await sharp(Buffer.from(inp.artwork.slice(inp.artwork.indexOf(",") + 1), "base64")).metadata();
   const aw = meta.width || 1, ah = meta.height || 1;
   const bx = vig.box.x * aw, by = vig.box.y * ah, bw = vig.box.w * aw, bh = vig.box.h * ah;
-  const fillK = art.kind === "oval" ? 0.98 : 0.9;
-  const k = Math.min((art.w * fillK) / bw, (art.h * fillK) / bh);
+  const k = Math.max(art.w / bw, art.h / bh);
   const pw = bw * k, ph = bh * k;
   const pxPos = { x: art.x + (art.w - pw) / 2, y: art.y + (art.h - ph) / 2 };
-  layout.art = { x: pxPos.x, y: pxPos.y, w: pw, h: ph };
+  layout.art = { x: art.x, y: art.y, w: art.w, h: art.h };
   layout.artCrop = { x: bx, y: by, w: bw, h: bh };
 
   const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -84,13 +117,18 @@ export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<C
       + `${t}>${esc(l.text)}</text>`;
   }).join("");
 
+  const clipId = `az-${tpl.id}`;
+  const clip = art.kind === "oval"
+    ? `<ellipse cx="${(art.x + art.w / 2).toFixed(1)}" cy="${(art.y + art.h / 2).toFixed(1)}" rx="${(art.w / 2).toFixed(1)}" ry="${(art.h / 2).toFixed(1)}"/>`
+    : `<rect x="${art.x.toFixed(1)}" y="${art.y.toFixed(1)}" width="${art.w.toFixed(1)}" height="${art.h.toFixed(1)}"/>`;
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${inp.widthMm}mm" height="${inp.heightMm}mm" viewBox="0 0 ${layout.W} ${layout.H}">`
+    + `<defs><clipPath id="${clipId}">${clip}</clipPath></defs>`
     + `<rect width="${layout.W}" height="${layout.H}" fill="${ground}"/>`
+    + `<g clip-path="url(#${clipId})">`
     + `<svg x="${pxPos.x.toFixed(1)}" y="${pxPos.y.toFixed(1)}" width="${pw.toFixed(1)}" height="${ph.toFixed(1)}" viewBox="${bx.toFixed(1)} ${by.toFixed(1)} ${bw.toFixed(1)} ${bh.toFixed(1)}" preserveAspectRatio="xMidYMid meet">`
-    + `<image xlink:href="${inp.artwork}" x="0" y="0" width="${aw}" height="${ah}"/></svg>`
+    + `<image xlink:href="${inp.artwork}" x="0" y="0" width="${aw}" height="${ah}"/></svg></g>`
     + texts + `</svg>`;
-
   const png = await sharp(Buffer.from(svg), { density: 12 * 25.4 }).resize(layout.W, layout.H).png().toBuffer();
   return {
     svg, png: `data:image/png;base64,${png.toString("base64")}`,

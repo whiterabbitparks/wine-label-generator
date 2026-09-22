@@ -1,5 +1,5 @@
 import { buildArtworkPrompt, evalModel, generateArtwork, artistModels } from "@/lib/eval/models";
-import { composeTemplateLabel, templatesOf } from "@/lib/typeset/compose-template";
+import { composeTemplateLabel, templatesOf, pickTemplate, IVORY } from "@/lib/typeset/compose-template";
 import { cleanPaper } from "@/lib/typeset/palette";
 import type { Band } from "@/lib/typeset/templates";
 import { faceFile, pickRoles, mix } from "@/lib/typeset/fonts";
@@ -81,20 +81,30 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
   const model = (inp.artistId ? evalModel(`artist:${inp.artistId}`) : null)
     || evalModel(await painterFor(style)) || artistModels().find((m) => m.lora) || artistModels()[0];
   if (!model) throw new Error("no artist is set up yet (data/artists/<id>/profile.json + lora.json)");
+  /* 2026-09-22: THE TEMPLATE IS CHOSEN BEFORE THE PAINTING, so the
+     picture can be asked for in the shape of the room it will live in.
+     A band across the top wants a wide picture; a half panel wants a
+     tall one. Ask for the wrong shape and filling the room has to crop
+     the drawing hard — which is what made every template look alike. */
+  const band = bandOf(style);
+  const tpl = pickTemplate(band, seed);
+  const zone = tpl.art || { w: tpl.refW, h: tpl.refH };
+  const zoneAspect = (zone.w / tpl.refW * widthMm) / (zone.h / tpl.refH * heightMm);
   const ap = await buildArtworkPrompt(brief, model.artist);
+  ap.aspect = zoneAspect > 1.25 ? "landscape" : zoneAspect < 0.8 ? "portrait" : "square";
   const painted = await gen429(() => generateArtwork(model, ap, { sketch: inp.sketch || null }));
   /* 2026-09-22 (owner): the artist's LoRA learned her PAPER as well as
      her hand, so the picture arrives wrinkled and unevenly lit, and its
      rectangle then shows against the label's one flat colour. The clean
      part of a picture must be clean — see cleanPaper. */
-  const art = (await cleanPaper(painted.art)).art;
+  const art = (await cleanPaper(painted.art, IVORY)).art;
   /* 2026-09-22: the type is set on ONE OF THE OWNER'S TWELVE DRAWN
      TEMPLATES, not invented. The three columns keep their keys but now
      mean his three bands — classical, contemporary, free — so one artist
      shows the widest spread he asked for: a centred serif label, a
      cleaner column one, and a free one in a written hand. */
   const out = await composeTemplateLabel({
-    artwork: art, band: bandOf(style), data: inp.data,
+    artwork: art, band, template: tpl.id, data: inp.data,
     widthMm, heightMm, seed, wineColour: inp.data.wineColorName,
   });
   if (out.warnings.length) console.warn(`[template ${out.template}] ${out.warnings.join("; ")}`);
@@ -122,7 +132,7 @@ export async function relayoutLabel(stored: { art: Buffer; meta: { style: string
   const raw = `data:image/png;base64,${stored.art.toString("base64")}`;
   /* a picture stored before the clean-paper pass still has its wrinkles;
      a re-layout is the moment to take them out */
-  const art = (await cleanPaper(raw)).art;
+  const art = (await cleanPaper(raw, IVORY)).art;
   /* 2026-09-22: a variation is now A DIFFERENT TEMPLATE from the same
      band — the strongest contrast there is, and still no model call. The
      tags already shown are avoided, so three variations of one painting

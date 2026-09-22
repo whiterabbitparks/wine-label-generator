@@ -1843,14 +1843,20 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   };
   /* owner #15 / round 7 #2: input text italic (design st16); the underline is
      a SEPARATE fixed-length row line, not text-decoration */
-  /* 2026-09-22 (owner: "in the wine name field the address book pops up,
-     and the same on Region, Country"). The browser guesses what a field
-     is from the WORDS BESIDE IT — "Wine Name:" reads as a person's name,
-     "Region, Country:" as an address — and then offers the address book.
-     Nothing here is a person or an address, so every field says so:
-     an autocomplete token the browser does not recognise (which it must
-     treat as off), a name that matches none of its patterns, and the
-     opt-out each password manager reads. */
+  /* 2026-09-22 (owner, twice: "in the wine name field the address book
+     pops up, and the same on Region, Country").
+
+     The attributes alone were not enough, and I should have known: Chrome
+     IGNORES autocomplete="off" on anything its heuristic reads as a name
+     or an address, and it reads the heuristic off the words beside the
+     field. "Wine Name:" and "Region, Country:" are as strong a signal as
+     there is.
+
+     What Chrome will not do is fill a READONLY field. So every field
+     arrives readonly and drops it on the first focus — by then the
+     autofill pass is long over. The attributes stay as well, for the
+     password managers, which do honour them. */
+  const [awake, setAwake] = useState<Record<string, boolean>>({});
   const noFill = (key: string) => ({
     name: `fld-${key}`,
     id: `fld-${key}`,
@@ -1858,6 +1864,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     autoCorrect: "off",
     autoCapitalize: "off",
     spellCheck: false,
+    readOnly: !awake[key],
+    onFocus: () => setAwake((a) => (a[key] ? a : { ...a, [key]: true })),
+    onMouseDown: () => setAwake((a) => (a[key] ? a : { ...a, [key]: true })),
     "data-lpignore": "true",
     "data-1p-ignore": "",
     "data-bwignore": "true",

@@ -35,7 +35,7 @@ const SPARSE = { wine: "Korra", vintage: "2023", sweetness: "Dry", wineColorName
 const data = has("--long") ? LONG : has("--sparse") ? SPARSE : FULL;
 
 const raw = `data:image/png;base64,${fs.readFileSync(ART).toString("base64")}`;
-const art = (await cleanPaper(raw)).art;
+const art = (await cleanPaper(raw, "#F5F1E6")).art;
 
 const tiles: Buffer[] = [];
 let problems = 0;
