@@ -1,9 +1,16 @@
 import { buildArtworkPrompt, evalModel, generateArtwork, artistModels } from "@/lib/eval/models";
-import { composeLabel } from "@/lib/typeset/compose";
+import { composeTemplateLabel, templatesOf } from "@/lib/typeset/compose-template";
 import { cleanPaper } from "@/lib/typeset/palette";
+import type { Band } from "@/lib/typeset/templates";
 import { faceFile, pickRoles, mix } from "@/lib/typeset/fonts";
 import type { Layout } from "@/lib/typeset/compose";
 import { painterFor } from "./painters";
+
+/* the wizard's three columns are the owner's three bands (2026-09-22:
+   "first option can be classical… second contemporary… third more free,
+   so we have the most variety within one artist") */
+export const bandOf = (style: string): Band =>
+  style === "contemporary" ? "contemporary" : style === "punk" ? "free" : "classical";
 
 /* THE HYBRID ENGINE for the wizard (branch POPIKA_Back_To_Vector, round
    84; round 105 on POPIKA_Artists). One call:
@@ -81,8 +88,17 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
      rectangle then shows against the label's one flat colour. The clean
      part of a picture must be clean — see cleanPaper. */
   const art = (await cleanPaper(painted.art)).art;
-  const out = await composeLabel({ artwork: art, style, texts: textsOf(inp.data), widthMm, heightMm, seed, wineColour: inp.data.wineColorName, fit: "vignette" });
-  return { png: out.png, svg: out.svg, art, faces: out.faces, ink: out.ink, ground: out.layout.ground, prompt: ap.prompt, layout: out.layout, tag: layoutTag(style, seed), fit: "vignette", painter: model.id, artist: model.artist.name, repainted: painted.repainted };
+  /* 2026-09-22: the type is set on ONE OF THE OWNER'S TWELVE DRAWN
+     TEMPLATES, not invented. The three columns keep their keys but now
+     mean his three bands — classical, contemporary, free — so one artist
+     shows the widest spread he asked for: a centred serif label, a
+     cleaner column one, and a free one in a written hand. */
+  const out = await composeTemplateLabel({
+    artwork: art, band: bandOf(style), data: inp.data,
+    widthMm, heightMm, seed, wineColour: inp.data.wineColorName,
+  });
+  if (out.warnings.length) console.warn(`[template ${out.template}] ${out.warnings.join("; ")}`);
+  return { png: out.png, svg: out.svg, art, faces: out.faces, ink: out.ink, ground: out.layout.ground, prompt: ap.prompt, layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", painter: model.id, artist: model.artist.name, repainted: painted.repainted };
 }
 
 /* ROUND 86 #3 (owner: "keep the image, just change the layout — tons of
@@ -103,21 +119,26 @@ export function layoutTag(style: string, seed: number): string {
    goes centred) */
 export async function relayoutLabel(stored: { art: Buffer; meta: { style: string; widthMm: number; heightMm: number; ground: string; fit?: "yield" | "crop" | "top" | "vignette" } }, data: Record<string, string>, avoid: string[] = [], recipe: { big?: boolean; flip?: boolean } = {}): Promise<HybridOutput & { tag: string }> {
   const { style, widthMm, heightMm, ground } = stored.meta;
-  const fams = new Set(avoid.map((a) => a.split("|")[0])), buckets = new Set(avoid.map((a) => a.split("|")[1]));
-  let seed = (Math.random() * 0xffffffff) >>> 0;
-  for (let i = 0; i < 60; i++) {
-    const [fam, b] = layoutTag(style, seed).split("|");
-    const bigOk = !recipe.big || i >= 30 || Number(b) >= 3;
-    if (!fams.has(fam) && (i >= 20 || !buckets.has(b)) && bigOk) break;
-    seed = (Math.random() * 0xffffffff) >>> 0;
-  }
   const raw = `data:image/png;base64,${stored.art.toString("base64")}`;
   /* a picture stored before the clean-paper pass still has its wrinkles;
      a re-layout is the moment to take them out */
-  const art = (stored.meta.fit || "yield") === "vignette" ? (await cleanPaper(raw)).art : raw;
-  const align = recipe.flip ? (pickRoles(style, seed).align === "center" ? "left" : "center") : undefined;
-  const out = await composeLabel({ artwork: art, style, texts: textsOf(data), widthMm, heightMm, seed, paper: stored.meta.fit === "crop" ? undefined : ground, wineColour: data.wineColorName, align, fit: stored.meta.fit || "yield" });
-  return { png: out.png, svg: out.svg, art, faces: out.faces, ink: out.ink, ground, prompt: "(re-layout of an existing painting)", layout: out.layout, tag: layoutTag(style, seed), fit: stored.meta.fit || "yield" };
+  const art = (await cleanPaper(raw)).art;
+  /* 2026-09-22: a variation is now A DIFFERENT TEMPLATE from the same
+     band — the strongest contrast there is, and still no model call. The
+     tags already shown are avoided, so three variations of one painting
+     are three different arrangements of his own. */
+  const band = bandOf(style);
+  const used = new Set(avoid.map((a) => a.split("|")[0]));
+  const pool = templatesOf(band);
+  const free = pool.filter((t) => !used.has(t.id));
+  const pick = (free.length ? free : pool)[Math.floor(Math.random() * (free.length ? free.length : pool.length))];
+  const seed = (Math.random() * 0xffffffff) >>> 0;
+  const out = await composeTemplateLabel({
+    artwork: art, band, template: pick.id, data,
+    widthMm, heightMm, seed, wineColour: data.wineColorName,
+  });
+  void recipe;
+  return { png: out.png, svg: out.svg, art, faces: out.faces, ink: out.ink, ground: out.layout.ground || ground, prompt: "(re-layout of an existing painting)", layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette" };
 }
 
 /* the TTFs a label's SVG sets its type in — shipped beside the SVG so

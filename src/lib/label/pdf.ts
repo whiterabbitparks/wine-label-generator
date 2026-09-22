@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
-import { PDFDocument, rgb, setCharacterSpacing, pushGraphicsState, popGraphicsState } from "pdf-lib";
+import { PDFDocument, rgb, degrees, setCharacterSpacing, pushGraphicsState, popGraphicsState } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import type { Layout } from "@/lib/typeset/compose";
 import { faceFile } from "@/lib/typeset/fonts";
@@ -78,10 +78,17 @@ export async function labelPdf(layout: Layout, artPng: Buffer, widthMm: number, 
     const font = fonts.get(faceFile({ family: l.family, weight: l.weight, italic: l.italic }))!;
     const size = l.size * s, tracking = l.tracking * s;
     const width = font.widthOfTextAtSize(l.text, size) + tracking * Math.max(0, l.text.length - 1);
-    const x = (l.anchor === "middle" ? l.x * s - width / 2 : l.x * s);
-    const y = Hpt - l.y * s;                                  /* SVG baseline from the top → PDF from the bottom */
+    /* 2026-09-22 (the owner's templates): a line may anchor at its END,
+       and may be rotated — the vertical columns of templates 11/12 and
+       every glyph of an arced wine name. pdf-lib rotates about the
+       drawing point, which is the anchor, exactly as the SVG does. */
+    const off = l.anchor === "middle" ? -width / 2 : l.anchor === "end" ? -width : 0;
+    const rot = l.rot || 0;
+    const rad = (-rot * Math.PI) / 180;                       /* SVG turns clockwise, PDF anticlockwise */
+    const x = l.x * s + off * Math.cos(rad);
+    const y = Hpt - l.y * s + off * Math.sin(rad);            /* SVG baseline from the top → PDF from the bottom */
     page.pushOperators(pushGraphicsState(), setCharacterSpacing(tracking));
-    page.drawText(l.text, { x, y, size, font, color: hexRgb(l.colour) });
+    page.drawText(l.text, { x, y, size, font, color: hexRgb(l.colour), ...(rot ? { rotate: degrees(-rot) } : {}) });
     page.pushOperators(popGraphicsState());
   }
   return Buffer.from(await doc.save({ useObjectStreams: false }));

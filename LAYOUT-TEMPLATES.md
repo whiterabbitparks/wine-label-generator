@@ -12,7 +12,8 @@ exactly as you drew it, which is what SVG was destroying.
 Fonts are named in the file, so nothing was lost by not embedding:
 Times New Roman (regular and bold) and EB Garamond Regular.
 
-**Check this document, not the code. Nothing is built yet.**
+**Built and running locally (2026-09-22). Sections 5 to 7 say what
+changed after his answers and how to look at it.**
 
 ---
 
@@ -88,19 +89,19 @@ and would keep it as a per-template choice.
 
 Your three versions map onto what you drew like this:
 
-- **Classical.** Centred composition, serif. Templates 1 to 5.
-- **Contemporary.** Left-justified columns and vertical text, cleaner
-  and smaller. Templates 6 to 12.
-- **Free.** Brush or handwritten face, non-standard arrangement.
-  **Nothing you drew is in this band.**
+- **Classical.** Centred composition, serif. Templates 1, 2, 3, 4.
+- **Contemporary.** Two-column, cleaner and smaller, sans-serif.
+  Templates 6, 7, 8, 9, 10.
+- **Free.** Handwritten and artistic faces, the arrangements that break
+  the grid. Templates 5, 11, 12.
 
-That is the one real gap. Templates 11 and 12 are vertical, which you
-named as a contemporary option, so they do not fill the free slot
-either. Question 4 below asks how you want to close it.
+Nothing you drew is grunge, so the free column takes the arced one and
+the two vertical ones and gets its character from the faces. Draw more
+when you want that column to go further.
 
 ---
 
-## 4. Your rules, as I would implement them
+## 4. Your rules, as they are implemented
 
 **Collapse, never leave a hole.** Each template is an ordered list of
 blocks with one anchor each. When a field is empty its block is removed
@@ -114,55 +115,67 @@ only when it is a bleed picture. The verifier the engine already has
 measures this on every render and fails the build, so it cannot drift.
 
 **The image absorbs the change of shape.** When the label is not 104 × 84,
-the type block keeps its sizes and its margins, and the picture's box
-takes the difference. A rectangular box re-crops. An oval rescales and
-keeps its centre. Type only moves once the picture cannot give any more,
-and then it scales as a whole, never line by line.
+the type keeps its size and its distance from its own anchor edge, and
+the picture's zone takes the difference. Type only scales once it no
+longer fits, and then as a whole, never line by line, never past 7 pt.
 
-**Typography.** 7 pt floor, 20 pt ceiling, hierarchy preserved: the wine
-name is always the largest, the legal line always the smallest. Faces
-vary within the column's band, but a swap has to be visible, so a new
-face must differ in class, not just in name. No two text blocks closer
-than 1 mm.
+**Typography.** 7 pt floor, 20 pt ceiling, hierarchy preserved: nothing
+outgrows the wine name. Faces vary within the column's band, and the
+pools are built so members differ in class, not just in name. No two
+lines closer than 1 mm: a crowded row steps down in size together, and
+the 5 mm margin counts as the row's outermost neighbour, so a long wine
+name gives way to it exactly as it gives way to the line beside it.
 
 **Colour.** Wine type suggests a direction, the artwork decides inside it.
 One ink and one accent per label, as you drew.
 
 ---
 
-## 5. Six things I need from you before I build
+## 5. Your answers, and what they changed
 
-1. **The legal line.** Your template reads `Alc.: 13.5% / 750 ml.` The
-   standing rule in the project says `13.5% Alc. by Vol. / 750 mL`,
-   which is the wording some markets require. Which one wins?
+1. **The legal line** is `13.5% Alc. by Vol. / 750 mL`, the house wording,
+   not the shorthand on the artboard. Built.
+2. **20 pt is an absolute ceiling** for now, and 7 pt the floor. Built.
+3. **Only free Google faces**, and the logic holds: serif for the
+   classical column, sans for the contemporary, handwritten and artistic
+   for the free one. The faces on the artboard were for looking at, not
+   to be matched. Built — three pools, one per column.
 
-2. **20 pt at every size?** On this 104 mm label 20 pt is right. On a
-   300 mm label it would look lost. Is 20 pt an absolute ceiling, or is
-   it the ceiling at this size and it scales with the label?
+Still open, and I have taken the obvious reading rather than stopping:
 
-3. **Times New Roman.** It is a commercial Monotype face. We deliver a
-   PDF with live type, so the font travels with the file. EB Garamond is
-   free and safe. Do you want me to find a free serif that reads like
-   Times, or do you have a licence?
+4. **The free column** has no grunge template drawn, so it takes the
+   arced one and the two vertical ones, and gets its freedom from the
+   written faces. Draw more when you want to.
+5. **Fields a template never shows** — templates 11 and 12 join region,
+   grape and the legal line into slash-separated lines, and template 5
+   has no appellation. Left as you drew them.
+6. **The two reds** are treated as one accent. The accent now comes off
+   the painting anyway, with the wine type only as a direction.
 
-4. **The free column.** Do you want to draw two or three grunge
-   templates, or should that column take templates 11 and 12 and get its
-   freedom from brush faces and colour instead?
+## 6. What is built
 
-5. **Fields that a template never shows.** Template 5 has no appellation.
-   Templates 11 and 12 join region, grape and legal into slash-separated
-   lines. That is fine visually, but it means a customer who fills a
-   field will not see it. Confirm that the back label carrying it is
-   enough.
+- `tools/extract-templates.mjs` reads your PDF and writes the geometry.
+  Re-run it whenever you re-draw a template and the engine follows.
+- `src/lib/typeset/templates.ts` lays a label on a template: collapse,
+  the 5 mm margin, the picture absorbing a change of shape, the type
+  bounds, collisions, and the faces per column.
+- The wizard's three columns now mean your three bands, and a variation
+  is a DIFFERENT TEMPLATE from the same band.
 
-6. **Two reds.** The file has `#d71920` and `#c70001`. Same intent, or
-   are they meant to be different?
+To look at them without generating anything:
 
----
+```
+npx tsx tools/preview-templates.mts              # all twelve, full details
+npx tsx tools/preview-templates.mts --sparse     # only name, vintage, legal
+npx tsx tools/preview-templates.mts --long       # a very long name
+npx tsx tools/preview-templates.mts --size 70x90 # a different shape
+```
 
-## 6. What happens next
+## 7. What I would change next, once you have looked
 
-Once you have answered, I build **one** template end to end, render it at
-several label sizes and with short and long wine names, and show you
-before touching the other eleven. That is the step the earlier attempt
-skipped.
+- The picture is FITTED into its zone, never cropped, because a painting
+  is never cut is a standing rule. Your bands bleed off the label edge,
+  so if you want them to read as full-bleed imagery that is a decision to
+  take.
+- Template 5's foot row crowds when every field is long: a centred grape
+  between a left and a right line. It shrinks to fit, and warns.

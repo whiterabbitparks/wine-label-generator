@@ -37,7 +37,12 @@ export interface ComposeInput {
   fit?: "yield" | "crop" | "top" | "vignette";  /* round 100: vignette = the drawing is trimmed off its plain ground and placed above the type on that colour */
 }
 /* every set line, in label pixels — what the PDF is drawn from */
-export interface LaidLine { text: string; x: number; y: number; size: number; tracking: number; family: string; weight: number; italic: boolean; anchor: "start" | "middle"; colour: string }
+/* 2026-09-22: the owner's templates right-align a column and set two of
+   them vertically, and one sets the wine name around an arc — so a line
+   may now anchor at its END and may carry its own rotation, in degrees
+   clockwise about its anchor point. Both are optional; nothing that was
+   already laid out uses them. */
+export interface LaidLine { text: string; x: number; y: number; size: number; tracking: number; family: string; weight: number; italic: boolean; anchor: "start" | "middle" | "end"; colour: string; rot?: number }
 export interface Layout { W: number; H: number; ground: string; art: { x: number; y: number; w: number; h: number }; artCrop?: { x: number; y: number; w: number; h: number }; lines: LaidLine[] }
 export interface ComposeOutput { svg: string; png: string; faces: string; ink: string; layout: Layout }
 
