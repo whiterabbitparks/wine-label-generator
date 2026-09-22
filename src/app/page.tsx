@@ -1032,9 +1032,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   /* ROUND 112 #4 (owner's artboards): the ARTISTS pages — an index of
      everyone who trained a model, and a page each. Read from the public
      /api/artists (name, biography, link and the pictures on disk). */
-  interface SiteArtist { id: string; name: string; bio: string; link: string; linkKind: "instagram" | "site" | ""; portrait: string; crop: string; works: string[] }
+  interface SiteArtist { id: string; name: string; bio: string; link: string; linkKind: "instagram" | "site" | ""; instagram: string; website: string; portrait: string; crop: string; works: string[]; labels: string[] }
   const [siteArtists, setSiteArtists] = useState<SiteArtist[]>([]);
   const [artistId, setArtistId] = useState("");
+  /* round 113 #6: her page shows two sets — her own paintings, or the
+     labels already painted in her hand */
+  const [artistView, setArtistView] = useState<"art" | "labels">("art");
   const artistsFrom = useRef<PageKey>("welcome");
   /* the artist a visitor chose on that page: every column then paints in
      her hand instead of the three the admin set */
@@ -1768,7 +1771,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
      element: one raster space, one snap, no drift at any page scale. */
   const PLUS_ARM = 9;
   const dashLine = (x1: number, y1: number, x2: number, y2: number, i: number | string, dashed = true) => (
-    <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#000" strokeWidth="1"
+    /* the ink comes from the wrapping <svg>'s `color`, so a whole frame
+       can be greyed in one place (round 113 #4) without splitting the
+       element — splitting it is what made the pluses drift */
+    <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="currentColor" strokeWidth="1"
       strokeDasharray={dashed ? "4.12 4.12" : undefined} shapeRendering="crispEdges" />
   );
   const plusAt = (cx: number, cy: number, i: number | string) => (
@@ -1784,7 +1790,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const T = 0.5, B = h + 0.5, L = 0.5, R = w + 0.5;
     const at = (c: number) => c - x + 0.5;
     return (
-      <svg key={key} style={{ ...px(x - 0.5, y - 0.5, w + 1, h + 1), pointerEvents: "none", overflow: "visible" }} viewBox={`0 0 ${w + 1} ${h + 1}`}>
+      <svg key={key} style={{ ...px(x - 0.5, y - 0.5, w + 1, h + 1), pointerEvents: "none", overflow: "visible", color: "#000" }} viewBox={`0 0 ${w + 1} ${h + 1}`}>
         {dashLine(L, T, R, T, "t")}{dashLine(L, B, R, B, "b")}
         {sides && (<>{dashLine(L, T, L, B, "l")}{dashLine(R, T, R, B, "r")}</>)}
         {cols.map((c, i) => dashLine(at(c), T, at(c), B, "c" + i))}
@@ -1794,10 +1800,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       </svg>
     );
   };
-  const dashedBox = (x: number, y: number, w: number, h: number, key?: string, pluses = false) => {
+  const dashedBox = (x: number, y: number, w: number, h: number, key?: string, pluses = false, color = "#000") => {
     const L = 0.5, R = w + 0.5, T = 0.5, B = h + 0.5;
     return (
-      <svg key={key} style={{ ...px(x - 0.5, y - 0.5, w + 1, h + 1), pointerEvents: "none", overflow: "visible" }} viewBox={`0 0 ${w + 1} ${h + 1}`}>
+      <svg key={key} style={{ ...px(x - 0.5, y - 0.5, w + 1, h + 1), pointerEvents: "none", overflow: "visible", color }} viewBox={`0 0 ${w + 1} ${h + 1}`}>
         {dashLine(L, T, R, T, 0)}{dashLine(L, B, R, B, 1)}
         {dashLine(L, T, L, B, 2)}{dashLine(R, T, R, B, 3)}
         {pluses && ([[L, T], [R, T], [L, B], [R, B]] as const).map(([cx, cy], i) => plusAt(cx, cy, i))}
@@ -1815,7 +1821,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const dashRule = (x: number, y: number, len: number, vertical = false, key?: string, color = "#000", ends = false) => (
     /* the element is pulled back half a unit across the line, so the
        stroke straddles the coordinate instead of sitting beside it */
-    <svg key={key} style={{ ...px(vertical ? x - 0.5 : x, vertical ? y : y - 0.5, vertical ? 1 : len, vertical ? len : 1), pointerEvents: "none", overflow: "visible" }} viewBox={`0 0 ${vertical ? 1 : len} ${vertical ? len : 1}`}>
+    <svg key={key} style={{ ...px(vertical ? x - 0.5 : x, vertical ? y : y - 0.5, vertical ? 1 : len, vertical ? len : 1), pointerEvents: "none", overflow: "visible", color }} viewBox={`0 0 ${vertical ? 1 : len} ${vertical ? len : 1}`}>
       <line x1={vertical ? 0.5 : 0} y1={vertical ? 0 : 0.5} x2={vertical ? 0.5 : len} y2={vertical ? len : 0.5} stroke={color} strokeWidth="1" strokeDasharray="4.12 4.12" shapeRendering="crispEdges" />
       {ends && (vertical
         ? (<>{plusAt(0.5, 0, "a")}{plusAt(0.5, len, "b")}</>)
@@ -1920,6 +1926,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     { code: "IL", col: 3, row: 0 }, { code: "GE", col: 3, row: 1 }, { code: "CA", col: 3, row: 2 },
   ];
 
+  /* round 71: Mtavruli runs much wider than Latin — six stops 166.6 apart
+     only clear each other in Georgian at a smaller size. The progress
+     bar's title size; round 113 #2 borrows it for the artists' names
+     over the three labels. */
+  const BAR_FS = lang === "ge" ? 12 : 15;
+
   const OPT_FRAMES = [{ x: 137.1 }, { x: 548.5 }, { x: 960 }];
   const OPT_TOP = 290, OPT_BOT = 540, OPT_W = 342.9;   /* round 98 #1: where the labels sit */
   const BD_AREA = { x: 548.6, y: 171.5, w: 342.9, h: 342.9 };
@@ -1980,7 +1992,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             if (!a2) return <span key={"slot" + i} style={{ ...px(cx - R, cy - R, R * 2, R * 2), borderRadius: R, background: "#e6e6e6" }} />;
             const parts = a2.name.split(" ");
             return (
-              <button key={a2.id} onClick={() => { setArtistId(a2.id); go("artist"); }}
+              <button key={a2.id} onClick={() => { setArtistId(a2.id); setArtistView("art"); go("artist"); }}
                 style={{ ...px(cx - 110, cy - R, 220, R * 2 + 90), ...ghost, cursor: "pointer", textTransform: "none" }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={a2.portrait} alt={a2.name}
@@ -2010,26 +2022,53 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           <button onClick={() => { setChosenArtist(a2.id); go("vision"); }}
             style={{ ...px(136.96, 548.57, 343.21, 34.29), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, textTransform: "none" }}>
             {t("Create label with")} {first}{t("’s art")}</button>
-          <span style={{ ...px(BX, baseTop(628.19, 17), 300, 20), font: `700 17px ${HNW}`, lineHeight: "17px", color: INK, whiteSpace: "nowrap" }}>{t("Original art")}</span>
-          {/* the second view is drawn as the owner has it; it lights up
-              when we have labels painted in her hand to show */}
-          <span style={{ ...px(BX, baseTop(651.35, 17), 300, 20), font: `700 17px ${HNW}`, lineHeight: "17px", color: "#b3b3b3", whiteSpace: "nowrap" }}>{t("Labels from")} {first}</span>
-          {a2.link && (
-            <a href={a2.link} target="_blank" rel="noreferrer" aria-label={a2.linkKind === "instagram" ? "instagram" : "website"}
-              style={{ ...px(424, 630, 22, 22), display: "block" }}>
-              {a2.linkKind === "instagram" ? (
-                <svg viewBox="0 0 22 22" width="22" height="22"><rect x="1.6" y="1.6" width="18.8" height="18.8" rx="5.4" fill="none" stroke={INK} strokeWidth="1.5" /><circle cx="11" cy="11" r="4.6" fill="none" stroke={INK} strokeWidth="1.5" /><circle cx="16.6" cy="5.4" r="1.2" fill={INK} /></svg>
-              ) : (
-                <svg viewBox="0 0 22 22" width="22" height="22"><g fill="none" stroke={INK} strokeWidth="1.5" strokeLinecap="round"><path d="M9 13a4 4 0 0 0 5.66 0l3-3A4 4 0 0 0 12 4.34l-1.2 1.2" /><path d="M13 9a4 4 0 0 0-5.66 0l-3 3A4 4 0 0 0 10 17.66l1.2-1.2" /></g></svg>
-              )}
-            </a>
-          )}
-          {a2.works.slice(0, 6).map((w, i) => (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img key={w} src={w} alt=""
-              style={{ ...px(WX + (i % 3) * WGAP, WY + Math.floor(i / 3) * WGAP, WK, WK), objectFit: "cover", display: "block", cursor: "pointer" }}
-              onClick={() => setGallery({ items: a2.works, index: i })} />
-          ))}
+          {/* ROUND 113 #6 (owner): the two captions are HYPERLINKS —
+              underlined, as the owner drew them (his .st5 carries
+              text-decoration: underline). "Original art" shows her own
+              paintings; "Labels from …" shows the labels already painted
+              in her hand. The set being shown is black, the other grey. */}
+          {([["Original art", "art"], ["Labels from", "labels"]] as const).map(([cap, view], i) => {
+            const set = view === "art" ? a2.works : a2.labels;
+            const on = artistView === view;
+            return (
+              <button key={view} onClick={() => set.length && setArtistView(view)}
+                style={{ ...px(BX, baseTop(i ? 651.35 : 628.19, 17), 300, 20), ...ghost, font: `700 17px ${HNW}`, lineHeight: "17px", color: on && set.length ? INK : "#b3b3b3", whiteSpace: "nowrap", textAlign: "left", textDecoration: "underline", textUnderlineOffset: 3, cursor: set.length ? "pointer" : "default", textTransform: "none" }}>
+                {view === "art" ? t(cap) : `${t(cap)} ${first}`}</button>
+            );
+          })}
+          {/* ROUND 113 #5 (owner): BOTH marks stand on every artist's page,
+              traced from his own artboard — the paths are his, and the
+              viewBox is the artboard's own space, so each lands exactly
+              where he drew it. An address he has not filled in yet leaves
+              its mark standing, pale and inert. */}
+          {([["instagram", a2.instagram, 413, 24, [
+              "M436.53,645.21c-.08,3.25-2.81,6.04-6.04,6.1-3.81.07-7.46.11-11.28-.02-3.25-.11-5.92-3.08-5.91-6.26v-10.5c.01-3.25,2.79-6.17,6.09-6.26,3.79-.1,7.39-.11,11.19,0,3.15.09,5.86,2.91,5.95,6.05.11,3.67.1,7.16,0,10.89ZM430.79,650.3c2.62-.42,4.75-2.63,4.74-5.3l-.02-10.51c0-2.74-2.39-5.18-5.12-5.18h-10.91c-2.77,0-5.12,2.52-5.13,5.26l-.04,10.01c0,1.63.61,3.14,1.76,4.25,1.06,1.03,2.38,1.47,3.84,1.47h10.88Z",
+              "M429.34,643.85c-1.48,1.63-3.67,2.29-5.84,1.77-1.88-.45-3.52-1.85-4.24-3.82-.83-2.26-.15-4.74,1.63-6.36s4.5-2.1,6.71-.95c1.64.85,2.79,2.34,3.15,3.96.44,2.01-.05,3.9-1.41,5.4ZM429.87,640.2c.22-2.9-2.05-5.21-4.81-5.3s-5.06,2.07-5.11,4.87,2.09,4.84,4.69,4.98,5.01-1.8,5.23-4.55Z",
+              "M431.92,634.48c-.57.19-1.08-.02-1.39-.46-.28-.39-.25-.94.06-1.37s.87-.6,1.39-.39c.47.19.78.64.77,1.12,0,.46-.33.93-.83,1.1Z"]],
+            ["website", a2.website, 457.8, 22.6, [
+              "M469.46,642.76c1.33.24,2.84-.07,3.8-1.02l4.62-4.59c1.14-1.13,1.49-2.86,1.1-4.44-.35-1.38-1.38-2.65-2.83-3.25-1.63-.67-3.62-.35-4.88.91l-3.84,3.87c-.36.03-.77-.37-.73-.73l4.09-4.11c1.93-1.74,4.86-1.78,6.9-.3,2.8,2.03,3.29,5.76,1.22,8.53l-4.44,4.46c-.62.67-1.33,1.1-2.18,1.42-2.9,1.07-5.62-.22-7.2-2.86.03-.19.19-.39.33-.49.13-.1.5-.12.61.02.78,1.28,1.84,2.3,3.42,2.59Z",
+              "M466.08,649.23l3.86-3.76c.34-.04.69.28.76.67l-3.86,3.83c-1.85,1.84-5.55,1.97-7.86-.36-2.03-2.05-2.35-5.4-.37-7.66l4.84-4.91c1.16-1.18,3.07-1.48,4.62-1.21,1.72.3,2.98,1.38,3.93,2.74.21.31.31.53.04.79-.18.19-.57.33-.76,0-.82-1.33-2.07-2.34-3.69-2.54-1.19-.15-2.6.14-3.48,1.03l-4.65,4.69c-1.74,1.96-1.36,4.89.54,6.58,1.69,1.51,4.29,1.62,6.09.1Z"]]] as const)
+            .map(([kind, href, ix, iw, paths]) => {
+              const mark = (
+                <svg viewBox={`${ix} 627.5 ${iw} 24.5`} style={{ ...px(ix, 627.5, iw, 24.5), display: "block", opacity: href ? 1 : 0.32 }}>
+                  {paths.map((d, k) => <path key={k} d={d} fill={INK} />)}
+                </svg>
+              );
+              return href
+                ? <a key={kind} href={href} target="_blank" rel="noreferrer" aria-label={kind}>{mark}</a>
+                : <span key={kind} aria-hidden="true">{mark}</span>;
+            })}
+          {(() => {
+            /* round 113 #6: her paintings fill their squares; a LABEL keeps
+               its own shape, so it is fitted inside the square instead */
+            const set = (artistView === "labels" ? a2.labels : a2.works).slice(0, 6);
+            return set.map((w, i) => (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img key={w} src={w} alt="" title={t("Show this one big")}
+                style={{ ...px(WX + (i % 3) * WGAP, WY + Math.floor(i / 3) * WGAP, WK, WK), objectFit: artistView === "labels" ? "contain" : "cover", display: "block", cursor: "pointer" }}
+                onClick={() => setGallery({ items: set, index: i })} />
+            ));
+          })()}
         </>);
       }
 
@@ -2214,13 +2253,42 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
            over each column with a dashed rule, the label with its crosses,
            three dots (the three layouts of one painting), then SAVE. No
            variation buttons, no subtitle. */
-        const styleHead = (fi: number) => (
-          <span key={"sh" + fi}>
-            {/* round 102: an artist's column carries the artist's name */}
-            <span style={{ ...px(OPT_FRAMES[fi].x, baseTop(221, 21), OPT_W, 24), font: `700 21px ${HNW}`, lineHeight: "21px", textAlign: "center", display: "block", whiteSpace: "nowrap" }}>{(dreams[fi]?.artist || t(STYLE_NAMES[fi])).toUpperCase()}</span>
-            {dashRule(OPT_FRAMES[fi].x - 12, 242, OPT_W + 24, false, "shr" + fi)}
-          </span>
-        );
+        /* ROUND 113 #3 (owner): "make dashed line above the labels same
+           width as the labels" — so the head has to know where the
+           column's label will land. ONE measurement, used by the head and
+           by the label itself; with no dream yet it falls back to the
+           size the customer typed, so the empty page draws the same box. */
+        const labelBox = (fi: number) => {
+          const nat = imgDims[fi];
+          const ar = nat ? nat.w / nat.h : (Number(f.width) || 110) / (Number(f.height) || 80);
+          let lw: number, lh: number;
+          if (ar >= 1) { lw = OPT_W; lh = OPT_W / ar; if (lh > AREA_BOT - AREA_TOP) { lh = AREA_BOT - AREA_TOP; lw = lh * ar; } }
+          else { lh = AREA_BOT - AREA_TOP; lw = lh * ar; if (lw > OPT_W - 2 * CUBE) { lw = OPT_W - 2 * CUBE; lh = lw / ar; } }
+          return { lx: OPT_FRAMES[fi].x + (OPT_W - lw) / 2, ly: AREA_TOP + (ar >= 1 ? 0 : (AREA_BOT - AREA_TOP - lh) / 2), lw, lh };
+        };
+        const styleHead = (fi: number) => {
+          /* the empty page still shows a full-width grey slot, so its rule
+             keeps the column's full width */
+          const b = dreams.length ? labelBox(fi) : { lx: OPT_FRAMES[fi].x, lw: OPT_W };
+          const who = dreams[fi]?.artist || "";
+          /* ROUND 113 #2 (owner): the artist's name at the progress bar's
+             own title size, with her face in a small circle before it */
+          const av = siteArtists.find((s) => s.name === who) || (chosenArtist ? siteArtists.find((s) => s.id === chosenArtist) : undefined);
+          const AV = BAR_FS + 7;
+          return (
+            <span key={"sh" + fi}>
+              {/* round 102: an artist's column carries the artist's name */}
+              <div style={{ ...px(b.lx, baseTop(221, BAR_FS) - (AV - BAR_FS) / 2, b.lw, AV), display: "flex", alignItems: "center", justifyContent: "center", columnGap: 7, pointerEvents: "none" }}>
+                {who && av && (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={av.portrait} alt="" style={{ width: AV, height: AV, borderRadius: "50%", objectFit: "cover", objectPosition: av.crop, display: "block", flex: "0 0 auto" }} />
+                )}
+                <span style={{ font: `700 ${BAR_FS}px ${HNW}`, lineHeight: `${BAR_FS}px`, whiteSpace: "nowrap" }}>{(who || t(STYLE_NAMES[fi])).toUpperCase()}</span>
+              </div>
+              {dashRule(b.lx, 242, b.lw, false, "shr" + fi)}
+            </span>
+          );
+        };
         return (<>
           {covers}
           {patch(135, 164, 1170, 26, "stynames")}
@@ -2229,13 +2297,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             const orig = dreams[fi];
             if (!orig?.preview && !orig?.dream) return null;
             const dv = viewedDream(fi);
-            const nat = imgDims[fi];
-            const ar = nat ? nat.w / nat.h : (Number(f.width) || 110) / (Number(f.height) || 80);
-            let lw: number, lh: number;
-            if (ar >= 1) { lw = OPT_W; lh = OPT_W / ar; if (lh > AREA_BOT - AREA_TOP) { lh = AREA_BOT - AREA_TOP; lw = lh * ar; } }
-            else { lh = AREA_BOT - AREA_TOP; lw = lh * ar; if (lw > OPT_W - 2 * CUBE) { lw = OPT_W - 2 * CUBE; lh = lw / ar; } }
-            const lx = fr.x + (OPT_W - lw) / 2;
-            const ly = AREA_TOP + (ar >= 1 ? 0 : (AREA_BOT - AREA_TOP - lh) / 2);
+            const { lx, ly, lw, lh } = labelBox(fi);
             const nDots = 1 + (styleVars[fi]?.length || 0);
             return (
               <div key={fi}>
@@ -2491,22 +2553,39 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       case "backdesign": {
         const fit = fitIn(BD_AREA.w, BD_AREA.h, backDims.w, backDims.h);
         const lx = BD_AREA.x + fit.dx, ly = BD_AREA.y + fit.dy;
+        /* ROUND 113 #4 (owner): "Back label page with placeholders is not
+           in sync with the actual layout… if we make any change in real
+           UI the placeholder pages should also adapt". So the empty page
+           is the filled page with the ink taken out: the same dashed
+           frame with its corner pluses, the same size caption on the same
+           midline, and BOTH buttons — Edit and Save — in their real
+           places, greyed. The geometry is read from the same numbers. */
+        const BD_EDIT_Y = 589, BD_SAVE_Y = 657.6, BD_BX = 548.6, BD_BW = 341.4, BD_BH = 34.3;
+        /* with nothing made yet the slot is the whole area, so the frame
+           stands 10 off it exactly as it stands off a real label */
+        const capY = ((backPng ? ly + fit.h : BD_AREA.y + BD_AREA.h) + BD_EDIT_Y) / 2 - 7.5;
+        const sizeCaption = (rows: readonly (readonly [string, string])[], grey: boolean) => (
+          <div style={{ position: "absolute", left: BD_AREA.x, top: capY, width: BD_AREA.w, display: "flex", justifyContent: "center", alignItems: "baseline", columnGap: 24, pointerEvents: "none" }}>
+            {rows.map(([cap, v]) => (
+              <span key={cap} style={{ display: "flex", alignItems: "baseline" }}>
+                <span style={{ font: `700 14px ${HNW}`, lineHeight: "15px", ...(grey ? { color: "#C9C7BF" } : {}) }}>{t(cap)}</span>
+                <span style={{ font: `italic 14px ${HNW}`, lineHeight: "15px", marginLeft: 4, ...(grey ? { color: "#C9C7BF" } : {}) }}>{v} {t("mm")}</span>
+              </span>
+            ))}
+          </div>
+        );
         return (<>
           {/* cover baked mock + its corner crosses + Edit/magnifier row */}
           {patch(BD_AREA.x - 12, BD_AREA.y - 12, BD_AREA.w + 24, BD_AREA.h + 24, "bdmock")}
           {patch(546, 546, 350, 40, "bdrow")}
           {!backPng && (<>
             {notMade(BD_AREA.x, BD_AREA.y, BD_AREA.w, BD_AREA.h, "back", "nmbd")}
+            {dashedBox(BD_AREA.x - 10, BD_AREA.y - 10, BD_AREA.w + 20, BD_AREA.h + 20, "bdDempty", true, "#C9C7BF")}
             {/* round 53 #8: deactivated grey furniture on the empty page */}
-            <div style={{ position: "absolute", left: BD_AREA.x, top: 559, width: BD_AREA.w, display: "flex", justifyContent: "center", alignItems: "baseline", columnGap: 24, pointerEvents: "none" }}>
-              {(["Width:", "Height:"] as const).map((cap) => (
-                <span key={cap} style={{ display: "flex", alignItems: "baseline" }}>
-                  <span style={{ font: `700 14px ${HNW}`, lineHeight: "15px", color: "#C9C7BF" }}>{t(cap)}</span>
-                  <span style={{ font: `italic 14px ${HNW}`, lineHeight: "15px", marginLeft: 4, color: "#C9C7BF" }}>— {t("mm")}</span>
-                </span>
-              ))}
-            </div>
-            <div style={{ ...px(548.6, 589, 341.4, 34.3), background: "#ECECEA", color: "#B3B1A8", font: `12px ${HNW}`, letterSpacing: 0.3, display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>{t("Edit")}</div>
+            {sizeCaption([["Width:", "—"], ["Height:", "—"]] as const, true)}
+            {([["Edit", BD_EDIT_Y], ["Save", BD_SAVE_Y]] as const).map(([cap, y]) => (
+              <div key={cap} style={{ ...px(BD_BX, y, BD_BW, BD_BH), background: "#ECECEA", color: "#B3B1A8", font: `12px ${HNW}`, letterSpacing: 0.3, display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>{t(cap)}</div>
+            ))}
           </>)}
           {backPng && (<>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -2516,10 +2595,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             {/* round 88 #8: the frame stands 10px off the label, crosses on its corners */}
             {dashedBox(lx - 10, ly - 10, fit.w + 20, fit.h + 20, "bdD", true)}
             <button onClick={() => go("backdetails", -1)}
-              style={{ ...px(548.6, 589, 341.4, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>{t("Edit")}</button>
+              style={{ ...px(BD_BX, BD_EDIT_Y, BD_BW, BD_BH), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>{t("Edit")}</button>
             {/* round 88 #7 (owner): SAVE under Edit — flies the back label into the folder */}
             <button onClick={() => { setBackSaved(!backSaved); flyToFolder([{ src: backPng, x: lx, y: ly, w: fit.w, h: fit.h }], backSaved); }}
-              style={{ ...px(548.6, 657.6, 341.4, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: backSaved ? "#fff" : "#111", color: backSaved ? "#111" : "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, transition: `background 240ms ${EASE}, color 240ms ${EASE}` }}>{backSaved ? t("Saved") : t("Save")}</button>
+              style={{ ...px(BD_BX, BD_SAVE_Y, BD_BW, BD_BH), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: backSaved ? "#fff" : "#111", color: backSaved ? "#111" : "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, transition: `background 240ms ${EASE}, color 240ms ${EASE}` }}>{backSaved ? t("Saved") : t("Save")}</button>
             {/* ROUND 51 #7/#8 (owner): informational size caption — same
                 type as the front page's Width/Height, no input, no
                 underline, centered between the label and Edit. The width
@@ -2528,17 +2607,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             {(() => {
               const hmm = Number(f.height) || 80;
               const wmm = Math.round((hmm * (backDims.w / backDims.h)) / 5) * 5;
-              const yMid = (ly + fit.h + 589) / 2;
-              return (
-                <div style={{ position: "absolute", left: BD_AREA.x, top: yMid - 7.5, width: BD_AREA.w, display: "flex", justifyContent: "center", alignItems: "baseline", columnGap: 24, pointerEvents: "none" }}>
-                  {([["Width:", wmm], ["Height:", hmm]] as const).map(([cap, v]) => (
-                    <span key={cap} style={{ display: "flex", alignItems: "baseline" }}>
-                      <span style={{ font: `700 14px ${HNW}`, lineHeight: "15px" }}>{t(cap)}</span>
-                      <span style={{ font: `italic 14px ${HNW}`, lineHeight: "15px", marginLeft: 4 }}>{v} {t("mm")}</span>
-                    </span>
-                  ))}
-                </div>
-              );
+              return sizeCaption([["Width:", String(wmm)], ["Height:", String(hmm)]] as const, false);
             })()}
           </>)}
         </>);
@@ -3183,9 +3252,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const modalOpen = !!confirmModal || termsOpen || marketOpen;
   const barPage: PageKey = page === "blank" ? blankFrom.current : page;
   const step = tut >= 0 ? tut : STEP_OF[barPage];
-  /* round 71: Mtavruli runs much wider than Latin — six stops 166.6 apart
-     only clear each other in Georgian at a smaller size */
-  const BAR_FS = lang === "ge" ? 12 : 15;
   /* round 71 #4: while the walkthrough runs, the bar follows IT — the
      button rides the stop being explained and the line follows it home */
   const tutLast = TUT_CARDS.length - 1;
@@ -3251,7 +3317,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           the margins rasterises exactly like the stretch across the page
           (the page redraws them over its boards, which cover this one) */}
       {(["left", "right"] as const).map((side) => (
-        <div key={side} style={{ position: "absolute", [side]: 0, top: 0, width: `calc(50% - ${(W * scale) / 2}px)`, height: FOOT_RULE_Y * scale + 2, overflow: "hidden", pointerEvents: "none" }}>
+        /* ROUND 113 #1 (owner): the gallery's veil goes over EVERYTHING,
+           and these two rules run past the page into the window margins,
+           where no veil inside the page box can reach them. They fade to
+           the same 6 % the veil leaves of any black — so the rule reads
+           identically inside the page and out in the margins. */
+        <div key={side} style={{ position: "absolute", [side]: 0, top: 0, width: `calc(50% - ${(W * scale) / 2}px)`, height: FOOT_RULE_Y * scale + 2, overflow: "hidden", pointerEvents: "none", opacity: gallery ? 0.06 : 1 }}>
           <div style={{ position: "absolute", left: 0, top: 0, width: 4000, height: PAGE_H, transform: `scale(${scale})`, transformOrigin: "top left" }}>
             <div style={{ position: "absolute", left: 0, top: HEADER_H - 0.5, width: 4000, height: 1, background: HAIRLINE }} />
             <div style={{ position: "absolute", left: 0, top: FOOT_RULE_Y - 0.5, width: 4000, height: 1, background: HAIRLINE }} />
@@ -3659,11 +3730,17 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                veil covers the band ONLY — the header, the folder mark and
                the progress bar are never covered by anything (z 30/31/32
                all pass under the bar's 45 and the header's 44). */
-            const GTOP = VEIL_TOP, GBOT = VEIL_BOT;
+            /* ROUND 113 #1 (owner): "in gallery view, put the white
+               transparent background on top of everything" — the gallery
+               is the ONE exception to round 108 #20. Its veil covers the
+               whole page, header, folder mark and progress bar included,
+               and rides above them (z 80+ clears the bar's 45, the
+               header's 44 and the walkthrough pointer's 70). */
+            const GTOP = 0, GBOT = PAGE_H;
             const res = gallery.save ? 78 : many ? 34 : 0;    /* room kept for the furniture */
             /* the same air top and bottom, so the picture sits on the
-               band's own middle whatever furniture is under it */
-            const pad = Math.max(18, res);
+               page's own middle whatever furniture is under it */
+            const pad = Math.max(56, res + 20);
             const boxY = GTOP + pad, boxH = (GBOT - pad) - boxY;
             const MID = GTOP + (GBOT - GTOP) / 2;
             const chev = (dir: -1 | 1) => (
@@ -3673,21 +3750,28 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               </svg>
             );
             return (<>
-              <div style={{ ...px(0, GTOP, W, GBOT - GTOP), zIndex: 30 }} onClick={() => setGallery(null)} />
-              <div style={{ ...px(0, GTOP, W, GBOT - GTOP), background: "rgba(255,255,255,0.94)", zIndex: 30, pointerEvents: "none" }} />
+              <div style={{ ...px(0, GTOP, W, GBOT - GTOP), zIndex: 80 }} onClick={() => setGallery(null)} />
+              <div style={{ ...px(0, GTOP, W, GBOT - GTOP), background: "rgba(255,255,255,0.94)", zIndex: 80, pointerEvents: "none" }} />
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={src} alt="" style={{ ...px(210, boxY, 1020, boxH), objectFit: "contain", zIndex: 31, animation: `nuiFadeIn 220ms ${EASE} both` }} />
+              <img src={src} alt="" style={{ ...px(210, boxY, 1020, boxH), objectFit: "contain", zIndex: 81, animation: `nuiFadeIn 220ms ${EASE} both` }} />
               {many && (<>
-                <button aria-label="previous" onClick={() => step(-1)} style={{ ...px(137.14 - 46, MID - 22, 44, 44), ...ghost, zIndex: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>{chev(-1)}</button>
-                <button aria-label="next" onClick={() => step(1)} style={{ ...px(1302.86 + 2, MID - 22, 44, 44), ...ghost, zIndex: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>{chev(1)}</button>
-                <span style={{ ...px(0, GBOT - res - 2, W, 16), font: `13px ${HNW}`, color: "#8a887e", textAlign: "center", display: "block", zIndex: 32 }}>{gallery.index + 1} / {gallery.items.length}</span>
+                <button aria-label="previous" onClick={() => step(-1)} style={{ ...px(137.14 - 46, MID - 22, 44, 44), ...ghost, zIndex: 82, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>{chev(-1)}</button>
+                <button aria-label="next" onClick={() => step(1)} style={{ ...px(1302.86 + 2, MID - 22, 44, 44), ...ghost, zIndex: 82, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>{chev(1)}</button>
+                <span style={{ ...px(0, GBOT - res - 2, W, 16), font: `13px ${HNW}`, color: "#8a887e", textAlign: "center", display: "block", zIndex: 82 }}>{gallery.index + 1} / {gallery.items.length}</span>
               </>)}
-              <button aria-label="close gallery" onClick={() => setGallery(null)} style={{ ...px(1302.86 - 20, GTOP + 42, 24, 24), ...ghost, zIndex: 32, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg viewBox="0 0 20 20" width="18" height="18"><line x1="2" y1="2" x2="18" y2="18" stroke="#111" strokeWidth="1.92" /><line x1="18" y1="2" x2="2" y2="18" stroke="#111" strokeWidth="1.92" /></svg>
+              {/* ROUND 113 #1 (owner): "put the close icon X in black circle
+                  and make X white" — the disc is centred on the right page
+                  margin, at the height the ✕ always sat */}
+              <button aria-label="close gallery" onClick={() => setGallery(null)} style={{ ...px(1302.86 - 17, 42 - 17, 34, 34), ...ghost, zIndex: 82, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <svg viewBox="0 0 34 34" width="34" height="34" style={{ display: "block" }}>
+                  <circle cx="17" cy="17" r="17" fill="#111" />
+                  <line x1="11" y1="11" x2="23" y2="23" stroke="#fff" strokeWidth="1.92" />
+                  <line x1="23" y1="11" x2="11" y2="23" stroke="#fff" strokeWidth="1.92" />
+                </svg>
               </button>
               {gallery.save && (
                 <button onClick={() => { gallery.save?.(); setGallery((g) => g ? { ...g, saved: !g.saved } : g); }}
-                  style={{ ...px(W / 2 - 120, GBOT - 48, 240, 34.3), zIndex: 32, cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: gallery.saved ? "#fff" : "#111", color: gallery.saved ? "#111" : "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
+                  style={{ ...px(W / 2 - 120, GBOT - 48, 240, 34.3), zIndex: 82, cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: gallery.saved ? "#fff" : "#111", color: gallery.saved ? "#111" : "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
                   {gallery.saved ? t("Saved") : t("Save")}</button>
               )}
             </>);

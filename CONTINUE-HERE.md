@@ -2013,6 +2013,42 @@ composition-contract tightening, then customer wiring.
   artists' versions, artists earn a share per label. Live (2.28.48.43)
   stays on POPIKA_Back_To_Vector. Decisions: start with ONE artist, all
   three columns show her; no smart selection yet; share % undecided.
+- ROUND 113 — THE GALLERY ON TOP, THE ARTIST OVER THE LABEL, AND HER
+  TWO SETS (2026-09-22, owner's six-item list). (1) THE GALLERY IS THE
+  ONE THING THAT COVERS EVERYTHING. Its veil ran the content band only,
+  so the header and the progress bar stood clear of it. It now runs the
+  whole page (z80/81/82, over the bar's 45, the header's 44 and the
+  walkthrough pointer's 70), and the two hairlines that run PAST the
+  page into the window margins fade to 6 % while it is open — the same
+  6 % the veil leaves of any black, so a rule reads identically inside
+  the page and out in the margin. The close mark is now a white ✕ in a
+  black disc (d 34) centred on the right page margin. (2) THE ARTIST'S
+  NAME over each label is set at BAR_FS, the progress bar's own title
+  size (15, or 12 in Georgian), with her portrait in a small circle
+  before it. (3) THE DASHED RULE over each label is cut to THAT label's
+  width: one measurement, labelBox(fi), now serves the head and the
+  label both. With nothing painted yet it falls back to the size the
+  customer typed, so the empty page draws the same box. (4) THE BACK-
+  LABEL PLACEHOLDER matches the real page: the same dashed frame with
+  its corner pluses, the same size caption on the same midline, and
+  BOTH buttons (Edit and Save) in their real places, greyed. Owner's
+  standing rule from this round: A PLACEHOLDER PAGE IS THE REAL PAGE
+  WITH THE INK TAKEN OUT — when the real one changes, the placeholder
+  changes with it, so both must read from the same numbers. To make
+  that possible dashLine now takes its ink from the wrapping <svg>'s
+  `color` (dashedBox gained a colour argument) instead of hard-coding
+  black — the frame still draws in ONE element, which is what keeps
+  the pluses on their crossings. (5) BOTH SOCIAL MARKS stand on every
+  artist's page, traced from the owner's own artboard paths in his own
+  coordinates; an address he has not filled in yet leaves its mark
+  standing, pale and inert. profile.json now reads `instagram` and
+  `website` (falling back to `portfolio`), so he can fill either in
+  without a code change. (6) "Original art" and "Labels from <name>"
+  are HYPERLINKS — underlined, as he drew them — and switch the six
+  squares between her paintings and SIX LABELS PAINTED IN HER HAND.
+  Those labels are the best-rated results of the winning pipeline only
+  (gpt-image → FLUX + LoRA), one per wine, exported to
+  public/newui/artists/<id>/label1..6.jpg; /api/artists serves them.
 - ROUND 112 — VEILS, POINTER, NO CREDITS, AND THE ARTISTS' PAGES
   (2026-09-22, owner). (1) A modal's white veil ran from HEADER_H to
   FOOTER_Y, which is INSIDE both 1px rules, so opening a popup made the
