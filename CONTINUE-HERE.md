@@ -2013,6 +2013,15 @@ composition-contract tightening, then customer wiring.
   artists' versions, artists earn a share per label. Live (2.28.48.43)
   stays on POPIKA_Back_To_Vector. Decisions: start with ONE artist, all
   three columns show her; no smart selection yet; share % undecided.
+- AN ARTIST CAN BE SWITCHED OFF (2026-09-22, owner: "remove Tal's model
+  at the moment, let's use Mariam and Keta's art"). profile.json carries
+  `active`; false takes her out of everything — no column paints in her
+  hand, no page, no admin option, and a saved column map pointing at her
+  falls through to an artist who is on (artistModel returns null). Her
+  works, charter and LoRA stay on disk; switching her back on is one
+  word in that file. Missing means on. TAL TAMAM IS OFF; Mariam and Keta
+  paint. Keta's biography names Keta Dvali (it arrived naming
+  "Shashiashvili" on the artboard).
 - ROUND 113 — THE GALLERY ON TOP, THE ARTIST OVER THE LABEL, AND HER
   TWO SETS (2026-09-22, owner's six-item list). (1) THE GALLERY IS THE
   ONE THING THAT COVERS EVERYTHING. Its veil ran the content band only,
