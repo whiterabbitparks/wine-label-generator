@@ -42,5 +42,13 @@ tests/parity/imagegen-e2e.png
 docs/DESIGN.pdf
 
 # Server-side runtime data (art direction config, sessions)
-data/
+data/*
+# …except each artist's PAPERS: the seven answers, the consent line, the
+# reference picks and the trained LoRA's address and trigger word. A few
+# kilobytes, and the only copy of things that cannot be recovered — the
+# paintings themselves stay out (the artist's property, and heavy).
+!data/artists/
+data/artists/*/*
+!data/artists/*/profile.json
+!data/artists/*/lora*.json
 ui-export/
