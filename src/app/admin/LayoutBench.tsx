@@ -21,7 +21,7 @@ type Line = { text: string; x: number; y: number; size: number; tracking: number
 type Bench = {
   png: string | null; layout: { W: number; H: number; ground: string };
   art: { x: number; y: number; w: number; h: number };
-  lines: Line[]; widthMm: number; heightMm: number; refW: number; refH: number; warnings?: string[];
+  lines: Line[]; widthMm: number; heightMm: number; refW: number; refH: number; warnings?: string[]; fitting?: string[]; used?: string | null;
   template: { id: string; band: string; kind: string; art: { x: number; y: number; w: number; h: number } | null; texts: { fields: string[]; x: number; baseline: number; size: number; align: string }[] };
 };
 type Move = { dx: number; dy: number };
@@ -121,7 +121,12 @@ export function LayoutBench() {
           <option value="sparse">Few details</option>
           <option value="long">Long names</option>
         </select>
-        <button onClick={() => { const i = arts.indexOf(art); setArt(arts[(i + 1) % Math.max(1, arts.length)] || ""); }}
+        <button onClick={() => {
+            /* only among the paintings this template can take */
+            const pool = b?.fitting?.length ? b.fitting : arts;
+            const cur = b?.used || art;
+            setArt(pool[(pool.indexOf(cur) + 1) % Math.max(1, pool.length)] || "");
+          }}
           style={S.btnGhost} title="another painting">Another picture</button>
         <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, whiteSpace: "nowrap" }}>
           <input type="checkbox" checked={grid} onChange={(e) => setGrid(e.target.checked)} /> Grid
@@ -134,6 +139,7 @@ export function LayoutBench() {
 
       <div style={{ background: "#e9e7e1", padding: 24, display: "flex", justifyContent: "center", borderRadius: 4 }}>
         {busy && !b && <div style={{ padding: 60, color: "#777" }}>…</div>}
+        {b && !b.used && <div style={{ padding: 60, color: "#777", fontSize: 13 }}>No painting made so far suits this layout.</div>}
         {b && (
           <div ref={box} style={{
             position: "relative", width: b.layout.W * zoom, height: b.layout.H * zoom,
