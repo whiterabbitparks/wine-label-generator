@@ -58,6 +58,14 @@ rule of any kind: the label ground is the painting's. Test sheet:
 all edge to edge; Levan's t08 ground came out black). He will review and
 correct from what the site makes.
 
+**UI round, same night (LIVE, 9f912d9):** red SKIP on each title line at
+the right margin (page.tsx SKIP_TO: front pages → backdetails, back pages →
+bottle, bottle → checkout; none on assets/checkout or during the
+tutorial); "LABEL DETAILS" (no FRONT) on the details page; black type
+lines inside the size box; the tutorial WAITS for the click again
+(reverses round 85 #4 — the button pulses); label heads read "Style By:
+<Artist Name>" in normal case, no portrait.
+
 **Open — the owner's decisions**
 0. ANSWERED (see above) — "why is Mariam always a
    small oval?" Cause: this morning's rule "ONE kind of ask" (models.ts:
