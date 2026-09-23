@@ -104,6 +104,24 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
   const zoneAspect = (zone.w / tpl.refW * widthMm) / (zone.h / tpl.refH * heightMm);
   const ap = asKind(await buildArtworkPrompt(brief, model.artist), artKindOf(tpl) === "spot" ? "spot" : "bleed");
   ap.aspect = zoneAspect > 1.25 ? "landscape" : zoneAspect < 0.8 ? "portrait" : "square";
+  /* 2026-09-23 (owner: "only the legs of a person on the chair showed —
+     more than half the image lay outside the label; work the picture's
+     proportion out from the room the label leaves"). The painter has
+     three canvas shapes; a band can be 2.8:1. So the painter is TOLD the
+     window: everything that matters goes into the strip of the canvas
+     that the window will show, the rest is calm continuation. The
+     composer then shows exactly that strip (compose-template.ts). */
+  if (artKindOf(tpl) !== "spot") {
+    const canvas = ap.aspect === "landscape" ? 1.5 : ap.aspect === "portrait" ? 2 / 3 : 1;
+    const wide = zoneAspect > canvas;
+    const frac = wide ? canvas / zoneAspect : zoneAspect / canvas;
+    if (frac < 0.85) {
+      const pct = Math.round(frac * 100);
+      ap.prompt += wide
+        ? ` COMPOSITION — THE WINDOW: this painting will be seen through a wide window about ${zoneAspect.toFixed(1)} times wider than tall. Put EVERYTHING that matters — every figure whole, every face, the whole story — inside a horizontal strip across the MIDDLE of the canvas, about ${pct}% of its height. Above and below that strip only continue the ground, sky, wall or floor calmly, with nothing important in them.`
+        : ` COMPOSITION — THE WINDOW: this painting will be seen through a tall window. Put EVERYTHING that matters — every figure whole, every face, the whole story — inside a vertical strip down the MIDDLE of the canvas, about ${pct}% of its width. Left and right of that strip only continue the ground, sky, wall or floor calmly, with nothing important in them.`;
+    }
+  }
   const painted = await gen429(() => generateArtwork(model, ap, { sketch: inp.sketch || null, refSet: inp.refSet }));
   /* 2026-09-22 (owner): the artist's LoRA learned her PAPER as well as
      her hand, so the picture arrives wrinkled and unevenly lit, and its
@@ -118,20 +136,12 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
   const cleaned = await cleanPaper(painted.art);
   const art = cleaned.art;
 
-  /* now the layout: among this shape's templates, the ones this picture
-     actually fits — the owner's rule, a picture is not dragged into a
-     layout it does not suit. Best fit first; the rest become its
-     variations. */
-  const pool = templatesOf(band).filter((t) => artKindOf(t) === kind);
-  const scored = pool.map((t) => {
-    const probe = layoutFromTemplate({
-      template: t, fields: templateFields(inp.data), widthMm, heightMm, seed,
-      ground: cleaned.ground, ink: "#111", accent: "#111",
-    });
-    return { t, lost: inkLost(t, cleaned.ink, widthMm, heightMm, probe.art) };
-  }).sort((a, b) => a.lost - b.lost);
-  const fits = scored.filter((x) => x.lost <= 0.35);
-  const chosen = (fits.length ? fits : scored)[0].t;
+  /* 2026-09-23 (owner: "we no longer generate variations — the rules
+     that made one image fit different labels are not needed"): the
+     painting stays in the template it was painted FOR. It used to be
+     re-scored against every template of its shape, and could land in one
+     whose window it was never composed for. */
+  const chosen = tpl;
 
   const out = await composeTemplateLabel({
     artwork: art, band, template: chosen.id, data: inp.data, ink: cleaned.ink, paper: cleaned.ground,

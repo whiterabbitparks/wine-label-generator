@@ -173,32 +173,51 @@ export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<C
      the same thing his red-and-grey diagram shows, built rather than
      hoped for, which is why one picture serves every layout of its
      shape. */
-  const s = kind === "spot"
-    ? Math.min(art.w / bw, art.h / bh)
-    : (() => {
-        const over = Math.max(layout.W, layout.H) * 0.06;
-        const needW = art.w + (bleeds.left ? over : 0) + (bleeds.right ? over : 0);
-        const needH = art.h + (bleeds.top ? over : 0) + (bleeds.bottom ? over : 0);
-        let k = Math.max(needW / bw, needH / bh);
-        /* it may only run past its room where it bleeds; on the side that
-           faces the type the artist's own edge has to show */
-        if (!(bleeds.left || bleeds.right)) k = Math.min(k, art.w / bw);
-        if (!(bleeds.top || bleeds.bottom)) k = Math.min(k, art.h / bh);
-        return k;
-      })();
-  const pw = aw * s, ph = ah * s;
-  const pxPos = {
-    x: art.x + (art.w - bw * s) / 2 - bx * s,
-    y: art.y + (art.h - bh * s) / 2 - by * s,
-  };
-  if (kind !== "spot") {
-    if (bleeds.top && !bleeds.bottom) pxPos.y = art.y + art.h - bh * s - by * s;
-    if (bleeds.bottom && !bleeds.top) pxPos.y = art.y - by * s;
-    if (bleeds.left && !bleeds.right) pxPos.x = art.x + art.w - bw * s - bx * s;
-    if (bleeds.right && !bleeds.left) pxPos.x = art.x - bx * s;
+  /* 2026-09-23 (owner: "Levan's label showed only the legs of the man on
+     the chair — more than half the picture lay outside the label").
+     A picture that BLEEDS used to be pinned by the edge that faces the
+     type (its bottom, under a top band) and every millimetre it was too
+     tall went off the label on the other side — so a 3:2 painting in a
+     2.8:1 band lost its top half, faces and all. That rule served one
+     picture laid into several layouts; there is one label per picture
+     now. So the WINDOW is fixed — the band, run past the trim on its
+     bleeding sides — the picture covers it, and WHICH part of the picture
+     shows is chosen by where the picture's detail is (figures, faces,
+     edges; a flat wall or floor carries none). The side that faces the
+     type is a straight cut, as his artboards draw the band. */
+  let s: number, pxPos: { x: number; y: number };
+  let clip: { x: number; y: number; w: number; h: number } | null = null;
+  if (kind === "spot") {
+    s = Math.min(art.w / bw, art.h / bh);
+    pxPos = { x: art.x + (art.w - bw * s) / 2 - bx * s, y: art.y + (art.h - bh * s) / 2 - by * s };
+    layout.art = { x: pxPos.x + bx * s, y: pxPos.y + by * s, w: bw * s, h: bh * s };
+    layout.artCrop = { x: bx, y: by, w: bw, h: bh };
+  } else {
+    const over = Math.max(layout.W, layout.H) * 0.06;
+    const win = {
+      x0: bleeds.left ? Math.min(art.x, 0) - over : art.x,
+      y0: bleeds.top ? Math.min(art.y, 0) - over : art.y,
+      x1: bleeds.right ? Math.max(art.x + art.w, layout.W) + over : art.x + art.w,
+      y1: bleeds.bottom ? Math.max(art.y + art.h, layout.H) + over : art.y + art.h,
+    };
+    const ww = win.x1 - win.x0, wh = win.y1 - win.y0;
+    s = Math.max(ww / bw, wh / bh);
+    /* the part of the ink box the window shows, in picture pixels, and
+       where it sits: the strip with the most detail, a touch of pull to
+       the middle so a tie does not hug an edge. The window's VISIBLE part
+       (inside the trim) is what is weighed. */
+    const srcW = ww / s, srcH = wh / s;
+    const detail = await detailProfile(inp.artwork);
+    const visTop = (Math.max(win.y0, 0) - win.y0) / s, visH = (Math.min(win.y1, layout.H) - Math.max(win.y0, 0)) / s;
+    const visLeft = (Math.max(win.x0, 0) - win.x0) / s, visW = (Math.min(win.x1, layout.W) - Math.max(win.x0, 0)) / s;
+    const offY = bestWindow(detail.rows, ah, by, bh, srcH, visTop, visH);
+    const offX = bestWindow(detail.cols, aw, bx, bw, srcW, visLeft, visW);
+    pxPos = { x: win.x0 - (bx + offX) * s, y: win.y0 - (by + offY) * s };
+    layout.art = { x: win.x0, y: win.y0, w: ww, h: wh };
+    layout.artCrop = { x: bx + offX, y: by + offY, w: srcW, h: srcH };
+    clip = layout.art;
   }
-  layout.art = { x: pxPos.x + bx * s, y: pxPos.y + by * s, w: bw * s, h: bh * s };
-  layout.artCrop = { x: bx, y: by, w: bw, h: bh };
+  const pw = aw * s, ph = ah * s;
 
   const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const texts = layout.lines.map((l) => {
@@ -209,7 +228,11 @@ export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<C
       + `${t}>${esc(l.text)}</text>`;
   }).join("");
 
-  const picture = `<image xlink:href="${inp.artwork}" x="${pxPos.x.toFixed(1)}" y="${pxPos.y.toFixed(1)}" width="${pw.toFixed(1)}" height="${ph.toFixed(1)}" preserveAspectRatio="none"/>`;
+  const image = `<image xlink:href="${inp.artwork}" x="${pxPos.x.toFixed(1)}" y="${pxPos.y.toFixed(1)}" width="${pw.toFixed(1)}" height="${ph.toFixed(1)}" preserveAspectRatio="none"/>`;
+  /* a bleeding picture is cut to its window (the straight edge facing the type) */
+  const picture = clip
+    ? `<clipPath id="artwin"><rect x="${clip.x.toFixed(1)}" y="${clip.y.toFixed(1)}" width="${clip.w.toFixed(1)}" height="${clip.h.toFixed(1)}"/></clipPath><g clip-path="url(#artwin)">${image}</g>`
+    : image;
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${inp.widthMm}mm" height="${inp.heightMm}mm" viewBox="0 0 ${layout.W} ${layout.H}">`
     + `<rect width="${layout.W}" height="${layout.H}" fill="${ground}"/>`
@@ -222,3 +245,43 @@ export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<C
 }
 
 export { MARGIN_MM, PX_PER_MM };
+
+
+/* WHERE A PICTURE'S DETAIL IS (2026-09-23): gradient energy per row and
+   per column of a small copy — figures, faces and drawn edges carry it, a
+   flat painted wall or floor does not. Indexed 0..1 along each axis. */
+async function detailProfile(dataUrl: string): Promise<{ rows: number[]; cols: number[] }> {
+  const N = 160;
+  const { data, info } = await sharp(Buffer.from(dataUrl.slice(dataUrl.indexOf(",") + 1), "base64"))
+    .resize(N, N, { fit: "fill" }).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  const c = info.channels;
+  const rows = new Array(N).fill(0), cols = new Array(N).fill(0);
+  for (let y = 1; y < N; y++) for (let x = 1; x < N; x++) {
+    let g = 0;
+    for (let k = 0; k < 3; k++) {
+      const v = data[(y * N + x) * c + k];
+      g += Math.abs(v - data[(y * N + x - 1) * c + k]) + Math.abs(v - data[((y - 1) * N + x) * c + k]);
+    }
+    rows[y] += g; cols[x] += g;
+  }
+  return { rows, cols };
+}
+
+/* the offset (picture px, from the ink box's start) of the window of
+   length `len` inside [start, start+span] whose VISIBLE part holds the
+   most detail; a gentle pull to the middle breaks ties */
+function bestWindow(profile: number[], full: number, start: number, span: number, len: number, visOff: number, visLen: number): number {
+  const slack = span - len;
+  if (slack <= 1) return Math.max(0, slack / 2);
+  const N = profile.length, at = (px: number) => Math.min(N - 1, Math.max(0, Math.floor((px / full) * N)));
+  const sum = (a: number, b: number) => { let t = 0; for (let i = at(a); i <= at(b); i++) t += profile[i]; return t; };
+  const total = sum(start, start + span) || 1;
+  let best = slack / 2, bestScore = -Infinity;
+  for (let k = 0; k <= 40; k++) {
+    const off = (slack * k) / 40;
+    const v0 = start + off + visOff;
+    const score = sum(v0, v0 + visLen) / total - 0.08 * Math.abs(off / slack - 0.5);
+    if (score > bestScore) { bestScore = score; best = off; }
+  }
+  return best;
+}

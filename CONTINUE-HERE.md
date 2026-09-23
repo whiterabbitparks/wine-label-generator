@@ -154,6 +154,26 @@ makes wax read as wax. Asked him: he KEEPS the old rule and wants words
 only (no wax reference picture). So the scenes now match the shot's
 closure; the shot's wax stays capsule-like by his choice.
 
+**Picture placement for band/panel layouts (2026-09-23, owner: "Levan's
+label showed only the legs — more than half the image outside the
+label; the rules that fit one image to many labels are not needed").**
+Three changes: (1) compose-template.ts — a BLEEDING picture no longer
+hangs by the edge facing the type (that sent a 3:2 painting's whole top
+half off a 2.8:1 top band). The WINDOW is fixed (the band, run past the
+trim on its bleeding sides); the picture covers it; which strip shows is
+chosen by detail (gradient energy per row/column, `detailProfile` +
+`bestWindow`, slight pull to the middle); the SVG clips to the window
+(clipPath "artwin"), artCrop carries the same crop to the PDF. (2)
+hybrid.ts — the painter is TOLD the window ("seen through a window
+2.8× wider than tall — everything that matters in the middle strip,
+~54% of the height") whenever the canvas and window differ by >15%. (3)
+the painting stays in the template it was painted for (the re-scoring
+against other templates of its shape is gone). Tests:
+Desktop/8K-sheet-test/window-test/ (Giorgi panel, Levan bottom band,
+Mariam top band — whole figures, faces in).
+Also: the assets page's lifestyle glasses now fill (ASSET_STAGES still
+said "…/4"); the label-size preview box on the details page is removed.
+
 **Open — the owner's decisions**
 0. ANSWERED (see above) — "why is Mariam always a
    small oval?" Cause: this morning's rule "ONE kind of ask" (models.ts:

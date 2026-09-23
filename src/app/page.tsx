@@ -738,7 +738,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const fillMax = useRef(0);
   useEffect(() => { if (page === "loader") fillMax.current = 0; }, [page]);
   /* round 59 #5: FOUR lifestyle images per set */
-  const ASSET_STAGES = ["front shot", "back shot", "lifestyle 1/4", "lifestyle 2/4", "lifestyle 3/4", "lifestyle 4/4"];
+  /* 2026-09-23 (owner: "only the first glass fills, the rest stay empty
+     until their image appears"): this list still named FOUR lifestyle
+     stages ("…/4") after round 71 went back to five — the server says
+     "lifestyle N/5", so every lifestyle glass missed its stage and sat
+     at the bottom */
+  const ASSET_STAGES = ["front shot", "back shot", "lifestyle 1/5", "lifestyle 2/5", "lifestyle 3/5", "lifestyle 4/5", "lifestyle 5/5"];
   const assetFill = (key: string) => {
     void tick;   // ticking re-render drives the rise
     const now = Date.now();
@@ -2363,44 +2368,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               </span>
             ))}
           </div>
-          {/* ROUND 108 #5 (owner): a live thumbnail of the label's shape —
-              its right edge on the prompt box's right edge, its foot on the
-              size row's rule, never rising closer to the box than one row
-              of the details list (30), and always the typed proportions. */}
-          {(() => {
-            const w0 = Math.min(999, Math.max(1, Number(f.width) || 110)), h0 = Math.min(999, Math.max(1, Number(f.height) || 80));
-            /* the box's foot is a 1-unit STROKE, and crispEdges snaps a
-               stroke by its CENTRE — so the centre sits a unit above the
-               page's bottom line to paint the same device row as the
-               column rule, the list's last rule and the text. Verified by
-               reading the pixels, not by eye. */
-            const FOOT = VIS_FOOT - 1, GAP = 30, MAX_W = 220;
-            const maxH = FOOT - (BOX.y + BOX.h + GAP);
-            const sc = Math.min(maxH / h0, MAX_W / w0);
-            const w2 = Math.max(6, w0 * sc), h2 = Math.max(6, h0 * sc);
-            /* ROUND 110 (owner): drawn like every other proportion box on
-               the site — a dashed rule with a plus on each corner */
-            const rx = BOX.x + BOX.w - w2, ry = FOOT - h2;
-            return (
-              <span key="sizeprev">
-                {dashedBox(rx, ry, w2, h2, "szbox", true)}
-                {/* 2026-09-23 (owner): a few black lines inside the box, as
-                    if the label's type were already on it — a name, the
-                    wine in bold, the vintage, and the small legal lines at
-                    the foot. They scale with the box. */}
-                {(() => {
-                  const thick = Math.min(5, Math.max(2, h2 * 0.03)), thin = Math.min(2, Math.max(1, h2 * 0.012));
-                  const rows: [number, number, number][] = [
-                    [0.2, 0.34, thin], [0.3, 0.62, thick], [0.42, 0.22, thin],
-                    [0.78, 0.56, thin], [0.86, 0.42, thin],
-                  ];
-                  return rows.map(([fy, fw, th], i) => (
-                    <div key={"szl" + i} style={{ ...px(rx + (w2 - w2 * fw) / 2, ry + h2 * fy - th / 2, w2 * fw, th), background: "#111", pointerEvents: "none" }} />
-                  ));
-                })()}
-              </span>
-            );
-          })()}
+          {/* 2026-09-23 (owner): the label-size preview box is gone */}
           {/* the dashed column rule */}
           {dashRule(788, 133, 522, true, "vrule")}
           {/* ── right: the label's own details ── */}
