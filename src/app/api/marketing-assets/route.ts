@@ -1,4 +1,4 @@
-import { generateMarketingAssets, loadMarketingCharters, type MarketingBrief, type AssetEvent } from "@/lib/marketing/engine";
+import { generateMarketingAssets, loadMarketingPool, type MarketingBrief, type AssetEvent } from "@/lib/marketing/engine";
 
 /* PUBLIC customer endpoint (owner 2026-09-06): the marketing-asset run in
    one streamed call — 2 studio product shots (front/back, transparent
@@ -52,18 +52,20 @@ export async function POST(req: Request) {
   /* signature: everything that changes the output — label pixels AND the
      current charters (an edited/analyzed board must bust the cache) */
   const hash = (s: string) => { let h = 5381; for (let i = 0; i < s.length; i += 97) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0; return h.toString(36); };
-  const charters = await loadMarketingCharters(brief.style);
+  /* 2026-09-23: one pool from all three boards (the column's style no
+     longer directs the scenes) */
+  const charters = await loadMarketingPool();
   const lifeOnly = !!body.lifeOnly;
   const batch = Math.max(0, Math.min(20, Number(body.batch) || 0));
-  const sig = JSON.stringify({ ...brief, lo: lifeOnly, bt: batch, f: hash(front), b: back ? hash(back) : "", cl: hash(charters.life), cs: hash(charters.shots), sn: hash(charters.scenes.join("|")), rl: hash(charters.rules.join("|")) });
+  const sig = JSON.stringify({ ...brief, lo: lifeOnly, bt: batch, f: hash(front), b: back ? hash(back) : "", cs: hash(charters.shots), sn: hash(charters.scenes.map((x) => x.text + x.charter).join("|")), rl: hash(charters.rules.join("|")) });
 
   /* diagnostic dry run (owner 2026-09-07): returns the exact lifestyle
      prompt WITHOUT generating — proves whether charters+scenes reach the model */
   if ((body as { dryRun?: boolean }).dryRun) {
     const { buildLifestylePrompt, dealScenarios } = await import("@/lib/marketing/engine");
     const sc = dealScenarios(brief.seed, charters.scenes, 5, !brief.grape)[0];
-    const prompt = buildLifestylePrompt(brief, sc.text, charters.life, true, sc.fromBoard);
-    return new Response(JSON.stringify({ charters: { life: charters.life.length, shots: charters.shots.length, scenes: charters.scenes.length, fromBoard: sc.fromBoard }, promptStart: prompt.slice(0, 900) }), { headers: { "Content-Type": "application/json" } });
+    const prompt = buildLifestylePrompt(brief, sc.text, sc.charter, true, sc.fromBoard);
+    return new Response(JSON.stringify({ charters: { shots: charters.shots.length, scenes: charters.scenes.length, fromBoard: sc.fromBoard }, promptStart: prompt.slice(0, 900) }), { headers: { "Content-Type": "application/json" } });
   }
 
   const enc = new TextEncoder();

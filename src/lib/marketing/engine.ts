@@ -275,15 +275,6 @@ const SCENARIOS: [string, string][] = [
   ["crate", "the bottle leans against a wooden harvest crate, label to camera, a few grapes scattered around"],
 ];
 
-const STYLE_WORLD: Record<string, string> = {
-  traditional:
-    "Setting and styling are CLASSIC and timeless: old-world wine estate atmosphere — aged oak, stone, linen, brass, candle-warm or soft window light, refined understated elegance, nothing modern or flashy.",
-  contemporary:
-    "Setting and styling are CONTEMPORARY and minimal: clean modern spaces, simple architectural surfaces, uncluttered composition, generous negative space, calm natural daylight, editorial restraint.",
-  punk:
-    "Setting and styling are RAW and natural: candid unpolished scenes, natural-wine bar energy, honest daylight, real textures — concrete, worn wood, skin, paper — nothing staged-looking, a free documentary feel.",
-};
-
 export function buildLifestylePrompt(b: MarketingBrief, scenario: string, charter: string, hasShape: boolean, fromBoard = false, rules?: string[], others?: string[]) {
   const d = bottleDescription(b);
   return (
@@ -299,7 +290,7 @@ export function buildLifestylePrompt(b: MarketingBrief, scenario: string, charte
     /* the owner's reference-derived charter LEADS the prompt (early tokens
        weigh most) and explicitly outranks the generic style world */
     (charter ? `ART DIRECTION — this brand's photographic world, follow it CLOSELY in setting, props, light, colour grading and styling (it overrides any generic defaults below): ${charter} ` : "") +
-    (fromBoard ? "" : `${STYLE_WORLD[b.style] || STYLE_WORLD.contemporary} `) +
+    /* 2026-09-23: no style world any more — the three looks are mixed */
     `The wine bottle: ${d.text} ` +
     /* round 41 #1: a red wine once poured ROSÉ in a glass — every visible
        drop must match the label's wine */
@@ -332,10 +323,36 @@ export function buildLifestylePrompt(b: MarketingBrief, scenario: string, charte
   );
 }
 
-/* seeded scenario deal — full coverage before repeats, stable per seed.
-   round 31: when the owner's board yielded scenes, deal from THOSE —
-   the generic list is only the no-board fallback. */
-export function dealScenarios(seed: number, boardScenes?: string[], count = 5, noGrapes = false): { text: string; fromBoard: boolean }[] {
+/* 2026-09-23 (owner: "we no longer have traditional / contemporary /
+   punk styles — mix all three together, and never repeat a similar scene:
+   one bottle in a cellar means no second cellar, one bottle in grapes
+   means no second grape scene; be as diverse as possible").
+   A scene is dealt WITH the charter of the board it came from (its own
+   photographic world); the generic list only tops the pool up. Every
+   scene is tagged with the MOTIFS it shows, and a set of five never holds
+   two scenes that share one. */
+const MOTIFS: [string, RegExp][] = [
+  ["cellar", /cellar|barrel/i],
+  ["grapes", /grape|vine\b|vines|vineyard|harvest|vine trunk|vine root/i],
+  ["soil", /soil|earth|roots?\b|gnarled/i],
+  ["pour", /pour/i],
+  ["dining", /dining|tablecloth|restaurant|server|service|cutlery/i],
+  ["picnic", /picnic|snacks|cheese/i],
+  ["person", /person|torso|figure|\bhands?\b|\barm\b|sommelier|holds|holding|gripping|cradles|lifts/i],
+  ["crate", /crate|shipping|tote/i],
+  ["studio", /studio|plinth|backdrop|seamless/i],
+  ["overhead", /overhead|directly above/i],
+  ["several", /two wine bottles|three wine bottles|two bottles|three bottles|two chilled|other \(blurred/i],
+  ["water", /stream|river|lake|sea\b|beach/i],
+  ["home", /sofa|couch|loveseat|living-room|living room|\brug\b|stereo/i],
+  ["bar", /\bbar\b|counter/i],
+  ["sunwall", /wall.*(sun|shadow)|(sun|shadow).*wall|stucco|plaster/i],
+  ["outdoor", /outdoor|terrace|golden-hour|woodland|forest|garden/i],
+];
+export const motifsOf = (t: string) => new Set(MOTIFS.filter(([, re]) => re.test(t)).map(([k]) => k));
+
+export interface DealtScene { text: string; fromBoard: boolean; charter: string }
+export function dealScenarios(seed: number, pool: { text: string; charter: string }[] = [], count = 5, noGrapes = false): DealtScene[] {
   let s = seed >>> 0;
   const rnd = () => ((s = (Math.imul(s, 1664525) + 1013904223) >>> 0) / 2 ** 32);
   const shuffle = <T,>(a: T[]) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
@@ -345,25 +362,27 @@ export function dealScenarios(seed: number, boardScenes?: string[], count = 5, n
     let n = 0; for (const w of A) if (B.has(w)) n++;
     return n / Math.max(1, Math.min(A.size, B.size));
   };
-  /* round 93 #2: no known variety → the grape scenes are never dealt */
-  const generic = shuffle(SCENARIOS.filter(([, text]) => !noGrapes || !/grape/i.test(text))).map(([, text]) => ({ text, fromBoard: false }));
-  /* round 56 #5 (owner: identical prompts again): near-duplicates are
-     DELETED, never dealt — when the distinct board pool runs short the
-     GENERIC scenarios top it up (they are distinct by construction).
-     The same seed always deals the same order, so a "More Variations"
-     batch takes the NEXT window without repeating earlier images. */
-  const out: { text: string; fromBoard: boolean }[] = [];
-  if (boardScenes && boardScenes.length) {
-    for (const cand of shuffle([...boardScenes])) {
-      if (out.length >= count) break;
-      if (out.every((o) => sim(o.text, cand) < 0.35)) out.push({ text: cand, fromBoard: true });
-    }
+  /* round 93 #2: no known variety → no grape scene is ever dealt (board
+     scenes included now — a grape scene with "no grapes" is nonsense) */
+  const ok = (t: string) => !noGrapes || !/grape/i.test(t);
+  const all: DealtScene[] = [
+    ...shuffle(pool.filter((p) => ok(p.text))).map((p) => ({ text: p.text, fromBoard: true, charter: p.charter })),
+    ...shuffle(SCENARIOS.filter(([, t]) => ok(t))).map(([, t]) => ({ text: t, fromBoard: false, charter: "" })),
+  ];
+  /* windows of five (a "More Variations" batch takes the next window):
+     inside a window no motif repeats; the first pass is strict, a second
+     pass only fills a window the pool could not complete */
+  const out: DealtScene[] = [];
+  const used = new Set<number>();
+  while (out.length < count && used.size < all.length) {
+    const win = out.slice(out.length - (out.length % 5));
+    const taken = new Set(win.flatMap((w) => [...motifsOf(w.text)]));
+    let pick = all.findIndex((c, i) => !used.has(i) && [...motifsOf(c.text)].every((m) => !taken.has(m)) && win.every((w) => sim(w.text, c.text) < 0.35));
+    if (pick < 0) pick = all.findIndex((c, i) => !used.has(i) && win.every((w) => sim(w.text, c.text) < 0.35));
+    if (pick < 0) pick = all.findIndex((_, i) => !used.has(i));
+    used.add(pick); out.push(all[pick]);
   }
-  for (const g of generic) {
-    if (out.length >= count) break;
-    if (out.every((o) => sim(o.text, g.text) < 0.35)) out.push(g);
-  }
-  while (out.length < count) out.push(generic[out.length % generic.length]);
+  while (out.length < count) out.push(all[out.length % all.length]);
   return out.slice(0, count);
 }
 
@@ -435,6 +454,16 @@ export async function loadMarketingCharters(style: string): Promise<{ life: stri
   } catch { return { life: "", shots: "", scenes: [], rules: [] }; }
 }
 
+/* 2026-09-23: ALL three boards at once — their scenes pooled, each scene
+   carrying its own board's charter */
+export async function loadMarketingPool(): Promise<{ shots: string; scenes: { text: string; charter: string }[]; rules: string[] }> {
+  const parts = await Promise.all(["traditional", "contemporary", "punk"].map((st) => loadMarketingCharters(st)));
+  return {
+    shots: parts[0].shots, rules: parts[0].rules,
+    scenes: parts.flatMap((c) => c.scenes.map((text) => ({ text, charter: c.life }))),
+  };
+}
+
 function houseRules(rules?: string[]) {
   return rules && rules.length ? ` HOUSE RULES (the art director's standing orders — never break them): ${rules.map((r) => `${r}.`).join(" ")} ` : "";
 }
@@ -444,17 +473,17 @@ export async function generateMarketingAssets(
   frontLabel: string,
   backLabel: string | null,
   send: (e: AssetEvent) => void,
-  charters?: { life: string; shots: string; scenes: string[]; rules: string[] },
+  pool?: { shots: string; scenes: { text: string; charter: string }[]; rules: string[] },
   /* round 56 (owner's More Variations): lifeOnly batches skip the shots
      and deal the NEXT window of 5 scenes */
   opts?: { lifeOnly?: boolean; batch?: number }
 ): Promise<void> {
   const final = imageQuality() === "prod";
   const batch = Math.max(0, opts?.batch || 0);
-  const { life: charter, shots: shotCharter, scenes, rules } = charters || await loadMarketingCharters(b.style);
+  const { shots: shotCharter, scenes, rules } = pool || await loadMarketingPool();
   /* ops visibility (owner escalation 2026-09-07: "references have no
      influence") — every run states what steering it actually carries */
-  console.log(`[marketing] style=${b.style} lifeCharter=${charter.length}ch shotCharter=${shotCharter.length}ch boardScenes=${scenes.length} seed=${b.seed}`);
+  console.log(`[marketing] mixed pool: shotCharter=${shotCharter.length}ch boardScenes=${scenes.length} seed=${b.seed}`);
 
   /* the owner's line-art drawing of the chosen bottle rides along as a
      silhouette spec (round 14 #4) */
@@ -489,7 +518,7 @@ export async function generateMarketingAssets(
     send({ type: "progress", stage: `lifestyle ${i + 1}/${scenarios.length}` });
     try {
       const img = await generateImageRawWithRetry({
-        prompt: buildLifestylePrompt(b, scenarios[i].text, charter, !!shape, scenarios[i].fromBoard, rules,
+        prompt: buildLifestylePrompt(b, scenarios[i].text, scenarios[i].charter, !!shape, scenarios[i].fromBoard, rules,
           scenarios.filter((_, j) => j !== i).map((x) => x.text)),
         references: shape ? [frontLabel, shape] : [frontLabel], size: { w: 1024, h: 1024 },
       });

@@ -4138,10 +4138,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                  fills only 32.6% x 68.8% of its 800x1600 JPG — sized by the
                  ink, not the canvas, so the outline itself stands 155 tall
                  like the reference (ink centred on x78.6, top at y177.6) */
+              /* 2026-09-23 (owner): the bottle has its title, like the two
+                 labels and the details beside it */
               left.push(
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img key="bt" src={bottleSrc()} alt="" style={{ position: "absolute", left: 22, top: 140, width: 112.7, height: 225.3 }} />
               );
+              /* after the drawing: its JPG's white ground would cover it */
+              left.push(<span key="btt">{colTitle(32, t("Bottle"))}</span>);
               leftBottom = 333;
               /* the tallest height at which BOTH labels still fit their box */
               const inW = 160 - 16, inH = 155 - 16;

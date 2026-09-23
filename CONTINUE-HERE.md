@@ -125,6 +125,19 @@ one per column, shuffled (3000/3000 simulated). First test:
 ~/Desktop/8K-sheet-test/giorgi-test/ (one run was a moderation refusal,
 the retry painted all three).
 
+**Marketing images, 2026-09-23 (owner):** the column's style no longer
+directs the scenes — ONE pool from all three boards (33 scenes, each
+carrying its own board's charter; generic list tops up; STYLE_WORLD
+gone). No two scenes in a set of five share a MOTIF (engine.ts MOTIFS:
+cellar, grapes, soil, pour, dining, picnic, person, crate, studio,
+overhead, several bottles, water, home, bar, sun-on-wall, outdoor) —
+500 simulated sets: ~1% of picks repeat a motif, only when the pool runs
+short. Grape scenes from the boards are also dropped when no variety is
+known. The bottle popup has its "Bottle" title.
+OPEN (asked him): the label is still REDRAWN by the image model (it is
+sent as a reference picture), and the bottle outline is only a reference
+too — see the plan in the conversation of 2026-09-23 night.
+
 **Open — the owner's decisions**
 0. ANSWERED (see above) — "why is Mariam always a
    small oval?" Cause: this morning's rule "ONE kind of ask" (models.ts:
