@@ -197,14 +197,15 @@ export async function vignetteOf(dataUrl: string): Promise<{ ground: string; box
    It refuses to run on a picture whose border is not paper at all (a
    painting that fills its frame), so nothing is ever scrubbed out of a
    full-bleed image. */
-export async function cleanPaper(dataUrl: string, to?: string): Promise<{ art: string; ground: string; cleaned: boolean }> {
+export async function cleanPaper(dataUrl: string, to?: string): Promise<{ art: string; ground: string; cleaned: boolean; ink: { x: number; y: number; w: number; h: number } }> {
   const buf = Buffer.from(dataUrl.slice(dataUrl.indexOf(",") + 1), "base64");
   const { data, info } = await sharp(buf).flatten({ background: "#ffffff" }).raw().toBuffer({ resolveWithObject: true });
   const W = info.width, H = info.height, C = info.channels;
+  const whole = { x: 0, y: 0, w: 1, h: 1 };
   const ring = Math.max(2, Math.round(Math.min(W, H) * 0.05));
   const onRing = (x: number, y: number) => x < ring || x >= W - ring || y < ring || y >= H - ring;
 
-  /* the ground: the commonest colour on the border ring */
+  /* the paper's colour: the commonest on the border ring */
   const bins = new Map<string, { n: number; r: number; g: number; b: number }>();
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     if (!onRing(x, y)) continue;
@@ -213,13 +214,12 @@ export async function cleanPaper(dataUrl: string, to?: string): Promise<{ art: s
     e.n++; e.r += data[i]; e.g += data[i + 1]; e.b += data[i + 2]; bins.set(k, e);
   }
   const top = [...bins.values()].sort((a, b) => b.n - a.n)[0];
-  if (!top) return { art: dataUrl, ground: "#F4EFE3", cleaned: false };
+  if (!top) return { art: dataUrl, ground: "#F4EFE3", cleaned: false, ink: whole };
   const gr = top.r / top.n, gg = top.g / top.n, gb = top.b / top.n;
   const ground = hex(gr, gg, gb);
-
-  /* how far the paper itself strays — the 90th percentile of the ring,
-     which stays honest even when the drawing runs off one edge */
   const dist = (i: number) => Math.max(Math.abs(data[i] - gr), Math.abs(data[i + 1] - gg), Math.abs(data[i + 2] - gb));
+
+  /* how far the paper itself strays, from the ring */
   const hist = new Uint32Array(256);
   let ringN = 0;
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
@@ -228,35 +228,62 @@ export async function cleanPaper(dataUrl: string, to?: string): Promise<{ art: s
   }
   let acc = 0, p90 = 0;
   for (let d = 0; d < 256; d++) { acc += hist[d]; if (acc >= ringN * 0.9) { p90 = d; break; } }
-
-  /* the soft ramp: everything within t0 is paper, everything past t1 is
-     drawing, and the gap between them fades */
   const t0 = Math.max(14, Math.min(28, p90 * 1.5 + 4));
   const t1 = t0 + 24;
-
-  /* a border that is mostly NOT near the ground is not paper — leave the
-     picture exactly as the artist painted it */
   let near = 0;
   for (let d = 0; d <= Math.round(t0); d++) near += hist[d];
-  if (near < ringN * 0.6) return { art: dataUrl, ground, cleaned: false };
+  if (near < ringN * 0.6) return { art: dataUrl, ground, cleaned: false, ink: whole };
 
-  /* 2026-09-22 (owner: "let us take the grounds off — make every ground
-     ivory white"): the paper may be repainted to a GIVEN colour, not only
-     flattened to its own. The label then paints that same ivory behind
-     it, so the join is still invisible and every label shares one paper. */
+  /* THE PAPER IS ONLY WHAT THE BORDER REACHES (owner, 2026-09-22, twice:
+     "inside the image, inside the ink, leave the background alone — the
+     background is what lies OUTSIDE the ink, the sheet it is painted
+     on"). Flattening every pixel that merely resembled the paper ate the
+     flat grounds inside Levan's paintings. Now the paper is grown from
+     the edge of the sheet inward and stops at the drawing. */
+  const paper = new Uint8Array(W * H);
+  const queue = new Int32Array(W * H);
+  let qa = 0, qb = 0;
+  const push = (x: number, y: number) => {
+    const p2 = y * W + x;
+    if (paper[p2]) return;
+    if (dist(p2 * C) >= t1) return;
+    paper[p2] = 1; queue[qb++] = p2;
+  };
+  for (let x = 0; x < W; x++) { push(x, 0); push(x, H - 1); }
+  for (let y = 0; y < H; y++) { push(0, y); push(W - 1, y); }
+  while (qa < qb) {
+    const p2 = queue[qa++], x = p2 % W, y = (p2 / W) | 0;
+    if (x > 0) push(x - 1, y);
+    if (x < W - 1) push(x + 1, y);
+    if (y > 0) push(x, y - 1);
+    if (y < H - 1) push(x, y + 1);
+  }
+
   const tr = to ? parseInt(to.slice(1, 3), 16) : gr;
   const tg = to ? parseInt(to.slice(3, 5), 16) : gg;
   const tb = to ? parseInt(to.slice(5, 7), 16) : gb;
   const out = Buffer.from(data);
-  for (let p = 0; p < W * H; p++) {
-    const i = p * C, d = dist(i);
-    if (d >= t1) continue;
+  const rows = new Uint32Array(H), cols = new Uint32Array(W);
+  for (let p2 = 0; p2 < W * H; p2++) {
+    const i = p2 * C;
+    if (!paper[p2]) {
+      rows[(p2 / W) | 0]++; cols[p2 % W]++;
+      continue;
+    }
+    const d = dist(i);
     let a = d <= t0 ? 0 : (d - t0) / (t1 - t0);
     a = a * a * (3 - 2 * a);                       /* smoothstep, no banding */
     out[i] = Math.round(tr + (data[i] - gr) * a);
     out[i + 1] = Math.round(tg + (data[i + 1] - gg) * a);
     out[i + 2] = Math.round(tb + (data[i + 2] - gb) * a);
   }
+  /* the drawing's box: the rows and columns that carry REAL ink. A speck
+     of stray paint near a corner must not stretch it to the whole sheet
+     (it did: Mariam's sheets came back as 99 % ink). */
+  let x0 = W, y0 = H, x1 = -1, y1 = -1;
+  for (let y = 0; y < H; y++) if (rows[y] > W * 0.006) { if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  for (let x = 0; x < W; x++) if (cols[x] > H * 0.006) { if (x < x0) x0 = x; if (x > x1) x1 = x; }
+  const ink = x1 < 0 || y1 < 0 ? whole : { x: x0 / W, y: y0 / H, w: (x1 - x0 + 1) / W, h: (y1 - y0 + 1) / H };
   const png = await sharp(out, { raw: { width: W, height: H, channels: C as 1 | 2 | 3 | 4 } }).png().toBuffer();
-  return { art: `data:image/png;base64,${png.toString("base64")}`, ground: to || ground, cleaned: true };
+  return { art: `data:image/png;base64,${png.toString("base64")}`, ground: to || ground, cleaned: true, ink };
 }

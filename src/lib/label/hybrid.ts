@@ -1,9 +1,9 @@
 import { buildArtworkPrompt, asKind, evalModel, generateArtwork, artistModels } from "@/lib/eval/models";
-import { composeTemplateLabel, templatesOf, pickTemplate, IVORY } from "@/lib/typeset/compose-template";
+import { composeTemplateLabel, templatesOf, pickTemplate, inkLost } from "@/lib/typeset/compose-template";
 import { TEMPLATES } from "@/lib/typeset/templates.data";
 import type { Template } from "@/lib/typeset/templates";
 import { cleanPaper } from "@/lib/typeset/palette";
-import { artKindOf, type ArtKind, type Band } from "@/lib/typeset/templates";
+import { artKindOf, layoutFromTemplate, templateFields, type ArtKind, type Band } from "@/lib/typeset/templates";
 import { faceFile, pickRoles, mix } from "@/lib/typeset/fonts";
 import type { Layout } from "@/lib/typeset/compose";
 import { painterFor } from "./painters";
@@ -106,14 +106,29 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
   /* only a SPOT floats on the label's paper, so only a spot's paper is
      repainted to it — a bleed keeps the ground the artist painted
      (owner: "inside the image leave the backgrounds alone") */
-  const art = artKindOf(tpl) === "spot" ? (await cleanPaper(painted.art, IVORY)).art : painted.art;
-  /* 2026-09-22: the type is set on ONE OF THE OWNER'S TWELVE DRAWN
-     TEMPLATES, not invented. The three columns keep their keys but now
-     mean his three bands — classical, contemporary, free — so one artist
-     shows the widest spread he asked for: a centred serif label, a
-     cleaner column one, and a free one in a written hand. */
+  /* the paper is flattened and MEASURED: cleanPaper grows the paper in
+     from the edge, so it knows exactly where the drawing is. Inside the
+     drawing nothing is touched — a flat ground Levan painted is his. */
+  const cleaned = await cleanPaper(painted.art);
+  const art = cleaned.art;
+
+  /* now the layout: among this shape's templates, the ones this picture
+     actually fits — the owner's rule, a picture is not dragged into a
+     layout it does not suit. Best fit first; the rest become its
+     variations. */
+  const pool = templatesOf(band).filter((t) => artKindOf(t) === kind);
+  const scored = pool.map((t) => {
+    const probe = layoutFromTemplate({
+      template: t, fields: templateFields(inp.data), widthMm, heightMm, seed,
+      ground: cleaned.ground, ink: "#111", accent: "#111",
+    });
+    return { t, lost: inkLost(t, cleaned.ink, widthMm, heightMm, probe.art) };
+  }).sort((a, b) => a.lost - b.lost);
+  const fits = scored.filter((x) => x.lost <= 0.35);
+  const chosen = (fits.length ? fits : scored)[0].t;
+
   const out = await composeTemplateLabel({
-    artwork: art, band, template: tpl.id, data: inp.data,
+    artwork: art, band, template: chosen.id, data: inp.data, ink: cleaned.ink, paper: cleaned.ground,
     widthMm, heightMm, seed, wineColour: inp.data.wineColorName,
   });
   if (out.warnings.length) console.warn(`[template ${out.template}] ${out.warnings.join("; ")}`);
@@ -141,22 +156,28 @@ export async function relayoutLabel(stored: { art: Buffer; meta: { style: string
   const raw = `data:image/png;base64,${stored.art.toString("base64")}`;
   /* a picture stored before the clean-paper pass still has its wrinkles;
      a re-layout is the moment to take them out */
-  const art = raw;
   /* 2026-09-22: a variation is now A DIFFERENT TEMPLATE from the same
      band — the strongest contrast there is, and still no model call. The
      tags already shown are avoided, so three variations of one painting
      are three different arrangements of his own. */
   const band = bandOf(style);
   const used = new Set(avoid.map((a) => a.split("|")[0]));
-  /* a variation stays with the SAME KIND of picture — the painting was
-     made for it, and a spot dropped into a bleed layout would be cut */
-  const kind = artKindOf((TEMPLATES as Template[]).find((t) => t.id === (stored.meta as { template?: string }).template || "") || templatesOf(band)[0]);
+  const cleaned = await cleanPaper(raw);
+  const art = cleaned.art;
+  /* a variation is another layout of the SAME picture — the owner's
+     three rows. Only layouts of its own shape, and only the ones it fits
+     without being dragged past the trim. */
+  const kind = artKindOf((TEMPLATES as Template[]).find((t) => t.id === (stored.meta as { template?: string }).template) || templatesOf(band)[0]);
   const pool = templatesOf(band).filter((t) => artKindOf(t) === kind);
-  const free = pool.filter((t) => !used.has(t.id));
-  const pick = (free.length ? free : pool)[Math.floor(Math.random() * (free.length ? free.length : pool.length))];
+  const scored = pool.map((t) => {
+    const probe = layoutFromTemplate({ template: t, fields: templateFields(data), widthMm, heightMm, seed: 1, ground: cleaned.ground, ink: "#111", accent: "#111" });
+    return { t, lost: inkLost(t, cleaned.ink, widthMm, heightMm, probe.art) };
+  }).filter((x) => x.lost <= 0.35).sort((a, b) => a.lost - b.lost);
+  const free = scored.filter((x) => !used.has(x.t.id));
+  const pick = (free.length ? free : scored.length ? scored : [{ t: pool[0], lost: 0 }])[0].t;
   const seed = (Math.random() * 0xffffffff) >>> 0;
   const out = await composeTemplateLabel({
-    artwork: art, band, template: pick.id, data,
+    artwork: art, band, template: pick.id, data, ink: cleaned.ink, paper: cleaned.ground,
     widthMm, heightMm, seed, wineColour: data.wineColorName,
   });
   void recipe;

@@ -35,13 +35,14 @@ const SPARSE = { wine: "Korra", vintage: "2023", sweetness: "Dry", wineColorName
 const data = has("--long") ? LONG : has("--sparse") ? SPARSE : FULL;
 
 const raw = `data:image/png;base64,${fs.readFileSync(ART).toString("base64")}`;
-const art = (await cleanPaper(raw, "#F5F1E6")).art;
+const cleaned = await cleanPaper(raw);
+const art = cleaned.art;
 
 const tiles: Buffer[] = [];
 let problems = 0;
 for (const tpl of TEMPLATES as Template[]) {
   const out = await composeTemplateLabel({
-    artwork: art, template: tpl.id, band: tpl.band, data,
+    artwork: art, template: tpl.id, band: tpl.band, data, ink: cleaned.ink,
     widthMm: W, heightMm: H, seed: 4242, wineColour: data.wineColorName,
   });
   if (out.warnings.length) { problems++; console.log(`  ! ${tpl.id} ${out.warnings.join("; ")}`); }
