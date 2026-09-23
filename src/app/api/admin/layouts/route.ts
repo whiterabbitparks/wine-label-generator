@@ -4,6 +4,7 @@ import sharp from "sharp";
 import path from "node:path";
 import { requestIsAuthenticated } from "@/lib/admin/session";
 import { TEMPLATES } from "@/lib/typeset/templates.data";
+import { applyReviewEdits } from "@/lib/typeset/templates.review";
 import { layoutFromTemplate, templateFields, artKindOf, type Template } from "@/lib/typeset/templates";
 import { composeTemplateLabel, inkLost } from "@/lib/typeset/compose-template";
 import { cleanPaper } from "@/lib/typeset/palette";
@@ -129,7 +130,7 @@ export async function GET() {
   const c = readCorrections();
   return NextResponse.json({
     templates: (TEMPLATES as Template[]).map((t) => {
-      const now = applyCorrections(t, c);
+      const now = applyCorrections(applyReviewEdits(t), c);
       return { id: t.id, band: t.band, kind: artKindOf(now), refW: t.refW, refH: t.refH, touched: !!c[t.id] };
     }),
     fills: Object.keys(SAMPLES),
@@ -142,7 +143,7 @@ export async function POST(req: Request) {
   const b = (await req.json()) as { id: string; widthMm?: number; heightMm?: number; fill?: string; seed?: number; art?: string };
   const base = (TEMPLATES as Template[]).find((t) => t.id === b.id);
   if (!base) return NextResponse.json({ error: "no such template" }, { status: 404 });
-  const tpl = applyCorrections(base);
+  const tpl = applyCorrections(applyReviewEdits(base));
   const widthMm = Math.min(300, Math.max(30, b.widthMm || 110));
   const heightMm = Math.min(300, Math.max(30, b.heightMm || 80));
   const data = SAMPLES[b.fill || "full"] || SAMPLES.full;

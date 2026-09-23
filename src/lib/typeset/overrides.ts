@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { TEMPLATES } from "./templates.data";
 import type { Template } from "./templates";
+import { applyReviewEdits } from "./templates.review";
 
 /* THE OWNER'S CORRECTIONS (2026-09-23). He draws the templates, the tool
    reads them, and then — in /admin → Layouts — he drags a line or the
@@ -45,8 +46,9 @@ export function applyCorrections(tpl: Template, c: Corrections = readCorrections
   return { ...tpl, texts, art };
 }
 
-/* every template, as the owner last left it */
+/* every template, as the owner last left it: his drawing, his review
+   edits (templates.review.ts), then his bench nudges */
 export function templatesNow(): Template[] {
   const c = readCorrections();
-  return (TEMPLATES as Template[]).map((t) => applyCorrections(t, c));
+  return (TEMPLATES as Template[]).map((t) => applyCorrections(applyReviewEdits(t), c));
 }

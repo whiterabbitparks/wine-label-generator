@@ -205,6 +205,34 @@ Now:
 - Source PDF now lives in `NEW UI/Comments/Achive/Layout_Options.pdf`;
   his PNG exports of the same twelve are in `Comments/New`.
 
+## 6c. His first review (2026-09-23)
+
+He edited the review sheet (`tools/review-pdf.mts` → Illustrator) and
+`tools/review-diff.mts` read it back. What became rules:
+
+- **White space, not baseline steps.** The air between rows is kept from
+  the foot of one row's letters to the top of the next row's capitals
+  (ASC 0.7 / DESC 0.2 of the size). His baselines come back exactly at his
+  size; a shrunk long name no longer floats away from the producer, and
+  rows that close up over missing fields sit closer.
+- **Pairs join on a narrow label.** A left and a right line that cannot
+  stand side by side at 7 pt become ONE line joined by " / " (plain
+  weight; centred on a centred label, left on a left-set one); a line
+  that stood between them follows on its own line. If even the joined
+  line cannot fit, the two go on two lines of their own.
+- **Tall, narrow label (height > 1.1 × width): the oval takes the height**
+  the type leaves, 4:3, and may run off both sides by up to 5 mm.
+- **t11/t12 with only name, vintage and the legal line:** the vintage
+  becomes small print (the legal line's size and weight, ink colour) in
+  the legal column, centred where the big one stood.
+- **Structural edits to his own templates** live in
+  `src/lib/typeset/templates.review.ts` (t05: new foot; t06: lower block
+  opened), applied on top of the drawing and under the bench nudges.
+  `templatesNow()` applies both; the admin bench uses the same chain.
+
+Next round: `~/Desktop/8K-sheet-test/8-layout-review-v2.pdf`; its
+manifest is `data/eval/layout-review-manifest.json` (v1 kept beside it).
+
 ## 7. What I would change next, once you have looked
 
 - The picture is FITTED into its zone, never cropped, because a painting

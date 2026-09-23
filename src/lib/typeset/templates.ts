@@ -222,9 +222,8 @@ export interface TemplateLayout {
 }
 
 export function layoutFromTemplate(inp: TemplateInput): TemplateLayout {
-  const tpl = inp.template;
   const W = Math.round(inp.widthMm * PX_PER_MM), H = Math.round(inp.heightMm * PX_PER_MM);
-  const faces = facesFor(tpl.band, inp.seed);
+  const faces = facesFor(inp.template.band, inp.seed);
   const warnings: string[] = [];
 
   const textOf = (t: TplText) => {
@@ -239,6 +238,30 @@ export function layoutFromTemplate(inp: TemplateInput): TemplateLayout {
   const faceOf = (t: TplText): Face => t.bold === undefined
     ? (t.role === "hero" ? faces.hero : t.role === "secondary" ? faces.secondary : faces.small)
     : t.bold ? faces.hero : faces.small;
+
+  /* THE VERTICAL TEMPLATES WITH FEW WORDS (owner, 2026-09-23, on t12 with
+     only a name, a vintage and the legal line: he made the vintage small,
+     plain and black, and stood it in the legal line's column). With
+     nothing but the name and the small print, a big red vintage above the
+     name is a second hero; it becomes small print, centred where the big
+     one stood. */
+  const tpl: Template = (() => {
+    const t0 = inp.template;
+    if (!t0.texts.some((t) => t.rot === -90)) return t0;
+    const present = (Object.keys(inp.fields) as FieldKey[]).filter((k) => inp.fields[k]);
+    const few = new Set<FieldKey>(["wineName", "vintage", "wineTypeLine", "alcVol"]);
+    if (!present.includes("vintage") || present.some((k) => !few.has(k))) return t0;
+    const vin = t0.texts.find((t) => t.fields.includes("vintage") && t.rot === -90);
+    const legal = t0.texts.find((t) => t.fields.includes("alcVol") && t.rot === -90);
+    if (!vin || !legal || vin === legal) return t0;
+    const text = textOf(vin);
+    const lenOld = measure(text, faceOf(vin), ptPx(vin.size), vin.tracking) / PX_PER_MM;
+    const small: TplText = { ...vin, size: legal.size, bold: legal.bold ?? false, accent: false, tracking: legal.tracking, x: legal.x };
+    const lenNew = measure(text, faceOf(small), ptPx(small.size), small.tracking) / PX_PER_MM;
+    small.baseline = vin.baseline - lenOld / 2 + lenNew / 2;
+    small.fromBottom = t0.refH - small.baseline;
+    return { ...t0, texts: t0.texts.map((t) => (t === vin ? small : t)) };
+  })();
 
   /* ---- HIS ARTBOARD IS THE MEASURE (owner, 2026-09-23, laying the
      engine's labels over his own: "the text runs onto the picture, the
@@ -259,12 +282,24 @@ export function layoutFromTemplate(inp: TemplateInput): TemplateLayout {
   const rows0 = rowsOf(tpl);
   const hisPt = (r: Row) => Math.max(...r.items.map((t) => t.size));
   const hisMm = (r: Row) => hisPt(r) * PT_MM;
-  /* the gap each row leaves before the next, as a multiple of its own type */
-  const ratioAfter = new Map<Row, number>();
+  /* THE AIR BETWEEN ROWS IS HIS WHITE SPACE, not his baseline step
+     (owner, 2026-09-23: on a long name that had to shrink he pulled the
+     name up to the producer; with rows missing he pulled the name down to
+     the small print). What he draws is the paper between one row's letters
+     and the next row's, so that is what is kept: from the foot of a row's
+     letters (DESC of its size) to the top of the next row's capitals (ASC
+     of its size). At his sizes this gives back his baselines exactly; when
+     a row is set smaller, or the next row is gone, the rows stay the same
+     distance apart AS THE EYE SEES IT. */
+  const ASC = 0.7, DESC = 0.2;
+  const gapAfter = new Map<Row, number>();
   for (const edge of ["top", "bottom"] as const) {
     const g = rows0.filter((r) => r.anchor === edge);
-    for (let i = 0; i < g.length - 1; i++) ratioAfter.set(g[i], (g[i + 1].baseline - g[i].baseline) / hisMm(g[i]));
+    for (let i = 0; i < g.length - 1; i++) gapAfter.set(g[i], (g[i + 1].baseline - g[i].baseline) - DESC * hisMm(g[i]) - ASC * hisMm(g[i + 1]));
   }
+  /* a line that the engine joined or split from his, and the lines of his
+     it came from — so the picture's zone still knows whose room it is */
+  const originOf = new Map<TplText, TplText[]>();
 
   /* ---- across the label: his margins, his centring ---------------- */
   const xShift = new Map<TplText, number>();     /* vertical columns, closed up */
@@ -343,23 +378,50 @@ export function layoutFromTemplate(inp: TemplateInput): TemplateLayout {
     return b.length > 0 && (b[0][0] < px(MARGIN_MM) - 0.5 || b[b.length - 1][1] > px(inp.widthMm - MARGIN_MM) + 0.5);
   };
 
-  /* A ROW THAT CANNOT FIT BREAKS, IT DOES NOT OVERLAP: his foot row puts
-     a line left, a line right and the vintage between them. On a narrow
-     label that cannot fit even at 7 pt, so the middle line steps up onto
-     a line of its own. */
+  /* A ROW THAT CANNOT FIT JOINS, IT DOES NOT OVERLAP (owner, 2026-09-23,
+     on a narrow label: "Vieilles Vignes / Bordeaux, France" and "Dry Red
+     Wine / 13.5% Alc. by Vol. / 750 mL" each as ONE line). When a line on
+     the left and one on the right cannot stand beside each other — or
+     beside the line between them — even at 7 pt, the pair becomes one line
+     joined by a slash, in the plain weight, and whatever stood between
+     them follows on its own line under it. The joined line is centred on
+     a centred label and stays on the left edge of a left-set one. */
+  const heroCentred = tpl.texts.some((t) => t.fields.includes("wineName") && t.align === "center");
   const splitRows = (src: Row[]): Row[] => {
     const out: Row[] = [];
     for (const row of src) {
       const live = row.items.filter((t) => textOf(t));
       if (live.length < 2 || live.some((t) => t.rot === -90)) { out.push(row); continue; }
       if (!clashes(live, () => ptPx(MIN_PT), px(1))) { out.push(row); continue; }
-      const middle = live.find((t) => t.align === "center")
-        || [...live].sort((a, b2) => measure(textOf(b2), faces.small, 100, 0) - measure(textOf(a), faces.small, 100, 0))[0];
-      const rest = row.items.filter((t) => t !== middle);
-      if (!rest.some((t) => textOf(t))) { out.push(row); continue; }
-      const lifted: Row = { baseline: row.baseline - 0.01, fromBottom: row.fromBottom, anchor: row.anchor, items: [middle] };
-      ratioAfter.set(lifted, 1.45);
-      out.push(lifted, { ...row, items: rest });
+      const left = live.find((t) => t.align === "left"), right = live.find((t) => t.align === "right");
+      const mid = live.find((t) => t.align === "center");
+      if (!left || !right) { out.push(row); continue; }
+      const centred = !!mid || heroCentred;
+      const joined: TplText = {
+        ...left, fields: [...left.fields, ...right.fields], join: " / ",
+        align: centred ? "center" : "left", x: centred ? tpl.refW / 2 : left.x,
+        size: Math.min(left.size, right.size), bold: false,
+        accent: left.accent && right.accent, caps: left.caps && right.caps, sample: undefined,
+      };
+      /* and if even the joined line cannot fit at 7 pt, the two keep
+         their own sides and go on two lines of their own */
+      const g0 = gapAfter.get(row) ?? 0.5 * hisMm(row);
+      if (clashes([joined], () => ptPx(MIN_PT), px(1))) {
+        const r1: Row = { baseline: row.baseline - 0.02, fromBottom: row.fromBottom, anchor: row.anchor, items: [left] };
+        const r2: Row = { baseline: row.baseline - 0.01, fromBottom: row.fromBottom, anchor: row.anchor, items: [right] };
+        gapAfter.set(r1, 0.35 * hisMm(row)); gapAfter.set(r2, g0);
+        out.push(r1, r2);
+      } else {
+        originOf.set(joined, [left, right]);
+        const pair: Row = { baseline: row.baseline - 0.01, fromBottom: row.fromBottom, anchor: row.anchor, items: [joined] };
+        gapAfter.set(pair, g0);
+        out.push(pair);
+      }
+      if (mid) {
+        const midRow: Row = { ...row, items: [mid] };
+        if (gapAfter.has(row)) gapAfter.set(midRow, gapAfter.get(row)!);
+        out.push(midRow);
+      }
     }
     return out;
   };
@@ -471,21 +533,28 @@ export function layoutFromTemplate(inp: TemplateInput): TemplateLayout {
       const g = placed.filter((p2) => p2.row.anchor === edge);
       if (!g.length) continue;
       const all = rows.filter((r) => r.anchor === edge);
+      /* a row of turned (vertical) lines has no capitals above it: it
+         keeps his baseline, not his cap line */
+      const turned = (p2: Placed) => p2.items.every((i) => i.t.rot === -90);
+      const gap = (p2: Placed) => (gapAfter.get(p2.row) ?? 0.5 * p2.setMm) * scale;
       if (edge === "top") {
-        let y = all[0].baseline * (g[0].setMm / (hisPt(all[0]) * PT_MM));
+        /* the air above his first row's capitals stays his; the first row
+           that is set inherits it (rule 1) */
+        let y = turned(g[0]) ? all[0].baseline : all[0].baseline - ASC * hisMm(all[0]) + ASC * g[0].setMm;
         y = Math.max(y, MARGIN_MM + g[0].up / PX_PER_MM);
         for (let i = 0; i < g.length; i++) {
           g[i].base = y;
-          y += (ratioAfter.get(g[i].row) ?? 1.4) * g[i].setMm;
+          if (i < g.length - 1) y += DESC * g[i].setMm + gap(g[i]) + ASC * g[i + 1].setMm;
         }
       } else {
         const last = all[all.length - 1];
         const lastSet = g[g.length - 1];
-        let y = inp.heightMm - (tpl.refH - last.baseline) * (lastSet.setMm / (hisPt(last) * PT_MM));
+        let y = turned(lastSet) ? inp.heightMm - (tpl.refH - last.baseline)
+          : inp.heightMm - (tpl.refH - last.baseline - DESC * hisMm(last)) - DESC * lastSet.setMm;
         y = Math.min(y, inp.heightMm - MARGIN_MM - lastSet.down / PX_PER_MM);
         for (let i = g.length - 1; i >= 0; i--) {
           g[i].base = y;
-          if (i > 0) y -= (ratioAfter.get(g[i - 1].row) ?? 1.4) * g[i - 1].setMm;
+          if (i > 0) y -= ASC * g[i].setMm + gap(g[i - 1]) + DESC * g[i - 1].setMm;
         }
       }
     }
@@ -604,7 +673,7 @@ export function layoutFromTemplate(inp: TemplateInput): TemplateLayout {
     const mid = a.y + a.h / 2;
     /* where a row of HIS ended up — a row that broke on a narrow label
        lives in two placed rows, and the zone must respect both */
-    const partsOf = (r: Row) => pass.placed.filter((p) => p.items.some((i) => r.items.includes(i.t)));
+    const partsOf = (r: Row) => pass.placed.filter((p) => p.items.some((i) => r.items.includes(i.t) || (originOf.get(i.t) || []).some((o) => r.items.includes(o))));
     const hisRow = (r: Row) => {
       const ps = partsOf(r);
       if (!ps.length) return null;
@@ -647,10 +716,23 @@ export function layoutFromTemplate(inp: TemplateInput): TemplateLayout {
       /* his oval, as large as the room allows (a little larger than he drew
          it at most), never nearer the sides than he drew it */
       const side = Math.min(a.x, tpl.refW - a.x - a.w);
-      const k = Math.min(1.25, (W - 2 * px(side)) / px(a.w), roomH / px(a.h));
-      const w = px(a.w) * k, h = px(a.h) * k;
       const cx = Math.abs(a.x + a.w / 2 - tpl.refW / 2) < 1 ? W / 2 : px(a.x + a.w / 2) * (W / px(tpl.refW));
-      art = { kind: "oval", x: cx - w / 2, y: top + (roomH - h) / 2, w, h };
+      if (inp.heightMm > inp.widthMm * 1.1) {
+        /* A TALL, NARROW LABEL (owner, 2026-09-23, on t05 at 70 × 120: he
+           drew the oval over the whole height the type leaves, rounder, and
+           running off both sides). There his wide oval would be a small
+           lozenge in a column of air; instead it takes the height the type
+           leaves, four-thirds as wide as tall, and may cross the label's
+           edges — the painting alone may bleed — by up to 5 mm a side. If
+           the room is taller than that allows, it stays 4:3 and sits in
+           the middle of the room. */
+        const w = Math.min(roomH * 4 / 3, W + px(10)), h = w * 3 / 4;
+        art = { kind: "oval", x: cx - w / 2, y: top + (roomH - h) / 2, w, h };
+      } else {
+        const k = Math.min(1.25, (W - 2 * px(side)) / px(a.w), roomH / px(a.h));
+        const w = px(a.w) * k, h = px(a.h) * k;
+        art = { kind: "oval", x: cx - w / 2, y: top + (roomH - h) / 2, w, h };
+      }
       /* and no letter may touch the oval itself — the ends of a long arced
          word dip beside it, which is fine; into it, which is not */
       /* an arced word is boxed letter by letter — as one box it covered the

@@ -16,7 +16,8 @@
 */
 import fs from "node:fs";
 import { layoutFromTemplate, templateFields, facesInUse, MARGIN_MM, PX_PER_MM, MIN_PT, MAX_PT, type Template } from "../src/lib/typeset/templates";
-import { TEMPLATES } from "../src/lib/typeset/templates.data";
+import { templatesNow } from "../src/lib/typeset/overrides";
+const TEMPLATES = templatesNow();
 import { measure, inkExtent, faceFile } from "../src/lib/typeset/fonts";
 import type { LaidLine } from "../src/lib/typeset/compose";
 
