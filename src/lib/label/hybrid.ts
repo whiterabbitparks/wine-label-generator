@@ -6,7 +6,7 @@ import { cleanPaper } from "@/lib/typeset/palette";
 import { artKindOf, layoutFromTemplate, templateFields, type ArtKind, type Band } from "@/lib/typeset/templates";
 import { faceFile, pickRoles, mix } from "@/lib/typeset/fonts";
 import type { Layout } from "@/lib/typeset/compose";
-import { painterFor } from "./painters";
+import { painterFor, mixedPainter } from "./painters";
 
 /* the wizard's three columns are the owner's three bands (2026-09-22:
    "first option can be classical… second contemporary… third more free,
@@ -36,6 +36,9 @@ export interface HybridInput {
   seed?: number;
   /* round 112 #4: paint in THIS artist's hand, whatever the column says */
   artistId?: string;
+  /* one generation run's token: the three columns share it and get a
+     mixed cast of artists from it (painters.ts mixedPainter) */
+  order?: string;
   /* force one of the artist's reference sets (0-based) — tests only */
   refSet?: number;
 }
@@ -83,6 +86,7 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
   const brief = { id: "wizard", title: "wizard", vision: inp.vision, data: inp.data, width: widthMm, height: heightMm };
   /* the column's artist (admin → Artists); any artist with a LoRA if unset */
   const model = (inp.artistId ? evalModel(`artist:${inp.artistId}`) : null)
+    || (inp.order ? evalModel(mixedPainter(inp.order, style)) : null)
     || evalModel(await painterFor(style)) || artistModels().find((m) => m.lora) || artistModels()[0];
   if (!model) throw new Error("no artist is set up yet (data/artists/<id>/profile.json + lora.json)");
   /* 2026-09-22: THE TEMPLATE IS CHOSEN BEFORE THE PAINTING, and so is

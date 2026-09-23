@@ -34,7 +34,32 @@ overwrites the server's `.env.local`. Live smoke label made through
 - Proper case for typed names (src/lib/label/casing.ts): wine → Wine,
   "Domaine de la Romanée-Conti", "Mukuzani PDO"; Georgian untouched.
 
+**Second deploy, same evening (both LIVE):**
+- The owner's reference SETS (see decision 1 below).
+- Artists MIXED across the three columns (owner: "don't always show one
+  Mariam and two Levans — mix it; every layout standard must fall to every
+  artist alike"). The wizard sends one random `order` token per run;
+  painters.ts `mixedPainter` shuffles a cast from it (2 artists → a 2+1
+  split whose majority and seats change per run; 3+ → three different).
+  3000 simulated runs: every column ≈50/50 per artist. The admin's
+  per-column artist map is NOT used by the wizard any more (eval only);
+  an artist-page visitor still gets that artist in all three columns.
+
 **Open — the owner's decisions**
+0. NEW, asked 2026-09-23 night, not yet answered — "why is Mariam always a
+   small oval?" Cause: this morning's rule "ONE kind of ask" (models.ts:
+   BLEED = VIGNETTE — every picture is asked as a drawing with free paper
+   around it; he asked for it: "generate the image with the free zones").
+   Mariam's LoRA obeys (her paper is part of her hand), so even a band
+   template gets a vignette floating on paper; Levan's LoRA fills the
+   canvas anyway, so he looks like a bleed. With the columns mixed, both
+   now get every template family — but Mariam's pictures still read as
+   ovals. Options to put to him: (a) for band/panel templates ask for an
+   edge-to-edge painting again (only for those; contradicts the one-ask
+   rule, so HIS call); (b) keep the ask, but for band/panel crop INTO
+   her drawing so it runs off the label (loses her ragged edge);
+   (c) leave it — the oval is her character. My lean: (a), tested on
+   Mariam only, ~$1.
 1. Levan's labels come out blue (or black): his 4 reference works
    (profile.json `refs`: 01, 02, 09, 17 — three have flat sky-blue grounds)
    + charter "sky blue…" + our ask says "flat single-colour background"
@@ -53,8 +78,9 @@ overwrites the server's `.env.local`. Live smoke label made through
    (A–D), shown under "Recent labels" in admin. Levan A 01-06-09,
    B 18-17-10, C 07-13-03, D 16-14-02; Mariam A 01-03-09, B 05-14-40,
    C 43-44-45, D 33-08-06. `refs` stays as the fallback. Side-by-side test:
-   data/experiments/ref-sets-test.mts → Desktop/8K-sheet-test/ref-sets/.
-   NOT yet on live.
+   data/experiments/ref-sets-test.mts → Desktop/8K-sheet-test/ref-sets/
+   (night idea → mostly blue; next test with a warm DAY idea). Live since
+   the second deploy of 2026-09-23.
    The refs decide the SKETCH's palette; the LoRA (trained on ALL works)
    repaints at 0.60 and keeps most of the sketch's colour. Still open:
    light-paper ask + pale-tint fallback.

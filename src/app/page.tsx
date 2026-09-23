@@ -1592,6 +1592,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     /* round 84: ONE payload builder — this copy still carried the demo
        fallback that round 78 removed from buildDreamPayload */
     const { data, aspectKey, width, height, artist } = buildDreamPayload();
+    /* 2026-09-23: one token for the whole run — the server mixes which
+       artist paints which column from it (a retried column keeps its seat) */
+    const order = Math.random().toString(36).slice(2, 12);
     const one = async (style: string): Promise<Dream> => {
       /* round 56 #3 (TEMP dev switch): fake the run with existing art */
       if (!liveGenRef.current) {
@@ -1606,7 +1609,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         /* 2026-09-23 (owner: "remove variations altogether, they
            complicate things — three versions and that's it"): one label
            a column, no re-layouts riding along */
-        body: JSON.stringify({ vision, style, data, sketch, aspect: aspectKey, width, height, variants: 1, artist }),
+        body: JSON.stringify({ vision, style, data, sketch, aspect: aspectKey, width, height, variants: 1, artist, order }),
       });
       if (!r.ok || !r.body) throw new Error(`generation failed (${r.status})`);
       const reader = r.body.getReader(); const dec = new TextDecoder();

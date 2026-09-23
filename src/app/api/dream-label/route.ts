@@ -21,7 +21,7 @@ const DATA_KEYS = [
 ] as const;
 
 export async function POST(req: Request) {
-  let body: { vision?: string; style?: string; data?: Record<string, string>; sketch?: string | null; width?: number; height?: number; relayout?: string; variants?: number; artist?: string };
+  let body: { vision?: string; style?: string; data?: Record<string, string>; sketch?: string | null; width?: number; height?: number; relayout?: string; variants?: number; artist?: string; order?: string };
   try {
     body = await req.json();
   } catch {
@@ -41,6 +41,8 @@ export async function POST(req: Request) {
   /* ROUND 112 #4: a visitor who started from an artist's page has every
      column painted in THAT artist's hand, whoever the admin set */
   const artist = /^[a-z0-9-]{1,40}$/.test(String(body.artist || "")) ? String(body.artist) : "";
+  /* the run's token — the three columns share it and are cast from it */
+  const order = /^[a-z0-9-]{1,40}$/i.test(String(body.order || "")) ? String(body.order) : "";
 
   const enc = new TextEncoder();
   const stream = new ReadableStream({
@@ -52,7 +54,7 @@ export async function POST(req: Request) {
         send({ type: "progress", stage: base ? "setting" : "painting" });
         const out = base
           ? await relayoutLabel(base, data)
-          : await paintHybridLabel({ vision, style, data, widthMm, heightMm, sketch, artistId: artist || undefined });
+          : await paintHybridLabel({ vision, style, data, widthMm, heightMm, sketch, artistId: artist || undefined, order: order || undefined });
         const m = base ? base.meta : { style, widthMm, heightMm, fit: out.fit };
         const id = saveLabel({ style: m.style, widthMm: m.widthMm, heightMm: m.heightMm, faces: out.faces, ground: out.ground, svg: out.svg, png: out.png, art: out.art, prompt: out.prompt, layout: out.layout, fit: m.fit, template: (out as { template?: string }).template, hasPaper: (out as { hasPaper?: boolean }).hasPaper, artist: (out as { artist?: string }).artist, refSet: (out as { refSet?: string }).refSet });
         /* medium-res JPEG for the page's views — the PNG stays the print source */
