@@ -45,8 +45,21 @@ overwrites the server's `.env.local`. Live smoke label made through
   per-column artist map is NOT used by the wizard any more (eval only);
   an artist-page visitor still gets that artist in all three columns.
 
+**Third change, same night (LIVE) — the owner's answer to "why is Mariam
+always a small oval?": "forget putting Mariam only in the oval — every
+artist's style gets the same share of layouts, whoever the artist; forget
+the white or light ground rule; let's see what comes out, then I'll
+correct."** So: models.ts BLEED is a real edge-to-edge ask again (the
+"one kind of ask" rule is REVOKED for band/panel layouts), and the FLUX
+repaint says "paint right to every edge" for those (it used to say "keep
+the paper" for everything). Spot layouts keep the vignette. No light-ground
+rule of any kind: the label ground is the painting's. Test sheet:
+~/Desktop/8K-sheet-test/bleed-test/00-all.jpg (both painters × t01/t08/t11,
+all edge to edge; Levan's t08 ground came out black). He will review and
+correct from what the site makes.
+
 **Open — the owner's decisions**
-0. NEW, asked 2026-09-23 night, not yet answered — "why is Mariam always a
+0. ANSWERED (see above) — "why is Mariam always a
    small oval?" Cause: this morning's rule "ONE kind of ask" (models.ts:
    BLEED = VIGNETTE — every picture is asked as a drawing with free paper
    around it; he asked for it: "generate the image with the free zones").
@@ -83,7 +96,8 @@ overwrites the server's `.env.local`. Live smoke label made through
    the second deploy of 2026-09-23.
    The refs decide the SKETCH's palette; the LoRA (trained on ALL works)
    repaints at 0.60 and keeps most of the sketch's colour. Still open:
-   light-paper ask + pale-tint fallback.
+   light-paper ask + pale-tint fallback. → DROPPED 2026-09-23 night: the
+   owner revoked every light-ground rule ("let's see what comes out").
 2. Ground under OVAL layouts: white / painter's paper / pale tint
    (data/experiments/oval-test.mts shows all three).
 3. Does t06's review nudge also apply to t08 and t09 (same block)?

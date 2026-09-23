@@ -78,7 +78,15 @@ const VIGNETTE = "A spot illustration: one self-contained drawing isolated on a 
    the one the model has always done well: a drawing with the ragged edge
    the painter chose, standing on plain ground with room around it. The
    free zone is ours to size afterwards — it is arithmetic, not a wish. */
-const BLEED = VIGNETTE;
+/* 2026-09-23 night (owner: "forget putting Mariam only in the oval —
+   every artist's style must get the same share of the layouts, whoever
+   the artist; forget the white or light ground rule; let's see what comes
+   out and I'll correct it"). The one-ask rule above is REVOKED for the
+   band and panel layouts: those ask every artist for a painting that
+   runs off every edge, so a band is a band in Mariam's hand too (her
+   LoRA had kept her paper and floated a small oval in every layout).
+   The spot layouts keep the vignette — a spot IS a drawing on paper. */
+const BLEED = "A full painting that covers the whole canvas right to every edge: no empty margin, no plain paper showing, no frame, no border — the scene simply runs off all four sides, as if the sheet were cut from a larger painting.";
 
 /* rebuild the ask for the OTHER kind of picture, keeping everything the
    artist's charter and the story already put into it */
@@ -124,7 +132,7 @@ export async function repaintInHand(model: EvalModel, story: string, ap: Artwork
   const key = process.env.FAL_KEY;
   if (!key) throw new Error("FAL_KEY is not set");
   const url = await falUpload(Buffer.from(story.slice(story.indexOf(",") + 1), "base64"), "story.png", "image/png");
-  const prompt = `${model.lora.trigger} style. Repaint this picture in your own hand — same scene, same subjects in the same places, your own colours and brush: ${ap.subject} Painted as ${artistCharter(model.artist)}. Keep the plain, empty paper around the drawing.`.slice(0, 1900);
+  const prompt = `${model.lora.trigger} style. Repaint this picture in your own hand — same scene, same subjects in the same places, your own colours and brush: ${ap.subject} Painted as ${artistCharter(model.artist)}. ${ap.kind === "bleed" ? "Paint right to every edge — no empty paper, no margin, no border." : "Keep the plain, empty paper around the drawing."}`.slice(0, 1900);
   const res = await fetch("https://fal.run/fal-ai/flux-lora/image-to-image", {
     method: "POST", headers: { Authorization: `Key ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({ prompt, image_url: url, strength: REPAINT_STRENGTH, num_inference_steps: 28, guidance_scale: 3.5, num_images: 1, output_format: "png", loras: [{ path: model.lora.url, scale: LORA_SCALE }] }),

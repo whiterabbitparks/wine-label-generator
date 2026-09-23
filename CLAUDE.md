@@ -48,7 +48,11 @@ John/Doe), MongoDB Atlas db `8k-labels`.
   `input[type=text]` selectors time out; use `locator('input').first()`.
 
 ## Non-negotiable design rules (full list in CONTINUE-HERE.md)
-- Artwork always on pure white background; multiply blend on labels.
+- (REVOKED 2026-09-23 night for the hybrid wizard: "forget the white or
+  light ground rule" — the label ground is the painting's own ground,
+  whatever colour. Band/panel layouts get edge-to-edge paintings from
+  EVERY artist; only spot layouts keep a drawing on paper.) Legacy engine:
+  artwork on pure white background; multiply blend on labels.
 - Artwork fills ~85% of its MEASURED free area (admin-tunable artFillPct)
   and may bleed off the label edge — artwork ALONE is exempt from the 5mm
   margin; text never is. Artwork never contains its own frame/border
@@ -58,7 +62,8 @@ John/Doe), MongoDB Atlas db `8k-labels`.
 - Layout-detail edits never regenerate artwork (only story/sketch/seed do).
 - Reference-board images NEVER go to the image model (they cause shape
   copying) — they steer only through the derived style profiles.
-- No split-colour label backgrounds; no dark grounds under artwork.
+- No split-colour label backgrounds. ("No dark grounds under artwork"
+  REVOKED 2026-09-23 night — see above.)
 - No frames or borders on any layout (2026-08-16).
 - Customers get ONLY admin-selected fonts and ONLY approved layout comps
   (once any comp is approved for a style) (2026-08-16).
