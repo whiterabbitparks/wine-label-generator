@@ -4,7 +4,7 @@ import { getDb } from "@/lib/db";
 import { DEFAULT_REGIONS } from "./regions";
 import type { EvalBrief } from "./briefs";
 import { aspectOf } from "./briefs";
-import { readArtist, listArtists, artistRefs, artistCharter, isActive, type ArtistProfile } from "@/lib/label/artists";
+import { readArtist, listArtists, artistRefs, nextRefSet, artistCharter, isActive, type ArtistProfile } from "@/lib/label/artists";
 
 /* THE PAINTER (round 105, 2026-09-20 — the owner, after nine story
    tests: "we have a winner: gpt-image → FLUX + LoRA at 0.60; drop every
@@ -108,9 +108,9 @@ const GPT_SIZE = { landscape: { w: 1536, h: 1024 }, portrait: { w: 1024, h: 1536
    the arrangement, not gpt-image's own rendering. The quality is a knob,
    not a constant, so it can be proven and then set — see STORY_QUALITY. */
 export const STORY_QUALITY = (process.env.STORY_QUALITY as "low" | "medium" | "high") || "medium";
-export async function paintStory(model: EvalModel, ap: ArtworkPrompt, extra: { sketch?: string | null; quality?: "low" | "medium" | "high" } = {}): Promise<string> {
+export async function paintStory(model: EvalModel, ap: ArtworkPrompt, extra: { sketch?: string | null; quality?: "low" | "medium" | "high"; refFiles?: string[] } = {}): Promise<string> {
   const sketch = extra.sketch && extra.sketch.startsWith("data:image/") ? extra.sketch : null;
-  const refs = artistRefs(model.artist.id);
+  const refs = artistRefs(model.artist.id, 4, extra.refFiles);
   return generateOpenAIImage({
     prompt: ap.prompt + (sketch ? " The last image is the customer's own sketch: follow its subject and arrangement." : ""),
     references: [...refs, ...(sketch ? [sketch] : [])],
@@ -136,14 +136,16 @@ export async function repaintInHand(model: EvalModel, story: string, ap: Artwork
   return `data:${img.headers.get("content-type") || "image/png"};base64,${Buffer.from(await img.arrayBuffer()).toString("base64")}`;
 }
 
-/* both steps; `story` is kept so a failed repaint still yields a picture */
-export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt, extra: { sketch?: string | null; quality?: "low" | "medium" | "high" } = {}): Promise<{ art: string; story: string; repainted: boolean; error?: string }> {
-  const story = await paintStory(model, ap, extra);
+/* both steps; `story` is kept so a failed repaint still yields a picture.
+   `refSet` is the letter of the owner's set the story was shown (A–D). */
+export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt, extra: { sketch?: string | null; quality?: "low" | "medium" | "high"; refSet?: number } = {}): Promise<{ art: string; story: string; repainted: boolean; error?: string; refSet: string }> {
+  const { set: refSet, files: refFiles } = nextRefSet(model.artist.id, extra.refSet);
+  const story = await paintStory(model, ap, { ...extra, refFiles });
   try {
-    return { art: await repaintInHand(model, story, ap), story, repainted: true };
+    return { art: await repaintInHand(model, story, ap), story, repainted: true, refSet };
   } catch (e) {
     const error = e instanceof Error ? e.message : String(e);
     console.error(`[painter] FLUX + LoRA failed for ${model.id}: ${error} — the story picture ships as painted`);
-    return { art: story, story, repainted: false, error };
+    return { art: story, story, repainted: false, error, refSet };
   }
 }

@@ -36,6 +36,8 @@ export interface HybridInput {
   seed?: number;
   /* round 112 #4: paint in THIS artist's hand, whatever the column says */
   artistId?: string;
+  /* force one of the artist's reference sets (0-based) — tests only */
+  refSet?: number;
 }
 export interface HybridOutput {
   png: string;          /* data URL — the print bitmap at 12 px/mm */
@@ -73,7 +75,7 @@ async function gen429<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
-export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput & { tag: string; painter: string; artist?: string; repainted: boolean; template: string; hasPaper: boolean }> {
+export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput & { tag: string; painter: string; artist?: string; repainted: boolean; template: string; hasPaper: boolean; refSet: string }> {
   const style = ["traditional", "contemporary", "punk"].includes(inp.style) ? inp.style : "traditional";
   const seed = inp.seed ?? (Math.random() * 0xffffffff) >>> 0;
   const widthMm = Math.min(300, Math.max(30, inp.widthMm || 110));
@@ -98,7 +100,7 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
   const zoneAspect = (zone.w / tpl.refW * widthMm) / (zone.h / tpl.refH * heightMm);
   const ap = asKind(await buildArtworkPrompt(brief, model.artist), artKindOf(tpl) === "spot" ? "spot" : "bleed");
   ap.aspect = zoneAspect > 1.25 ? "landscape" : zoneAspect < 0.8 ? "portrait" : "square";
-  const painted = await gen429(() => generateArtwork(model, ap, { sketch: inp.sketch || null }));
+  const painted = await gen429(() => generateArtwork(model, ap, { sketch: inp.sketch || null, refSet: inp.refSet }));
   /* 2026-09-22 (owner): the artist's LoRA learned her PAPER as well as
      her hand, so the picture arrives wrinkled and unevenly lit, and its
      rectangle then shows against the label's one flat colour. The clean
@@ -132,7 +134,7 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
     widthMm, heightMm, seed, wineColour: inp.data.wineColorName,
   });
   if (out.warnings.length) console.warn(`[template ${out.template}] ${out.warnings.join("; ")}`);
-  return { png: out.png, svg: out.svg, art, faces: out.faces, ink: out.ink, ground: out.layout.ground, prompt: ap.prompt, layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", painter: model.id, artist: model.artist.name, repainted: painted.repainted, template: out.template, hasPaper: cleaned.cleaned };
+  return { png: out.png, svg: out.svg, art, faces: out.faces, ink: out.ink, ground: out.layout.ground, prompt: ap.prompt, layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", painter: model.id, artist: model.artist.name, repainted: painted.repainted, template: out.template, hasPaper: cleaned.cleaned, refSet: painted.refSet };
 }
 
 /* ROUND 86 #3 (owner: "keep the image, just change the layout — tons of

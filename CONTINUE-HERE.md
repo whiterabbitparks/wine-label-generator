@@ -44,9 +44,17 @@ overwrites the server's `.env.local`. Live smoke label made through
    (e.g. 06, 09, 10, 17), and if the measured paper is still dark/saturated
    use a pale tint of it. Conflicts with his rule "no dark grounds under
    artwork" until fixed. Test ≈ $0.40.
-   UPDATE 2026-09-23 evening: the OWNER picked the refs himself (numbered
-   sheets in ~/Desktop/8K-sheet-test/choose-works/): Levan 18, 07, 01, 03;
-   Mariam 05, 01, 33, 43 (commit 03d8ddb, local only — not yet on live).
+   UPDATE 2026-09-23 evening: the OWNER picks the reference works himself
+   (numbered sheets in ~/Desktop/8K-sheet-test/choose-works/). He made
+   FOUR SETS OF THREE per painter (profile.json `refSets`), turned in
+   rotation — one set a label, so an order's three columns stand on three
+   different sets (artists.ts nextRefSet; per-artist in-memory turn,
+   random start). Each label's meta.json records `artist` + `refSet`
+   (A–D), shown under "Recent labels" in admin. Levan A 01-06-09,
+   B 18-17-10, C 07-13-03, D 16-14-02; Mariam A 01-03-09, B 05-14-40,
+   C 43-44-45, D 33-08-06. `refs` stays as the fallback. Side-by-side test:
+   data/experiments/ref-sets-test.mts → Desktop/8K-sheet-test/ref-sets/.
+   NOT yet on live.
    The refs decide the SKETCH's palette; the LoRA (trained on ALL works)
    repaints at 0.60 and keeps most of the sketch's colour. Still open:
    light-paper ask + pale-tint fallback.

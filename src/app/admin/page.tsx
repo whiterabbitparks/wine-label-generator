@@ -152,7 +152,7 @@ function MarketingRefsCard() {
 
 /* ROUND 98 #2: the hybrid engine's own log — the labels under data/labels */
 function RecentLabelsCard() {
-  const [rows, setRows] = useState<{ id: string; style: string; widthMm: number; heightMm: number; faces: string; createdAt: string; fit?: string }[]>([]);
+  const [rows, setRows] = useState<{ id: string; style: string; widthMm: number; heightMm: number; faces: string; createdAt: string; fit?: string; artist?: string; refSet?: string }[]>([]);
   useEffect(() => { fetch("/api/admin/labels").then((r) => r.json()).then((b) => setRows(b.labels || [])); }, []);
   return (
     <div style={S.card}>
@@ -164,6 +164,7 @@ function RecentLabelsCard() {
             <img src={`/api/admin/labels?id=${r.id}`} alt={r.id} style={{ width: "100%", display: "block", background: "#F4F3EE" }} />
             <div style={{ fontSize: 11, color: "#8a887e", marginTop: 6 }}>{r.createdAt.slice(0, 16).replace("T", " ")} · {r.style === "punk" ? "funky" : r.style} · {r.widthMm}×{r.heightMm} mm</div>
             <div style={{ fontSize: 11, marginTop: 2 }}>{r.faces}</div>
+            {r.artist && <div style={{ fontSize: 11, marginTop: 2 }}>{r.artist}{r.refSet ? ` · works set ${r.refSet}` : ""}</div>}
           </div>
         ))}
         {!rows.length && <span style={{ fontSize: 12, color: "#8a887e" }}>nothing painted yet</span>}

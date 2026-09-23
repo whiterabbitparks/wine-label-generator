@@ -20,5 +20,6 @@
   "pageOrder": 3,
   "crop": "52% 26%",
   "charterBy": "Claude's draft from the 18 works, 2026-09-22 — the owner replaces it with the artist's own seven answers",
-  "refs": ["work-18.jpg", "work-07.jpg", "work-01.jpg", "work-03.jpg"]
+  "refs": ["work-18.jpg", "work-07.jpg", "work-01.jpg", "work-03.jpg"],
+  "refSets": [["work-01.jpg", "work-06.jpg", "work-09.jpg"], ["work-18.jpg", "work-17.jpg", "work-10.jpg"], ["work-07.jpg", "work-13.jpg", "work-03.jpg"], ["work-16.jpg", "work-14.jpg", "work-02.jpg"]]
 }
