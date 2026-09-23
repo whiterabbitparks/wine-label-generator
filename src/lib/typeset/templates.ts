@@ -66,6 +66,20 @@ export interface Template {
   texts: TplText[];
 }
 
+/* TWO KINDS OF PICTURE (owner, 2026-09-22). A template either holds a
+   SPOT — an illustration that stays inside the cut lines, floating on the
+   paper with the edge the artist gave it — or a BLEED, a picture that
+   runs off one or more edges of the label. They are different pictures
+   and must be painted differently, so a column paints the kind its
+   template wants and only ever shows layouts of that kind. */
+export type ArtKind = "spot" | "bleed";
+export function artKindOf(t: Template): ArtKind {
+  const a = t.art;
+  if (!a) return "bleed";
+  const touches = a.x <= 0.5 || a.y <= 0.5 || a.x + a.w >= t.refW - 0.5 || a.y + a.h >= t.refH - 0.5;
+  return touches ? "bleed" : "spot";
+}
+
 export const PX_PER_MM = 12;
 export const MARGIN_MM = 5;
 export const MIN_PT = 7;
@@ -234,7 +248,10 @@ export function layoutFromTemplate(inp: TemplateInput): TemplateLayout {
   }
 
   /* ---- across the label: his margins, his centring ---------------- */
+  const xShift = new Map<TplText, number>();     /* vertical columns, closed up */
   const mmX = (t: TplText) => {
+    const moved = xShift.get(t);
+    if (moved !== undefined) return moved;
     /* the vertical columns of templates 11 and 12 hug the edge the type
        lives on, so they keep their distance from THAT edge — held at his
        absolute x they walked straight off a narrower label */
@@ -369,6 +386,51 @@ export function layoutFromTemplate(inp: TemplateInput): TemplateLayout {
         for (let i = g.length - 1; i >= 0; i--) {
           g[i].base = y;
           if (i > 0) y -= (ratioAfter.get(g[i - 1].row) ?? 1.4) * g[i - 1].setMm;
+        }
+      }
+    }
+
+    /* ---- his groups must read as groups (owner, 2026-09-22: "if the
+       gap inside a group is 1, the gap to the next text must be at least
+       2.5") ----------------------------------------------------------- */
+    for (const edge of ["top", "bottom"] as const) {
+      const g = placed.filter((p2) => p2.row.anchor === edge);
+      if (g.length < 3) continue;
+      const gaps = g.slice(0, -1).map((p2, i) => g[i + 1].base - p2.base);
+      const inside = gaps.filter((v, i) => v <= (ratioAfter.get(g[i].row) ?? 1.4) * g[i].setMm * 1.05 && v <= 1.7 * g[i].setMm);
+      if (!inside.length) continue;
+      const unit = inside.sort((a, b2) => a - b2)[Math.floor(inside.length / 2)];
+      for (let i = 0; i < gaps.length; i++) {
+        if (gaps[i] <= 1.7 * g[i].setMm) continue;          /* a gap inside a group */
+        const want = unit * 2.5;
+        if (gaps[i] >= want - 0.01) continue;
+        const add = want - gaps[i];
+        if (edge === "top") for (let j = i + 1; j < g.length; j++) g[j].base += add;
+        else for (let j = i; j >= 0; j--) g[j].base -= add;
+      }
+    }
+
+    /* ---- and his vertical columns close up toward their own edge ----
+       stepping by the REAL width of the column just set plus the next
+       one's descender, so a big name never lands on its neighbour */
+    for (const { row, live, size } of placed) {
+      const cols = live.filter((t) => t.rot === -90);
+      if (cols.length < 2) continue;
+      const all = row.items.filter((t) => t.rot === -90).sort((a, b2) => a.x - b2.x);
+      const onLeft = all[0].x <= tpl.refW - all[all.length - 1].x;
+      const order = onLeft ? all : [...all].reverse();     /* outwards from the edge */
+      let edgeOfPrev: number | null = null;
+      for (const t of order) {
+        if (!textOf(t)) continue;
+        const sMm = (size.get(t) || ptPx(sizeOf(t))) / PX_PER_MM;
+        if (edgeOfPrev === null) {
+          const own = onLeft ? t.x : inp.widthMm - (tpl.refW - t.x);
+          xShift.set(t, own);
+          edgeOfPrev = onLeft ? own + 0.95 * sMm : own - 0.95 * sMm;
+        } else {
+          const x: number = onLeft ? edgeOfPrev + 0.6 + 0.28 * sMm : edgeOfPrev - 0.6 - 0.28 * sMm;
+          xShift.set(t, x);
+          edgeOfPrev = onLeft ? x + 0.95 * sMm : x - 0.95 * sMm;
         }
       }
     }

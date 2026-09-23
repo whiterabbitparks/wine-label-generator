@@ -63,22 +63,35 @@ export async function regionNote(region: string): Promise<string> {
   return key && map[key]?.trim() ? ` ${region.trim()} looks like this: ${map[key].trim()} ` : "";
 }
 
-export interface ArtworkPrompt { prompt: string; subject: string; aspect: "landscape" | "portrait" | "square" }
+export interface ArtworkPrompt { prompt: string; subject: string; aspect: "landscape" | "portrait" | "square"; kind?: "spot" | "bleed" }
 
 /* THE VIGNETTE — the one composition every model knows: an isolated spot
    illustration on a flat plain ground with air around it. The composer
    trims the air and sets the type on that same paper: nothing is ever
    cut or covered, the drawing ends where the artist ended it. */
-const VIGNETTE = "A spot illustration: one self-contained drawing isolated on a flat, plain, single-colour background with empty margin all around; the drawing's edges finish naturally.";
+const VIGNETTE = "A spot illustration: one self-contained drawing isolated on a flat, plain, single-colour background with empty margin all around; the drawing's edges finish naturally — they are the edges the painter chose, soft and irregular, never a frame, never a straight cut, never a border.";
+/* 2026-09-22 (owner): a picture that runs off the label is a different
+   picture. It fills its rectangle edge to edge, and the quiet room the
+   type will sit on is part of the painting — a wide sky, a field, a
+   wall — so the type lands on the artist's own paint and the join is
+   never a cut. */
+const BLEED = "A full-bleed illustration that fills the whole rectangle edge to edge, with no border and no empty paper margin. Keep a broad, calm, uncluttered area of sky, ground or wall across the top and the bottom of the picture, with no important detail in it, so lettering can be set over it later. The subject sits in the middle band.";
 
 /* THE ASK, exactly as test 5/7/8/9 put it (the words the owner marked) */
+/* rebuild the ask for the OTHER kind of picture, keeping everything the
+   artist's charter and the story already put into it */
+export function asKind(ap: ArtworkPrompt, kind: "spot" | "bleed"): ArtworkPrompt {
+  if (ap.kind === kind) return ap;
+  const swap = kind === "bleed" ? [VIGNETTE, BLEED] : [BLEED, VIGNETTE];
+  return { ...ap, kind, prompt: ap.prompt.replace(swap[0], swap[1]) };
+}
 export async function buildArtworkPrompt(brief: EvalBrief, artist: ArtistProfile): Promise<ArtworkPrompt> {
   const d = brief.data;
   const place = [d.region, d.country].filter(Boolean).join(", ");
   const gaz = await regionNote(d.region);
   const subject = `${brief.vision} ${place ? `Set in ${place}.${gaz}` : ""} No buildings unless the story names them. No text, no letters, no border.`;
   const inStyle = `Painted by ${artist.name}, whose works are the reference images: ${artistCharter(artist)}. Paint a NEW picture in exactly her manner, medium and palette (do not copy the reference subjects).`;
-  return { prompt: `${inStyle} ${VIGNETTE} ${subject}`, subject, aspect: aspectOf(brief) };
+  return { prompt: `${inStyle} ${VIGNETTE} ${subject}`, subject, aspect: aspectOf(brief), kind: "spot" };
 }
 
 const GPT_SIZE = { landscape: { w: 1536, h: 1024 }, portrait: { w: 1024, h: 1536 }, square: { w: 1024, h: 1024 } } as const;

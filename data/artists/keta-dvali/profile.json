@@ -22,7 +22,8 @@
     "work-20.jpg"
   ],
   "bio": "Keta Dvali is a Georgian figurative artist who completed the Certificate of Fine Arts program at the New York Academy of Art in 2025. Her work combines traditional academic training with a personal, evolving visual language. Her paintings Gazelle and Great Escape were featured in the Academy’s 2025 Certificate of Fine Arts Exhibition.",
-  "page": true,
+  "page": false,
   "pageOrder": 2,
-  "crop": "60% 45%"
+  "crop": "60% 45%",
+  "active": false
 }

@@ -2319,7 +2319,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 )}
                 <span style={{ font: `700 ${BAR_FS}px ${HNW}`, lineHeight: `${BAR_FS}px`, whiteSpace: "nowrap" }}>{(who || t(STYLE_NAMES[fi])).toUpperCase()}</span>
               </div>
-              {dashRule(b.lx, 242, b.lw, false, "shr" + fi)}
+              {/* round 114 (owner): the dashed rule under the artist's
+                  name is gone — the name stands on its own */}
             </span>
           );
         };

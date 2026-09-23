@@ -1,6 +1,6 @@
 import sharp from "sharp";
 import { inkOf, vignetteOf } from "./palette";
-import { layoutFromTemplate, templateFields, MARGIN_MM, PX_PER_MM, type Band, type Template } from "./templates";
+import { layoutFromTemplate, templateFields, artKindOf, MARGIN_MM, PX_PER_MM, type ArtKind, type Band, type Template } from "./templates";
 import { TEMPLATES } from "./templates.data";
 import type { ComposeOutput } from "./compose";
 
@@ -15,6 +15,7 @@ import type { ComposeOutput } from "./compose";
    that a painting is never cut and never framed. */
 
 export const IVORY = "#F5F1E6";
+const px = (mm: number) => mm * PX_PER_MM;
 
 export interface TemplateComposeInput {
   artwork: string;               /* data URL — the painter's picture */
@@ -30,9 +31,11 @@ export interface TemplateComposeInput {
 export function templatesOf(band: Band): Template[] {
   return (TEMPLATES as Template[]).filter((t) => t.band === band);
 }
-export function pickTemplate(band: Band, seed: number): Template {
-  const pool = templatesOf(band);
-  return pool[seed % pool.length] || (TEMPLATES as Template[])[0];
+export function pickTemplate(band: Band, seed: number, kind?: ArtKind): Template {
+  const all = templatesOf(band);
+  const pool = kind ? all.filter((t) => artKindOf(t) === kind) : all;
+  const use = pool.length ? pool : all;
+  return use[seed % use.length] || (TEMPLATES as Template[])[0];
 }
 
 /* the accent: the painting's own loud colour when it has one, else a red
@@ -88,24 +91,26 @@ export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<C
     seed: inp.seed, ground, ink, accent,
   });
 
-  /* THE PICTURE FILLS ITS ZONE (owner, 2026-09-22: "several templates had
-     the picture as a small spot and many had it filling the top, the
-     bottom or the middle of the label — what I generated only ever showed
-     the centred spot version").
+  /* TWO KINDS OF PICTURE, PLACED TWO WAYS (owner, 2026-09-22).
 
-     He was right and this was the cause: the drawing was FITTED inside
-     its zone at 90 %, so whatever shape he drew — a full-bleed band, a
-     half panel, an oval — came out as the same small spot floating on the
-     ground, and every template looked alike. The zone is the picture's
-     room and the picture takes it: scaled to COVER, centred, and clipped
-     to the shape he drew. What hangs over the edge is his bleed. */
+     A SPOT keeps the edge the artist gave it. The zone he drew is a
+     rough area to work in, not a cookie cutter — "do not repeat my oval
+     in millimetres, it may well come out amorphous; what decides the
+     shape is the picture, not a drawn frame". So the drawing is fitted
+     into that area at full size, on clean paper, and nothing is clipped.
+
+     A BLEED runs off the label. There the zone IS the picture's room:
+     scaled to cover it, centred, clipped to the edge of the label. */
+  const kind = artKindOf(tpl);
   const meta = await sharp(Buffer.from(inp.artwork.slice(inp.artwork.indexOf(",") + 1), "base64")).metadata();
   const aw = meta.width || 1, ah = meta.height || 1;
   const bx = vig.box.x * aw, by = vig.box.y * ah, bw = vig.box.w * aw, bh = vig.box.h * ah;
-  const k = Math.max(art.w / bw, art.h / bh);
+  const k = kind === "spot"
+    ? Math.min(art.w / bw, art.h / bh)
+    : Math.max(art.w / bw, art.h / bh);
   const pw = bw * k, ph = bh * k;
   const pxPos = { x: art.x + (art.w - pw) / 2, y: art.y + (art.h - ph) / 2 };
-  layout.art = { x: art.x, y: art.y, w: art.w, h: art.h };
+  layout.art = kind === "spot" ? { x: pxPos.x, y: pxPos.y, w: pw, h: ph } : { x: art.x, y: art.y, w: art.w, h: art.h };
   layout.artCrop = { x: bx, y: by, w: bw, h: bh };
 
   const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -117,17 +122,48 @@ export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<C
       + `${t}>${esc(l.text)}</text>`;
   }).join("");
 
-  const clipId = `az-${tpl.id}`;
-  const clip = art.kind === "oval"
-    ? `<ellipse cx="${(art.x + art.w / 2).toFixed(1)}" cy="${(art.y + art.h / 2).toFixed(1)}" rx="${(art.w / 2).toFixed(1)}" ry="${(art.h / 2).toFixed(1)}"/>`
-    : `<rect x="${art.x.toFixed(1)}" y="${art.y.toFixed(1)}" width="${art.w.toFixed(1)}" height="${art.h.toFixed(1)}"/>`;
+  /* THE INNER EDGE IS THE ARTIST'S, NOT A KNIFE (owner, 2026-09-22:
+     "even on the big images, where the picture meets the text, could
+     that boundary not be marked the way the small illustration is — as
+     if it were the artist's decision and not a crop").
+
+     The edges that run off the label stay hard, because that is the
+     bleed. The edges that face the type fade out over a few millimetres,
+     so the paint thins into the paper the way a wash does. */
+  const clipId = `az-${tpl.id}`, maskId = `am-${tpl.id}`;
+  const FADE = Math.min(px(6), art.h * 0.22, art.w * 0.22);
+  const E = 0.5;
+  const inner = {
+    top: art.y > E, bottom: art.y + art.h < layout.H - E,
+    left: art.x > E, right: art.x + art.w < layout.W - E,
+  };
+  const stops = (dir: "top" | "bottom" | "left" | "right") => {
+    const v = dir === "top" || dir === "bottom";
+    const a = { x1: "0", y1: "0", x2: "0", y2: "1" };
+    if (!v) { a.x1 = "0"; a.y1 = "0"; a.x2 = "1"; a.y2 = "0"; }
+    const flip = dir === "bottom" || dir === "right";
+    const g = `<linearGradient id="${maskId}-${dir}" x1="${flip ? a.x2 : a.x1}" y1="${flip ? a.y2 : a.y1}" x2="${flip ? a.x1 : a.x2}" y2="${flip ? a.y1 : a.y2}">`
+      + `<stop offset="0" stop-color="#000"/><stop offset="1" stop-color="#fff"/></linearGradient>`;
+    const rect = dir === "top" ? `x="${art.x}" y="${art.y}" width="${art.w}" height="${FADE}"`
+      : dir === "bottom" ? `x="${art.x}" y="${art.y + art.h - FADE}" width="${art.w}" height="${FADE}"`
+      : dir === "left" ? `x="${art.x}" y="${art.y}" width="${FADE}" height="${art.h}"`
+      : `x="${art.x + art.w - FADE}" y="${art.y}" width="${FADE}" height="${art.h}"`;
+    return { g, r: `<rect ${rect} fill="url(#${maskId}-${dir})"/>` };
+  };
+  const sides = (Object.keys(inner) as ("top" | "bottom" | "left" | "right")[]).filter((d) => inner[d]).map(stops);
+  const mask = sides.length
+    ? `<mask id="${maskId}">${sides.map((x) => x.g).join("")}`
+      + `<rect x="${art.x}" y="${art.y}" width="${art.w}" height="${art.h}" fill="#fff"/>`
+      + sides.map((x) => x.r).join("") + `</mask>`
+    : "";
+  const picture =
+    `<svg x="${pxPos.x.toFixed(1)}" y="${pxPos.y.toFixed(1)}" width="${pw.toFixed(1)}" height="${ph.toFixed(1)}" viewBox="${bx.toFixed(1)} ${by.toFixed(1)} ${bw.toFixed(1)} ${bh.toFixed(1)}" preserveAspectRatio="xMidYMid meet">`
+    + `<image xlink:href="${inp.artwork}" x="0" y="0" width="${aw}" height="${ah}"/></svg>`;
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${inp.widthMm}mm" height="${inp.heightMm}mm" viewBox="0 0 ${layout.W} ${layout.H}">`
-    + `<defs><clipPath id="${clipId}">${clip}</clipPath></defs>`
+    + (kind === "bleed" ? `<defs><clipPath id="${clipId}"><rect x="${art.x.toFixed(1)}" y="${art.y.toFixed(1)}" width="${art.w.toFixed(1)}" height="${art.h.toFixed(1)}"/></clipPath>${mask}</defs>` : "")
     + `<rect width="${layout.W}" height="${layout.H}" fill="${ground}"/>`
-    + `<g clip-path="url(#${clipId})">`
-    + `<svg x="${pxPos.x.toFixed(1)}" y="${pxPos.y.toFixed(1)}" width="${pw.toFixed(1)}" height="${ph.toFixed(1)}" viewBox="${bx.toFixed(1)} ${by.toFixed(1)} ${bw.toFixed(1)} ${bh.toFixed(1)}" preserveAspectRatio="xMidYMid meet">`
-    + `<image xlink:href="${inp.artwork}" x="0" y="0" width="${aw}" height="${ah}"/></svg></g>`
+    + (kind === "bleed" ? `<g clip-path="url(#${clipId})"${mask ? ` mask="url(#${maskId})"` : ""}>${picture}</g>` : picture)
     + texts + `</svg>`;
   const png = await sharp(Buffer.from(svg), { density: 12 * 25.4 }).resize(layout.W, layout.H).png().toBuffer();
   return {

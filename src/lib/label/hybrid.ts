@@ -1,7 +1,9 @@
-import { buildArtworkPrompt, evalModel, generateArtwork, artistModels } from "@/lib/eval/models";
+import { buildArtworkPrompt, asKind, evalModel, generateArtwork, artistModels } from "@/lib/eval/models";
 import { composeTemplateLabel, templatesOf, pickTemplate, IVORY } from "@/lib/typeset/compose-template";
+import { TEMPLATES } from "@/lib/typeset/templates.data";
+import type { Template } from "@/lib/typeset/templates";
 import { cleanPaper } from "@/lib/typeset/palette";
-import type { Band } from "@/lib/typeset/templates";
+import { artKindOf, type Band } from "@/lib/typeset/templates";
 import { faceFile, pickRoles, mix } from "@/lib/typeset/fonts";
 import type { Layout } from "@/lib/typeset/compose";
 import { painterFor } from "./painters";
@@ -81,23 +83,27 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
   const model = (inp.artistId ? evalModel(`artist:${inp.artistId}`) : null)
     || evalModel(await painterFor(style)) || artistModels().find((m) => m.lora) || artistModels()[0];
   if (!model) throw new Error("no artist is set up yet (data/artists/<id>/profile.json + lora.json)");
-  /* 2026-09-22: THE TEMPLATE IS CHOSEN BEFORE THE PAINTING, so the
-     picture can be asked for in the shape of the room it will live in.
-     A band across the top wants a wide picture; a half panel wants a
-     tall one. Ask for the wrong shape and filling the room has to crop
-     the drawing hard — which is what made every template look alike. */
+  /* 2026-09-22: THE TEMPLATE IS CHOSEN BEFORE THE PAINTING, and so is
+     the KIND of picture. A spot is an illustration that floats on the
+     paper with its own edge; a bleed runs off the label. They are
+     different pictures, so the column decides which it wants, paints
+     that, and only ever shows layouts that use it. */
   const band = bandOf(style);
-  const tpl = pickTemplate(band, seed);
+  const kind: "spot" | "bleed" = mix(seed, 21) % 2 === 0 ? "spot" : "bleed";
+  const tpl = pickTemplate(band, seed, kind);
   const zone = tpl.art || { w: tpl.refW, h: tpl.refH };
   const zoneAspect = (zone.w / tpl.refW * widthMm) / (zone.h / tpl.refH * heightMm);
-  const ap = await buildArtworkPrompt(brief, model.artist);
+  const ap = asKind(await buildArtworkPrompt(brief, model.artist), artKindOf(tpl));
   ap.aspect = zoneAspect > 1.25 ? "landscape" : zoneAspect < 0.8 ? "portrait" : "square";
   const painted = await gen429(() => generateArtwork(model, ap, { sketch: inp.sketch || null }));
   /* 2026-09-22 (owner): the artist's LoRA learned her PAPER as well as
      her hand, so the picture arrives wrinkled and unevenly lit, and its
      rectangle then shows against the label's one flat colour. The clean
      part of a picture must be clean — see cleanPaper. */
-  const art = (await cleanPaper(painted.art, IVORY)).art;
+  /* only a SPOT floats on the label's paper, so only a spot's paper is
+     repainted to it — a bleed keeps the ground the artist painted
+     (owner: "inside the image leave the backgrounds alone") */
+  const art = artKindOf(tpl) === "spot" ? (await cleanPaper(painted.art, IVORY)).art : painted.art;
   /* 2026-09-22: the type is set on ONE OF THE OWNER'S TWELVE DRAWN
      TEMPLATES, not invented. The three columns keep their keys but now
      mean his three bands — classical, contemporary, free — so one artist
@@ -132,14 +138,17 @@ export async function relayoutLabel(stored: { art: Buffer; meta: { style: string
   const raw = `data:image/png;base64,${stored.art.toString("base64")}`;
   /* a picture stored before the clean-paper pass still has its wrinkles;
      a re-layout is the moment to take them out */
-  const art = (await cleanPaper(raw, IVORY)).art;
+  const art = raw;
   /* 2026-09-22: a variation is now A DIFFERENT TEMPLATE from the same
      band — the strongest contrast there is, and still no model call. The
      tags already shown are avoided, so three variations of one painting
      are three different arrangements of his own. */
   const band = bandOf(style);
   const used = new Set(avoid.map((a) => a.split("|")[0]));
-  const pool = templatesOf(band);
+  /* a variation stays with the SAME KIND of picture — the painting was
+     made for it, and a spot dropped into a bleed layout would be cut */
+  const kind = artKindOf((TEMPLATES as Template[]).find((t) => t.id === (stored.meta as { template?: string }).template || "") || templatesOf(band)[0]);
+  const pool = templatesOf(band).filter((t) => artKindOf(t) === kind);
   const free = pool.filter((t) => !used.has(t.id));
   const pick = (free.length ? free : pool)[Math.floor(Math.random() * (free.length ? free.length : pool.length))];
   const seed = (Math.random() * 0xffffffff) >>> 0;
