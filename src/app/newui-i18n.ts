@@ -32,6 +32,11 @@ export const SVG_GE: Record<string, string> = {
   /* front — round 47: the page is titled "…DETAILS" (renamed in page.tsx
      before translation, so the key is the new title) */
   "FRONT LABEL DETAILS": "ᲬᲘᲜᲐ ᲔᲢᲘᲙᲔᲢᲘᲡ ᲓᲔᲢᲐᲚᲔᲑᲘ",
+  /* 2026-09-23: the details page lost its FRONT; the red SKIP; the
+     artist over each label */
+  "LABEL DETAILS": "ᲔᲢᲘᲙᲔᲢᲘᲡ ᲓᲔᲢᲐᲚᲔᲑᲘ",
+  "SKIP": "ᲒᲐᲛᲝᲢᲝᲕᲔᲑᲐ",
+  "Style By:": "სტილი:",
   "FRONT LABEL": "ᲬᲘᲜᲐ ᲔᲢᲘᲙᲔᲢᲘ",
   "Producer:": "მწარმოებელი:",
   "Wine Name:": "ღვინის სახელი:",

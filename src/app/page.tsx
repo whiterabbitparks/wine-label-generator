@@ -166,6 +166,12 @@ const PAGE_TITLE: Partial<Record<PageKey, string>> = {
   options: "FRONT LABEL OPTIONS", backdesign: "BACK LABEL DESIGN",
   bottle: "BOTTLE", assets: "MARKETING ASSETS", checkout: "FINAL PACK",
 };
+/* 2026-09-23 (owner): where the red SKIP beside the title leads */
+const SKIP_TO: Partial<Record<PageKey, PageKey>> = {
+  vision: "backdetails", options: "backdetails",
+  backdetails: "bottle", backdesign: "bottle",
+  bottle: "checkout",
+};
 /* ROUND 71: one stop per page, so the red line lands exactly ON the
    current page's stop instead of stopping half way. */
 const THICK: Record<PageKey, number | null> = {
@@ -1442,19 +1448,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
          beat after the step has played, the button presses itself (one
          click-sized scale) and the next step begins. Only the closing card
          waits, and only there the button keeps its double pulse. */
+      /* 2026-09-23 (owner: "the tutorial must not move on by itself any
+         more — bring back the version where the user clicks to go to the
+         next step"): REVERSES round 85 #4. The step plays, the pointer
+         leaves, and the red button pulses until the visitor presses it
+         (its onClick turns the page of the story). */
       if (!live()) return;
-      if (tut >= TUT_CARDS.length - 1) { setNudge((n) => n + 1); return; }
-      /* round 108 #22 (owner: "it looks as if somebody else clicks"): the
-         pointer travels to the red arrow and presses it, like every other
-         move in the story */
-      if (!(await hold(900))) return;
-      const arrowX = tut < STEPS.length ? STEPS[tut].x : NEXT_X;
-      if (!(await tap([arrowX, PROG_Y], 60, 560, () => setPressed((n) => n + 1)))) return;
-      if (!(await hold(200))) return;
-      const nx = tut + 1;
-      setTut(nx);
-      const pg: PageKey = nx === 1 ? "loader" : TUT_PAGES[nx];
-      if (pg !== page) go(pg);
+      setCursor(null);
+      setNudge((n) => n + 1);
     })();
     return () => { /* the token bump in the next run cancels this one */ };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2192,13 +2193,27 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             return (
               <span key="sizeprev">
                 {dashedBox(rx, ry, w2, h2, "szbox", true)}
+                {/* 2026-09-23 (owner): a few black lines inside the box, as
+                    if the label's type were already on it — a name, the
+                    wine in bold, the vintage, and the small legal lines at
+                    the foot. They scale with the box. */}
+                {(() => {
+                  const thick = Math.min(5, Math.max(2, h2 * 0.03)), thin = Math.min(2, Math.max(1, h2 * 0.012));
+                  const rows: [number, number, number][] = [
+                    [0.2, 0.34, thin], [0.3, 0.62, thick], [0.42, 0.22, thin],
+                    [0.78, 0.56, thin], [0.86, 0.42, thin],
+                  ];
+                  return rows.map(([fy, fw, th], i) => (
+                    <div key={"szl" + i} style={{ ...px(rx + (w2 - w2 * fw) / 2, ry + h2 * fy - th / 2, w2 * fw, th), background: "#111", pointerEvents: "none" }} />
+                  ));
+                })()}
               </span>
             );
           })()}
           {/* the dashed column rule */}
           {dashRule(788, 133, 522, true, "vrule")}
           {/* ── right: the label's own details ── */}
-          <span style={{ ...px(891.8, baseTop(149.08, 24), 500, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t("FRONT LABEL DETAILS")}</span>
+          <span style={{ ...px(891.8, baseTop(149.08, 24), 500, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t("LABEL DETAILS")}</span>
           <span style={{ ...px(891.8, baseTop(183, 14), 410, 76), font: `italic 14px ${HNW}`, lineHeight: "18px", color: "#111" }}>
             {/* round 95 #2 (owner): what they type is what prints — case and
                 language. Round 108 #3: ONE flowing paragraph — the forced
@@ -2315,18 +2330,15 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           const b = dreams.length ? labelBox(fi) : { lx: OPT_FRAMES[fi].x, lw: OPT_W };
           const who = dreams[fi]?.artist || "";
           /* ROUND 113 #2 (owner): the artist's name at the progress bar's
-             own title size, with her face in a small circle before it */
-          const av = siteArtists.find((s) => s.name === who) || (chosenArtist ? siteArtists.find((s) => s.id === chosenArtist) : undefined);
+             own title size (the portrait circle went 2026-09-23) */
           const AV = BAR_FS + 7;
           return (
             <span key={"sh" + fi}>
               {/* round 102: an artist's column carries the artist's name */}
               <div style={{ ...px(b.lx, baseTop(221, BAR_FS) - (AV - BAR_FS) / 2, b.lw, AV), display: "flex", alignItems: "center", justifyContent: "center", columnGap: 7, pointerEvents: "none" }}>
-                {who && av && (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={av.portrait} alt="" style={{ width: AV, height: AV, borderRadius: "50%", objectFit: "cover", objectPosition: av.crop, display: "block", flex: "0 0 auto" }} />
-                )}
-                <span style={{ font: `700 ${BAR_FS}px ${HNW}`, lineHeight: `${BAR_FS}px`, whiteSpace: "nowrap" }}>{(who || t(STYLE_NAMES[fi])).toUpperCase()}</span>
+                {/* 2026-09-23 (owner): no portrait, and the name as it is
+                    written — "Style By: Mariam Kvashilava", not all capitals */}
+                <span style={{ font: `700 ${BAR_FS}px ${HNW}`, lineHeight: `${BAR_FS}px`, whiteSpace: "nowrap" }}>{who ? `${t("Style By:")} ${who}` : t(STYLE_NAMES[fi]).toUpperCase()}</span>
               </div>
               {/* round 114 (owner): the dashed rule under the artist's
                   name is gone — the name stands on its own */}
@@ -3397,6 +3409,18 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   <span style={{ ...px(137.14, baseTop(149.08, 24), 620, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t(PAGE_TITLE[p]!)}</span>
                 </>)}
                 {renderOverlay(p, inSlide)}
+                {/* 2026-09-23 (owner): a red SKIP on the title's line, at the
+                    page's right margin, same size as the title. Front label
+                    pages skip to the back label details, back label pages
+                    to the bottle, the bottle straight to the Final Pack. Not
+                    on Marketing Assets or the Final Pack, and not while the
+                    tutorial is telling its story. */}
+                {SKIP_TO[p] && tut < 0 && (
+                  <button onClick={() => go(SKIP_TO[p]!)}
+                    style={{ ...px(W - 137.14 - 200, baseTop(149.08, 24), 200, 24), ...ghost, font: `700 24px ${HNW}`, lineHeight: "24px", color: BAR_RED, textAlign: "right", whiteSpace: "nowrap", padding: 0, cursor: "pointer", zIndex: 5 }}>
+                    {t("SKIP")}
+                  </button>
+                )}
               </>
             );
             /* content-aware slices (round 16 #3): clip rects with per-slice
