@@ -1240,6 +1240,34 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   }, [tutReset]);
   useEffect(() => { stopTutRef.current = stopTutorial; }, [stopTutorial]);
 
+  /* 2026-09-23 (owner, restating his rule: "during the tutorial nothing
+     may be pressed except the red button and Skip"): while the story runs,
+     every press anywhere else is caught before it lands — header, fields,
+     buttons, language switch alike. The two allowed controls carry
+     data-tut-ok. The story itself drives state, not clicks, so it is
+     untouched. */
+  useEffect(() => {
+    if (tut < 0) return;
+    const block = (e: Event) => {
+      const el = e.target as Element | null;
+      if (el && el.closest && el.closest("[data-tut-ok]")) return;
+      e.preventDefault(); e.stopPropagation();
+    };
+    const kinds = ["pointerdown", "mousedown", "click", "dblclick", "touchstart"];
+    for (const k of kinds) document.addEventListener(k, block, { capture: true, passive: false });
+    return () => { for (const k of kinds) document.removeEventListener(k, block, { capture: true }); };
+  }, [tut]);
+  /* 2026-09-23 (owner: "when a step's animation has finished and the user
+     does nothing, the red button pulses every 3 seconds — a reminder that
+     the next step is waiting"): tutIdle is set when a step has played out */
+  const [tutIdle, setTutIdle] = useState(false);
+  useEffect(() => {
+    if (tut < 0 || !tutIdle) return;
+    setNudge((n) => n + 1);
+    const id = setInterval(() => setNudge((n) => n + 1), 3000);
+    return () => clearInterval(id);
+  }, [tut, tutIdle]);
+
   const endTutorial = useCallback(() => {
     stopTutorial();
     /* round 72 #2: straight into the real Your Vision page, not the home
@@ -1248,6 +1276,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   }, [go, stopTutorial]);
 
   useEffect(() => {
+    setTutIdle(false);
     if (tut < 0) return;
     const tok = ++tutTok.current;
     const live = () => tok === tutTok.current;
@@ -1501,7 +1530,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
          (its onClick turns the page of the story). */
       if (!live()) return;
       setCursor(null);
-      setNudge((n) => n + 1);
+      setTutIdle(true);
     })();
     return () => { /* the token bump in the next run cancels this one */ };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -3743,7 +3772,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     ))}
                     {/* round 72 #4: a way out at any point — the last line
                         of the card, so it never runs into the copy */}
-                    <button onClick={endTutorial}
+                    <button data-tut-ok onClick={endTutorial}
                       style={{ position: "absolute", left: 0, top: baseTop(CARD_BASE + CARD_BODY[1] + 16.4, 12), ...ghost, pointerEvents: "auto", font: `12px ${HNW}`, color: BAR_RED, textDecoration: "underline", textTransform: "none", cursor: "pointer", lineHeight: "12px" }}>
                       {t("Skip")}</button>
                   </>)}
@@ -3762,7 +3791,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   transition: `${arrowFly ? "" : `left ${SLIDE_MS}ms ${EASE}, `}transform 200ms cubic-bezier(0.33, 1, 0.68, 1)`,
                   pointerEvents: modalOpen ? "none" : "auto",
                 }}>
-              <button key={"next" + nudge + "-" + pressed} aria-label={page === "welcome" ? "start" : "next"}
+              <button data-tut-ok key={"next" + nudge + "-" + pressed} aria-label={page === "welcome" ? "start" : "next"}
                 onClick={() => {
                   barJumped.current = false;
                   /* round 71 #4: inside the walkthrough the arrow only ever
@@ -3825,7 +3854,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   borderRadius: NEXT_R, background: BAR_RED, border: "none",
                   padding: 0, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
                   animation: arrowFly ? `btnFly ${SLIDE_MS}ms ${EASE} both`
-                    : ((tut >= 0 && tut >= tutLast) || page === "checkout") && nudge > 0 ? `nuiNudge 1200ms ${EASE} both`
+                    : ((tut >= 0 && (tutIdle || tut >= tutLast)) || page === "checkout") && nudge > 0 ? `nuiNudge 1200ms ${EASE} both`
                     : pressed > 0 ? `nuiPress 260ms ${EASE} both` : "none",
                 }}>
                 {/* ROUND 109: the artboard's smaller arrow — 18.25 long,

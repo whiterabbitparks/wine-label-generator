@@ -96,6 +96,14 @@ bottle read off his shots: Burgundy / Olive Green / Cork / matte blue
 capsule (wheel 0.441,0.772, shade 0.6); market US (his back label carries
 the US warning); size 110 × 80.
 
+**Tutorial rules (owner, 2026-09-23, standing):** while the tutorial
+runs NOTHING can be pressed except the red button and the card's Skip
+(document-level capture blocker in page.tsx; allowed controls carry
+`data-tut-ok`). The story WAITS for the click after each step, and once a
+step has played out the red button pulses every 3 s (`tutIdle`). Tutorial
+labels carry their artists, so the heads read "Style By: …" like the real
+page.
+
 **Open — the owner's decisions**
 0. ANSWERED (see above) — "why is Mariam always a
    small oval?" Cause: this morning's rule "ONE kind of ask" (models.ts:
