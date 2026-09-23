@@ -143,6 +143,16 @@ sends the page's own front-shot preview (`frontShot`). He chose to leave
 the PRODUCT SHOTS as they are and to keep every pose in the scenes (no
 exact compositing). Test: data/experiments/marketing-test.mts →
 Desktop/8K-sheet-test/marketing-test/.
+CLOSURE LOCK (owner: "in two photos the wax seal became an ordinary
+capsule — every image must carry the closure exactly as the product shot
+does"): engine.ts closureLock() leads every shot AND scene prompt, one
+line per closure type, saying what it must never turn into; wax stays wax
+on a poured bottle (cut at the lip). Finding: our matte Wax Seal renders
+as a smooth capsule-like sleeve even in the product shot, because the
+round-49 wax rule ("no drips, clean edge, medium height") removes what
+makes wax read as wax. Asked him: he KEEPS the old rule and wants words
+only (no wax reference picture). So the scenes now match the shot's
+closure; the shot's wax stays capsule-like by his choice.
 
 **Open — the owner's decisions**
 0. ANSWERED (see above) — "why is Mariam always a
