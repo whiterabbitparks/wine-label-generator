@@ -44,6 +44,12 @@ overwrites the server's `.env.local`. Live smoke label made through
    (e.g. 06, 09, 10, 17), and if the measured paper is still dark/saturated
    use a pale tint of it. Conflicts with his rule "no dark grounds under
    artwork" until fixed. Test ≈ $0.40.
+   UPDATE 2026-09-23 evening: the OWNER picked the refs himself (numbered
+   sheets in ~/Desktop/8K-sheet-test/choose-works/): Levan 18, 07, 01, 03;
+   Mariam 05, 01, 33, 43 (commit 03d8ddb, local only — not yet on live).
+   The refs decide the SKETCH's palette; the LoRA (trained on ALL works)
+   repaints at 0.60 and keeps most of the sketch's colour. Still open:
+   light-paper ask + pale-tint fallback.
 2. Ground under OVAL layouts: white / painter's paper / pale tint
    (data/experiments/oval-test.mts shows all three).
 3. Does t06's review nudge also apply to t08 and t09 (same block)?
