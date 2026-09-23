@@ -1055,8 +1055,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   useEffect(() => {
     /* inline the artboards: SVG-in-<img> cannot use page fonts (the
        owner's Safari font complaint) — inline SVG can */
-    ORDER.filter((p) => p !== "artists" && p !== "artist").forEach((p) => {
-      fetch(`/newui/${p}.svg`).then((r) => r.text()).then((t) =>
+    /* 2026-09-23 (owner: "a 404 flashes before the loader glass"): the
+       "blank" step has no artboard — its fetch came back as the site's 404
+       PAGE and that HTML was inlined as the board under the confirm popup.
+       It is not fetched, and a board that fails to load is never inlined. */
+    ORDER.filter((p) => p !== "artists" && p !== "artist" && p !== "blank").forEach((p) => {
+      fetch(`/newui/${p}.svg`).then((r) => (r.ok ? r.text() : Promise.reject(new Error(`${p}.svg ${r.status}`)))).then((t) =>
         {
           const processed = namespaceSvg(t, p).replace(/<\?xml[^>]*\?>/, "").replace(/<svg /, '<svg preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%" ')
             /* Mtavruli titles: HNW lacks Georgian capitals — Apple's own
@@ -1595,12 +1599,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         setGenProgress((p) => p + 1 / 3);
         const d0 = dreams.find(Boolean);
         const fake = { style, dream: d0?.dream || FAKE_IMG, preview: d0?.preview || FAKE_IMG };
-        /* the dev switch fakes the three layouts too, so the dots show */
-        return { ...fake, variants: [fake, fake] };
+        return fake;
       }
       const r = await fetch("/api/dream-label", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ vision, style, data, sketch, aspect: aspectKey, width, height, variants: 3, artist }),
+        /* 2026-09-23 (owner: "remove variations altogether, they
+           complicate things — three versions and that's it"): one label
+           a column, no re-layouts riding along */
+        body: JSON.stringify({ vision, style, data, sketch, aspect: aspectKey, width, height, variants: 1, artist }),
       });
       if (!r.ok || !r.body) throw new Error(`generation failed (${r.status})`);
       const reader = r.body.getReader(); const dec = new TextDecoder();
@@ -1637,7 +1643,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       if (!ok.length) throw new Error("all generations failed — try again");
       ok.sort((a, b2) => styles3.indexOf(a.style) - styles3.indexOf(b2.style));
       setDreams(ok); setSelected(-1); setFrontSig(sigFront()); setBackSig("");
-      setStyleVars(styles3.map((st) => ok.find((d) => d.style === st)?.variants || [])); setStyleView([0, 0, 0]); setVarBusyCol(-1);
+      setStyleVars([[], [], []]); setStyleView([0, 0, 0]); setVarBusyCol(-1);
       /* round 43 #3 (owner: "landing page thumb shows the previous bottle"):
          a freshly generated wine invalidates any earlier published page —
          the restored productUrl (round 28b, meant to survive a reload of
@@ -2333,7 +2339,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             if (!orig?.preview && !orig?.dream) return null;
             const dv = viewedDream(fi);
             const { lx, ly, lw, lh } = labelBox(fi);
-            const nDots = 1 + (styleVars[fi]?.length || 0);
             return (
               <div key={fi}>
                 {dv ? (
@@ -2357,23 +2362,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                       {cross(lx - 10, ly - 10, `tl${fi}`)}{cross(lx + lw + 10, ly - 10, `tr${fi}`)}
                       {cross(lx - 10, ly + lh + 10, `bl${fi}`)}{cross(lx + lw + 10, ly + lh + 10, `br${fi}`)}
                     </span>)}
-                {/* the column's dot switcher, centered to the label — round
-                    88 #9: up to two rows of 15, the rows centred on the
-                    midline between label and button */}
-                {nDots > 1 && Array.from({ length: nDots }, (_, k) => {
-                  /* round 94 #6: one row of up to three, 36 px apart, on y 584 */
-                  const dx = lx + lw / 2 + (k - (nDots - 1) / 2) * 36 - 9;
-                  const dy = 584 - 9;
-                  return (
-                  <button key={"vd" + fi + k} onClick={() => setStyleView((p) => { const n = [...p]; n[fi] = k; return n; })}
-                    aria-label={`view ${fi}-${k}`}
-                    style={{ ...px(dx, dy, 18, 18), ...ghost }}>
-                    <svg width="18" height="18" viewBox="0 0 18 18" style={{ position: "absolute", left: 0, top: 0, display: "block" }}>
-                      <circle cx="9" cy="9" r="5.5" fill={(styleView[fi] || 0) === k ? "#111" : "#fff"} stroke="#111" strokeWidth="1.4" />
-                    </svg>
-                  </button>
-                  );
-                })}
+                {/* 2026-09-23 (owner): no variations, so no dots */}
               </div>
             );
           })}

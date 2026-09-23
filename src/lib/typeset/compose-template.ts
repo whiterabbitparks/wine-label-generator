@@ -80,8 +80,11 @@ export function pickTemplate(band: Band, seed: number, kind?: ArtKind): Template
 const WINE_ACCENT: Record<string, string> = {
   red: "#8B1A1A", amber: "#8A5A16", white: "#3F5C2E", rose: "#A8425C", rosé: "#A8425C", orange: "#9A4E14",
 };
-function accentFor(artAccent: string | null, wineColour?: string): string {
-  return readable(artAccent || WINE_ACCENT[(wineColour || "").toLowerCase()] || "#8B1A1A");
+function accentFor(artAccent: string | null, wineColour: string | undefined, on: string, ink: string): string {
+  const a = readable(artAccent || WINE_ACCENT[(wineColour || "").toLowerCase()] || "#8B1A1A", on);
+  /* an accent that only reads by turning into the ink is no accent: the
+     name is set in the ink instead */
+  return ratioOf(a, on) >= 4.5 && ratioOf(a, ink) >= 1.6 ? a : ink;
 }
 
 /* TYPE MUST READ ON THE PAPER (2026-09-22). The ink and the accent are
@@ -94,16 +97,25 @@ const lumOf = (hex: string) => {
     .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
   return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
 };
+const hexOf = (c: number[]) => `#${c.map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0")).join("")}`;
+const ratioOf = (a: string, b: string) => { const x = lumOf(a), y = lumOf(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+/* 2026-09-23 (owner's ten site labels: the names on Levan's blue paper
+   were blue on blue). This measured against IVORY while the label's
+   ground had become the painter's paper — so it is measured against the
+   REAL ground now, and a colour that cannot stand clear by darkening (a
+   mid or dark ground) is lightened instead. Hue kept, brightness moved;
+   if neither way gets there, the plainest ink that does. */
 export function readable(hex: string, on = IVORY, want = 4.5): string {
-  const L2 = lumOf(on);
-  let [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
-  for (let i = 0; i < 24; i++) {
-    const ratio = (Math.max(lumOf(`#${[r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("")}`), L2) + 0.05)
-      / (Math.min(lumOf(`#${[r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("")}`), L2) + 0.05);
-    if (ratio >= want) break;
-    r = Math.round(r * 0.88); g = Math.round(g * 0.88); b = Math.round(b * 0.88);
-  }
-  return `#${[r, g, b].map((v) => Math.max(0, Math.min(255, v)).toString(16).padStart(2, "0")).join("")}`;
+  const c0 = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  const walk = (f: (c: number[]) => number[]) => {
+    let c = c0;
+    for (let i = 0; i < 32; i++) { if (ratioOf(hexOf(c), on) >= want) return hexOf(c); c = f(c); }
+    return ratioOf(hexOf(c), on) >= want ? hexOf(c) : null;
+  };
+  const darker = walk((c) => c.map((v) => v * 0.88));
+  const lighter = walk((c) => c.map((v) => v + (255 - v) * 0.14));
+  const onDark = lumOf(on) < 0.18;
+  return (onDark ? lighter || darker : darker || lighter) || (ratioOf("#111111", on) >= ratioOf("#FAFAF7", on) ? "#111111" : "#FAFAF7");
 }
 
 export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<ComposeOutput & { template: string; warnings: string[] }> {
@@ -119,8 +131,8 @@ export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<C
      being settled, and a printer's paper does not change per bottle. */
   /* the label's paper IS the painting's paper, flattened to one tone */
   const ground = inp.paper || vig.ground;
-  const ink = readable(inks.ink, IVORY, 7);      /* the body text wants more than the accent */
-  const accent = accentFor(inks.accent, inp.wineColour);
+  const ink = readable(inks.ink, ground, 7);     /* the body text wants more than the accent */
+  const accent = accentFor(inks.accent, inp.wineColour, ground, ink);
 
   const { layout, art, faces, warnings } = layoutFromTemplate({
     template: tpl,
