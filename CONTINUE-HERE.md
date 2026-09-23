@@ -66,6 +66,22 @@ lines inside the size box; the tutorial WAITS for the click again
 (reverses round 85 #4 — the button pulses); label heads read "Style By:
 <Artist Name>" in normal case, no portrait.
 
+**New home page (2026-09-23, from NEW UI/Comments/New/Homepage_Visual.pdf,
+local + origin, NOT yet live):** built 1:1 from his PDF — positions, sizes
+and colours read out of it, pictures lifted from it into
+public/newui/home/ (the big bottle and the shadow had white paper baked
+in; it was turned into real transparency so nothing covers anything
+mid-slide). The sample label is his PDF's own rendering (Archivo, exact).
+Header: IGNORED on his instruction ("consider only the page content");
+credits: left out ("not sure I'll bring credits back"). Motion: the home
+page slides as LAYERS (Slice.layer / HomeLayer) — headline + Your
+Vision, then the label (+90 ms), the bottles (+180), the market photos
+and the italic line (+270) — whole-page see-through layers, so the bottle
+stays in front of the photos; it also plays on first open (`intro`).
+Georgian: headline and tagline wrap inside his space. Open: his footer
+shows the full red bar + START under a right-hand button — ours keeps
+the home page's left button (asked him).
+
 **Open — the owner's decisions**
 0. ANSWERED (see above) — "why is Mariam always a
    small oval?" Cause: this morning's rule "ONE kind of ask" (models.ts:

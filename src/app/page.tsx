@@ -210,8 +210,25 @@ const STRIP_BOUNDS: Record<PageKey, [number, number]> = {
    (the front size box grows during the slide instead of sliding).
    front: every input row cascades; compliance: country rows cascade;
    bottle: VERTICAL column slices, each carrying its own dashed divider. */
-type Slice = { x0?: number; y0?: number; x1?: number; y1?: number; delay: number; mode?: "slide" | "fade" };
+type Slice = { x0?: number; y0?: number; x1?: number; y1?: number; delay: number; mode?: "slide" | "fade"; layer?: HomeLayer };
+/* 2026-09-23 (owner's Homepage_Visual): the home page does not cut into
+   rectangles — its big bottle stands in front of the market photos and
+   its headline runs over the label's column, so a clip would slice them.
+   It slides as LAYERS instead: each group is a whole-page, see-through
+   layer with its own delay (only the first carries the white page). The
+   array order is the stacking order, the delay is the cascade: headline
+   + Your Vision, then the label, then the bottles, the market photos
+   last — and the bottles still stand in front of them. */
+type HomeLayer = "base" | "label" | "market" | "bottles" | "tagline";
 const PAGE_SLICES: Partial<Record<PageKey, Slice[]>> = {
+  welcome: [
+    { layer: "base", delay: 0 },
+    { layer: "label", delay: 90 },
+    { layer: "market", delay: 270 },
+    { layer: "bottles", delay: 180 },
+    /* the italic line sits OVER the big bottle's white edge, as in his file */
+    { layer: "tagline", delay: 270 },
+  ],
   /* ROUND 63: the merged pages slide as their two halves — vision splits
      at its dashed column rule, back details at its dashed band rule */
   vision: [
@@ -437,6 +454,13 @@ export default function NewUI() {
     } catch { }
   }, []);
   const [prev, setPrev] = useState<PageKey | null>(null);
+  /* 2026-09-23 (owner): the home page slides in on first open too, its
+     groups in their cascade — as if arriving from another page */
+  const [intro, setIntro] = useState(true);
+  useEffect(() => {
+    const id = setTimeout(() => setIntro(false), SLIDE_MS + maxSliceDelay("welcome") + 60);
+    return () => clearTimeout(id);
+  }, []);
   /* ENG/GEO (owner 2026-09-07): translates overlays AND baked board text */
   const [lang, setLang] = useState<"en" | "ge">("en");
   useEffect(() => { try { const l = localStorage.getItem("nui-lang"); if (l === "ge") setLang("ge"); } catch { } }, []);
@@ -1081,7 +1105,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             .replace(p === "bottle" ? /<line[^>]*x1="(?:582\.8[56]|822\.8[56]|1062\.8[56]|591\.1|574\.62|831\.1|814\.62|1071\.09|1054\.61)"[^>]*\/>/g : /$^/g, "")
             /* ROUND 49 #3 (owner): "all" leaves the compliance subtitle in
                both languages (the GEO key in SVG_GE matches this new text) */
-            .replace("incorporate all required regulatory information", "incorporate required regulatory information");
+            .replace("incorporate all required regulatory information", "incorporate required regulatory information")
+            /* 2026-09-23 (owner's Homepage_Visual): the home page's
+               headline and subline are drawn live now, at the new size
+               and places — the board's baked copies go */
+            .replace(p === "welcome" ? /<text class="welcome-st[01]"[\s\S]*?<\/text>/g : /$^/g, "");
           setBoards((m) => ({ ...m, [p]: processed }));
           setBoardsGe((m) => ({ ...m, [p]: translateSvg(processed) }));
         }
@@ -1998,13 +2026,99 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     return `rgb(${mix(r)}, ${mix(g)}, ${mix(bl)})`;
   };
 
+  /* THE HOME PAGE (owner's Homepage_Visual, 2026-09-23) — every place,
+     size and colour read out of his PDF (NEW UI/Comments/New), in page
+     units. The pictures were lifted from the same file (public/newui/
+     home/); the sample label is his PDF's own rendering of it, so its
+     Archivo type is exactly his. `layer` picks one group for the slide
+     cascade (see HomeLayer); none = all of them, in stacking order. */
+  const homeLayers = (layer?: HomeLayer) => {
+    const on = (l: HomeLayer) => !layer || layer === l;
+    const H_ = "/newui/home/";
+    const BLUE = "#04bcf6";
+    const img = (src: string, x: number, y: number, w: number, h: number) => (
+      /* eslint-disable-next-line @next/next/no-img-element */
+      <img key={src} src={H_ + src} alt="" draggable={false} style={{ ...px(x, y, w, h), display: "block", pointerEvents: "none" }} />
+    );
+    /* the blue "↦" between the steps */
+    const arrow = (x: number, k: string) => (
+      <svg key={k} style={{ ...px(x - 1, 450, 30, 18), overflow: "visible", pointerEvents: "none" }} viewBox={`${x - 1} 450 30 18`}>
+        <line x1={x + 0.7} y1={458.7} x2={x + 25.4} y2={458.7} stroke={BLUE} strokeWidth={1.5} />
+        <rect x={x} y={453.9} width={1.5} height={9.7} fill={BLUE} />
+        <polyline points={`${x + 20.2},${453.2} ${x + 25.9},${458.7} ${x + 20.2},${464.2}`} fill="none" stroke={BLUE} strokeWidth={1.5} />
+      </svg>
+    );
+    const title = (text: string, x: number, k: string, right = false) => (
+      <span key={k} style={{ ...px(right ? x - 300 : x, baseTop(340.83, 13.5), 300, 16), font: `700 13.5px ${HNW}`, lineHeight: "13.5px", color: "#000", whiteSpace: "nowrap", textAlign: right ? "right" : "left" }}>{t(text)}</span>
+    );
+    const DETAILS: [string, string][] = [
+      ["Producer:", "MARANI"], ["Wine Name:", "TSINANDALI"], ["Vintage:", "2023"], ["Grape Variety:", "Rkatsiteli"],
+      ["Region, Country:", "Kakheti, Georgia"], ["Special mention:", "Qvevri wine"], ["Sweetness:", "Dry"], ["Colour:", "Amber"],
+      ["Wine Type:", "Wine"], ["Alcohol:", "12%"], ["Volume:", "750 mL"],
+    ];
+    return (<>
+      {on("base") && (<span key="hb">
+        {/* English keeps his three lines; Georgian runs longer, so it
+            wraps inside the room his headline has (it must stop short of
+            the small bottle) */}
+        {lang === "ge" ? (
+          <span style={{ ...px(137.3, baseTop(184.59, 26) - (33.41 - 26) / 2, 540, 140), font: `700 26px ${HNW}`, lineHeight: "33.41px", color: "#000" }}>
+            {["Everything you need to take your wine", "from bottle to market,", "in a few simple steps."].map((ln) => t(ln)).join(" ")}
+          </span>
+        ) : ["Everything you need to take your wine", "from bottle to market,", "in a few simple steps."].map((ln, i) => (
+          <span key={"hl" + i} style={{ ...px(137.3, baseTop(184.59 + i * 33.41, 27.84), 700, 32), font: `700 27.84px ${HNW}`, lineHeight: "27.84px", color: "#000", whiteSpace: "nowrap" }}>{t(ln)}</span>
+        ))}
+        {title("YOUR VISION", 137.3, "tv")}
+        <svg style={{ ...px(137, 361.4, 256, 186.2), overflow: "visible", pointerEvents: "none" }} viewBox="137 361.4 256 186.2">
+          <rect x={137.3} y={361.7} width={255.1} height={185.5} fill="none" stroke="#221f1f" strokeWidth={0.475} strokeDasharray="2.376" />
+        </svg>
+        <span style={{ ...px(152.6, baseTop(381.07, 8.99), 222, 50), font: `8.99px ${HNW}`, lineHeight: "10.79px", color: "#000" }}>{IDEAS[0]}</span>
+        {DETAILS.map(([k, v], i) => (
+          <span key={"hd" + i}>
+            <span style={{ ...px(152.6, baseTop(445.44 + i * 9, 6.59), 60, 9), font: `700 6.59px ${HNW}`, lineHeight: "6.59px", color: "#000", whiteSpace: "nowrap" }}>{t(k)}</span>
+            <span style={{ ...px(212.3, baseTop(445.44 + i * 9, 7.06), 110, 9), font: `italic 7.06px ${HNW}`, lineHeight: "7.06px", color: "#000", whiteSpace: "nowrap" }}>{v}</span>
+            <span style={{ ...px(212.3, 445.44 + i * 9 + 0.56, 109, 0.353), background: "#000", opacity: 0.55 }} />
+          </span>
+        ))}
+      </span>)}
+      {on("label") && (<span key="hlb">
+        {title("YOUR LABEL", 433.7, "tl")}
+        {img("label.webp", 433.7, 361.7, 255.1, 185.5)}
+        {arrow(400.4, "a1")}
+      </span>)}
+      {on("market") && (<span key="hm">
+        {title("YOUR MARKET", 1316.8, "tm", true)}
+        {img("market-1.webp", 945.9, 361.7, 185.2, 185.5)}
+        {img("market-2.webp", 1131.1, 361.7, 185.7, 185.5)}
+      </span>)}
+      {on("bottles") && (<span key="hbt">
+        {arrow(697.3, "a2")}
+        {img("shadow-small.webp", 690.2, 519.2, 239.1, 44.9)}
+        {img("bottle-back.webp", 698.8, 231.5, 145.1, 269.4)}
+        {img("bottle-front.webp", 655.9, 158.2, 465.6, 622.6)}
+      </span>)}
+      {on("tagline") && (<span key="htg">
+        {lang === "ge" ? (
+          <span style={{ ...px(1038.5, baseTop(625.4, 16.2) - (19.44 - 16.2) / 2, 280, 90), font: `italic 16.2px ${HNW}`, lineHeight: "19.44px", color: "#000" }}>
+            {["Create print and market-ready labels,", "marketing assets, and a product page", "in ~10 minutes."].map((ln) => t(ln)).join(" ")}
+          </span>
+        ) : ["Create print and market-ready labels,", "marketing assets, and a product page", "in ~10 minutes."].map((ln, i) => (
+          <span key={"hs" + i} style={{ ...px(1038.5, baseTop(625.4 + i * 19.44, 16.2), 320, 20), font: `italic 16.2px ${HNW}`, lineHeight: "16.2px", color: "#000", whiteSpace: "nowrap" }}>{t(ln)}</span>
+        ))}
+      </span>)}
+    </>);
+  };
+
   /* inSlide = rendered inside a moving slide layer (inert, entry
      animations suppressed — the slide itself is the entry) */
-  const renderOverlay = (p: PageKey, inSlide = false) => {
+  const renderOverlay = (p: PageKey, inSlide = false, layer?: HomeLayer) => {
     switch (p) {
       case "welcome":
         /* ROUND 63: the start action is the red round button on the bar */
-        return patch(118, 658, 70, 54, "welarrow");
+        return (<>
+          {(!layer || layer === "base") && patch(118, 658, 70, 54, "welarrow")}
+          {homeLayers(layer)}
+        </>);
 
       /* ================= ROUND 112 #4: THE ARTISTS =================
          Straight off the owner's artboards. The index: a title, the
@@ -3379,7 +3493,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {(() => {
             const zoneH = fullSlide ? H : bandBottom - BAND_TOP;
             const pageTop = fullSlide ? 0 : -BAND_TOP;
-            const pageSpace = (p: PageKey, inSlide: boolean) => (
+            const pageSpace = (p: PageKey, inSlide: boolean, layer?: HomeLayer) => layer && layer !== "base" ? <>{renderOverlay(p, inSlide, layer)}</> : (
               <>
                 <div style={{ position: "absolute", inset: 0, userSelect: "none" }} dangerouslySetInnerHTML={{ __html: (lang === "ge" ? boardsGe[p] : boards[p]) || boards[p] || "" }} />
                 {/* ROUND 63: the boards still carry the OLD baked progress bar
@@ -3408,7 +3522,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   {patch(130, 126, 620, 32, "ttl" + p)}
                   <span style={{ ...px(137.14, baseTop(149.08, 24), 620, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t(PAGE_TITLE[p]!)}</span>
                 </>)}
-                {renderOverlay(p, inSlide)}
+                {renderOverlay(p, inSlide, layer)}
                 {/* 2026-09-23 (owner): a red SKIP on the title's line, at the
                     page's right margin, same size as the title. Front label
                     pages skip to the back label details, back label pages
@@ -3441,7 +3555,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   {/* round 28 #3: OPAQUE page behind each slice — an arriving
                       slice covers the outgoing page's late-delay ghosts the
                       moment it lands (no text-over-text mid-flight either) */}
-                  <div style={{ position: "absolute", left: -x0, top: pageTop - zy0, width: W, height: H, background: "#fff" }}>{pageSpace(p, true)}</div>
+                  <div style={{ position: "absolute", left: -x0, top: pageTop - zy0, width: W, height: H, background: s.layer && s.layer !== "base" ? "transparent" : "#fff" }}>{pageSpace(p, true, s.layer)}</div>
                 </div>
               );
             }).filter(Boolean);
@@ -3460,6 +3574,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 {prev && (prev === "loader" ? faded(prev, "nuiFadeOut") : slices(prev, false))}
                 {prev
                   ? (page === "loader" ? faded(page, "nuiFadeIn", SLIDE_MS + maxSliceDelay(prev)) : slices(page, true))
+                  : intro && page === "welcome" ? slices(page, true)
                   : <div style={{ position: "absolute", left: 0, top: pageTop, width: W, height: H }}>{pageSpace(page, false)}</div>}
               </div>
             );

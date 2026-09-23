@@ -36,6 +36,12 @@ export const SVG_GE: Record<string, string> = {
      artist over each label */
   "LABEL DETAILS": "ᲔᲢᲘᲙᲔᲢᲘᲡ ᲓᲔᲢᲐᲚᲔᲑᲘ",
   "SKIP": "ᲒᲐᲛᲝᲢᲝᲕᲔᲑᲐ",
+  /* 2026-09-23: the new home page (Homepage_Visual) */
+  "YOUR LABEL": "ᲗᲥᲕᲔᲜᲘ ᲔᲢᲘᲙᲔᲢᲘ",
+  "YOUR MARKET": "ᲗᲥᲕᲔᲜᲘ ᲑᲐᲖᲐᲠᲘ",
+  "Create print and market-ready labels,": "შექმენით საბეჭდად და ბაზრისთვის მზა ეტიკეტები,",
+  "marketing assets, and a product page": "სამარკეტინგო მასალა და პროდუქტის გვერდი",
+  "in ~10 minutes.": "~10 წუთში.",
   "Style By:": "სტილი:",
   "FRONT LABEL": "ᲬᲘᲜᲐ ᲔᲢᲘᲙᲔᲢᲘ",
   "Producer:": "მწარმოებელი:",
