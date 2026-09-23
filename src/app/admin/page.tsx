@@ -22,6 +22,7 @@ import { UsersTab, LoginForm, AdminStyles as S } from "../legacy/LegacyAdmin";
 import { RegionsCard } from "./RegionsCard";
 import { PaintersCard } from "./PaintersCard";
 import { EvalPanel } from "./EvalPanel";
+import { LayoutBench } from "./LayoutBench";
 
 const TABS = ["Artists & Rules", "Marketing", "Evaluate", "System"] as const;
 type Tab = (typeof TABS)[number];
@@ -229,6 +230,7 @@ export default function AdminPage() {
         </nav>
 
         {tab === "Artists & Rules" && (<>
+            <LayoutBench />
           <Section title="Artists" note="Which artist paints each column of the wizard. The type is always set by code.">
             <PaintersCard />
           </Section>

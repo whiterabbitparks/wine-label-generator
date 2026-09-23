@@ -43,6 +43,7 @@ docs/DESIGN.pdf
 
 # Server-side runtime data (art direction config, sessions)
 data/*
+!data/templates-overrides.json
 # …except each artist's PAPERS: the seven answers, the consent line, the
 # reference picks and the trained LoRA's address and trigger word. A few
 # kilobytes, and the only copy of things that cannot be recovered — the

@@ -1,7 +1,7 @@
 import sharp from "sharp";
 import { inkOf, vignetteOf } from "./palette";
 import { layoutFromTemplate, templateFields, artKindOf, bleedsOf, MARGIN_MM, PX_PER_MM, type ArtKind, type Band, type Template } from "./templates";
-import { TEMPLATES } from "./templates.data";
+import { templatesNow } from "./overrides";
 import type { ComposeOutput } from "./compose";
 
 /* THE TEMPLATE COMPOSER (2026-09-22). Sets a label on one of the owner's
@@ -27,6 +27,7 @@ export interface TemplateComposeInput {
   seed: number;
   wineColour?: string;
   paper?: string;               /* the painting's own paper, from cleanPaper */
+  textless?: boolean;           /* the label WITHOUT its type — the layout bench draws the words itself */
   /* the drawing's box inside the file, as fractions — cleanPaper knows it
      exactly, because it grew the paper in from the edge */
   ink?: { x: number; y: number; w: number; h: number };
@@ -65,13 +66,13 @@ export function inkLost(tpl: Template, box: { x: number; y: number; w: number; h
 }
 
 export function templatesOf(band: Band): Template[] {
-  return (TEMPLATES as Template[]).filter((t) => t.band === band);
+  return templatesNow().filter((t) => t.band === band);
 }
 export function pickTemplate(band: Band, seed: number, kind?: ArtKind): Template {
   const all = templatesOf(band);
   const pool = kind ? all.filter((t) => artKindOf(t) === kind) : all;
   const use = pool.length ? pool : all;
-  return use[seed % use.length] || (TEMPLATES as Template[])[0];
+  return use[seed % use.length] || templatesNow()[0];
 }
 
 /* the accent: the painting's own loud colour when it has one, else a red
@@ -108,7 +109,7 @@ export function readable(hex: string, on = IVORY, want = 4.5): string {
 export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<ComposeOutput & { template: string; warnings: string[] }> {
   const band: Band = inp.band || "classical";
   const tpl = inp.template
-    ? ((TEMPLATES as Template[]).find((t) => t.id === inp.template) || pickTemplate(band, inp.seed))
+    ? (templatesNow().find((t) => t.id === inp.template) || pickTemplate(band, inp.seed))
     : pickTemplate(band, inp.seed);
 
   const vig = await vignetteOf(inp.artwork);
@@ -200,7 +201,7 @@ export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<C
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${inp.widthMm}mm" height="${inp.heightMm}mm" viewBox="0 0 ${layout.W} ${layout.H}">`
     + `<rect width="${layout.W}" height="${layout.H}" fill="${ground}"/>`
-    + picture + texts + `</svg>`;
+    + picture + (inp.textless ? "" : texts) + `</svg>`;
   const png = await sharp(Buffer.from(svg), { density: 12 * 25.4 }).resize(layout.W, layout.H).png().toBuffer();
   return {
     svg, png: `data:image/png;base64,${png.toString("base64")}`,

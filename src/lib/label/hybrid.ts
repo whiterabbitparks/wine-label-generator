@@ -1,6 +1,6 @@
 import { buildArtworkPrompt, asKind, evalModel, generateArtwork, artistModels } from "@/lib/eval/models";
 import { composeTemplateLabel, templatesOf, pickTemplate, inkLost } from "@/lib/typeset/compose-template";
-import { TEMPLATES } from "@/lib/typeset/templates.data";
+import { templatesNow } from "@/lib/typeset/overrides";
 import type { Template } from "@/lib/typeset/templates";
 import { cleanPaper } from "@/lib/typeset/palette";
 import { artKindOf, layoutFromTemplate, templateFields, type ArtKind, type Band } from "@/lib/typeset/templates";
@@ -167,7 +167,7 @@ export async function relayoutLabel(stored: { art: Buffer; meta: { style: string
   /* a variation is another layout of the SAME picture — the owner's
      three rows. Only layouts of its own shape, and only the ones it fits
      without being dragged past the trim. */
-  const kind = artKindOf((TEMPLATES as Template[]).find((t) => t.id === (stored.meta as { template?: string }).template) || templatesOf(band)[0]);
+  const kind = artKindOf(templatesNow().find((t) => t.id === (stored.meta as { template?: string }).template) || templatesOf(band)[0]);
   const pool = templatesOf(band).filter((t) => artKindOf(t) === kind);
   const scored = pool.map((t) => {
     const probe = layoutFromTemplate({ template: t, fields: templateFields(data), widthMm, heightMm, seed: 1, ground: cleaned.ground, ink: "#111", accent: "#111" });
