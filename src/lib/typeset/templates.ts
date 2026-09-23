@@ -390,25 +390,15 @@ export function layoutFromTemplate(inp: TemplateInput): TemplateLayout {
       }
     }
 
-    /* ---- his groups must read as groups (owner, 2026-09-22: "if the
-       gap inside a group is 1, the gap to the next text must be at least
-       2.5") ----------------------------------------------------------- */
-    for (const edge of ["top", "bottom"] as const) {
-      const g = placed.filter((p2) => p2.row.anchor === edge);
-      if (g.length < 3) continue;
-      const gaps = g.slice(0, -1).map((p2, i) => g[i + 1].base - p2.base);
-      const inside = gaps.filter((v, i) => v <= (ratioAfter.get(g[i].row) ?? 1.4) * g[i].setMm * 1.05 && v <= 1.7 * g[i].setMm);
-      if (!inside.length) continue;
-      const unit = inside.sort((a, b2) => a - b2)[Math.floor(inside.length / 2)];
-      for (let i = 0; i < gaps.length; i++) {
-        if (gaps[i] <= 1.7 * g[i].setMm) continue;          /* a gap inside a group */
-        const want = unit * 2.5;
-        if (gaps[i] >= want - 0.01) continue;
-        const add = want - gaps[i];
-        if (edge === "top") for (let j = i + 1; j < g.length; j++) g[j].base += add;
-        else for (let j = i; j >= 0; j--) g[j].base -= add;
-      }
-    }
+    /* NO GROUP-RATIO ENFORCEMENT HERE any more. I added one, and it was
+       the cause of the holes the owner photographed: it took the median
+       of the gaps it guessed were "inside a group" and stretched every
+       other gap to two and a half times THAT — so a 5 mm gap under a
+       14 pt name became the unit, and a 9 pt block was thrown 12 mm
+       apart. His own artboard already carries the grouping in its
+       proportions, and the rebuild above keeps them. The rule he stated
+       is a MINIMUM to respect, not a spacing to impose, and his drawing
+       already respects it. */
 
     /* ---- and his vertical columns close up toward their own edge ----
        stepping by the REAL width of the column just set plus the next

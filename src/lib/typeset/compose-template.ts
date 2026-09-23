@@ -122,48 +122,20 @@ export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<C
       + `${t}>${esc(l.text)}</text>`;
   }).join("");
 
-  /* THE INNER EDGE IS THE ARTIST'S, NOT A KNIFE (owner, 2026-09-22:
-     "even on the big images, where the picture meets the text, could
-     that boundary not be marked the way the small illustration is — as
-     if it were the artist's decision and not a crop").
-
-     The edges that run off the label stay hard, because that is the
-     bleed. The edges that face the type fade out over a few millimetres,
-     so the paint thins into the paper the way a wash does. */
-  const clipId = `az-${tpl.id}`, maskId = `am-${tpl.id}`;
-  const FADE = Math.min(px(6), art.h * 0.22, art.w * 0.22);
-  const E = 0.5;
-  const inner = {
-    top: art.y > E, bottom: art.y + art.h < layout.H - E,
-    left: art.x > E, right: art.x + art.w < layout.W - E,
-  };
-  const stops = (dir: "top" | "bottom" | "left" | "right") => {
-    const v = dir === "top" || dir === "bottom";
-    const a = { x1: "0", y1: "0", x2: "0", y2: "1" };
-    if (!v) { a.x1 = "0"; a.y1 = "0"; a.x2 = "1"; a.y2 = "0"; }
-    const flip = dir === "bottom" || dir === "right";
-    const g = `<linearGradient id="${maskId}-${dir}" x1="${flip ? a.x2 : a.x1}" y1="${flip ? a.y2 : a.y1}" x2="${flip ? a.x1 : a.x2}" y2="${flip ? a.y1 : a.y2}">`
-      + `<stop offset="0" stop-color="#000"/><stop offset="1" stop-color="#fff"/></linearGradient>`;
-    const rect = dir === "top" ? `x="${art.x}" y="${art.y}" width="${art.w}" height="${FADE}"`
-      : dir === "bottom" ? `x="${art.x}" y="${art.y + art.h - FADE}" width="${art.w}" height="${FADE}"`
-      : dir === "left" ? `x="${art.x}" y="${art.y}" width="${FADE}" height="${art.h}"`
-      : `x="${art.x + art.w - FADE}" y="${art.y}" width="${FADE}" height="${art.h}"`;
-    return { g, r: `<rect ${rect} fill="url(#${maskId}-${dir})"/>` };
-  };
-  const sides = (Object.keys(inner) as ("top" | "bottom" | "left" | "right")[]).filter((d) => inner[d]).map(stops);
-  const mask = sides.length
-    ? `<mask id="${maskId}">${sides.map((x) => x.g).join("")}`
-      + `<rect x="${art.x}" y="${art.y}" width="${art.w}" height="${art.h}" fill="#fff"/>`
-      + sides.map((x) => x.r).join("") + `</mask>`
-    : "";
+  /* NO FADE ON THE INNER EDGE. I invented one; the owner never asked for
+     it and it reads as a washed-out band under the picture. What he asked
+     for is that the boundary be the ARTIST'S — which is the painter's job,
+     not a filter's, and it is asked for in the bleed prompt. The picture
+     is placed and clipped, and nothing is feathered. */
+  const clipId = `az-${tpl.id}`;
   const picture =
     `<svg x="${pxPos.x.toFixed(1)}" y="${pxPos.y.toFixed(1)}" width="${pw.toFixed(1)}" height="${ph.toFixed(1)}" viewBox="${bx.toFixed(1)} ${by.toFixed(1)} ${bw.toFixed(1)} ${bh.toFixed(1)}" preserveAspectRatio="xMidYMid meet">`
     + `<image xlink:href="${inp.artwork}" x="0" y="0" width="${aw}" height="${ah}"/></svg>`;
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${inp.widthMm}mm" height="${inp.heightMm}mm" viewBox="0 0 ${layout.W} ${layout.H}">`
-    + (kind === "bleed" ? `<defs><clipPath id="${clipId}"><rect x="${art.x.toFixed(1)}" y="${art.y.toFixed(1)}" width="${art.w.toFixed(1)}" height="${art.h.toFixed(1)}"/></clipPath>${mask}</defs>` : "")
+    + (kind === "bleed" ? `<defs><clipPath id="${clipId}"><rect x="${art.x.toFixed(1)}" y="${art.y.toFixed(1)}" width="${art.w.toFixed(1)}" height="${art.h.toFixed(1)}"/></clipPath></defs>` : "")
     + `<rect width="${layout.W}" height="${layout.H}" fill="${ground}"/>`
-    + (kind === "bleed" ? `<g clip-path="url(#${clipId})"${mask ? ` mask="url(#${maskId})"` : ""}>${picture}</g>` : picture)
+    + (kind === "bleed" ? `<g clip-path="url(#${clipId})">${picture}</g>` : picture)
     + texts + `</svg>`;
   const png = await sharp(Buffer.from(svg), { density: 12 * 25.4 }).resize(layout.W, layout.H).png().toBuffer();
   return {
