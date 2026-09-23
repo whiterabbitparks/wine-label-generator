@@ -334,7 +334,7 @@ const TUT_LIFE = [1, 2, 3, 4, 5].map((n) => `${TUT_D}ts-life${n}.jpg`);
    "Style By: <artist>", so the story's labels must carry the names too
    (owner 2026-09-23: "the tutorial still shows the old titles") */
 const TUT_ARTISTS = ["Mariam Kvashilava", "Levan Amashukeli", "Levan Amashukeli"];
-const TUT_BACK = TUT_D + "ts-back-label.png", TUT_SHOT_F = TUT_D + "ts-shot-front.jpg", TUT_SHOT_B = TUT_D + "ts-shot-back.jpg";
+const TUT_BACK = TUT_D + "ts-back-label.png", TUT_SHOT_F = TUT_D + "ts-shot-front.png", TUT_SHOT_B = TUT_D + "ts-shot-back.png";   /* transparent, like the real shots */
 /* round 72 #1: the closing card sits on a BLANK page — the walkthrough
    stays on the assets page and a white sheet covers the band */
 const TUT_PAGES: PageKey[] = ["vision", "options", "backdetails", "backdesign", "bottle", "assets", "assets"];
@@ -366,10 +366,11 @@ const DEMO_BACK: Record<string, string> = {
    a clear Sparkling bottle, cork, black matte hood. */
 /* round 88 #4: a Sparkling bottle offers only "Sparkling Cork" / "Crown
    Cap" — "Cork" left the ring empty */
-/* TSINANDALI's bottle, read off his shots: Burgundy, olive glass, cork
-   under a matte sky-blue capsule */
-const DEMO_BOTTLE = { type: "Burgundy", color: "Olive Green", closure: "Cork", finish: "Matte" };
-const DEMO_BOTTLE_0 = { type: "Bordeaux", color: "Transparent", closure: "Wax Seal", finish: "Matte" };
+/* TSINANDALI's bottle (owner 2026-09-23: Burgundy, olive glass, and a
+   WAX SEAL in matte sky blue). The page opens on something else, so each
+   choice is seen being made. */
+const DEMO_BOTTLE = { type: "Burgundy", color: "Olive Green", closure: "Wax Seal", finish: "Matte" };
+const DEMO_BOTTLE_0 = { type: "Bordeaux", color: "Transparent", closure: "Cork", finish: "Matte" };
 /* the capsule's blue: the wheel point nearest his photo's capsule
    (31,135,188), which the shade drag then deepens a touch */
 const DEMO_WHEEL = { x: 0.441, y: 0.772, rgb: [36, 167, 253] };
@@ -382,6 +383,7 @@ const TAP = {
   bdSave: [719.3, 674.8],           /* round 94 #7: the back label's Save */
   descBox: [250, 265], barcode: [360, 468], qrBtn: [874.5, 467],
   market: [873.5, 670], eu: [873, 330], us: [873, 355],   /* the dropdown's rows are 25 apart */
+  assetsSave: [720, 674.75],        /* the assets page's Save, on the centre line */
   backFirst: [1050, 212],            /* round 73 #1: up to the details */
   /* round 86: the variation plays on the PUNK column (KORRA's yellow →
      blue re-layout); column 3's centre is 960 + 342.9/2 */
@@ -1249,6 +1251,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   useEffect(() => {
     if (tut < 0) return;
     const block = (e: Event) => {
+      if (tutClick.current) return;   /* the story's own press (assets Save) */
       const el = e.target as Element | null;
       if (el && el.closest && el.closest("[data-tut-ok]")) return;
       e.preventDefault(); e.stopPropagation();
@@ -1261,6 +1264,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
      does nothing, the red button pulses every 3 seconds — a reminder that
      the next step is waiting"): tutIdle is set when a step has played out */
   const [tutIdle, setTutIdle] = useState(false);
+  const tutClick = useRef(false);
   useEffect(() => {
     if (tut < 0 || !tutIdle) return;
     setNudge((n) => n + 1);
@@ -1482,10 +1486,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           /* Transparent -> Olive Green */
           if (!(await tap(BRING(2, 0), 480, 520, () => setBottle((m) => ({ ...m, color: "Olive Green" }))))) return;
           if (!(await beat(620))) return;
-          /* Wax Seal -> Cork (row 0) */
-          if (!(await tap(BRING(3, 0), 480, 520, () => setBottle((m) => ({ ...m, closure: "Cork" }))))) return;
+          /* Cork -> Wax Seal (row 2: Cork, Screw Cap, Wax Seal …) */
+          if (!(await tap(BRING(3, 2), 480, 520, () => setBottle((m) => ({ ...m, closure: "Wax Seal" }))))) return;
           if (!(await beat(680))) return;
-          /* the capsule's sky blue, then a touch deeper */
+          /* the seal's sky blue, then a touch deeper */
           if (!(await tap(TAP.wheel, 420, 560, () => pickWheel(DEMO_WHEEL.x, DEMO_WHEEL.y)))) return;
           if (!(await beat(560))) return;
           if (!(await dragShade(0.5, DEMO_SHADE))) return;
@@ -1512,6 +1516,16 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           if (!(await hold(600))) return;
           setTutLanding(true);
           setAssetsStage("");
+          /* 2026-09-23 (owner: "add the saving of those assets, and let the
+             step end with it"): the pointer presses the page's own Save,
+             so the very same flight into the folder plays */
+          if (!(await hold(1100))) return;
+          if (!(await tap(TAP.assetsSave, 320, 520, () => {
+            tutClick.current = true;
+            (document.querySelector("[data-assets-save]") as HTMLButtonElement | null)?.click();
+            tutClick.current = false;
+          }))) return;
+          if (!(await hold(1800))) return;
           break;
         }
         default:
@@ -3129,7 +3143,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               outside it, on its left edge — every image flies into the
               folder in sequence */}
           {!assetsStage && assets.front && (
-            <button onClick={() => {
+            <button data-assets-save onClick={() => {
               const unsave = assetsSaved;
               setAssetsSaved(!unsave);
               const items: { src: string; x: number; y: number; w: number; h: number }[] = [];
@@ -3712,11 +3726,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 const r = st.big ? DOT_BIG : DOT_SMALL;
                 const done = step >= i;
                 return (
-                  <button key={"d" + i} aria-label={st.label}
-                    /* round 111 (owner): while the walkthrough plays, the bar
-                       is a picture — its stops and names take no clicks */
-                    onClick={() => { if (tut >= 0) return; if (st.page !== page) { barJumped.current = true; go(st.page, ORDER.indexOf(st.page) > ORDER.indexOf(page) ? 1 : -1); } }}
-                    style={{ ...px(st.x - 13, PROG_Y - 13, 26, 26), ...ghost, pointerEvents: modalOpen || tut >= 0 ? "none" : "auto" }}>
+                  <button key={"d" + i} aria-label={st.label} tabIndex={-1}
+                    /* 2026-09-23 (owner: "no clicks anywhere on the progress
+                       bar — its stops, its names, the bar itself; only the red
+                       button"): the bar is a picture, always */
+                    style={{ ...px(st.x - 13, PROG_Y - 13, 26, 26), ...ghost, cursor: "default", pointerEvents: "none" }}>
                     <span style={{
                       position: "absolute", left: "50%", top: "50%", transform: "translate(-50%,-50%)",
                       width: r * 2, height: r * 2, borderRadius: r, boxSizing: "border-box",
@@ -3728,10 +3742,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 );
               })}
               {STEPS.map((st, i) => (
-                <button key={st.label + i} onClick={() => { if (tut >= 0) return; if (st.page !== page) { barJumped.current = true; go(st.page, ORDER.indexOf(st.page) > ORDER.indexOf(page) ? 1 : -1); } }}
+                <button key={st.label + i} tabIndex={-1}
                   style={{
                     ...px(st.x - 130, baseTop(LABEL_BASE, BAR_FS), 260, 20), ...ghost,
-                    pointerEvents: modalOpen || tut >= 0 ? "none" : "auto",
+                    cursor: "default", pointerEvents: "none",
                     font: `${st.big ? 700 : 300} ${BAR_FS}px ${HNW}`, lineHeight: `${BAR_FS}px`,
                     color: INK, textAlign: "center", textTransform: "none", whiteSpace: "nowrap",
                     /* round 72 #6: in the walkthrough a stop stays unnamed

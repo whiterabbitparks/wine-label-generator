@@ -102,7 +102,13 @@ runs NOTHING can be pressed except the red button and the card's Skip
 `data-tut-ok`). The story WAITS for the click after each step, and once a
 step has played out the red button pulses every 3 s (`tutIdle`). Tutorial
 labels carry their artists, so the heads read "Style By: …" like the real
-page.
+page. The assets step ENDS with the pointer pressing the page's own
+Save (the real flight into the folder; `data-assets-save`, `tutClick`
+lets the story's press past the blocker). TSINANDALI's closure is a WAX
+SEAL (owner). Product shots are transparent PNGs (JPEG had turned their
+ground black).
+**Progress bar (owner, 2026-09-23, standing): no clicks anywhere on it —
+stops, names, bar. Only the red button.**
 
 **Open — the owner's decisions**
 0. ANSWERED (see above) — "why is Mariam always a
