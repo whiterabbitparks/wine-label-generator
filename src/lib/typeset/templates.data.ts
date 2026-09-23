@@ -34,7 +34,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0.22,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "GRAND VIN"
       },
       {
         "fields": [
@@ -51,7 +53,9 @@ export const TEMPLATES: Template[] = [
         "accent": true,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "CHÂTEAU MARGAUX"
       },
       {
         "fields": [
@@ -68,7 +72,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "Margaux AOC"
       },
       {
         "fields": [
@@ -85,7 +91,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Premier Grand Cru Classé"
       },
       {
         "fields": [
@@ -102,7 +110,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "Cabernet Sauvignon, Merlot"
       },
       {
         "fields": [
@@ -119,7 +129,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Vieilles Vignes"
       },
       {
         "fields": [
@@ -136,7 +148,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Bordeaux, France"
       },
       {
         "fields": [
@@ -153,7 +167,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Dry Red Wine"
       },
       {
         "fields": [
@@ -170,7 +186,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Alc.: 13.5% / 750 ml."
       },
       {
         "fields": [
@@ -187,7 +205,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "2018"
       }
     ]
   },
@@ -220,11 +240,14 @@ export const TEMPLATES: Template[] = [
         "tracking": 0,
         "rot": 0,
         "serif": true,
+        "bold": true,
+        "sample": "GRAND VIN",
         "arc": {
           "cx": 51.999,
           "cy": 76.727,
           "r": 66.885,
-          "up": true
+          "up": true,
+          "sweep": 22.49
         }
       },
       {
@@ -242,7 +265,9 @@ export const TEMPLATES: Template[] = [
         "accent": true,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "CHÂTEAU MARGAUX"
       },
       {
         "fields": [
@@ -259,7 +284,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "Margaux AOC"
       },
       {
         "fields": [
@@ -276,7 +303,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Premier Grand Cru Classé"
       },
       {
         "fields": [
@@ -293,7 +322,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "Cabernet Sauvignon, Merlot"
       },
       {
         "fields": [
@@ -310,7 +341,9 @@ export const TEMPLATES: Template[] = [
         "accent": true,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Vieilles Vignes"
       },
       {
         "fields": [
@@ -327,7 +360,9 @@ export const TEMPLATES: Template[] = [
         "accent": true,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Bordeaux, France"
       },
       {
         "fields": [
@@ -344,7 +379,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Dry Red Wine"
       },
       {
         "fields": [
@@ -361,7 +398,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Alc.: 13.5% / 750 ml."
       },
       {
         "fields": [
@@ -378,7 +417,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "2018"
       }
     ]
   },
@@ -410,7 +451,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0.22,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "GRAND VIN"
       },
       {
         "fields": [
@@ -427,7 +470,9 @@ export const TEMPLATES: Template[] = [
         "accent": true,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "CHÂTEAU MARGAUX"
       },
       {
         "fields": [
@@ -444,7 +489,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "Margaux AOC"
       },
       {
         "fields": [
@@ -461,7 +508,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Premier Grand Cru Classé"
       },
       {
         "fields": [
@@ -478,7 +527,9 @@ export const TEMPLATES: Template[] = [
         "accent": true,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "Cabernet Sauvignon, Merlot"
       },
       {
         "fields": [
@@ -495,7 +546,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Vieilles Vignes"
       },
       {
         "fields": [
@@ -512,7 +565,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Bordeaux, France"
       },
       {
         "fields": [
@@ -529,7 +584,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Dry Red Wine"
       },
       {
         "fields": [
@@ -546,7 +603,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Alc.: 13.5% / 750 ml."
       },
       {
         "fields": [
@@ -563,7 +622,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "2018"
       }
     ]
   },
@@ -595,7 +656,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0.22,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "GRAND VIN"
       },
       {
         "fields": [
@@ -612,7 +675,9 @@ export const TEMPLATES: Template[] = [
         "accent": true,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "CHÂTEAU MARGAUX"
       },
       {
         "fields": [
@@ -629,7 +694,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "Margaux AOC"
       },
       {
         "fields": [
@@ -646,7 +713,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Premier Grand Cru Classé"
       },
       {
         "fields": [
@@ -663,7 +732,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "Cabernet Sauvignon, Merlot"
       },
       {
         "fields": [
@@ -680,7 +751,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Vieilles Vignes"
       },
       {
         "fields": [
@@ -697,7 +770,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Bordeaux, France"
       },
       {
         "fields": [
@@ -714,7 +789,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Dry Red Wine"
       },
       {
         "fields": [
@@ -731,7 +808,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Alc.: 13.5% / 750 ml."
       },
       {
         "fields": [
@@ -748,7 +827,9 @@ export const TEMPLATES: Template[] = [
         "accent": true,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "2018"
       }
     ]
   },
@@ -780,7 +861,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0.22,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "GRAND VIN"
       },
       {
         "fields": [
@@ -798,11 +881,14 @@ export const TEMPLATES: Template[] = [
         "tracking": 0,
         "rot": 0,
         "serif": true,
+        "bold": true,
+        "sample": "CHÂTEAU MARGAUX",
         "arc": {
           "cx": 52.12,
           "cy": 98.016,
           "r": 80.171,
-          "up": true
+          "up": true,
+          "sweep": 48.84
         }
       },
       {
@@ -820,7 +906,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "2018"
       },
       {
         "fields": [
@@ -837,7 +925,9 @@ export const TEMPLATES: Template[] = [
         "accent": true,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "Cabernet Sauvignon"
       },
       {
         "fields": [
@@ -854,7 +944,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "Vieilles Vignes"
       },
       {
         "fields": [
@@ -871,7 +963,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "Bordeaux, France"
       },
       {
         "fields": [
@@ -888,7 +982,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Premier Grand Cru Classé"
       },
       {
         "fields": [
@@ -905,7 +1001,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Dry Red Wine"
       },
       {
         "fields": [
@@ -922,7 +1020,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Alc.: 13.5% / 750 ml."
       }
     ]
   },
@@ -954,7 +1054,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "GRAND VIN"
       },
       {
         "fields": [
@@ -971,7 +1073,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Margaux AOC"
       },
       {
         "fields": [
@@ -988,7 +1092,9 @@ export const TEMPLATES: Template[] = [
         "accent": true,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "CHÂTEAU MARGAUX"
       },
       {
         "fields": [
@@ -1005,7 +1111,9 @@ export const TEMPLATES: Template[] = [
         "accent": true,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "2018"
       },
       {
         "fields": [
@@ -1022,7 +1130,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Vieilles Vignes"
       },
       {
         "fields": [
@@ -1039,7 +1149,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Premier Grand Cru Classé"
       },
       {
         "fields": [
@@ -1056,7 +1168,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "Cabernet Sauvignon, Merlot"
       },
       {
         "fields": [
@@ -1073,7 +1187,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Bordeaux, France"
       },
       {
         "fields": [
@@ -1090,7 +1206,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Dry Red Wine"
       },
       {
         "fields": [
@@ -1107,7 +1225,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Alc.: 13.5% / 750 ml."
       }
     ]
   },
@@ -1139,7 +1259,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "GRAND VIN"
       },
       {
         "fields": [
@@ -1156,7 +1278,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Margaux AOC"
       },
       {
         "fields": [
@@ -1173,7 +1297,9 @@ export const TEMPLATES: Template[] = [
         "accent": true,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "CHÂTEAU MARGAUX"
       },
       {
         "fields": [
@@ -1190,7 +1316,9 @@ export const TEMPLATES: Template[] = [
         "accent": true,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "2018"
       },
       {
         "fields": [
@@ -1207,7 +1335,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "Premier Grand Cru Classé"
       },
       {
         "fields": [
@@ -1224,7 +1354,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "Bordeaux, France"
       },
       {
         "fields": [
@@ -1241,7 +1373,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Cabernet Sauvignon"
       },
       {
         "fields": [
@@ -1258,7 +1392,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Vieilles Vignes"
       },
       {
         "fields": [
@@ -1275,7 +1411,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Dry Red Wine"
       },
       {
         "fields": [
@@ -1292,7 +1430,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Alc.: 13.5% / 750 ml."
       }
     ]
   },
@@ -1324,7 +1464,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "GRAND VIN"
       },
       {
         "fields": [
@@ -1341,7 +1483,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Margaux AOC"
       },
       {
         "fields": [
@@ -1358,7 +1502,9 @@ export const TEMPLATES: Template[] = [
         "accent": true,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "CHÂTEAU MARGAUX"
       },
       {
         "fields": [
@@ -1375,7 +1521,9 @@ export const TEMPLATES: Template[] = [
         "accent": true,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "2018"
       },
       {
         "fields": [
@@ -1392,7 +1540,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Vieilles Vignes"
       },
       {
         "fields": [
@@ -1409,7 +1559,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Premier Grand Cru Classé"
       },
       {
         "fields": [
@@ -1426,7 +1578,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "Cabernet Sauvignon, Merlot"
       },
       {
         "fields": [
@@ -1443,7 +1597,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Bordeaux, France"
       },
       {
         "fields": [
@@ -1460,7 +1616,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Dry Red Wine"
       },
       {
         "fields": [
@@ -1477,7 +1635,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Alc.: 13.5% / 750 ml."
       }
     ]
   },
@@ -1509,7 +1669,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "GRAND VIN"
       },
       {
         "fields": [
@@ -1526,7 +1688,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Margaux AOC"
       },
       {
         "fields": [
@@ -1543,7 +1707,9 @@ export const TEMPLATES: Template[] = [
         "accent": true,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "CHÂTEAU MARGAUX"
       },
       {
         "fields": [
@@ -1560,7 +1726,9 @@ export const TEMPLATES: Template[] = [
         "accent": true,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "2018"
       },
       {
         "fields": [
@@ -1577,7 +1745,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Vieilles Vignes"
       },
       {
         "fields": [
@@ -1594,7 +1764,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Premier Grand Cru Classé"
       },
       {
         "fields": [
@@ -1611,7 +1783,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "Cabernet Sauvignon, Merlot"
       },
       {
         "fields": [
@@ -1628,7 +1802,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Bordeaux, France"
       },
       {
         "fields": [
@@ -1645,7 +1821,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Dry Red Wine"
       },
       {
         "fields": [
@@ -1662,7 +1840,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Alc.: 13.5% / 750 ml."
       }
     ]
   },
@@ -1694,7 +1874,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "GRAND VIN"
       },
       {
         "fields": [
@@ -1711,7 +1893,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Margaux AOC"
       },
       {
         "fields": [
@@ -1728,7 +1912,9 @@ export const TEMPLATES: Template[] = [
         "accent": true,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "CHÂTEAU MARGAUX"
       },
       {
         "fields": [
@@ -1745,7 +1931,9 @@ export const TEMPLATES: Template[] = [
         "accent": true,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "2018"
       },
       {
         "fields": [
@@ -1762,7 +1950,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "Premier Grand Cru Classé"
       },
       {
         "fields": [
@@ -1779,7 +1969,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "Bordeaux, France"
       },
       {
         "fields": [
@@ -1796,7 +1988,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Cabernet Sauvignon"
       },
       {
         "fields": [
@@ -1813,7 +2007,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Vieilles Vignes"
       },
       {
         "fields": [
@@ -1830,7 +2026,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Dry Red Wine"
       },
       {
         "fields": [
@@ -1847,7 +2045,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": 0,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Alc.: 13.5% / 750 ml."
       }
     ]
   },
@@ -1879,7 +2079,9 @@ export const TEMPLATES: Template[] = [
         "accent": true,
         "tracking": 0,
         "rot": -90,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "2018"
       },
       {
         "fields": [
@@ -1896,7 +2098,9 @@ export const TEMPLATES: Template[] = [
         "accent": true,
         "tracking": 0,
         "rot": -90,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "CHÂTEAU MARGAUX"
       },
       {
         "fields": [
@@ -1913,7 +2117,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": -90,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "GRAND VIN"
       },
       {
         "fields": [
@@ -1930,7 +2136,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": -90,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "Margaux AOC"
       },
       {
         "fields": [
@@ -1947,7 +2155,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": -90,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Premier Grand Cru Classé"
       },
       {
         "fields": [
@@ -1966,7 +2176,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": -90,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Bordeaux, France / Cabernet Sauvignon, Merlot"
       },
       {
         "fields": [
@@ -1986,7 +2198,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": -90,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Vieilles Vignes / Dry Red Wine / Alc.: 13.5% / 750 ml."
       }
     ]
   },
@@ -2018,7 +2232,9 @@ export const TEMPLATES: Template[] = [
         "accent": true,
         "tracking": 0,
         "rot": -90,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "2018"
       },
       {
         "fields": [
@@ -2035,7 +2251,9 @@ export const TEMPLATES: Template[] = [
         "accent": true,
         "tracking": 0,
         "rot": -90,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "CHÂTEAU MARGAUX"
       },
       {
         "fields": [
@@ -2052,7 +2270,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": -90,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "GRAND VIN"
       },
       {
         "fields": [
@@ -2069,7 +2289,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": -90,
-        "serif": true
+        "serif": true,
+        "bold": true,
+        "sample": "Margaux AOC"
       },
       {
         "fields": [
@@ -2086,7 +2308,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": -90,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Premier Grand Cru Classé"
       },
       {
         "fields": [
@@ -2105,7 +2329,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": -90,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Bordeaux, France / Cabernet Sauvignon, Merlot"
       },
       {
         "fields": [
@@ -2125,7 +2351,9 @@ export const TEMPLATES: Template[] = [
         "accent": false,
         "tracking": 0,
         "rot": -90,
-        "serif": true
+        "serif": true,
+        "bold": false,
+        "sample": "Vieilles Vignes / Dry Red Wine / Alc.: 13.5% / 750 ml."
       }
     ]
   }

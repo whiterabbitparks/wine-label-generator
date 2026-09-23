@@ -171,6 +171,40 @@ npx tsx tools/preview-templates.mts --long       # a very long name
 npx tsx tools/preview-templates.mts --size 70x90 # a different shape
 ```
 
+## 6b. His artboard is the measure (2026-09-23)
+
+The owner laid the engine's labels over his own artboards: text on the
+picture, lines far apart. The cause: after placing every line where he
+drew it, a second sweep treated each ROW as a band across the whole
+label, so his vintage in the middle of the foot "hit" the line above it
+on the left and every row was pushed up until the name sat in the
+picture. The vertical templates had the same fault mirrored (a line
+turned -90 has its letters' tops facing LEFT).
+
+Now:
+
+- With his words at his size the label IS his artboard — every line on
+  his baseline, at his size, in his weight (bold/regular read off the
+  face he set it in). `npx tsx tools/match-artboards.mts` proves it for
+  all twelve (±0.3 mm, x and y, size, weight, zone) and must pass.
+- A line moves only when it must: an empty row closes up toward its
+  edge; a long text steps down in size (7 pt floor); two lines move
+  apart only if their INK (real glyph outlines, `inkExtent`) would touch,
+  and only lines that share some width are compared.
+- One family a label, in his two weights. No "the name is always the
+  largest" cap — on template 11 his vintage is larger than his name.
+- Arced words keep his letter-spacing (the sweep he drew is stored per
+  arc) and shrink until they sit inside the 5 mm margin.
+- The picture's zone keeps his distance from the type beside it; an
+  edge on the label edge stays there. An oval shrinks only if a letter
+  would touch the ellipse itself.
+- `tools/check-templates.mts` measures real ink too (it called his own
+  artboards collisions before). 1296 layouts, must PASS.
+- Visual check: `npx tsx tools/his-vs-engine.mts "" out.png` (his PNG |
+  engine | overlay) and `tools/show-layouts.mts "t02:80x110:long,…"`.
+- Source PDF now lives in `NEW UI/Comments/Achive/Layout_Options.pdf`;
+  his PNG exports of the same twelve are in `Comments/New`.
+
 ## 7. What I would change next, once you have looked
 
 - The picture is FITTED into its zone, never cropped, because a painting

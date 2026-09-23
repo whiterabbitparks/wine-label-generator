@@ -7,6 +7,17 @@ single-file era), **this file wins**.
 
 ---
 
+> **2026-09-23 — layouts:** the template engine now reproduces the owner's
+> artboards exactly (see LAYOUT-TEMPLATES.md §6b). Gates after ANY change
+> to `src/lib/typeset/templates.ts`: `npx tsx tools/match-artboards.mts`
+> (12/12) and `npx tsx tools/check-templates.mts` (PASS). Oval layouts sit
+> on a light ground; the owner is choosing between white, the painter's
+> paper and a pale tint of the painting (data/experiments/oval-test.mts).
+> Image generation of free zones: a masked gpt-image edit keeps plain paper
+> around the ink for both artists, but paints ~2x the asked area, so ink is
+> MEASURED and placed, never trusted to size (data/experiments/sheet-test.mts).
+
+
 ## 1. What this project is now
 
 **8K Labels** is a wine-label generator: a winemaker enters label details in an

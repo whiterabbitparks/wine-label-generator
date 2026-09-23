@@ -96,7 +96,7 @@ function fitCircle(pts) {
   return { cx, cy, r };
 }
 
-const src = process.argv[2] || path.join(process.env.HOME, "Documents/PROJECTS/WAIN/NEW UI/Comments/New/Layout_Options.pdf");
+const src = process.argv[2] || path.join(process.env.HOME, "Documents/PROJECTS/WAIN/NEW UI/Comments/Achive/Layout_Options.pdf");
 const pages = await geom(src);
 
 /* the owner's three columns, classical → contemporary → free. Centred
@@ -140,10 +140,21 @@ for (let i = 0; i < pages.length; i++) {
       tracking: +t.track.toFixed(4) || 0,
       rot: vertical ? -90 : 0,
       serif: /Times|Garamond/i.test(t.font),
+      /* his weight, read off the face he set it in (2026-09-23: "one
+         family, different weights, as on my artboards") */
+      bold: /Bold|Black|Heavy|Semi.?bold|Demi/i.test(t.font),
+      /* his own words on the artboard — the test lays these and must get
+         his artboard back */
+      sample: t.s.trim(),
     };
     if (t.arc) {
       const c = fitCircle(t.pts);
-      if (c) e.arc = { cx: mm(c.cx), cy: mm(H - c.cy), r: mm(c.r), up: c.cy < t.y };
+      /* the angle his word spans on the circle, first letter's origin to
+         the last letter's end — his letter-spacing lives in where each
+         glyph sits, not in a tracking value */
+      const ang = (x, y) => Math.atan2(y - c.cy, x - c.cx);
+      const sweep = c ? Math.abs(ang(t.pts[0][0], t.pts[0][1]) - ang(t.x2, t.y2)) * 180 / Math.PI : 0;
+      if (c) e.arc = { cx: mm(c.cx), cy: mm(H - c.cy), r: mm(c.r), up: c.cy < t.y, sweep: +sweep.toFixed(2) };
     }
     texts.push(e);
   }

@@ -54,6 +54,29 @@ export function measure(text: string, f: Face, size: number, tracking = 0): numb
   return w + Math.max(0, [...text].length - 1) * tracking * size;
 }
 
+/* how far THESE words' ink actually reaches above and below the baseline,
+   in px at `size` — read off the glyph outlines, so "2018" is as tall as
+   its figures and "Margaux AOC" reaches no lower than its baseline. The
+   face's ascender/descender is the tallest glyph it owns; two lines his
+   artboard sets close together only clash by that measure, never in ink. */
+const boxCache = new Map<string, { up: number; down: number }>();
+export function inkExtent(text: string, f: Face, size: number): { up: number; down: number } {
+  const font = loadFace(f);
+  if (!font) return { up: size * 0.72, down: size * 0.22 };
+  let up = 0, down = 0;
+  for (const ch of text) {
+    const key = `${f.family}|${f.weight}|${f.italic ? 1 : 0}|${ch}`;
+    let b = boxCache.get(key);
+    if (!b) {
+      const bb = font.charToGlyph(ch).getBoundingBox();
+      b = { up: Math.max(0, bb.y2) / font.unitsPerEm, down: Math.max(0, -bb.y1) / font.unitsPerEm };
+      boxCache.set(key, b);
+    }
+    up = Math.max(up, b.up); down = Math.max(down, b.down);
+  }
+  return { up: up * size, down: down * size };
+}
+
 /* ascender / descender of the face, as fractions of the size */
 export function vmetrics(f: Face): { asc: number; desc: number } {
   const font = loadFace(f);
