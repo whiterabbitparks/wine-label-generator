@@ -538,9 +538,24 @@ export function layoutFromTemplate(inp: TemplateInput): TemplateLayout {
   let art: { kind: "rect" | "oval"; x: number; y: number; w: number; h: number };
   if (bleedsTall && !bleedsWide) {
     /* templates 11 / 12: the picture is a half, the type a vertical column
-       beside it. Which half he drew it on is whichever edge it touches. */
+       beside it. Which half he drew it on is whichever edge it touches.
+
+       2026-09-22 (owner: "the image should have grown to take the room
+       the skipped lines left"): the column is only as wide as the lines
+       that SURVIVED, measured, not as wide as he drew it — so when the
+       customer leaves fields out the picture takes the rest. */
     const onLeft = a.x <= tpl.refW - (a.x + a.w);
-    const typeW = onLeft ? tpl.refW - a.w : a.x;        /* the column he left for the type */
+    const cols = pass.laid.filter((l) => l.rot === -90);
+    let typeW: number;
+    if (cols.length) {
+      /* the picture must stop where the TYPE BEGINS, so take the edge of
+         the column nearest the picture and leave it 2 mm of air */
+      const edge = onLeft
+        ? Math.min(...cols.map((l) => l.x - l.size * 0.28))   /* type on the right */
+        : Math.max(...cols.map((l) => l.x + l.size * 0.95));  /* type on the left  */
+      typeW = ((onLeft ? W - edge : edge) / PX_PER_MM) + 2;
+      typeW = Math.max(MARGIN_MM * 1.6, Math.min(typeW, inp.widthMm * 0.6));
+    } else typeW = onLeft ? tpl.refW - a.w : a.x;
     const w = Math.max(px(10), W - px(typeW));
     art = { kind: a.kind, x: onLeft ? 0 : W - w, y: 0, w, h: H };
   } else {

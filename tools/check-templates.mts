@@ -81,6 +81,14 @@ for (const tpl of TEMPLATES as Template[]) {
           const pt = l.size / PX_PER_MM / PT_MM;
           if (pt < MIN_PT - 0.1 || pt > MAX_PT + 0.1) { fails.push(`SIZE     ${where}  ${pt.toFixed(1)} pt`); break; }
         }
+        /* 2026-09-22: and no line may sit ON the picture — none of his
+           templates set type over the artwork, and when the picture was
+           allowed to grow into the room freed by missing fields it ran
+           straight under the vertical columns */
+        const az = layout.art;
+        for (const b of boxes) {
+          if (hits(b, az)) { fails.push(`ON ART  ${where}  a line sits over the picture`); break; }
+        }
         const fams = new Set(layout.lines.map((l) => l.family));
         if (fams.size > 2) fails.push(`FAMILIES ${where}  ${[...fams].join(" + ")}`);
       }

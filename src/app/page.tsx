@@ -3945,7 +3945,18 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               if (backThumb) left.push(<span key="bl">{colTitle(323.7, t("Back Label"))}{dashBox(323.7, 177.6, 159, 155, backThumb, shared)}</span>);
             }
             const detX = isL ? 385.5 : 500;
-            const valX = isL ? (lang === "ge" ? 530 : 500) : (lang === "ge" ? 612 : 604);
+            /* round 114 (owner: "in the label details list the two columns
+               overlap"). The value column stood at a fixed x, so a long
+               caption — "Special mention:", "Region, Country:", and every
+               Georgian one — ran straight under its own value. The column
+               is now MEASURED off the longest caption actually listed. */
+            const capFont = `700 ${lang === "ge" ? fs - 2 : fs}px ${HNW}`;
+            const capW = rows.reduce((w, [c]) => {
+              const txt = t(c).endsWith(":") ? t(c) : t(c) + ":";
+              return Math.max(w, textW(txt, capFont));
+            }, 0);
+            const detX2 = isL ? 385.5 : 500;
+            const valX = Math.min(detX2 + Math.ceil(capW) + 14, detX2 + 260);
             const rowsBottom = rows.length ? 212 + (rows.length - 1) * 19.2 + 6 : 140;
             const contentBottom = Math.max(leftBottom, rowsBottom);
             const btnTop = contentBottom + (isL ? 24 : 48);
@@ -3971,7 +3982,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 {rows.length > 0 && colTitle(detX, t(isL ? "Label Details" : "Product Details"))}
                 {rows.map(([c, v, ph], i) => (
                   <span key={c}>
-                    <span style={{ position: "absolute", left: detX, top: baseTop(212 + i * 19.2, 15), width: 150 }}>{cap(t(c).endsWith(":") ? t(c) : t(c) + ":")}</span>
+                    <span style={{ position: "absolute", left: detX, top: baseTop(212 + i * 19.2, 15), width: valX - detX - 8 }}>{cap(t(c).endsWith(":") ? t(c) : t(c) + ":")}</span>
                     <span style={{ position: "absolute", left: valX, top: baseTop(212 + i * 19.2, 15), width: B.w - valX - 32, display: "flex", alignItems: "center", columnGap: 6 }}>
                       {v ? val(t(v)) : <span style={{ font: `italic ${fs}px ${HNW}`, lineHeight: LH, color: "#B3B3B3", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ph}</span>}
                       {v && c === "Closure Color" && (
