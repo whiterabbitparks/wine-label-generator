@@ -1042,6 +1042,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             wine: { colour: wineColor || f.colour || "Red", name: f.wine || "Wine", grape: (f.grape || "").trim() },
             labelMM: customLabel ? customDims : { w: Number(f.width) || 110, h: Number(f.height) || 80 },
             style: sel.style, seed, lifeOnly: true, batch,
+            /* 2026-09-23: the scenes copy this very bottle photo */
+            frontShot: [assets.front?.prev, assets.front?.full].find((u) => u && u.startsWith("data:image/")) || null,
           }),
         });
         if (!r.ok || !r.body) throw new Error(`more variations failed (${r.status})`);

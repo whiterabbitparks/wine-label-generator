@@ -134,9 +134,15 @@ overhead, several bottles, water, home, bar, sun-on-wall, outdoor) —
 500 simulated sets: ~1% of picks repeat a motif, only when the pool runs
 short. Grape scenes from the boards are also dropped when no variety is
 known. The bottle popup has its "Bottle" title.
-OPEN (asked him): the label is still REDRAWN by the image model (it is
-sent as a reference picture), and the bottle outline is only a reference
-too — see the plan in the conversation of 2026-09-23 night.
+Bottle proportions + label position in the scenes (owner: "control the
+bottle proportions — never wider or longer — and keep the label where it
+sits on the bottle in the product shot"): the finished FRONT product shot
+now rides FIRST into every scene ("copy this bottle; only pose, angle and
+light change"), then the flat label, then the outline. More Variations
+sends the page's own front-shot preview (`frontShot`). He chose to leave
+the PRODUCT SHOTS as they are and to keep every pose in the scenes (no
+exact compositing). Test: data/experiments/marketing-test.mts →
+Desktop/8K-sheet-test/marketing-test/.
 
 **Open — the owner's decisions**
 0. ANSWERED (see above) — "why is Mariam always a

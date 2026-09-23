@@ -21,6 +21,9 @@ export async function POST(req: Request) {
     backLabelMM?: { w?: number; h?: number };
     style?: string; seed?: number;
     lifeOnly?: boolean; batch?: number;
+    /* 2026-09-23: a More Variations batch sends the front shot it has,
+       so its scenes copy the same photographed bottle */
+    frontShot?: string | null;
   };
   try {
     body = await req.json();
@@ -57,7 +60,7 @@ export async function POST(req: Request) {
   const charters = await loadMarketingPool();
   const lifeOnly = !!body.lifeOnly;
   const batch = Math.max(0, Math.min(20, Number(body.batch) || 0));
-  const sig = JSON.stringify({ ...brief, lo: lifeOnly, bt: batch, f: hash(front), b: back ? hash(back) : "", cs: hash(charters.shots), sn: hash(charters.scenes.map((x) => x.text + x.charter).join("|")), rl: hash(charters.rules.join("|")) });
+  const sig = JSON.stringify({ ...brief, lo: lifeOnly, bt: batch, fs: body.frontShot ? hash(String(body.frontShot)) : "", f: hash(front), b: back ? hash(back) : "", cs: hash(charters.shots), sn: hash(charters.scenes.map((x) => x.text + x.charter).join("|")), rl: hash(charters.rules.join("|")) });
 
   /* diagnostic dry run (owner 2026-09-07): returns the exact lifestyle
      prompt WITHOUT generating — proves whether charters+scenes reach the model */
@@ -83,7 +86,7 @@ export async function POST(req: Request) {
         await generateMarketingAssets(brief, front, back, (e) => {
           if (e.type !== "progress") events.push(e);
           send(e);
-        }, charters, { lifeOnly, batch });
+        }, charters, { lifeOnly, batch, frontShot: typeof body.frontShot === "string" && body.frontShot.startsWith("data:image/") && body.frontShot.length < 12_000_000 ? body.frontShot : null });
         /* cache only if at least one image succeeded */
         if (events.some((e) => e.type === "shot" || e.type === "life")) cache.set(sig, events);
       } catch (e) {
