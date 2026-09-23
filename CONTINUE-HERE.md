@@ -7,16 +7,62 @@ single-file era), **this file wins**.
 
 ---
 
-> **2026-09-23 — layouts:** the template engine now reproduces the owner's
-> artboards exactly (see LAYOUT-TEMPLATES.md §6b). Gates after ANY change
-> to `src/lib/typeset/templates.ts`: `npx tsx tools/match-artboards.mts`
-> (12/12) and `npx tsx tools/check-templates.mts` (PASS). Oval layouts sit
-> on a light ground; the owner is choosing between white, the painter's
-> paper and a pale tint of the painting (data/experiments/oval-test.mts).
-> Image generation of free zones: a masked gpt-image edit keeps plain paper
-> around the ink for both artists, but paints ~2x the asked area, so ink is
-> MEASURED and placed, never trusted to size (data/experiments/sheet-test.mts).
+## ▶ TOMORROW START HERE (end of day 2026-09-23)
 
+**Live:** http://2.28.48.43 now runs branch **POPIKA_Artists** (deployed
+2026-09-23 evening, commit on origin). Previous live (POPIKA_Back_To_Vector)
+is backed up on the server at `/opt/8klabels-prev-2026-09-23/` (no
+node_modules/.next — to roll back: rsync it back over /opt/8klabels, then
+`npm ci && npm run build && systemctl restart 8klabels`). Deploy now also
+syncs `data/artists/` (the normal rsync excludes data/) and never
+overwrites the server's `.env.local`. Live smoke label made through
+/api/dream-label: fine (fonts, casing, one label, layout).
+
+**What shipped today**
+- Layouts reproduce the owner's 12 Illustrator artboards exactly; his
+  first review round became rules (LAYOUT-TEMPLATES.md §6b, §6c). Gates:
+  `npx tsx tools/match-artboards.mts` (12/12) and
+  `npx tsx tools/check-templates.mts` (PASS) after ANY templates change.
+- Review loop: `tools/review-pdf.mts` → he edits the PDF in Illustrator →
+  `tools/review-diff.mts <his.pdf>` says what he changed. Round 2 sheet:
+  `~/Desktop/8K-sheet-test/8-layout-review-v2.pdf` (he liked it).
+- Variations + their dots removed: one label per column, three total.
+- 404 flash before the loader glass fixed (the "blank" artboard fetch
+  returned the 404 page and was inlined).
+- Type colour is checked against the REAL ground (painter's paper), lightens
+  on dark grounds; unreadable accent falls back to the ink.
+- Proper case for typed names (src/lib/label/casing.ts): wine → Wine,
+  "Domaine de la Romanée-Conti", "Mukuzani PDO"; Georgian untouched.
+
+**Open — the owner's decisions**
+1. Levan's labels come out blue (or black): his 4 reference works
+   (profile.json `refs`: 01, 02, 09, 17 — three have flat sky-blue grounds)
+   + charter "sky blue…" + our ask says "flat single-colour background"
+   without saying LIGHT paper. We never alter the painting; the label
+   ground = most common colour on the painting's outer ring. Proposed (he
+   chose to ship first): ask for light paper, pick refs with varied grounds
+   (e.g. 06, 09, 10, 17), and if the measured paper is still dark/saturated
+   use a pale tint of it. Conflicts with his rule "no dark grounds under
+   artwork" until fixed. Test ≈ $0.40.
+2. Ground under OVAL layouts: white / painter's paper / pale tint
+   (data/experiments/oval-test.mts shows all three).
+3. Does t06's review nudge also apply to t08 and t09 (same block)?
+
+**Open — bugs to clean**
+- OpenAI moderation falsely refuses some Levan asks (2 of 15 today,
+  "moderation_blocked / other", on harmless ideas). Suspect a reference
+  work (02?). On the site a refused column retries once, then stays empty.
+- Painted letters inside pictures ("PROPLE MALAZANG ERIN") despite "no
+  text" in the ask — seen on the live smoke label (Mariam).
+- Mariam's LoRA paints a vertical fold/crease line that can run out of the
+  ink across the paper toward the type.
+- Admin layout bench still shows the composed (cropped) label; the plan is
+  whole image + dashed trim overlay (see the approved plan further down).
+- Server-side generation limit still missing (open spend risk); admin
+  login is still John/Doe; STORY_QUALITY defaults to medium even though
+  live IMAGE_QUALITY is "dev".
+
+---
 
 ## 1. What this project is now
 
