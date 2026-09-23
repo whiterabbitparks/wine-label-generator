@@ -15,12 +15,7 @@
   "mood": "dream",
   "consent": "test only — owner-collected 2026-09-20; customer publication needs the artist's audition approval",
   "status": "pilot",
-  "refs": [
-    "work-05.jpg",
-    "work-14.jpg",
-    "work-26.jpg",
-    "work-40.jpg"
-  ],
+  "refs": ["work-05.jpg", "work-01.jpg", "work-33.jpg", "work-43.jpg"],
   "bio": "Mariam Kvashilava is a Georgian artist based in New York. Working across painting, drawing, printmaking, and mixed media, her work explores memory, identity, displacement, and belonging through layered imagery and intuitive mark-making. Born in Tbilisi, she studied Art History and Archaeology at the Sorbonne in Paris and received her MFA from the New York Academy of Art.",
   "page": true,
   "pageOrder": 1,
