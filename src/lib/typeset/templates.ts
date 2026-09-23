@@ -66,18 +66,37 @@ export interface Template {
   texts: TplText[];
 }
 
-/* TWO KINDS OF PICTURE (owner, 2026-09-22). A template either holds a
-   SPOT — an illustration that stays inside the cut lines, floating on the
-   paper with the edge the artist gave it — or a BLEED, a picture that
-   runs off one or more edges of the label. They are different pictures
-   and must be painted differently, so a column paints the kind its
-   template wants and only ever shows layouts of that kind. */
-export type ArtKind = "spot" | "bleed";
+/* THREE SHAPES OF PICTURE (owner, 2026-09-22, with his diagram).
+
+   The dashed rectangle on his sheet is the LABEL'S TRIM. The pale area
+   around it is bleed. So a picture is not a rectangle cut to fit a slot:
+   it is a painting with a ragged painted edge, drawn LARGER than the
+   label, which runs off the trim on the sides it is meant to bleed from
+   and shows its own edge on the side that faces the type.
+
+   One painting serves every layout of its shape, which is why a
+   variation costs nothing:
+
+     spot   the painting stays inside the trim, floating on the paper
+     band   a wide picture across the label — top, middle or foot
+     panel  a tall picture down one side, the type set vertically beside it
+*/
+export type ArtKind = "spot" | "band" | "panel";
 export function artKindOf(t: Template): ArtKind {
   const a = t.art;
-  if (!a) return "bleed";
-  const touches = a.x <= 0.5 || a.y <= 0.5 || a.x + a.w >= t.refW - 0.5 || a.y + a.h >= t.refH - 0.5;
-  return touches ? "bleed" : "spot";
+  if (!a) return "band";
+  const E = 0.5;
+  const top = a.y <= E, bottom = a.y + a.h >= t.refH - E;
+  const left = a.x <= E, right = a.x + a.w >= t.refW - E;
+  if (!top && !bottom && !left && !right) return "spot";
+  if (top && bottom && !(left && right)) return "panel";
+  return "band";
+}
+/* which edges of the label this picture runs off */
+export function bleedsOf(t: Template) {
+  const a = t.art, E = 0.5;
+  if (!a) return { top: true, bottom: true, left: true, right: true };
+  return { top: a.y <= E, bottom: a.y + a.h >= t.refH - E, left: a.x <= E, right: a.x + a.w >= t.refW - E };
 }
 
 export const PX_PER_MM = 12;
@@ -125,20 +144,15 @@ export const BAND_FACES: Record<Band, Pool> = {
   },
 };
 
-/* ONE FAMILY A LABEL (owner, 2026-09-22: "so the fonts do not confuse
-   us, use one font on a label — one family. The wine name may use a more
-   pronounced one, but every other text is always the same font").
-
-   So every line but the name is set in ONE family. The name is that same
-   family at its bold, unless the seed sends it out to a display face.
-   Size, weight and colour still carry the hierarchy. */
+/* ONE FAMILY A LABEL (owner, 2026-09-22, twice: "use one font family per
+   label"). Not one plus a display face for the name — ONE. Size, weight
+   and colour carry the whole hierarchy, which is how a wine label has
+   always been set. */
 export function facesFor(band: Band, seed: number): { hero: Face; secondary: Face; small: Face } {
   const p = BAND_FACES[band];
-  const at = <T,>(l: T[], salt: number) => l[mix(seed, salt) % l.length];
-  const set = at(p.sets, 13);
-  const bold: Face = { family: set.family, weight: set.bold };
+  const set = p.sets[mix(seed, 13) % p.sets.length];
   return {
-    hero: mix(seed, 11) % 3 === 0 ? at(p.display, 14) : bold,
+    hero: { family: set.family, weight: set.bold },
     secondary: { family: set.family, weight: set.mid },
     small: { family: set.family, weight: set.text },
   };
@@ -151,7 +165,6 @@ export function facesInUse(): Face[] {
   const out: Face[] = [];
   for (const p of Object.values(BAND_FACES)) {
     for (const s2 of p.sets) for (const w of [s2.text, s2.mid, s2.bold]) out.push({ family: s2.family, weight: w });
-    out.push(...p.display);
   }
   return out.filter((f, i) => out.findIndex((g) => g.family === f.family && g.weight === f.weight) === i);
 }

@@ -70,14 +70,15 @@ export interface ArtworkPrompt { prompt: string; subject: string; aspect: "lands
    trims the air and sets the type on that same paper: nothing is ever
    cut or covered, the drawing ends where the artist ended it. */
 const VIGNETTE = "A spot illustration: one self-contained drawing isolated on a flat, plain, single-colour background with empty margin all around; the drawing's edges finish naturally — they are the edges the painter chose, soft and irregular, never a frame, never a straight cut, never a border.";
-/* 2026-09-22 (owner): a picture that runs off the label is a different
-   picture. It fills its rectangle edge to edge, and the quiet room the
-   type will sit on is part of the painting — a wide sky, a field, a
-   wall — so the type lands on the artist's own paint and the join is
-   never a cut. */
-const BLEED = "A full-bleed illustration that fills the whole rectangle edge to edge, with no border and no empty paper margin. Keep a broad, calm, uncluttered area of sky, ground or wall across the top and the bottom of the picture, with no important detail in it, so lettering can be set over it later. The subject sits in the middle band.";
+/* 2026-09-22 (owner, with his diagram): a picture that bleeds is NOT a
+   rectangle filled edge to edge. It is the same kind of painting as the
+   spot — one drawing with the ragged, hand-painted edge the artist chose
+   — only larger, so that when it is laid on the label it runs off the
+   trim on some sides and shows its own edge on the side that faces the
+   type. So: fill most of the sheet, keep the edges the artist's, and
+   keep a calm area where the type will go. */
+const BLEED = "One large drawing that fills most of the sheet, on a flat, plain, single-colour background. The drawing's edges are the ones the painter chose — soft, torn, irregular, never a frame, never a straight cut, never a border — and a little plain background still shows at the corners. Keep one broad, calm, uncluttered passage of sky, ground or wall, with no important detail in it, so lettering can be set over it later.";
 
-/* THE ASK, exactly as test 5/7/8/9 put it (the words the owner marked) */
 /* rebuild the ask for the OTHER kind of picture, keeping everything the
    artist's charter and the story already put into it */
 export function asKind(ap: ArtworkPrompt, kind: "spot" | "bleed"): ArtworkPrompt {

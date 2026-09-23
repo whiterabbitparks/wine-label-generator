@@ -1,6 +1,6 @@
 import sharp from "sharp";
 import { inkOf, vignetteOf } from "./palette";
-import { layoutFromTemplate, templateFields, artKindOf, MARGIN_MM, PX_PER_MM, type ArtKind, type Band, type Template } from "./templates";
+import { layoutFromTemplate, templateFields, artKindOf, bleedsOf, MARGIN_MM, PX_PER_MM, type ArtKind, type Band, type Template } from "./templates";
 import { TEMPLATES } from "./templates.data";
 import type { ComposeOutput } from "./compose";
 
@@ -91,26 +91,55 @@ export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<C
     seed: inp.seed, ground, ink, accent,
   });
 
-  /* TWO KINDS OF PICTURE, PLACED TWO WAYS (owner, 2026-09-22).
+  /* THE PAINTING IS PLACED, NEVER CUT (owner, 2026-09-22, with his
+     diagram). The dashed rectangle on his sheet is the label's TRIM and
+     the pale area around it is bleed, so a picture that bleeds is simply
+     drawn LARGER than the label and runs off the edges it should run
+     off. The label canvas is the trim, so nothing needs clipping: what
+     goes past it is not drawn. The edge that faces the type is the
+     ragged one the artist painted, which is why there is no cut and no
+     fade to hide one.
 
-     A SPOT keeps the edge the artist gave it. The zone he drew is a
-     rough area to work in, not a cookie cutter — "do not repeat my oval
-     in millimetres, it may well come out amorphous; what decides the
-     shape is the picture, not a drawn frame". So the drawing is fitted
-     into that area at full size, on clean paper, and nothing is clipped.
-
-     A BLEED runs off the label. There the zone IS the picture's room:
-     scaled to cover it, centred, clipped to the edge of the label. */
+     A SPOT stays inside the trim and floats on the paper. */
   const kind = artKindOf(tpl);
+  const bleeds = bleedsOf(tpl);
   const meta = await sharp(Buffer.from(inp.artwork.slice(inp.artwork.indexOf(",") + 1), "base64")).metadata();
   const aw = meta.width || 1, ah = meta.height || 1;
   const bx = vig.box.x * aw, by = vig.box.y * ah, bw = vig.box.w * aw, bh = vig.box.h * ah;
-  const k = kind === "spot"
-    ? Math.min(art.w / bw, art.h / bh)
-    : Math.max(art.w / bw, art.h / bh);
-  const pw = bw * k, ph = bh * k;
-  const pxPos = { x: art.x + (art.w - pw) / 2, y: art.y + (art.h - ph) / 2 };
-  layout.art = kind === "spot" ? { x: pxPos.x, y: pxPos.y, w: pw, h: ph } : { x: art.x, y: art.y, w: art.w, h: art.h };
+
+  let pw: number, ph: number, pxPos: { x: number; y: number };
+  if (kind === "spot") {
+    const k = Math.min(art.w / bw, art.h / bh);
+    pw = bw * k; ph = bh * k;
+    pxPos = { x: art.x + (art.w - pw) / 2, y: art.y + (art.h - ph) / 2 };
+  } else {
+    /* cover the room the type left, then push past the trim on every
+       side this picture bleeds from — 6 % of the label is enough for the
+       ragged edge to be outside and the paint to reach the corner */
+    const over = Math.max(layout.W, layout.H) * 0.06;
+    const needW = art.w + (bleeds.left ? over : 0) + (bleeds.right ? over : 0);
+    const needH = art.h + (bleeds.top ? over : 0) + (bleeds.bottom ? over : 0);
+    let k = Math.max(needW / bw, needH / bh);
+    /* a picture may only run PAST its room on an axis where it bleeds.
+       Where it does not bleed — the top and foot of a middle band — the
+       edge faces the type, so it must be the artist's own edge, which
+       means the picture has to fit. Otherwise it buries the words. */
+    if (!(bleeds.left || bleeds.right)) k = Math.min(k, art.w / bw);
+    if (!(bleeds.top || bleeds.bottom)) k = Math.min(k, art.h / bh);
+    pw = bw * k; ph = bh * k;
+    /* flush with the side it bleeds from; centred on an axis that bleeds
+       both ways or neither */
+    const place = (lo: boolean, hi: boolean, zoneLo: number, zoneLen: number, picLen: number) => {
+      if (lo && !hi) return zoneLo + zoneLen - picLen;      /* hangs off the low side  */
+      if (hi && !lo) return zoneLo;                          /* hangs off the high side */
+      return zoneLo + (zoneLen - picLen) / 2;
+    };
+    pxPos = {
+      x: place(bleeds.left, bleeds.right, art.x, art.w, pw),
+      y: place(bleeds.top, bleeds.bottom, art.y, art.h, ph),
+    };
+  }
+  layout.art = { x: pxPos.x, y: pxPos.y, w: pw, h: ph };
   layout.artCrop = { x: bx, y: by, w: bw, h: bh };
 
   const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -122,21 +151,13 @@ export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<C
       + `${t}>${esc(l.text)}</text>`;
   }).join("");
 
-  /* NO FADE ON THE INNER EDGE. I invented one; the owner never asked for
-     it and it reads as a washed-out band under the picture. What he asked
-     for is that the boundary be the ARTIST'S — which is the painter's job,
-     not a filter's, and it is asked for in the bleed prompt. The picture
-     is placed and clipped, and nothing is feathered. */
-  const clipId = `az-${tpl.id}`;
   const picture =
     `<svg x="${pxPos.x.toFixed(1)}" y="${pxPos.y.toFixed(1)}" width="${pw.toFixed(1)}" height="${ph.toFixed(1)}" viewBox="${bx.toFixed(1)} ${by.toFixed(1)} ${bw.toFixed(1)} ${bh.toFixed(1)}" preserveAspectRatio="xMidYMid meet">`
     + `<image xlink:href="${inp.artwork}" x="0" y="0" width="${aw}" height="${ah}"/></svg>`;
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${inp.widthMm}mm" height="${inp.heightMm}mm" viewBox="0 0 ${layout.W} ${layout.H}">`
-    + (kind === "bleed" ? `<defs><clipPath id="${clipId}"><rect x="${art.x.toFixed(1)}" y="${art.y.toFixed(1)}" width="${art.w.toFixed(1)}" height="${art.h.toFixed(1)}"/></clipPath></defs>` : "")
     + `<rect width="${layout.W}" height="${layout.H}" fill="${ground}"/>`
-    + (kind === "bleed" ? `<g clip-path="url(#${clipId})">${picture}</g>` : picture)
-    + texts + `</svg>`;
+    + picture + texts + `</svg>`;
   const png = await sharp(Buffer.from(svg), { density: 12 * 25.4 }).resize(layout.W, layout.H).png().toBuffer();
   return {
     svg, png: `data:image/png;base64,${png.toString("base64")}`,

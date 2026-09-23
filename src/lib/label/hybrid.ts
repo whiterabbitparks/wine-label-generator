@@ -3,7 +3,7 @@ import { composeTemplateLabel, templatesOf, pickTemplate, IVORY } from "@/lib/ty
 import { TEMPLATES } from "@/lib/typeset/templates.data";
 import type { Template } from "@/lib/typeset/templates";
 import { cleanPaper } from "@/lib/typeset/palette";
-import { artKindOf, type Band } from "@/lib/typeset/templates";
+import { artKindOf, type ArtKind, type Band } from "@/lib/typeset/templates";
 import { faceFile, pickRoles, mix } from "@/lib/typeset/fonts";
 import type { Layout } from "@/lib/typeset/compose";
 import { painterFor } from "./painters";
@@ -89,11 +89,14 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
      different pictures, so the column decides which it wants, paints
      that, and only ever shows layouts that use it. */
   const band = bandOf(style);
-  const kind: "spot" | "bleed" = mix(seed, 21) % 2 === 0 ? "spot" : "bleed";
+  /* only the shapes this column's band actually offers — the free
+     column has no wide band drawn, so it must not ask for one */
+  const offered = [...new Set(templatesOf(band).map(artKindOf))];
+  const kind: ArtKind = offered[mix(seed, 21) % offered.length] || "spot";
   const tpl = pickTemplate(band, seed, kind);
   const zone = tpl.art || { w: tpl.refW, h: tpl.refH };
   const zoneAspect = (zone.w / tpl.refW * widthMm) / (zone.h / tpl.refH * heightMm);
-  const ap = asKind(await buildArtworkPrompt(brief, model.artist), artKindOf(tpl));
+  const ap = asKind(await buildArtworkPrompt(brief, model.artist), artKindOf(tpl) === "spot" ? "spot" : "bleed");
   ap.aspect = zoneAspect > 1.25 ? "landscape" : zoneAspect < 0.8 ? "portrait" : "square";
   const painted = await gen429(() => generateArtwork(model, ap, { sketch: inp.sketch || null }));
   /* 2026-09-22 (owner): the artist's LoRA learned her PAPER as well as
