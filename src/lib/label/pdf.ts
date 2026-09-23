@@ -72,7 +72,12 @@ export async function labelPdf(layout: Layout, artPng: Buffer, widthMm: number, 
     const clean = file.replace(`${path.sep}labels${path.sep}`, `${path.sep}labels-pdf${path.sep}`);
     const src = fs.existsSync(clean) ? clean : file;
     if (!fs.existsSync(src)) throw new Error(`font file missing: ${file}`);
-    fonts.set(file, await doc.embedFont(fs.readFileSync(src), { subset: false }));
+    /* under the face's OWN PostScript name: pdf-lib otherwise appends a
+       random suffix ("EBGaramond-Bold-9196") and Illustrator cannot match
+       it to the installed font, so the type opens as missing (owner,
+       2026-09-23) */
+    const psName = (fontkit.create(fs.readFileSync(file)) as { postscriptName?: string }).postscriptName;
+    fonts.set(file, await doc.embedFont(fs.readFileSync(src), { subset: false, ...(psName ? { customName: psName } : {}) }));
   }
   for (const l of layout.lines) {
     const font = fonts.get(faceFile({ family: l.family, weight: l.weight, italic: l.italic }))!;

@@ -55,6 +55,38 @@ export function walk(ctx, stream, resources, ctm, out, depth = 0) {
       const wArr = ctx.lookup(f.get(PDFName.of("Widths")));
       const w = wArr?.asArray ? wArr.asArray().map((v) => ctx.lookup(v).asNumber()) : null;
       const mw = ctx.lookup(f.get(PDFName.of("FontDescriptor")))?.get?.(PDFName.of("MissingWidth"))?.asNumber?.() ?? 500;
+      /* a composite (Type0) font — how pdf-lib, and Illustrator, write an
+         embedded OpenType face: two-byte glyph codes, read back to letters
+         through the font's ToUnicode map, widths from its /W array */
+      if (String(f.get(PDFName.of("Subtype"))) === "/Type0") {
+        const uni = new Map(), cw = new Map();
+        const tu = f.get(PDFName.of("ToUnicode"));
+        if (tu) {
+          const cmap = Buffer.from(decodePDFRawStream(ctx.lookup(tu)).decode()).toString("latin1");
+          const u16 = (h) => Buffer.from(h.length % 4 ? h.padStart(Math.ceil(h.length / 4) * 4, "0") : h, "hex").swap16().toString("utf16le");
+          for (const [, blk] of cmap.matchAll(/beginbfchar([\s\S]*?)endbfchar/g))
+            for (const [, a, b] of blk.matchAll(/<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>/g)) uni.set(parseInt(a, 16), u16(b));
+          for (const [, blk] of cmap.matchAll(/beginbfrange([\s\S]*?)endbfrange/g)) {
+            for (const [, lo, hi, rest] of blk.matchAll(/<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>\s*(\[[^\]]*\]|<[0-9A-Fa-f]+>)/g)) {
+              const l = parseInt(lo, 16), h = parseInt(hi, 16);
+              if (rest.startsWith("[")) [...rest.matchAll(/<([0-9A-Fa-f]+)>/g)].forEach(([, d], k) => uni.set(l + k, u16(d)));
+              else { const d = rest.slice(1, -1); const base = parseInt(d, 16); for (let c = l; c <= h; c++) uni.set(c, u16((base + c - l).toString(16).padStart(d.length, "0"))); }
+            }
+          }
+        }
+        let dw = 1000;
+        try {
+          const desc = ctx.lookup(ctx.lookup(f.get(PDFName.of("DescendantFonts"))).asArray()[0]);
+          dw = desc.get(PDFName.of("DW"))?.asNumber?.() ?? 1000;
+          const W = desc.get(PDFName.of("W")) ? ctx.lookup(desc.get(PDFName.of("W"))).asArray().map((v) => ctx.lookup(v)) : [];
+          for (let i = 0; i < W.length;) {
+            const c0 = W[i].asNumber();
+            if (W[i + 1]?.asArray) { W[i + 1].asArray().forEach((v, k) => cw.set(c0 + k, ctx.lookup(v).asNumber())); i += 2; }
+            else { const c1 = W[i + 1].asNumber(), wv = W[i + 2].asNumber(); for (let c = c0; c <= c1; c++) cw.set(c, wv); i += 3; }
+          }
+        } catch { /* widths stay default */ }
+        return { name, fc: 0, w: null, mw: dw, cid: true, uni, cw, dw };
+      }
       return { name, fc, w, mw };
     } catch { return { name: n, fc: 0, w: null, mw: 500 }; }
   };
@@ -137,6 +169,17 @@ export function walk(ctx, stream, resources, ctm, out, depth = 0) {
     const rot = Math.atan2(m[1], m[0]) * 180 / Math.PI;
     const sc = Math.hypot(m[0], m[1]) * (gs.tz / 100);
     let wid = 0;
+    if (gs.fi?.cid) {
+      let text = "";
+      for (let i = 0; i + 1 < s.length; i += 2) {
+        const c = (s.charCodeAt(i) << 8) | s.charCodeAt(i + 1);
+        text += gs.fi.uni.get(c) ?? "\ufffd";
+        wid += ((gs.fi.cw.get(c) ?? gs.fi.dw) / 1000 * gs.size + gs.tc) * sc;
+      }
+      wid += adj / 1000 * size;
+      out.texts.push({ s: text, x: m[4], y: m[5], size, rot, font: gs.font, fill: gs.fill, w: wid, track: gs.size ? gs.tc / gs.size : 0 });
+      return;
+    }
     for (const ch of s) { const c = ch.charCodeAt(0);
       const gw = gs.fi?.w && c - gs.fi.fc >= 0 && c - gs.fi.fc < gs.fi.w.length ? gs.fi.w[c - gs.fi.fc] : (gs.fi?.mw ?? 500);
       wid += (gw / 1000 * gs.size + gs.tc + (ch === " " ? gs.tw : 0)) * sc; }
