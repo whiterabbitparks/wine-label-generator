@@ -25,6 +25,25 @@ const man = JSON.parse(fs.readFileSync(process.argv[3] || "data/eval/layout-revi
 type GText = { s: string; x: number; y: number; size: number; rot: number; font: string; fill: string; w: number };
 type GPath = { x: number; y: number; w: number; h: number; curves: number; fill: string; stroke: string; op: string };
 const page = (await geom(file))[0] as { w: number; h: number; texts: GText[]; paths: GPath[]; rects: GPath[] };
+/* Illustrator writes a spaced or kerned line as several pieces ("GRAND VI"
+   + "N"); join pieces that continue one another on the same line, in the
+   same face, size and colour */
+{
+  const ts = page.texts as (GText & { track?: number })[];
+  const out: (GText & { track?: number })[] = [];
+  for (const t of ts) {
+    const p = out[out.length - 1];
+    if (p && p.font === t.font && p.fill === t.fill && Math.abs(p.size - t.size) < 0.05 && Math.abs(p.rot - t.rot) < 0.5 && [...p.s].length > 0) {
+      const r = (p.rot * Math.PI) / 180;
+      const ex = p.x + Math.cos(r) * p.w, ey = p.y + Math.sin(r) * p.w;
+      if (Math.hypot(t.x - ex, t.y - ey) < Math.max(1.5, t.size * 0.35) && (Math.abs(p.rot) < 0.5 || Math.abs(Math.abs(p.rot) - 90) < 0.5)) {
+        p.s += t.s; p.w = Math.hypot(t.x - p.x, t.y - p.y) + t.w; continue;
+      }
+    }
+    out.push({ ...t });
+  }
+  page.texts = out;
+}
 const Hmm = page.h / PT;
 /* page geometry in mm from the TOP-LEFT, like the manifest */
 const mmBox = (p: { x: number; y: number; w: number; h: number }) => ({ x: p.x / PT, y: Hmm - (p.y + p.h) / PT, w: p.w / PT, h: p.h / PT });
@@ -49,6 +68,21 @@ const anchorOf = (t: GText, anchor: string) => {
 const weightOf = (font: string) => (/Black|Heavy|ExtraBold/i.test(font) ? "extra-bold" : /Bold|Semi|Demi/i.test(font) ? "bold" : /Medium/i.test(font) ? "medium" : "regular");
 const weightName = (w: number) => (w >= 800 ? "extra-bold" : w >= 600 ? "bold" : w >= 500 ? "medium" : "regular");
 
+/* a face missing from his file altogether was SUBSTITUTED by Illustrator
+   (not installed / not matched) — its lines are reported once, up front,
+   not as hundreds of weight changes */
+const fontsInHis = new Set(page.texts.map((t) => t.font));
+const substituted = new Set<string>();
+for (const c of man.cases) for (const l of c.lines) {
+  const ps = `${l.family.replace(/\s+/g, "")}-${l.weight >= 700 ? "Bold" : l.weight >= 600 ? "SemiBold" : l.weight >= 500 ? "Medium" : "Regular"}`;
+  if (![...fontsInHis].some((f) => f === ps)) substituted.add(`${l.family} ${l.weight}`);
+}
+/* 2026-09-23: seen in practice — Illustrator set EB Garamond from the
+   owner's VARIABLE font and wrote every weight under the default
+   instance's name ("EBGaramond-Regular"), while his screen and his JPG
+   export showed the bolds intact. So a missing face is NOT evidence of a
+   changed weight; the weights of that family are not judged from names. */
+if (substituted.size) say(`⚠ not in his file by name: ${[...substituted].join(", ")} — probably written from his installed variable font under one name; weights of these are not compared (check his JPG/screen)`);
 let changes = 0;
 const blue = page.texts.filter((t) => isBlue(t.fill));
 const claimedNotes = new Set<GText>();
@@ -79,7 +113,7 @@ for (const c of man.cases) {
     const bits: string[] = [];
     if (Math.hypot(dx, dy) > 0.25) bits.push(`moved ${dx >= 0 ? "right" : "left"} ${Math.abs(dx).toFixed(1)} mm, ${dy >= 0 ? "down" : "up"} ${Math.abs(dy).toFixed(1)} mm`);
     if (Math.abs(dPt) > 0.2) bits.push(`size ${l.pt.toFixed(1)} → ${t.size.toFixed(1)} pt`);
-    if (wOld !== wNew) bits.push(`weight ${wOld} → ${wNew} (${t.font})`);
+    if (wOld !== wNew && !substituted.has(`${l.family} ${l.weight}`)) bits.push(`weight ${wOld} → ${wNew} (${t.font})`);
     if (t.fill.toLowerCase() !== l.colour.toLowerCase() && !(isGrey(t.fill) && isGrey(l.colour))) bits.push(`colour ${l.colour} → ${t.fill}`);
     if (Math.abs(t.rot - -(l.rot || 0)) > 1 && [...l.text].length > 1) bits.push(`turned ${(-l.rot).toFixed(0)}° → ${t.rot.toFixed(0)}°`);
     if (bits.length) out.push(`"${l.text}": ${bits.join("; ")}  [now at ${(a.x - F.x).toFixed(1)}, ${(a.y - F.y).toFixed(1)} mm from the label's top-left]`);

@@ -162,8 +162,26 @@ export function walk(ctx, stream, resources, ctm, out, depth = 0) {
     }
     if (tk.v !== "]" ) ops = [];
   }
+  /* after showing text the pen moves on by the text's advance — Illustrator
+     writes a spaced word as several shows in one BT with no Td between */
+  function advance(codes, adj) {
+    let a = 0;
+    for (const c of codes) {
+      const gw = gs.fi?.cid ? (gs.fi.cw.get(c) ?? gs.fi.dw)
+        : gs.fi?.w && c - gs.fi.fc >= 0 && c - gs.fi.fc < gs.fi.w.length ? gs.fi.w[c - gs.fi.fc] : (gs.fi?.mw ?? 500);
+      a += gw / 1000 * gs.size + gs.tc + (!gs.fi?.cid && c === 32 ? gs.tw : 0);
+    }
+    a = (a + adj / 1000 * gs.size) * (gs.tz / 100);
+    tm = mul([1, 0, 0, 1, a, 0], tm);
+  }
   function emit(s, adj = 0) {
     if (!s || !tm) return;
+    const codes = [];
+    if (gs.fi?.cid) for (let i = 0; i + 1 < s.length; i += 2) codes.push((s.charCodeAt(i) << 8) | s.charCodeAt(i + 1));
+    else for (const ch of s) codes.push(ch.charCodeAt(0));
+    try { emitAt(s, adj); } finally { advance(codes, adj); }
+  }
+  function emitAt(s, adj = 0) {
     const m = mul(tm, gs.ctm);
     const size = gs.size * Math.hypot(m[0], m[1]);
     const rot = Math.atan2(m[1], m[0]) * 180 / Math.PI;
