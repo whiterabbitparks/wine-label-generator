@@ -79,3 +79,6 @@ John/Doe), MongoDB Atlas db `8k-labels`.
 - DEMO_FILL=true in editor-embed.js is TEMPORARY — revert before launch.
 - The NEW UI footer "live generation" switch (round 56) is a TEMPORARY
   dev tool that fakes all image generation — remove before launch.
+- The "fill details" switch under it (2026-09-23, src/app/demo-fill.ts)
+  fills both detail forms with a random coherent wine — also TEMPORARY,
+  remove with live gen.
