@@ -330,6 +330,10 @@ const TUT_D = "/newui/demo/";
    one he chose), Levan's funky */
 const TUT_LABELS = [TUT_D + "ts-label1.jpg", TUT_D + "ts-label2.jpg", TUT_D + "ts-label3.jpg"];
 const TUT_LIFE = [1, 2, 3, 4, 5].map((n) => `${TUT_D}ts-life${n}.jpg`);
+/* who painted each column of that run — the real page heads each label
+   "Style By: <artist>", so the story's labels must carry the names too
+   (owner 2026-09-23: "the tutorial still shows the old titles") */
+const TUT_ARTISTS = ["Mariam Kvashilava", "Levan Amashukeli", "Levan Amashukeli"];
 const TUT_BACK = TUT_D + "ts-back-label.png", TUT_SHOT_F = TUT_D + "ts-shot-front.jpg", TUT_SHOT_B = TUT_D + "ts-shot-back.jpg";
 /* round 72 #1: the closing card sits on a BLANK page — the walkthrough
    stays on the assets page and a white sheet covers the band */
@@ -1089,7 +1093,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   useEffect(() => {
     fetch("/api/artists").then((r) => r.json()).then((b) => setSiteArtists(b.artists || [])).catch(() => { });
   }, []);
-  const openArtists = () => { if (page !== "artists" && page !== "artist") artistsFrom.current = pageNow.current; go("artists"); };
+  /* 2026-09-23 (owner: "in the middle of the tutorial, 8K took me home
+     but the bar still said Front Label Details"): the header's links, like
+     the browser's Back (round 108 #21), stop the story before they go */
+  const openArtists = () => { if (tutRef.current >= 0) stopTutRef.current(); if (page !== "artists" && page !== "artist") artistsFrom.current = pageNow.current; go("artists"); };
   const [boards, setBoards] = useState<Record<string, string>>({});
   const [boardsGe, setBoardsGe] = useState<Record<string, string>>({});
   useEffect(() => {
@@ -1309,7 +1316,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const seed = () => {
       if (tut > 0) { setVision(DEMO_VISION); setF((m) => ({ ...m, ...DEMO_FRONT })); }
       if (tut > 1) {
-        setDreams(["traditional", "contemporary", "punk"].map((st2, i) => ({ style: st2, dream: TUT_LABELS[i], preview: TUT_LABELS[i] })));
+        setDreams(["traditional", "contemporary", "punk"].map((st2, i) => ({ style: st2, dream: TUT_LABELS[i], preview: TUT_LABELS[i], artist: TUT_ARTISTS[i] })));
         setSelected(1);
       }
       if (tut > 2) {
@@ -1379,7 +1386,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             if (!(await hold(320))) return;
           }
           if (!(await hold(200))) return;
-          setDreams(["traditional", "contemporary", "punk"].map((st2, i) => ({ style: st2, dream: TUT_LABELS[i], preview: TUT_LABELS[i] })));
+          setDreams(["traditional", "contemporary", "punk"].map((st2, i) => ({ style: st2, dream: TUT_LABELS[i], preview: TUT_LABELS[i], artist: TUT_ARTISTS[i] })));
           go("options");
           setGenProgress(0);
           if (!(await hold(SLIDE_MS + 900))) return;
@@ -1388,8 +1395,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
              the folder (round 73 #7's re-roll demo retired) */
           /* not saveFront(): this closure was made before the demo labels
              existed, so its `dreams` is empty — set and fly directly (the
-             sample labels are 1024×683 → 342.9×228.6 in column 2) */
-          if (!(await tap(TAP.optSelect, 200, 520, () => { setSelected(1); flyToFolder([{ src: TUT_LABELS[1], x: 548.5, y: 290, w: 342.9, h: 228.6 }]); }))) return;
+             sample labels are 110 × 80 mm → 342.9×249.4 in column 2) */
+          if (!(await tap(TAP.optSelect, 200, 520, () => { setSelected(1); flyToFolder([{ src: TUT_LABELS[1], x: 548.5, y: 290, w: 342.9, h: 249.4 }]); }))) return;
           if (!(await hold(900))) return;
           break;
         }
@@ -3641,7 +3648,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               </span>
               <span style={{ font: `300 9px ${HNW}`, color: "#aaa", whiteSpace: "nowrap" }}>live gen</span>
             </button>
-            <button onClick={() => go("welcome", -1)} style={{ ...px(138.2, 25.5, 100, 20), ...ghost, font: `700 19px ${HNW}`, color: INK, textAlign: "left", textTransform: "none" }}>8K</button>
+            <button onClick={() => { if (tutRef.current >= 0) stopTutorial(); go("welcome", -1); }} style={{ ...px(138.2, 25.5, 100, 20), ...ghost, font: `700 19px ${HNW}`, color: INK, textAlign: "left", textTransform: "none" }}>8K</button>
             {/* menu + ENG/GEO: one baseline, even gaps, right edge on the
                progress line's right edge x1303 (round 22 #11) */}
             <div style={{ position: "absolute", right: W - 1200, top: 27.5, display: "flex", alignItems: "baseline", columnGap: 44 }}>
