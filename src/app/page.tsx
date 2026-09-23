@@ -10,6 +10,7 @@
    replaces (E.g. texts, Select+magnifier boxes, corner crosses, dots). */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { randomDetails } from "./demo-fill";
 import { UI_GE, SVG_GE, translateSvg } from "./newui-i18n";
 
 const W = 1440, H = 823;
@@ -565,6 +566,17 @@ export default function NewUI() {
   const [liveGen, setLiveGen] = useState(true);
   const liveGenRef = useRef(true);
   useEffect(() => { try { if (localStorage.getItem("nui-live-gen") === "0") { setLiveGen(false); liveGenRef.current = false; } } catch { } }, []);
+  /* 2026-09-23 — TEMP DEV SWITCH (remove before launch, with live gen):
+     "fill details". On: the front and back label details are filled with
+     one random, coherent wine, its optional fields left out at random
+     (demo-fill.ts). Off: both forms are emptied. Remembered per browser;
+     a page opened with it on arrives filled. */
+  const [fillOn, setFillOn] = useState(false);
+  const fillDetails = (on: boolean) => {
+    if (on) { const r = randomDetails(); setF((m) => ({ width: m.width || "110", height: m.height || "80", ...r.front })); setB(r.back); }
+    else { setF((m) => ({ width: m.width || "110", height: m.height || "80" })); setB({}); }
+  };
+  useEffect(() => { try { if (localStorage.getItem("nui-fill") === "1") { setFillOn(true); fillDetails(true); } } catch { } }, []);   // eslint-disable-line react-hooks/exhaustive-deps
   /* round 57 #2: the stand-in is a REAL generated label, not a bottle */
   const FAKE_IMG = "/newui/sample-label.jpg";
   /* ROUND 68 #4 (owner: "an uploaded label generates only the label back —
@@ -1215,6 +1227,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
      (they can press the arrow faster than the typing). */
   const tutReset = useCallback(() => {
     setVision(""); setSketch(null); setF({ width: "110", height: "80" }); setB({});
+    /* the dev "fill details" switch, when on, refills what was just wiped */
+    try { if (localStorage.getItem("nui-fill") === "1") { const r = randomDetails(); setF({ width: "110", height: "80", ...r.front }); setB(r.back); } } catch { }
     setDreams([]); setStyleVars([[], [], []]); setSelected(-1); setFrontSig("");
     setBackPng(""); setBackSig(""); setBackDims({ w: 1, h: 1 });
     setMarkets([]); setNoComp(true); setGtin(""); setQrMode(""); setIngredients("");
@@ -3692,6 +3706,15 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 <span style={{ position: "absolute", top: 1.5, left: liveGen ? 11.5 : 1.5, width: 7, height: 7, borderRadius: 4, background: liveGen ? "#3fd05e" : "#bbb", transition: "left 160ms" }} />
               </span>
               <span style={{ font: `300 9px ${HNW}`, color: "#aaa", whiteSpace: "nowrap" }}>live gen</span>
+            </button>
+            {/* 2026-09-23 — TEMP DEV SWITCH: fill the details with a random wine */}
+            <button aria-label="toggle fill details"
+              onClick={() => { const v = !fillOn; setFillOn(v); fillDetails(v); try { localStorage.setItem("nui-fill", v ? "1" : "0"); } catch { } }}
+              style={{ ...px(18, 44, 110, 16), ...ghost, display: "flex", alignItems: "center", columnGap: 6, textTransform: "none" }}>
+              <span style={{ width: 22, height: 12, borderRadius: 7, border: "1px solid #bbb", position: "relative", background: "#fff", boxSizing: "border-box", flex: "0 0 auto" }}>
+                <span style={{ position: "absolute", top: 1.5, left: fillOn ? 11.5 : 1.5, width: 7, height: 7, borderRadius: 4, background: fillOn ? "#3fd05e" : "#bbb", transition: "left 160ms" }} />
+              </span>
+              <span style={{ font: `300 9px ${HNW}`, color: "#aaa", whiteSpace: "nowrap" }}>fill details</span>
             </button>
             <button onClick={() => { if (tutRef.current >= 0) stopTutorial(); go("welcome", -1); }} style={{ ...px(138.2, 25.5, 100, 20), ...ghost, font: `700 19px ${HNW}`, color: INK, textAlign: "left", textTransform: "none" }}>8K</button>
             {/* menu + ENG/GEO: one baseline, even gaps, right edge on the
