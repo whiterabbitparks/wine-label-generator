@@ -143,6 +143,27 @@ function closureLine(closure: string, colourCSS: string, finish: string) {
   }
 }
 
+/* 2026-09-23 (owner: "in two photos the wax seal became an ordinary
+   capsule — the closure changes the wine a lot; every image must have the
+   closure and its design exactly as in the product shot"). The closure is
+   stated FIRST in every scene, in terms of what it must never turn into,
+   and — for an opened bottle — what remains of it on the neck. */
+function closureLock(b: MarketingBrief, hasBottlePhoto: boolean): string {
+  const col = b.closureColour || "deep red";
+  const fin = /glossy/i.test(b.finish) ? "glossy" : "matte";
+  const src = hasBottlePhoto ? " — exactly as on the bottle in the FIRST attached image (same shape, colour, finish and height on the neck)" : "";
+  const what: Record<string, string> = {
+    "Wax Seal": `a thick, hand-dipped ${fin} ${col} WAX SEAL over the mouth and upper neck, its tip rounded into a soft wax dome${src}. It is WAX in every image — never a foil capsule, never a smooth metal or plastic cap, never a flat-topped sleeve. If the scene pours from the bottle, the wax stays on the neck, cut open cleanly at the lip — it is never replaced by a capsule`,
+    "Screw Cap": `a ${fin} ${col} aluminium SCREW CAP${src} — never a cork, never a foil capsule, never wax`,
+    "Crown Cap": `a ${fin} ${col} crimped CROWN CAP${src} — never a cork, capsule, screw cap or wax`,
+    "Sparkling Cork": `a mushroom sparkling cork and wire cage under a ${fin} ${col} foil hood${src} — never a still-wine cork or plain capsule`,
+    "No Capsule": `a bare natural cork seated in the glass lip, no capsule and no foil${src}`,
+    "Cork": `a ${fin} ${col} foil CAPSULE over the cork and upper neck${src} — never wax, never a screw cap`,
+  };
+  const key = /no capsule/i.test(b.closure) || /no cap/i.test(b.finish) ? "No Capsule" : (what[b.closure] ? b.closure : "Cork");
+  return `CLOSURE — READ FIRST, NON-NEGOTIABLE IN EVERY IMAGE: this bottle is closed with ${what[key]}. The closure is part of the product's identity and must be identical in every photograph of the series. `;
+}
+
 /* ---- label position (ROUND 29 #2) ----------------------------------
    Measured from the owner's charts in WAIN/Bottle types/Label positioning
    (black zone on each outline). Top-anchored bottles hang the label DOWN
@@ -223,6 +244,9 @@ export function buildShotPrompt(b: MarketingBrief, side: "front" | "back", hasSh
   /* round 51 #9: the back shot describes the BACK label's true size */
   const d = bottleDescription(side === "back" && b.backWmm && b.backHmm ? { ...b, labelWmm: b.backWmm, labelHmm: b.backHmm } : b);
   return (
+    /* 2026-09-23: the scenes copy THIS shot, so its closure must be right
+       first — the wax seal came out as a smooth capsule here */
+    closureLock(b, false) +
     `Professional studio product photograph of a single wine bottle, photographed dead straight-on, ` +
     `the bottle standing PERFECTLY UPRIGHT and vertical, ` +
     `${side === "front" ? "showing the FRONT of the bottle" : "showing the BACK of the bottle"}, the whole bottle in frame from base to closure with a small margin. ` +
@@ -292,6 +316,7 @@ export function buildLifestylePrompt(b: MarketingBrief, scenario: string, charte
     /* ROUND 108 #12 (owner, raised many times): a bottle held horizontally
        to pour kept its label printed UPRIGHT. Stated first, as an angle:
        the label and the bottle are ONE object at ONE angle. */
+    closureLock(b, hasBottlePhoto) +
     `LABEL ANGLE — READ FIRST: the label is glued to the glass, so it is always at EXACTLY the same angle as the bottle. Tilt the bottle and the label tilts with it by the same degrees; lay the bottle horizontal to pour and the label lies horizontal too, its lines of text running ALONG the bottle from neck to base. The angle between the label and the bottle is ZERO in every frame. ` +
     /* the owner's reference-derived charter LEADS the prompt (early tokens
        weigh most) and explicitly outranks the generic style world */
