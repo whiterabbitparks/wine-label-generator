@@ -1,0 +1,50 @@
+{
+  "id": "giorgi-akhuashvili",
+  "name": "Giorgi Akhuashvili",
+  "country": "Georgia",
+  "portfolio": "",
+  "medium": "Felt-tip marker, ink and watercolour on paper, sometimes on grid paper",
+  "words": [
+    "nervous",
+    "dreamlike",
+    "hatched"
+  ],
+  "colour": "acid pink, cyan, lemon yellow and leaf green on white paper, with inky black and deep blue accents, laid in marker strokes and loose washes",
+  "form": "figures and places built from dense hatching, stipple and repeated marker lines; faces mask-like and ghostly; suburbs, forests and rooms flattened and tilted",
+  "never": "never smooth digital rendering, never airbrushed gradients, never a dark overall ground",
+  "mood": "quietly uncanny, tender and a little haunted",
+  "consent": "NOT OBTAINED — works sent by the owner 2026-09-23 as screenshots; training is a test only and nothing may be published or sold until the artist agrees in writing",
+  "status": "pilot",
+  "bio": "",
+  "page": true,
+  "pageOrder": 4,
+  "charterBy": "Claude's draft from the 30 works, 2026-09-23 — the owner replaces it with the artist's own answers",
+  "refs": [
+    "work-04.jpg",
+    "work-09.jpg",
+    "work-27.jpg",
+    "work-13.jpg"
+  ],
+  "refSets": [
+    [
+      "work-04.jpg",
+      "work-07.jpg",
+      "work-12.jpg"
+    ],
+    [
+      "work-03.jpg",
+      "work-09.jpg",
+      "work-23.jpg"
+    ],
+    [
+      "work-26.jpg",
+      "work-27.jpg",
+      "work-24.jpg"
+    ],
+    [
+      "work-13.jpg",
+      "work-28.jpg",
+      "work-01.jpg"
+    ]
+  ]
+}

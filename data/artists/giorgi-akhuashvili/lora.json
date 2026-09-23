@@ -1,0 +1,8 @@
+{
+  "url": "https://v3b.fal.media/files/b/0aaba06b/Yf2T5oMavXfpY4ZCzw02K_pytorch_lora_weights.safetensors",
+  "trigger": "GRAKH",
+  "steps": 1500,
+  "works": 30,
+  "captions": true,
+  "trainedAt": "2026-09-23T21:27:21.754Z"
+}

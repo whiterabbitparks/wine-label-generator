@@ -110,6 +110,21 @@ ground black).
 **Progress bar (owner, 2026-09-23, standing): no clicks anywhere on it —
 stops, names, bar. Only the red button.**
 
+**Giorgi Akhuashvili joins (2026-09-23, local + origin; NOT yet live):**
+30 works (his 31 screenshots in NEW UI/Comments/ARTISTS/Giorgi
+Akhuashvili, sheet #28 = #26 dropped), LoRA GRAKH (1500 steps, same
+settings), page with six works (no portrait yet — the API now shows the
+first work in the circle until one comes). Charter = MY DRAFT read off
+the works (marker/ink/watercolour, hatching, acid pink-cyan-lemon on
+white, mask-like faces); consent NOT obtained — he will send details.
+Trios (my pick, owner may change): A 04-07-12 pink/cyan places,
+B 03-09-23 hatched figures, C 26-27-24 black/yellow interiors,
+D 13-28-01 green forests (work numbers AFTER the duplicate was dropped).
+With three trained painters every run shows Mariam, Levan and Giorgi,
+one per column, shuffled (3000/3000 simulated). First test:
+~/Desktop/8K-sheet-test/giorgi-test/ (one run was a moderation refusal,
+the retry painted all three).
+
 **Open — the owner's decisions**
 0. ANSWERED (see above) — "why is Mariam always a
    small oval?" Cause: this morning's rule "ONE kind of ask" (models.ts:

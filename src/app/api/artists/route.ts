@@ -58,7 +58,10 @@ export async function GET() {
       bio: (p.bio || "").trim(),
       link,
       linkKind: isIg ? "instagram" : link ? "site" : "",
-      portrait: portrait ? `/newui/artists/${p.id}/portrait.jpg` : "",
+      /* 2026-09-23 (Giorgi Akhuashvili arrived without a photo): until
+         the portrait comes, his first work stands in the circle — an
+         empty src showed a broken image with his name in it */
+      portrait: portrait ? `/newui/artists/${p.id}/portrait.jpg` : works[0] || "",
       crop: p.crop || "50% 40%",
       works,
       labels,
