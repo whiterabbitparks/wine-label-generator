@@ -34,6 +34,9 @@ export function LayoutBench() {
   const [id, setId] = useState("");
   const [size, setSize] = useState(0);
   const [fill, setFill] = useState("full");
+  const [arts, setArts] = useState<string[]>([]);
+  const [art, setArt] = useState("");
+  const [grid, setGrid] = useState(true);
   const [b, setB] = useState<Bench | null>(null);
   const [busy, setBusy] = useState(false);
   const [moves, setMoves] = useState<Record<string, Move>>({});
@@ -46,6 +49,8 @@ export function LayoutBench() {
     fetch("/api/admin/layouts").then((r) => r.json()).then((d) => {
       setTpls(d.templates || []);
       if (d.templates?.[0]) setId(d.templates[0].id);
+      setArts(d.paintings || []);
+      if (d.paintings?.[0]) setArt(d.paintings[0]);
     }).catch(() => { });
   }, []);
 
@@ -54,9 +59,9 @@ export function LayoutBench() {
     setBusy(true); setMoves({}); setArtMove({ dx: 0, dy: 0, dw: 0 }); setSaved("");
     fetch("/api/admin/layouts", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, widthMm: SIZES[size][0], heightMm: SIZES[size][1], fill }),
+      body: JSON.stringify({ id, widthMm: SIZES[size][0], heightMm: SIZES[size][1], fill, art }),
     }).then((r) => r.json()).then((d) => setB(d.error ? null : d)).finally(() => setBusy(false));
-  }, [id, size, fill]);
+  }, [id, size, fill, art]);
   useEffect(() => { load(); }, [load]);
 
   /* the label is drawn at this many screen pixels per label pixel */
@@ -120,10 +125,15 @@ export function LayoutBench() {
           <option value="sparse">Few details</option>
           <option value="long">Long names</option>
         </select>
+        <button onClick={() => { const i = arts.indexOf(art); setArt(arts[(i + 1) % Math.max(1, arts.length)] || ""); }}
+          style={S.btnGhost} title="another painting">Another picture</button>
+        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, whiteSpace: "nowrap" }}>
+          <input type="checkbox" checked={grid} onChange={(e) => setGrid(e.target.checked)} /> Grid
+        </label>
         <span style={{ flex: 1 }} />
-        <button onClick={reset} style={S.btnGhost}>Put back</button>
+        <button onClick={reset} style={S.btnGhost}>Reset</button>
         <button onClick={save} disabled={!dirty} style={{ ...S.btn, opacity: dirty ? 1 : 0.4 }}>
-          {saved === "kept" ? "Kept" : saved === "saving" ? "…" : "Keep"}
+          {saved === "kept" ? "Saved" : saved === "saving" ? "…" : "Save"}
         </button>
       </div>
 
@@ -156,6 +166,20 @@ export function LayoutBench() {
                 onPointerDown={(e) => { e.stopPropagation(); drag((dx) => setArtMove((a) => ({ ...a, dw: dx })))(e); }}
                 style={{ position: "absolute", right: -6, bottom: -6, width: 12, height: 12, background: "#fff", border: "1px solid #444", borderRadius: 2, cursor: "nwse-resize" }} />
             </div>
+            {grid && (() => {
+              const step = 5 * PX_PER_MM * zoom;          /* five millimetres */
+              const w = b.layout.W * zoom, h = b.layout.H * zoom;
+              return (
+                <div style={{
+                  position: "absolute", inset: 0, pointerEvents: "none",
+                  backgroundImage:
+                    `linear-gradient(to right, rgba(0,0,0,0.13) 1px, transparent 1px),`
+                    + `linear-gradient(to bottom, rgba(0,0,0,0.13) 1px, transparent 1px)`,
+                  backgroundSize: `${step}px ${step}px`,
+                  backgroundPosition: `${(w % step) / 2}px ${(h % step) / 2}px`,
+                }} />
+              );
+            })()}
             {/* the lines */}
             {b.lines.map((l, i) => {
               const m = moves[l.key] || { dx: 0, dy: 0 };

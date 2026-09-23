@@ -33,16 +33,21 @@ const SAMPLES: Record<string, Record<string, string>> = {
   },
 };
 
-/* a real painting to work on: the newest one this machine has made */
-function somePainting(): string | null {
+/* the paintings this machine has made, newest first — he picks which one
+   he is arranging around (owner 2026-09-23: "what image is this?") */
+function paintings(): string[] {
   const dir = path.join(process.cwd(), "data", "labels");
-  if (!fs.existsSync(dir)) return null;
-  const runs = fs.readdirSync(dir).sort().reverse();
-  for (const r of runs) {
-    const f = path.join(dir, r, "art.png");
-    if (fs.existsSync(f)) return `data:image/png;base64,${fs.readFileSync(f).toString("base64")}`;
-  }
-  return null;
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir).sort().reverse()
+    .filter((r) => fs.existsSync(path.join(dir, r, "art.png")))
+    .slice(0, 40);
+}
+function paintingOf(id?: string): string | null {
+  const all = paintings();
+  const pick = id && all.includes(id) ? id : all[0];
+  if (!pick) return null;
+  const f = path.join(process.cwd(), "data", "labels", pick, "art.png");
+  return fs.existsSync(f) ? `data:image/png;base64,${fs.readFileSync(f).toString("base64")}` : null;
 }
 
 export async function GET() {
@@ -54,12 +59,13 @@ export async function GET() {
       return { id: t.id, band: t.band, kind: artKindOf(now), refW: t.refW, refH: t.refH, touched: !!c[t.id] };
     }),
     fills: Object.keys(SAMPLES),
+    paintings: paintings(),
   });
 }
 
 export async function POST(req: Request) {
   if (!(await requestIsAuthenticated())) return NextResponse.json({ error: "not authenticated" }, { status: 401 });
-  const b = (await req.json()) as { id: string; widthMm?: number; heightMm?: number; fill?: string; seed?: number };
+  const b = (await req.json()) as { id: string; widthMm?: number; heightMm?: number; fill?: string; seed?: number; art?: string };
   const base = (TEMPLATES as Template[]).find((t) => t.id === b.id);
   if (!base) return NextResponse.json({ error: "no such template" }, { status: 404 });
   const tpl = applyCorrections(base);
@@ -67,7 +73,7 @@ export async function POST(req: Request) {
   const heightMm = Math.min(300, Math.max(30, b.heightMm || 80));
   const data = SAMPLES[b.fill || "full"] || SAMPLES.full;
 
-  const raw = somePainting();
+  const raw = paintingOf(b.art);
   const cleaned = raw ? await cleanPaper(raw) : null;
   const out = await composeTemplateLabel({
     artwork: cleaned?.art || raw || "",
