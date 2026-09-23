@@ -78,9 +78,23 @@ page slides as LAYERS (Slice.layer / HomeLayer) — headline + Your
 Vision, then the label (+90 ms), the bottles (+180), the market photos
 and the italic line (+270) — whole-page see-through layers, so the bottle
 stays in front of the photos; it also plays on first open (`intro`).
-Georgian: headline and tagline wrap inside his space. Open: his footer
-shows the full red bar + START under a right-hand button — ours keeps
-the home page's left button (asked him).
+Georgian: headline and tagline wrap inside his space. His footer (full
+red bar + START on the right) turned out to be the TUTORIAL'S CLOSING
+state — the home content now slides onto that closing sheet (owner:
+"at the end of the tutorial, instead of an empty page, the home page").
+The home page LEAVES as one sheet (every layer at once): the arriving
+page comes in two halves with a gap, and staggered exits showed through
+it as a glitch (owner reported it).
+THE TUTORIAL NOW PLAYS HIS TSINANDALI PROJECT (was KORRA): his live run
+of 18:00 on 2026-09-23 — three columns ts-label1..3 (Mariam traditional
+526dc91c7ac4, Levan contemporary b94c8c6a062c = chosen, Levan funky
+88cd7bc718ee, fetched from the live server's data/labels), his Final Pack
+in NEW UI/Comments/New (back label SVG, shots, five images), and his
+product page wqo2bp5f (screenshot → ts-landing.jpg; the tutorial's QR
+points at it). Details = his label's own text (appellation Mukuzani);
+bottle read off his shots: Burgundy / Olive Green / Cork / matte blue
+capsule (wheel 0.441,0.772, shade 0.6); market US (his back label carries
+the US warning); size 110 × 80.
 
 **Open — the owner's decisions**
 0. ANSWERED (see above) — "why is Mariam always a

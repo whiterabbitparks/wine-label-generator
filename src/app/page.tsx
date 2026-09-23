@@ -303,13 +303,16 @@ const IDEAS = [
 /* TEMP demo fill (owner RESTORED 2026-09-07 for testing speed — switch
    off before launch): empty fields fall back to these sample texts in
    GENERATED results only; the form stays empty */
-/* ROUND 86 (owner): the walkthrough plays the owner's own KORRA pack —
-   exactly the fields they filled in, nothing invented */
+/* ROUND 86 (owner): the walkthrough plays the owner's own pack —
+   exactly the fields they filled in, nothing invented. 2026-09-23 (owner:
+   "use the home page project"): KORRA gave way to MARANI TSINANDALI, his
+   live run of that evening (product page wqo2bp5f, the labels' own text,
+   his Final Pack in NEW UI/Comments/New). */
 const DEMO_FRONT: Record<string, string> = {
-  producer: "Giorgi's Marani", wine: "KORRA", appellation: "",
+  producer: "MARANI", wine: "TSINANDALI", appellation: "Mukuzani",
   classification: "", vintage: "2023", grape: "Rkatsiteli",
-  regionCountry: "", special: "", sweetness: "Dry",
-  colour: "White", wineType: "Pet-Nat", alcohol: "12", volume: "750",
+  regionCountry: "Kakheti Georgia", special: "Qvevri Wine", sweetness: "Dry",
+  colour: "Amber", wineType: "Wine", alcohol: "12", volume: "750",
 };
 
 /* ================= ROUND 71 #4: the first-run WALKTHROUGH =============
@@ -323,8 +326,11 @@ const DEMO_FRONT: Record<string, string> = {
    designs, its back label, and the product shots / marketing images /
    product page lifted from their Assets artboards. */
 const TUT_D = "/newui/demo/";
-const TUT_LABELS = [TUT_D + "label1.jpg", TUT_D + "label2.jpg", TUT_D + "label3.jpg"];
-const TUT_LIFE = [1, 2, 3, 4, 5].map((n) => `${TUT_D}life${n}.jpg`);
+/* his run's three columns: Mariam's traditional, Levan's contemporary (the
+   one he chose), Levan's funky */
+const TUT_LABELS = [TUT_D + "ts-label1.jpg", TUT_D + "ts-label2.jpg", TUT_D + "ts-label3.jpg"];
+const TUT_LIFE = [1, 2, 3, 4, 5].map((n) => `${TUT_D}ts-life${n}.jpg`);
+const TUT_BACK = TUT_D + "ts-back-label.png", TUT_SHOT_F = TUT_D + "ts-shot-front.jpg", TUT_SHOT_B = TUT_D + "ts-shot-back.jpg";
 /* round 72 #1: the closing card sits on a BLANK page — the walkthrough
    stays on the assets page and a white sheet covers the band */
 const TUT_PAGES: PageKey[] = ["vision", "options", "backdetails", "backdesign", "bottle", "assets", "assets"];
@@ -344,22 +350,26 @@ const TUT_CARDS: { step: string; body: string[] }[] = [
      where a station's name would be */
   { step: "START", body: [] },
 ];
-const DEMO_VISION = "The village cat walking along the top of a stone wall at dusk";
-const DEMO_DESC = "A dry, naturally sparkling pét-nat from Rkatsiteli. Pale straw with a fine, lively bead; green apple, white peach and a touch of bread crust on the nose; crisp acidity and a clean, saline finish. Bottled unfiltered, before the first fermentation ended.";
+const DEMO_VISION = IDEAS[0];   /* Soft Gravity — his TSINANDALI story */
+const DEMO_DESC = "A vibrant, medium-bodied wine with aromas of ripe cherry, wild berries, and subtle spice. Fresh acidity and soft tannins create a balanced palate, followed by notes of dried herbs and a smooth, lingering finish.";
 const DEMO_BACK: Record<string, string> = {
-  producerCompany: '"Popiashvili Cellars" LLC', producerAddress: "#36 S. Chikovani st. 0171 Tbilisi, Georgia",
-  importer: '"Teller Wines" LLC', importerAddress: "148 W 68 st. 10023 NYC, USA",
-  bottlingDate: "29/04/2026", lot: "L2606142", web: "www.popiashvili.com",
+  producerCompany: "POPIKA LLC", producerAddress: "#33 Chikovani St. 0171 Tbilisi, Georgia",
+  importer: "", importerAddress: "",
+  bottlingDate: "22/04/23", lot: "L9876545321", web: "www.popikasmarani.com",
 };
 /* round 73 #4: where the bottle step ENDS (it starts on Bordeaux / Olive
    Green / Wax Seal and is changed on camera). Round 86: KORRA's bottle —
    a clear Sparkling bottle, cork, black matte hood. */
 /* round 88 #4: a Sparkling bottle offers only "Sparkling Cork" / "Crown
    Cap" — "Cork" left the ring empty */
-const DEMO_BOTTLE = { type: "Sparkling", color: "Transparent", closure: "Sparkling Cork", finish: "Matte" };
-const DEMO_BOTTLE_0 = { type: "Bordeaux", color: "Olive Green", closure: "Wax Seal", finish: "Matte" };
-const DEMO_WHEEL = { x: 0.44, y: 0.1, rgb: [250, 27, 31] };   /* the pick; the shade drag takes it to black */
-const DEMO_SHADE = 0.97;
+/* TSINANDALI's bottle, read off his shots: Burgundy, olive glass, cork
+   under a matte sky-blue capsule */
+const DEMO_BOTTLE = { type: "Burgundy", color: "Olive Green", closure: "Cork", finish: "Matte" };
+const DEMO_BOTTLE_0 = { type: "Bordeaux", color: "Transparent", closure: "Wax Seal", finish: "Matte" };
+/* the capsule's blue: the wheel point nearest his photo's capsule
+   (31,135,188), which the shade drag then deepens a touch */
+const DEMO_WHEEL = { x: 0.441, y: 0.772, rgb: [36, 167, 253] };
+const DEMO_SHADE = 0.6;
 /* round 72 #8: the ghost taps — a red ring blooms where a hand would be */
 const TAP = {
   visionBox: [250, 400], width: [237, 650], height: [410, 650],   /* round 108 #1: the size row moved left */
@@ -367,12 +377,12 @@ const TAP = {
   optSelect: [720, 654],            /* round 94 #1: ON the Save button, column 2 */
   bdSave: [719.3, 674.8],           /* round 94 #7: the back label's Save */
   descBox: [250, 265], barcode: [360, 468], qrBtn: [874.5, 467],
-  market: [873.5, 670], eu: [873, 330],
+  market: [873.5, 670], eu: [873, 330], us: [873, 355],   /* the dropdown's rows are 25 apart */
   backFirst: [1050, 212],            /* round 73 #1: up to the details */
   /* round 86: the variation plays on the PUNK column (KORRA's yellow →
      blue re-layout); column 3's centre is 960 + 342.9/2 */
   varBtn: [1131.45, 582], dot0: [1120.25, 516.85], dot1: [1142.25, 516.85],
-  wheel: [1137.89 + 0.44 * 137.2, 368 + 0.1 * 137.2],
+  wheel: [1137.89 + 0.441 * 137.2, 368 + 0.772 * 137.2],
   bottleRings: [[386.06, 283.57], [577.98, 283.57], [769.9, 283.57], [961.82, 283.57], [1153.74, 283.57]],
 } as const;
 /* the bottle page's option rows and the lightness knob, from its own code:
@@ -1212,7 +1222,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     setCursor({ x: WELCOME_X, y: PROG_Y, ms: 0 });
     /* round 72 #12: the sample back label is fetched now, so the step that
        shows it never flashes an empty slot */
-    new Image().src = TUT_D + "back-label.png";
+    new Image().src = TUT_BACK;
     go("vision");
   }, [go, tutReset]);
 
@@ -1304,7 +1314,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       }
       if (tut > 2) {
         setB({ description: DEMO_DESC, ...DEMO_BACK });
-        setGtin("4860012345676"); setQrMode("create"); setMarkets(["EU"]); setNoComp(false);
+        setGtin("1234543454566"); setQrMode("create"); setMarkets(["US"]); setNoComp(false);
       }
       /* round 72 #12: the back label is set the instant the step begins —
          the image is preloaded when the walkthrough starts, so its empty
@@ -1312,10 +1322,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       if (tut >= 3) {
         const pr = new Image();
         pr.onload = () => { setBackDims({ w: pr.width, h: pr.height }); setBackPng(pr.src); };
-        pr.src = TUT_D + "back-label.png";
+        pr.src = TUT_BACK;
       }
       if (tut > 4) {
-        bottleTouched.current = true; setBottle({ ...DEMO_BOTTLE }); setWineColor("White");
+        bottleTouched.current = true; setBottle({ ...DEMO_BOTTLE }); setWineColor("Amber");
         setWheel({ ...DEMO_WHEEL }); setShade(DEMO_SHADE);
       }
       /* round 88 #5: the assets step opens ALREADY loading — no grey
@@ -1329,8 +1339,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       if (tut > 5) {
         setLifeTarget(5); setAssetsStage(""); setTutLanding(true);
         setAssets({
-          front: { full: TUT_D + "shot-front.jpg", prev: TUT_D + "shot-front.jpg" },
-          back: { full: TUT_D + "shot-back.jpg", prev: TUT_D + "shot-back.jpg" },
+          front: { full: TUT_SHOT_F, prev: TUT_SHOT_F },
+          back: { full: TUT_SHOT_B, prev: TUT_SHOT_B },
           life: TUT_LIFE.map((u) => ({ full: u, prev: u })),
         });
       }
@@ -1347,10 +1357,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           if (!(await hold(520))) return;
           /* round 72 #5: the label's own size gets set before the details */
           if (!(await tap(TAP.width, 300))) return;
-          if (!(await type("120", (v) => setF((m) => ({ ...m, width: v })), 150))) return;
+          if (!(await type("110", (v) => setF((m) => ({ ...m, width: v })), 150))) return;   /* TSINANDALI: 110 × 80 */
           if (!(await hold(260))) return;
           if (!(await tap(TAP.height, 300))) return;
-          if (!(await type("95", (v) => setF((m) => ({ ...m, height: v })), 150))) return;
+          if (!(await type("80", (v) => setF((m) => ({ ...m, height: v })), 150))) return;
           if (!(await hold(420))) return;
           if (!(await tap(TAP.firstField, 300))) return;
           for (const k of ["producer", "wine", "appellation", "classification", "vintage", "grape", "regionCountry", "special", "sweetness", "colour", "wineType", "alcohol", "volume"]) {
@@ -1388,7 +1398,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           if (!(await type(DEMO_DESC, (v) => setB((m) => ({ ...m, description: v })), 8))) return;
           if (!(await hold(320))) return;
           if (!(await tap(TAP.barcode, 300))) return;
-          if (!(await type("4860012345676", setGtin, 55))) return;
+          if (!(await type("1234543454566", setGtin, 55))) return;
           if (!(await hold(240))) return;
           if (!(await tap(TAP.qrBtn, 300, 520, () => setQrMode("create")))) return;
           if (!(await beat(560))) return;
@@ -1396,6 +1406,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
              single character of it is typed */
           if (!(await tap(TAP.backFirst, 340, 620))) return;
           for (const k of ["producerCompany", "producerAddress", "importer", "importerAddress", "bottlingDate", "lot", "web"]) {
+            if (!DEMO_BACK[k]) continue;   /* TSINANDALI has no importer */
             if (!(await backField(k, DEMO_BACK[k]))) return;
             if (!(await hold(80))) return;
           }
@@ -1403,7 +1414,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           if (!(await hold(360))) return;
           if (!(await tap(TAP.market, 320, 520, () => setMarketOpen(true)))) return;
           if (!(await hold(800))) return;
-          if (!(await tap(TAP.eu, 320, 520, () => { setMarkets(["EU"]); setNoComp(false); }))) return;
+          if (!(await tap(TAP.us, 320, 520, () => { setMarkets(["US"]); setNoComp(false); }))) return;
           if (!(await hold(700))) return;
           if (!(await tap(TAP.market, 320, 520, () => setMarketOpen(false)))) return;
           break;
@@ -1414,14 +1425,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
              (the demo back label is square, 984 × 984) */
           if (!(await beat(900))) return;
           const fit3 = fitIn(BD_AREA.w, BD_AREA.h, 984, 984);
-          if (!(await tap(TAP.bdSave, 200, 520, () => { setBackSaved(true); flyToFolder([{ src: TUT_D + "back-label.png", x: BD_AREA.x + fit3.dx, y: BD_AREA.y + fit3.dy, w: fit3.w, h: fit3.h }]); }))) return;
+          if (!(await tap(TAP.bdSave, 200, 520, () => { setBackSaved(true); flyToFolder([{ src: TUT_BACK, x: BD_AREA.x + fit3.dx, y: BD_AREA.y + fit3.dy, w: fit3.w, h: fit3.h }]); }))) return;
           if (!(await hold(700))) return;
           break;
         }
         case 4: {
           /* round 73 #4: it opens already filled in — only the changes play */
           bottleTouched.current = true;
-          setWineColor("White"); setBottle({ ...DEMO_BOTTLE_0 });
+          setWineColor("Amber"); setBottle({ ...DEMO_BOTTLE_0 });
           setWheel({ x: 0.5, y: 0.5, rgb: [255, 255, 255] }); setShade(0.5);
           /* ROUND 73 #4 (owner's exact order): the page OPENS already set
              to White / Bordeaux / Olive Green / Wax Seal / Matte. The
@@ -1429,16 +1440,16 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
              closure, picks a colour off the wheel and finally darkens it
              (round 86: to KORRA's clear Sparkling bottle, cork, black hood). */
           if (!(await beat(700))) return;
-          /* Bordeaux -> Sparkling */
-          if (!(await tap(BRING(1, 3), 560, 520, () => setBottle((m) => ({ ...m, type: "Sparkling" }))))) return;
+          /* 2026-09-23: TSINANDALI's bottle. Bordeaux -> Burgundy */
+          if (!(await tap(BRING(1, 2), 560, 520, () => setBottle((m) => ({ ...m, type: "Burgundy" }))))) return;
           if (!(await beat(620))) return;
-          /* Olive Green -> Transparent */
-          if (!(await tap(BRING(2, 1), 480, 520, () => setBottle((m) => ({ ...m, color: "Transparent" }))))) return;
+          /* Transparent -> Olive Green */
+          if (!(await tap(BRING(2, 0), 480, 520, () => setBottle((m) => ({ ...m, color: "Olive Green" }))))) return;
           if (!(await beat(620))) return;
-          /* Wax Seal -> Sparkling Cork (row 0 of the sparkling list) */
-          if (!(await tap(BRING(3, 0), 480, 520, () => setBottle((m) => ({ ...m, closure: "Sparkling Cork" }))))) return;
+          /* Wax Seal -> Cork (row 0) */
+          if (!(await tap(BRING(3, 0), 480, 520, () => setBottle((m) => ({ ...m, closure: "Cork" }))))) return;
           if (!(await beat(680))) return;
-          /* the hood's colour, then down to black */
+          /* the capsule's sky blue, then a touch deeper */
           if (!(await tap(TAP.wheel, 420, 560, () => pickWheel(DEMO_WHEEL.x, DEMO_WHEEL.y)))) return;
           if (!(await beat(560))) return;
           if (!(await dragShade(0.5, DEMO_SHADE))) return;
@@ -1451,10 +1462,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           assetT.current = { run: Date.now(), stage: Date.now() };
           setAssetsStage("front shot");
           if (!(await hold(600))) return;
-          setAssets((a) => ({ ...a, front: { full: TUT_D + "shot-front.jpg", prev: TUT_D + "shot-front.jpg" } }));
+          setAssets((a) => ({ ...a, front: { full: TUT_SHOT_F, prev: TUT_SHOT_F } }));
           setAssetsStage("back shot");
           if (!(await hold(500))) return;
-          setAssets((a) => ({ ...a, back: { full: TUT_D + "shot-back.jpg", prev: TUT_D + "shot-back.jpg" } }));
+          setAssets((a) => ({ ...a, back: { full: TUT_SHOT_B, prev: TUT_SHOT_B } }));
           for (let i = 0; i < 5; i++) {
             setAssetsStage(`lifestyle ${i + 1}/5`);
             if (!(await beat(340))) return;
@@ -3126,10 +3137,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             );
             if (tut >= 0) return (<>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={`${TUT_D}landing.jpg`} alt="product page"
+              <img src={`${TUT_D}ts-landing.jpg`} alt="product page"
                 style={{ ...px(921.5, 310.5, BW, BH), objectFit: "cover", borderRadius: 5, boxShadow: "0 8px 22px rgba(0,0,0,0.2)", animation: `nuiFadeIn ${FADE_MS}ms ${EASE}` }} />
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={`/api/qr?u=${encodeURIComponent("https://8klabels.com/p/demo")}`} alt="QR" style={{ ...px(925.5, 548.5, 34.3, 34.3) }} />
+              <img src={`/api/qr?u=${encodeURIComponent("https://8klabels.com/p/wqo2bp5f")}`} alt="QR" style={{ ...px(925.5, 548.5, 34.3, 34.3) }} />
               <span style={{ ...px(975, baseTop(582.5, 12), 300, 16), font: `italic 12px ${HNW}`, color: "#111", lineHeight: "12px", whiteSpace: "nowrap" }}>{t("Product landing page")}</span>
             </>);
             return (<>
@@ -3456,6 +3467,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         @keyframes nuiFolderBump { 0%, 100% { transform: scale(1) } 40% { transform: scale(1.14) } 72% { transform: scale(0.97) } }
         @keyframes btnFly { from { left: ${WELCOME_X - NEXT_R}px } to { left: ${NEXT_X - NEXT_R}px } }
         @keyframes nuiFadeIn { from { opacity: 0 } to { opacity: 1 } }
+        @keyframes nuiHomeIn { from { transform: translateX(1440px) } to { transform: translateX(0) } }
         @keyframes nuiFadeOut { from { opacity: 1 } to { opacity: 0 } }
         @keyframes szGrow { from { transform: scale(0) } to { transform: scale(1) } }`}</style>
       {/* round 40: the page bands extend to the window edges so the 80%
@@ -3546,7 +3558,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               const zy0 = Math.max(0, Math.min(zoneH, py0 + pageTop));
               const zy1 = Math.max(0, Math.min(zoneH, py1 + pageTop));
               if (zy1 <= zy0 || x1 <= x0) return null;
-              const d0 = s.delay + (dirIn ? outBase : 0);
+              /* 2026-09-23 (owner: "the home page's slide-out looks like the
+                 assets cluster, like a glitch — clean that phase up"): the
+                 arriving page comes in two halves with a gap between them,
+                 and through that gap the home layers showed at different
+                 offsets. A layered page therefore LEAVES as one sheet —
+                 every layer at once — and only its arrival cascades */
+              const d0 = (!dirIn && s.layer ? 0 : s.delay) + (dirIn ? outBase : 0);
               const anim = s.mode === "fade"
                 ? `${dirIn ? "nuiFadeIn" : "nuiFadeOut"} ${FADE_MS}ms ${EASE} ${d0}ms both`
                 : `${dirIn ? "nuiInPx" : "nuiOutPx"} ${SLIDE_MS}ms ${EASE} ${d0}ms both`;
@@ -3838,8 +3856,18 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           </div>
 
           {/* ROUND 72 #1: the closing card stands on a clean white page */}
+          {/* 2026-09-23 (owner: "when the red button reaches START, the
+              home page content should slide in — not an empty page"): his
+              Homepage_Visual IS this closing state, so its layers slide
+              onto the sheet in the home page's own cascade */}
           {tut === TUT_CARDS.length - 1 && (
-            <div style={{ ...px(0, VEIL_TOP, W, VEIL_BOT - VEIL_TOP), background: "#fff", zIndex: 11, animation: `nuiFadeIn 280ms ${EASE} both` }} />
+            <div style={{ ...px(0, VEIL_TOP, W, VEIL_BOT - VEIL_TOP), background: "#fff", zIndex: 11, overflow: "hidden", pointerEvents: "none", animation: `nuiFadeIn 280ms ${EASE} both` }}>
+              {(PAGE_SLICES.welcome || []).map((sl) => (
+                <div key={"tuthome" + sl.layer} style={{ position: "absolute", left: 0, top: -VEIL_TOP, width: W, height: H, animation: `nuiHomeIn ${SLIDE_MS}ms ${EASE} ${200 + sl.delay}ms both` }}>
+                  {homeLayers(sl.layer)}
+                </div>
+              ))}
+            </div>
           )}
           {/* ROUND 72 #11: the pointer doing the work */}
           {tut >= 0 && cursor && (
