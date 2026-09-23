@@ -70,14 +70,15 @@ export interface ArtworkPrompt { prompt: string; subject: string; aspect: "lands
    trims the air and sets the type on that same paper: nothing is ever
    cut or covered, the drawing ends where the artist ended it. */
 const VIGNETTE = "A spot illustration: one self-contained drawing isolated on a flat, plain, single-colour background with empty margin all around; the drawing's edges finish naturally — they are the edges the painter chose, soft and irregular, never a frame, never a straight cut, never a border.";
-/* 2026-09-22 (owner, with his diagram): a picture that bleeds is NOT a
-   rectangle filled edge to edge. It is the same kind of painting as the
-   spot — one drawing with the ragged, hand-painted edge the artist chose
-   — only larger, so that when it is laid on the label it runs off the
-   trim on some sides and shows its own edge on the side that faces the
-   type. So: fill most of the sheet, keep the edges the artist's, and
-   keep a calm area where the type will go. */
-const BLEED = "One large drawing that fills most of the sheet, on a flat, plain, single-colour background. The drawing's edges are the ones the painter chose — soft, torn, irregular, never a frame, never a straight cut, never a border — and a little plain background still shows at the corners. Keep one broad, calm, uncluttered passage of sky, ground or wall, with no important detail in it, so lettering can be set over it later.";
+/* 2026-09-23 (owner, exhausted and right): "generate the image the way I
+   showed you — with the free zones and the ink at the proportion I
+   explained". Asking the model to fill a whole sheet was my mistake: it
+   left NO free zone, so in a layout the picture could only ever be a torn
+   fragment. There is now ONE kind of ask, the one his diagram draws and
+   the one the model has always done well: a drawing with the ragged edge
+   the painter chose, standing on plain ground with room around it. The
+   free zone is ours to size afterwards — it is arithmetic, not a wish. */
+const BLEED = VIGNETTE;
 
 /* rebuild the ask for the OTHER kind of picture, keeping everything the
    artist's charter and the story already put into it */

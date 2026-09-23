@@ -102,11 +102,7 @@ export function LayoutBench() {
     }).then((r) => r.json()).then(() => { setSaved("kept"); load(); setTimeout(() => setSaved(""), 2200); })
       .catch(() => setSaved("failed"));
   };
-  const reset = () => {
-    if (!b) return;
-    fetch("/api/admin/layouts", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: b.template.id, correction: null }) })
-      .then(() => load());
-  };
+
 
   const dirty = Object.values(moves).some((m) => m.dx || m.dy) || artMove.dx || artMove.dy || artMove.dw;
 
@@ -131,7 +127,6 @@ export function LayoutBench() {
           <input type="checkbox" checked={grid} onChange={(e) => setGrid(e.target.checked)} /> Grid
         </label>
         <span style={{ flex: 1 }} />
-        <button onClick={reset} style={S.btnGhost}>Reset</button>
         <button onClick={save} disabled={!dirty} style={{ ...S.btn, opacity: dirty ? 1 : 0.4 }}>
           {saved === "kept" ? "Saved" : saved === "saving" ? "…" : "Save"}
         </button>

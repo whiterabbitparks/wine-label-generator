@@ -73,7 +73,7 @@ async function gen429<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
-export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput & { tag: string; painter: string; artist?: string; repainted: boolean }> {
+export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput & { tag: string; painter: string; artist?: string; repainted: boolean; template: string; hasPaper: boolean }> {
   const style = ["traditional", "contemporary", "punk"].includes(inp.style) ? inp.style : "traditional";
   const seed = inp.seed ?? (Math.random() * 0xffffffff) >>> 0;
   const widthMm = Math.min(300, Math.max(30, inp.widthMm || 110));
@@ -132,7 +132,7 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
     widthMm, heightMm, seed, wineColour: inp.data.wineColorName,
   });
   if (out.warnings.length) console.warn(`[template ${out.template}] ${out.warnings.join("; ")}`);
-  return { png: out.png, svg: out.svg, art, faces: out.faces, ink: out.ink, ground: out.layout.ground, prompt: ap.prompt, layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", painter: model.id, artist: model.artist.name, repainted: painted.repainted };
+  return { png: out.png, svg: out.svg, art, faces: out.faces, ink: out.ink, ground: out.layout.ground, prompt: ap.prompt, layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", painter: model.id, artist: model.artist.name, repainted: painted.repainted, template: out.template, hasPaper: cleaned.cleaned };
 }
 
 /* ROUND 86 #3 (owner: "keep the image, just change the layout — tons of

@@ -12,9 +12,9 @@ import type { Layout } from "@/lib/typeset/compose";
 export const LABEL_DIR = path.join(process.cwd(), "data", "labels");
 const safe = (s: string) => path.basename(String(s)).replace(/[^a-zA-Z0-9_-]/g, "");
 
-export interface StoredLabel { id: string; style: string; widthMm: number; heightMm: number; faces: string; ground: string; createdAt: string; fit?: "yield" | "crop" | "top" | "vignette" }
+export interface StoredLabel { id: string; style: string; widthMm: number; heightMm: number; faces: string; ground: string; createdAt: string; fit?: "yield" | "crop" | "top" | "vignette"; template?: string; hasPaper?: boolean }
 
-export function saveLabel(l: { style: string; widthMm: number; heightMm: number; faces: string; ground: string; svg: string; png: string; art: string; prompt: string; layout: Layout; fit?: "yield" | "crop" | "top" | "vignette" }): string {
+export function saveLabel(l: { style: string; widthMm: number; heightMm: number; faces: string; ground: string; svg: string; png: string; art: string; prompt: string; layout: Layout; fit?: "yield" | "crop" | "top" | "vignette"; template?: string; hasPaper?: boolean }): string {
   const id = `${new Date().toISOString().slice(0, 10)}-${crypto.randomBytes(6).toString("hex")}`;
   const dir = path.join(LABEL_DIR, id);
   fs.mkdirSync(dir, { recursive: true });
@@ -24,7 +24,7 @@ export function saveLabel(l: { style: string; widthMm: number; heightMm: number;
   fs.writeFileSync(path.join(dir, "art.png"), b64(l.art));
   fs.writeFileSync(path.join(dir, "prompt.txt"), l.prompt);
   fs.writeFileSync(path.join(dir, "layout.json"), JSON.stringify(l.layout));
-  const meta: StoredLabel = { id, style: l.style, widthMm: l.widthMm, heightMm: l.heightMm, faces: l.faces, ground: l.ground, createdAt: new Date().toISOString(), fit: l.fit || "yield" };
+  const meta: StoredLabel = { id, style: l.style, widthMm: l.widthMm, heightMm: l.heightMm, faces: l.faces, ground: l.ground, createdAt: new Date().toISOString(), fit: l.fit || "yield", template: l.template, hasPaper: l.hasPaper };
   fs.writeFileSync(path.join(dir, "meta.json"), JSON.stringify(meta, null, 2));
   return id;
 }

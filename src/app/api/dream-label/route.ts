@@ -52,7 +52,7 @@ export async function POST(req: Request) {
           ? await relayoutLabel(base, data)
           : await paintHybridLabel({ vision, style, data, widthMm, heightMm, sketch, artistId: artist || undefined });
         const m = base ? base.meta : { style, widthMm, heightMm, fit: out.fit };
-        const id = saveLabel({ style: m.style, widthMm: m.widthMm, heightMm: m.heightMm, faces: out.faces, ground: out.ground, svg: out.svg, png: out.png, art: out.art, prompt: out.prompt, layout: out.layout, fit: m.fit });
+        const id = saveLabel({ style: m.style, widthMm: m.widthMm, heightMm: m.heightMm, faces: out.faces, ground: out.ground, svg: out.svg, png: out.png, art: out.art, prompt: out.prompt, layout: out.layout, fit: m.fit, template: (out as { template?: string }).template, hasPaper: (out as { hasPaper?: boolean }).hasPaper });
         /* medium-res JPEG for the page's views — the PNG stays the print source */
         let preview: string | null = null;
         try {

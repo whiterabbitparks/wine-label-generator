@@ -38,8 +38,15 @@ const SAMPLES: Record<string, Record<string, string>> = {
 function paintings(): string[] {
   const dir = path.join(process.cwd(), "data", "labels");
   if (!fs.existsSync(dir)) return [];
+  /* only paintings that HAVE paper around them — one that fills its sheet
+     edge to edge has no free zone and can only ever look like a fragment
+     in a layout (owner, 2026-09-23) */
   return fs.readdirSync(dir).sort().reverse()
-    .filter((r) => fs.existsSync(path.join(dir, r, "art.png")))
+    .filter((r) => {
+      const f = path.join(dir, r, "art.png");
+      if (!fs.existsSync(f)) return false;
+      try { return JSON.parse(fs.readFileSync(path.join(dir, r, "meta.json"), "utf8")).hasPaper !== false; } catch { return true; }
+    })
     .slice(0, 40);
 }
 function paintingOf(id?: string): string | null {
