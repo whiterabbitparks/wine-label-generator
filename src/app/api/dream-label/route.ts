@@ -1,6 +1,7 @@
 import sharp from "sharp";
 import { paintHybridLabel, relayoutLabel } from "@/lib/label/hybrid";
 import { saveLabel, readLabel } from "@/lib/label/store";
+import { properCase, CASED_FIELDS } from "@/lib/label/casing";
 
 /* PUBLIC customer endpoint — one label, streamed as NDJSON so the page's
    loader stays honest.
@@ -30,7 +31,8 @@ export async function POST(req: Request) {
   const data: Record<string, string> = {};
   for (const k of DATA_KEYS) {
     const v = body.data?.[k];
-    if (typeof v === "string") data[k] = v.slice(0, 200);
+    /* names take their capitals whatever was typed (owner 2026-09-23) */
+    if (typeof v === "string") data[k] = CASED_FIELDS.has(k) ? properCase(v.slice(0, 200)) : v.slice(0, 200);
   }
   const style = ["traditional", "contemporary", "punk"].includes(String(body.style)) ? String(body.style) : "traditional";
   const sketch = typeof body.sketch === "string" && body.sketch.startsWith("data:image/") && body.sketch.length < 8_000_000

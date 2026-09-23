@@ -1,5 +1,6 @@
 import sharp from "sharp";
 import { composeBackLabel, MARKETS, BackLabelData } from "@/lib/back-label";
+import { properFields } from "@/lib/label/casing";
 
 /* BACK LABEL API (owner 2026-09-03): deterministic vector-typography back
    label. format=png → preview; format=tiff → 300dpi print file; default
@@ -22,7 +23,8 @@ export async function POST(req: Request) {
     /* print deliverables carry the owner's 2mm bleed (round 18 #1);
        screen previews stay trimmed */
     const bleedMM = fmt === "svg" || fmt === "tiff" ? 2 : 0;
-    const out = await composeBackLabel(body.data || {}, { heightMM, markets, bgColor, bleedMM });
+    /* names take their capitals whatever was typed (owner 2026-09-23) */
+    const out = await composeBackLabel(properFields(body.data || {}), { heightMM, markets, bgColor, bleedMM });
     if (fmt === "json")
       return new Response(JSON.stringify(out), { headers: { "Content-Type": "application/json" } });
     /* editable vector deliverable (owner 2026-09-04) */

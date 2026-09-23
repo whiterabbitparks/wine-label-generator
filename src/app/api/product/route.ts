@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
+import { properCase, CASED_FIELDS } from "@/lib/label/casing";
 
 /* PRODUCT PAGE SNAPSHOT (owner 2026-09-08): when a QR code is requested,
    the wizard posts everything known about the wine at the moment the
@@ -29,7 +30,7 @@ export async function POST(req: Request) {
       ["producer", "wine", "appellation", "classification", "vintage", "grape", "regionCountry",
         "special", "sweetness", "colour", "wineType", "alcohol", "volume",
         "producerCompany", "producerAddress", "importer", "importerAddress",
-        "bottlingDate", "lot", "web"].map((k) => [k, S(wine[k], 200)])),
+        "bottlingDate", "lot", "web"].map((k) => [k, CASED_FIELDS.has(k) ? properCase(S(wine[k], 200)) : S(wine[k], 200)])),
     description: S(body.description, 2000),
     ingredients: S(body.ingredients, 20000),
     images: {
