@@ -20,6 +20,7 @@ export type GuideDone =
   | "assetsReady"     /* shots and images all in */
   | "assetsSaved"     /* the images saved to the folder */
   | "confirm"         /* a check-your-details popup is open */
+  | "marketClosed"    /* a market picked and the picker closed again */
   | `page:${GuidePage}`;
 /* what a note to READ still expects the visitor to have done — skipping it
    with nothing done asks "are you sure?" first (owner, 2026-09-23 #10) */
@@ -35,6 +36,9 @@ export interface GuideStep {
   needs?: GuideNeed;
   /* shown over the check-your-details popup */
   modal?: boolean;
+  /* placed beside the popup's own Create button (the popup's height
+     changes with what it lists) */
+  anchor?: "create";
 }
 
 const RED = { x: 1284.8, y: 735.8, w: 36.1, h: 36.2 };   /* the red round button */
@@ -56,23 +60,23 @@ export const GUIDE: GuideStep[] = [
   { page: "vision", at: RED, side: "above",
     en: "All set? Press the red button.",
     ge: "მზად ხარ? დააჭირე წითელ ღილაკს.", done: "confirm" },
-  { page: "vision", at: { x: 350, y: 150, w: 740, h: 520 }, side: "right", modal: true,
-    en: "Check what you wrote. Create sends it to three artists; Edit Details takes you back.",
-    ge: "გადაამოწმე რაც ჩაწერე. Create სამ მხატვარს გაუგზავნის; Edit Details უკან დაგაბრუნებს.", done: "page:loader" },
+  { page: "vision", at: { x: 350, y: 150, w: 740, h: 520 }, side: "right", modal: true, anchor: "create",
+    en: "Check what you wrote; Edit Details takes you back if you want to change the details.",
+    ge: "გადაამოწმე რაც ჩაწერე; რედაქტირება უკან დაგაბრუნებს, თუ დეტალების შეცვლა გინდა.", done: "page:loader" },
   /* ── painting ── */
-  { page: "loader", at: { x: 620, y: 626, w: 200, h: 4 }, side: "below",
+  { page: "loader", at: { x: 620, y: 592, w: 200, h: 4 }, side: "below",
     en: "Three artists are painting right now. It takes about a minute.",
     ge: "სამი მხატვარი ახლა ხატავს. დაახლოებით ერთი წუთი დასჭირდება.", done: "page:options" },
   /* ── front label ── */
-  { page: "options", at: { x: 137, y: 290, w: 1166, h: 250 }, side: "above",
+  { page: "options", at: { x: 137, y: 200, w: 1166, h: 340 }, side: "above",
     en: "Three designs, each by a different artist. Click a label to see it big — and when you like one, save it.",
     ge: "სამი დიზაინი, თითო სხვადასხვა მხატვრის. დააჭირე ეტიკეტს, რომ დიდად ნახო — და თუ რომელიმე მოგეწონა, შეინახე." },
   { page: "options", at: { x: 137, y: 637, w: 1166, h: 34 }, side: "below",
     en: "Save the one you like best.",
     ge: "შეინახე ის, რომელიც ყველაზე მეტად მოგწონს.", done: "selected" },
   { page: "options", at: RED, side: "above",
-    en: "Nothing is final — you can come back and change your details any time. Press the red button to go on.",
-    ge: "არაფერია საბოლოო — ნებისმიერ დროს შეგიძლია დაბრუნდე და დეტალები შეცვალო. გასაგრძელებლად დააჭირე წითელ ღილაკს.", done: "page:backdetails" },
+    en: "Your picture is kept for this session — only a new generation changes it. The details you can change any time. Press the red button to go on.",
+    ge: "შენი სურათი ამ სესიაში შენახულია — მას მხოლოდ ახალი გენერაცია შეცვლის. დეტალების შეცვლა კი ნებისმიერ დროს შეგიძლია. გასაგრძელებლად დააჭირე წითელ ღილაკს.", done: "page:backdetails" },
   /* ── back label details ── */
   { page: "backdetails", at: { x: 136, y: 208, w: 551, h: 208 }, side: "below",
     en: "Describe your wine in a few lines — it goes on the back label.",
@@ -84,18 +88,21 @@ export const GUIDE: GuideStep[] = [
     en: "Have a barcode? Type its 12 or 13 digits. No barcode — leave it empty.",
     ge: "გაქვს შტრიხკოდი? ჩაწერე მისი 12 ან 13 ციფრი. თუ არ გაქვს — დატოვე ცარიელი." },
   { page: "backdetails", at: { x: 753, y: 450, w: 550, h: 34 }, side: "above",
-    en: "A QR code links to a page with your wine's ingredients. Create a QR code and your product's landing page — or upload your own.",
-    ge: "QR კოდი ღვინის ინგრედიენტების გვერდზე მიდის. შექმენი QR კოდი და პროდუქტის გვერდი — ან ატვირთე შენი." },
+    en: "Create a QR code and your product's web page — or upload your own QR code if you have one.",
+    ge: "შექმენი QR კოდი და პროდუქტის ვებ-გვერდი — ან ატვირთე შენი QR კოდი, თუ გაქვს ასეთი." },
   { page: "backdetails", at: { x: 753, y: 653, w: 241, h: 34 }, side: "right",
     en: "Pick the markets you'll sell in — we add the legal text each one requires.",
     ge: "აირჩიე ბაზრები, სადაც გაყიდი — თითოეულისთვის საჭირო სამართლებრივ ტექსტს ჩვენ დავამატებთ.", done: "markets" },
+  { page: "backdetails", at: { x: 753, y: 653, w: 241, h: 34 }, side: "right",
+    en: "Now press here to confirm your choice.",
+    ge: "ახლა დააჭირე აქ, რომ არჩევანი დაადასტურო.", done: "marketClosed" },
   { page: "backdetails", at: RED, side: "above",
     en: "Press the red button to build your back label.",
     ge: "დააჭირე წითელ ღილაკს, რომ უკანა ეტიკეტი აიწყოს.", done: "page:backdesign" },
   /* ── back label ── */
   { page: "backdesign", at: { x: 548.6, y: 171.5, w: 342.9, h: 342.9 }, side: "right",
-    en: "Your back label, ready to print. Save it — or press Edit to change something.",
-    ge: "შენი უკანა ეტიკეტი, ბეჭდვისთვის მზად. შეინახე — ან დააჭირე Edit-ს, რომ რამე შეცვალო.", done: "backSaved" },
+    en: "Your back label is ready to print. Save it — or press Edit if you want to change something.",
+    ge: "შენი უკანა ეტიკეტი ბეჭდვისთვის მზად არის. შეინახე — ან დააჭირე რედაქტირებას, თუ გინდა რამის შეცვლა.", done: "backSaved" },
   { page: "backdesign", at: RED, side: "above",
     en: "On to the bottle.",
     ge: "ახლა ბოთლი.", done: "page:bottle" },
@@ -109,13 +116,13 @@ export const GUIDE: GuideStep[] = [
   { page: "bottle", at: RED, side: "above",
     en: "Press the red button — you'll check everything before we start.",
     ge: "დააჭირე წითელ ღილაკს — დაწყებამდე ყველაფერს კიდევ ერთხელ გადახედავ.", done: "confirm" },
-  { page: "bottle", at: { x: 350, y: 150, w: 740, h: 520 }, side: "right", modal: true,
-    en: "Check your details. If all is right, press Create to make the photos — or press Edit Details to change something.",
-    ge: "გადაამოწმე დეტალები. თუ ყველაფერი სწორია, დააჭირე Create-ს ფოტოების შესაქმნელად — ან Edit Details-ს, თუ რამის შეცვლა გინდა.", done: "page:assets" },
+  { page: "bottle", at: { x: 350, y: 150, w: 740, h: 520 }, side: "right", modal: true, anchor: "create",
+    en: "Check your details. If all is right, press Create — or Edit Details if you want to change something.",
+    ge: "გადაამოწმე დეტალები. თუ ყველაფერი სწორია, დააჭირე შექმნას — ან რედაქტირებას, თუ რამის შეცვლა გინდა.", done: "page:assets" },
   /* ── marketing assets ── */
   { page: "assets", at: { x: 137, y: 274, w: 1165, h: 343 }, side: "above",
-    en: "Two product shots and five marketing images are being made — about two minutes.",
-    ge: "მზადდება პროდუქტის ორი ფოტო და ხუთი სარეკლამო სურათი — დაახლოებით ორი წუთი.", done: "assetsReady" },
+    en: "Two bottle photos and five marketing images{page} are being made — about two minutes in all.",
+    ge: "მზადდება ბოთლის ორი ფოტო და ხუთი სარეკლამო სურათი{page} — ყველაფერს დაახლოებით ორი წუთი დასჭირდება.", done: "assetsReady" },
   { page: "assets", at: { x: 583, y: 657.6, w: 274, h: 34.3 }, side: "right",
     en: "Save them to your folder.",
     ge: "შეინახე ისინი შენს საქაღალდეში.", done: "assetsSaved" },

@@ -3,7 +3,7 @@ import { composeTemplateLabel, templatesOf, pickTemplate, inkLost } from "@/lib/
 import { templatesNow } from "@/lib/typeset/overrides";
 import type { Template } from "@/lib/typeset/templates";
 import { cleanPaper } from "@/lib/typeset/palette";
-import { artKindOf, bleedsOf, layoutFromTemplate, templateFields, type ArtKind, type Band } from "@/lib/typeset/templates";
+import { artKindOf, bleedsOf, facesFor, layoutFromTemplate, templateFields, type ArtKind, type Band } from "@/lib/typeset/templates";
 import { faceFile, pickRoles, mix } from "@/lib/typeset/fonts";
 import type { Layout } from "@/lib/typeset/compose";
 import { painterFor, mixedPainter } from "./painters";
@@ -113,6 +113,20 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
      the side that faces the type, ends in the painter's own edge with
      plain ground beyond. The painted part is given the WINDOW's shape, so
      nothing that matters falls outside the label. */
+  /* 2026-09-23 (owner, on Giorgi's t05 label: "the illustration is very
+     small in the middle — grow its ink, without running onto the type,
+     but without so much air"). The oval window of a spot layout can be
+     2.3 times wider than tall; a drawing painted near 4:3 fits it only by
+     its height and leaves the sides empty. So a spot drawing is told its
+     window's shape too — a wide horizontal (or a tall) vignette. */
+  if (artKindOf(tpl) === "spot") {
+    const canvas = ap.aspect === "landscape" ? 1.5 : ap.aspect === "portrait" ? 2 / 3 : 1;
+    if (zoneAspect > canvas * 1.15 || zoneAspect < canvas / 1.15) {
+      ap.prompt += zoneAspect > canvas
+        ? ` COMPOSITION — THE WINDOW: the drawing will sit in a wide oval about ${zoneAspect.toFixed(1)} times wider than tall. Make it a WIDE, horizontal vignette of that shape — spread across most of the canvas's width, low in height, with the plain empty margin above and below it. Never a tall or square scene.`
+        : ` COMPOSITION — THE WINDOW: the drawing will sit in a tall window about ${(1 / zoneAspect).toFixed(1)} times taller than wide. Make it a TALL, upright vignette of that shape, with the plain empty margin at its sides.`;
+    }
+  }
   type Side = "top" | "bottom" | "left" | "right";
   let edgeSides: Side[] = [];
   if (artKindOf(tpl) !== "spot") {
@@ -188,7 +202,7 @@ export function layoutTag(style: string, seed: number): string {
    arrangements"): `big` insists on the largest hero sizes; `flip` sets
    the type on the OTHER alignment (a centred style goes left, a left one
    goes centred) */
-export async function relayoutLabel(stored: { art: Buffer; meta: { style: string; widthMm: number; heightMm: number; ground: string; fit?: "yield" | "crop" | "top" | "vignette" } }, data: Record<string, string>, avoid: string[] = [], recipe: { big?: boolean; flip?: boolean } = {}): Promise<HybridOutput & { tag: string }> {
+export async function relayoutLabel(stored: { art: Buffer; meta: { style: string; widthMm: number; heightMm: number; ground: string; fit?: "yield" | "crop" | "top" | "vignette" } }, data: Record<string, string>, avoid: string[] = [], recipe: { big?: boolean; flip?: boolean } = {}, keep = false): Promise<HybridOutput & { tag: string; template: string }> {
   const { style, widthMm, heightMm, ground } = stored.meta;
   const raw = `data:image/png;base64,${stored.art.toString("base64")}`;
   /* a picture stored before the clean-paper pass still has its wrinkles;
@@ -199,6 +213,29 @@ export async function relayoutLabel(stored: { art: Buffer; meta: { style: string
      are three different arrangements of his own. */
   const band = bandOf(style);
   const used = new Set(avoid.map((a) => a.split("|")[0]));
+  /* 2026-09-23 (owner: "within a session the label changes only when it
+     is generated anew"). KEEP: the details changed, nothing else — the
+     same painting in the SAME template, only the type set again. The
+     painting is cleaned only on its type-facing sides, as when it was
+     made (a full clean would flatten a dark painted scene). */
+  const storedTpl = templatesNow().find((t) => t.id === (stored.meta as { template?: string }).template);
+  if (keep && storedTpl) {
+    type Side = "top" | "bottom" | "left" | "right";
+    const bl = bleedsOf(storedTpl);
+    const sides: Side[] = artKindOf(storedTpl) === "spot" ? [] : (["bottom", "top", "right", "left"] as const).filter((k) => !bl[k]);
+    const cl = await cleanPaper(raw, undefined, sides.length ? sides : undefined);
+    /* and in the SAME face: the family was drawn from the label's seed,
+       which the label records by name ("EB Garamond 700/400 · t02") —
+       a seed that draws that family again is found */
+    const fam = String((stored.meta as { faces?: string }).faces || "").match(/^(.*?) \d{3}\//)?.[1];
+    let keepSeed = 1;
+    if (fam) for (let k = 1; k < 2000; k++) if (facesFor(band, k).hero.family === fam) { keepSeed = k; break; }
+    const out = await composeTemplateLabel({
+      artwork: cl.art, band, template: storedTpl.id, data, ink: cl.ink, paper: cl.ground,
+      widthMm, heightMm, seed: keepSeed, wineColour: data.wineColorName, edge: cl.cleaned && sides.length ? sides : undefined,
+    });
+    return { png: out.png, svg: out.svg, art: cl.art, faces: out.faces, ink: out.ink, ground: out.layout.ground || ground, prompt: "(the same painting, the details set again)", layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", template: out.template };
+  }
   const cleaned = await cleanPaper(raw);
   const art = cleaned.art;
   /* a variation is another layout of the SAME picture — the owner's
@@ -218,7 +255,7 @@ export async function relayoutLabel(stored: { art: Buffer; meta: { style: string
     widthMm, heightMm, seed, wineColour: data.wineColorName,
   });
   void recipe;
-  return { png: out.png, svg: out.svg, art, faces: out.faces, ink: out.ink, ground: out.layout.ground || ground, prompt: "(re-layout of an existing painting)", layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette" };
+  return { png: out.png, svg: out.svg, art, faces: out.faces, ink: out.ink, ground: out.layout.ground || ground, prompt: "(re-layout of an existing painting)", layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", template: out.template };
 }
 
 /* the TTFs a label's SVG sets its type in — shipped beside the SVG so

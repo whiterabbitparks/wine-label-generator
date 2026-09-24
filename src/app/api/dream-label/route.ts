@@ -20,8 +20,23 @@ const DATA_KEYS = [
   "alcohol", "volume",
 ] as const;
 
+/* 2026-09-23 (owner: "keep the generated label for the session, even if
+   the browser reloads or the internet drops"): the page keeps its labels'
+   ids, and brings their images back from here. Ids are long and random. */
+export async function GET(req: Request) {
+  const u = new URL(req.url);
+  const id = String(u.searchParams.get("id") || "").replace(/[^a-z0-9-]/gi, "");
+  const l = id ? readLabel(id) : null;
+  if (!l) return new Response("not found", { status: 404 });
+  if (u.searchParams.get("kind") === "preview") {
+    const jb = await sharp(l.png).resize(1024).jpeg({ quality: 82 }).toBuffer();
+    return new Response(new Uint8Array(jb), { headers: { "Content-Type": "image/jpeg", "Cache-Control": "private, max-age=86400" } });
+  }
+  return new Response(new Uint8Array(l.png), { headers: { "Content-Type": "image/png", "Cache-Control": "private, max-age=86400" } });
+}
+
 export async function POST(req: Request) {
-  let body: { vision?: string; style?: string; data?: Record<string, string>; sketch?: string | null; width?: number; height?: number; relayout?: string; variants?: number; artist?: string; order?: string };
+  let body: { vision?: string; style?: string; data?: Record<string, string>; sketch?: string | null; width?: number; height?: number; relayout?: string; variants?: number; artist?: string; order?: string; keep?: boolean };
   try {
     body = await req.json();
   } catch {
@@ -53,10 +68,10 @@ export async function POST(req: Request) {
         const base = body.relayout ? readLabel(String(body.relayout)) : null;
         send({ type: "progress", stage: base ? "setting" : "painting" });
         const out = base
-          ? await relayoutLabel(base, data)
+          ? await relayoutLabel(base, data, [], {}, !!body.keep)
           : await paintHybridLabel({ vision, style, data, widthMm, heightMm, sketch, artistId: artist || undefined, order: order || undefined });
         const m = base ? base.meta : { style, widthMm, heightMm, fit: out.fit };
-        const id = saveLabel({ style: m.style, widthMm: m.widthMm, heightMm: m.heightMm, faces: out.faces, ground: out.ground, svg: out.svg, png: out.png, art: out.art, prompt: out.prompt, layout: out.layout, fit: m.fit, template: (out as { template?: string }).template, hasPaper: (out as { hasPaper?: boolean }).hasPaper, artist: (out as { artist?: string }).artist, refSet: (out as { refSet?: string }).refSet });
+        const id = saveLabel({ style: m.style, widthMm: m.widthMm, heightMm: m.heightMm, faces: out.faces, ground: out.ground, svg: out.svg, png: out.png, art: out.art, prompt: out.prompt, layout: out.layout, fit: m.fit, template: (out as { template?: string }).template, hasPaper: (out as { hasPaper?: boolean }).hasPaper, artist: base ? (base.meta as { artist?: string }).artist : (out as { artist?: string }).artist, refSet: (out as { refSet?: string }).refSet });
         /* medium-res JPEG for the page's views — the PNG stays the print source */
         let preview: string | null = null;
         try {
@@ -82,7 +97,7 @@ export async function POST(req: Request) {
           }
         }
         /* round 102: the artist's name rides along so the wizard can head the column with it */
-        send({ type: "result", dream: out.png, preview, id, variants, artist: base ? undefined : (out as { artist?: string }).artist });
+        send({ type: "result", dream: out.png, preview, id, variants, artist: base ? (base.meta as { artist?: string }).artist : (out as { artist?: string }).artist });
       } catch (e) {
         send({ type: "error", error: e instanceof Error ? e.message : String(e) });
       }

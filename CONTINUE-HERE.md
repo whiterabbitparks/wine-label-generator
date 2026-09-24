@@ -293,6 +293,35 @@ download), 8K.WINE header, new home label. Live smoke label OK (Giorgi,
 t05, orphan region centred). Layout edits made on the LIVE admin live in
 the server's data/layout-edits — pull them before reading.
 
+**2026-09-24 round (15 points; committed, NOT yet deployed)**
+- Tour wording/positions: vision + bottle popup notes sit beside the
+  popup's own Create button (`anchor: "create"`, rect measured in the
+  popup → `createRect`); loader note mid empty space; designs note above
+  the artist names; QR note = "create QR + product page or upload yours";
+  NEW step after a market is picked: "press here to confirm" (done =
+  `marketClosed`); back-label and assets texts as he wrote them
+  (`{page}` = "and web page" only when qrMode==="create"). A note that
+  waits for an action has NO Next — the action moves it on.
+- SESSION KEEPS THE LABELS (his #6): the whole order is saved to
+  localStorage `nui-order` (vision, details, markets, bottle, chosen
+  label ids…) and restored on reload / lost connection; saved label
+  images come back via GET /api/dream-label?id=…(&kind=preview).
+  Details-only changes (same vision/sketch/size = `paintSig`) re-set the
+  text on the SAME paintings, SAME template, SAME font family
+  (`relayoutLabel(…, keep=true)`; ~6 s, verified). Only a changed
+  idea/sketch/size paints anew.
+- Georgian tour notes 12/15 px (EN 13/17). LANGUAGE-SWITCH BUG found and
+  fixed: React sets the `font` shorthand, which silently resets
+  line-height; the separate `lineHeight` key didn't change so React never
+  re-set it → English kept wrong spacing (details labels dropped ~7 px)
+  until reload. RULE: when a `font:` value can change, put the line
+  height INSIDE it (`font: \`700 ${fs}px/14px ${HNW}\``), never a
+  separate `lineHeight` key.
+- Header menu in capitals (both languages). Giorgi t05: wider window so
+  the picture grows. Popup idea text no longer clips p/g descenders.
+- #15 site font (HNW = Helvetica Neue World, commercial, no licence):
+  advised; waiting for his choice — do NOT swap before he picks.
+
 **Open — the owner's decisions**
 0. ANSWERED (see above) — "why is Mariam always a
    small oval?" Cause: this morning's rule "ONE kind of ask" (models.ts:

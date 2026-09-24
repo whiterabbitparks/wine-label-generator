@@ -583,7 +583,7 @@ export default function NewUI() {
     if (on) { const r = randomDetails(); setF((m) => ({ width: m.width || "110", height: m.height || "80", ...r.front })); setB(r.back); setGtin(r.gtin); }
     else { setF((m) => ({ width: m.width || "110", height: m.height || "80" })); setB({}); setGtin(""); }
   };
-  useEffect(() => { try { if (localStorage.getItem("nui-fill") === "1") { setFillOn(true); fillDetails(true); } } catch { } }, []);   // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { try { if (localStorage.getItem("nui-fill") === "1") { setFillOn(true); if (!localStorage.getItem("nui-order")) fillDetails(true); } } catch { } }, []);   // eslint-disable-line react-hooks/exhaustive-deps
   /* round 57 #2: the stand-in is a REAL generated label, not a bottle */
   const FAKE_IMG = "/newui/sample-label.jpg";
   /* ROUND 68 #4 (owner: "an uploaded label generates only the label back —
@@ -614,6 +614,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const [selected, setSelected] = useState(-1);
   const [genProgress, setGenProgress] = useState(0);
   const [frontSig, setFrontSig] = useState("");
+  /* 2026-09-23 (owner: "within a session the label changes only when it is
+     generated anew"): what the PAINTINGS were made from — the idea, the
+     sketch, the size. The details alone changing re-sets the type on the
+     same paintings; only a change here paints again. */
+  const [paintSig, setPaintSig] = useState("");
   const [b, setB] = useState<Record<string, string>>({});
   const [markets, setMarkets] = useState<string[]>([]);   /* round 8 #7: none preselected */
   /* round 41 #9: "No compliance needed" — ON by default; picking any
@@ -1294,6 +1299,49 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const [tutIdle, setTutIdle] = useState(false);
   const tutClick = useRef(false);
 
+  /* THE ORDER KEPT (owner, 2026-09-23: "keep the generated label for the
+     session — even if the browser reloads or the internet drops; it
+     changes only when it is generated anew"). What the visitor made lives
+     in this browser: the idea, the details, the bottle, the three labels
+     (by their ids — the images come back from the server) and which one
+     was saved. Not while the demo walkthrough plays, and never an empty
+     page over a real order. */
+  useEffect(() => {
+    if (tut >= 0) return;
+    const hasAny = dreams.length > 0 || !!vision.trim() || Object.entries(f).some(([k, v]) => k !== "width" && k !== "height" && !!(v || "").trim());
+    if (!hasAny) return;
+    const rec = {
+      v: 1, at: Date.now(), vision, f, b, gtin, qrMode, markets, bottle, wineColor, selected, frontSig, paintSig,
+      dreams: dreams.filter(Boolean).filter((d) => d.id).map((d) => ({ style: d.style, id: d.id, artist: d.artist })),
+    };
+    try { localStorage.setItem("nui-order", JSON.stringify(rec)); } catch { }
+  }, [tut, dreams, vision, f, b, gtin, qrMode, markets, bottle, wineColor, selected, frontSig, paintSig]);
+  useEffect(() => {
+    let rec: { v?: number; vision?: string; f?: Record<string, string>; b?: Record<string, string>; gtin?: string; qrMode?: string; markets?: string[]; bottle?: Record<string, string>; wineColor?: string; selected?: number; frontSig?: string; paintSig?: string; dreams?: { style: string; id?: string; artist?: string }[] } | null = null;
+    try { rec = JSON.parse(localStorage.getItem("nui-order") || "null"); } catch { }
+    if (!rec || rec.v !== 1) return;
+    setVision(rec.vision || ""); setF(rec.f || { width: "110", height: "80" }); setB(rec.b || {});
+    setGtin(rec.gtin || ""); setQrMode((rec.qrMode || "") as never); setMarkets(rec.markets || []);
+    if (rec.bottle) { setBottle(rec.bottle); bottleTouched.current = true; }
+    setWineColor(rec.wineColor || "");
+    const ds = (rec.dreams || []).filter((d) => d.id);
+    if (!ds.length) return;
+    const toData = async (u: string) => {
+      const bl = await (await fetch(u)).blob();
+      return new Promise<string>((res) => { const rd = new FileReader(); rd.onload = () => res(String(rd.result)); rd.readAsDataURL(bl); });
+    };
+    (async () => {
+      try {
+        const got: Dream[] = await Promise.all(ds.map(async (d) => ({
+          style: d.style, id: d.id, artist: d.artist,
+          dream: await toData(`/api/dream-label?id=${d.id}`), preview: await toData(`/api/dream-label?id=${d.id}&kind=preview`),
+        })));
+        setDreams(got); setSelected(rec!.selected ?? -1); setFrontSig(rec!.frontSig || ""); setPaintSig(rec!.paintSig || "");
+      } catch { /* the labels are gone from the server — the details stay */ }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   /* THE GUIDED TOUR moves on by itself when the visitor has done what its
      note asked (guide.ts `done`); a note to read waits for Next. It follows
      the visitor BOTH ways (owner, 2026-09-23 #1): pressing on past a page
@@ -1303,6 +1351,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const GUIDE_PAGES = ["vision", "loader", "options", "backdetails", "backdesign", "bottle", "assets", "checkout"];
   const [guideWarn, setGuideWarn] = useState(-1);      /* the step whose Next already warned once */
   const [guideTick, setGuideTick] = useState(0);
+  const createRect = useRef({ x: 735.5, y: 560, w: 354.5, h: 30 });
   const pageSince = useRef(Date.now());
   useEffect(() => { pageSince.current = Date.now(); }, [page]);
   const guideDoneNow = (d?: string) => {
@@ -1316,6 +1365,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       : d === "assetsReady" ? !assetsStage && !!assets.front
       : d === "assetsSaved" ? assetsSaved
       : d === "confirm" ? !!confirmModal
+      : d === "marketClosed" ? markets.length > 0 && !marketOpen
       : false;
   };
   const guideNeedsMet = (n?: string) =>
@@ -1352,7 +1402,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
        marketing popup opens on a page that already "counts" as reached */
     if (st.done && (!st.modal || !confirmModal) && guideDoneNow(st.done)) setGuide(guide + 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [guide, guideTick, page, vision, selected, markets, backSaved, assetsStage, assets.front, assetsSaved, confirmModal]);
+  }, [guide, guideTick, page, vision, selected, markets, marketOpen, backSaved, assetsStage, assets.front, assetsSaved, confirmModal]);
   useEffect(() => {
     if (tut < 0 || !tutIdle) return;
     setNudge((n) => n + 1);
@@ -1639,6 +1689,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   }, [tut]);
 
   const sigFront = () => JSON.stringify({ vision, sketch: !!sketch, f });
+  const sigPaint = () => JSON.stringify({ vision, sketch: sketch ? sketch.length : 0, w: f.width, h: f.height });
   /* round 60 #4: qrMode AND the viewed variation are part of the brief —
      ANY back-details change births a fresh back label */
   const sigBack = () => JSON.stringify({ b, markets, gtin: gtinValid ? gtinNorm : "", qrImg: !!qrImg, qm: qrMode, w: f.width, h: f.height, sel: selected >= 0 ? `${selected}:${styleView[selected] || 0}` : "" });
@@ -1764,6 +1815,30 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   async function nextFromFront() {
     /* owner #14: regenerate ONLY when inputs changed */
     if (dreams.length && frontSig === sigFront()) { go("options"); return; }
+    /* only the details changed: the SAME paintings in the same templates,
+       the type set again — seconds, no painter, no cost */
+    if (liveGenRef.current && dreams.length && paintSig && paintSig === sigPaint() && dreams.every((d) => d?.id)) {
+      go("loader"); setGenProgress(0.3);
+      const { data, aspectKey, width, height } = buildDreamPayload();
+      const redo = async (d: Dream): Promise<Dream> => {
+        const r = await fetch("/api/dream-label", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ vision, style: d.style, data, aspect: aspectKey, width, height, relayout: d.id, keep: true }),
+        });
+        if (!r.ok || !r.body) throw new Error(`re-set failed (${r.status})`);
+        const txt = await r.text();
+        const res = txt.split("\n").filter(Boolean).map((l) => JSON.parse(l)).find((m) => m.type === "result");
+        if (!res?.dream) throw new Error("re-set gave nothing");
+        return { style: d.style, dream: res.dream, preview: res.preview || null, id: res.id, artist: res.artist || d.artist };
+      };
+      try {
+        const next = await Promise.all(dreams.map(redo));
+        setGenProgress(1);
+        setDreams(next); setFrontSig(sigFront()); setBackSig("");
+        go("options");
+        return;
+      } catch { /* fall through to a fresh painting */ }
+    }
     go("loader");
     setGenProgress(0);
     const genT0 = Date.now();   /* round 46: feed the loader's REAL average */
@@ -1823,7 +1898,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       }
       if (!ok.length) throw new Error("all generations failed — try again");
       ok.sort((a, b2) => styles3.indexOf(a.style) - styles3.indexOf(b2.style));
-      setDreams(ok); setSelected(-1); setFrontSig(sigFront()); setBackSig("");
+      setDreams(ok); setSelected(-1); setFrontSig(sigFront()); setPaintSig(sigPaint()); setBackSig("");
       setStyleVars([[], [], []]); setStyleView([0, 0, 0]); setVarBusyCol(-1);
       /* round 43 #3 (owner: "landing page thumb shows the previous bottle"):
          a freshly generated wine invalidates any earlier published page —
@@ -2455,7 +2530,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             const base = VIS_FOOT - 3.5 - (FRONT_ROWS.length - 1 - i) * 30;
             return (
               <span key={k2}>
-                <span style={{ ...px(891.8, baseTop(base, 14), 130, 14), font: `700 ${lang === "ge" ? 13 : 14}px ${HNW}`, lineHeight: "14px", color: "#111", whiteSpace: "nowrap" }}>{t(FRONT_LABELS[i])}</span>
+                <span style={{ ...px(891.8, baseTop(base, 14), 130, 14), font: `700 ${lang === "ge" ? 13 : 14}px/14px ${HNW}`, color: "#111", whiteSpace: "nowrap" }}>{t(FRONT_LABELS[i])}</span>
                 <input value={f[k2] || ""} placeholder={t(FRONT_PH[i])} {...noFill(k2)}
                   onChange={(e) => setF((m) => ({ ...m, [k2]: e.target.value }))}
                   /* round 87 (owner): typed text sat ON its rule line — 2px up */
@@ -2565,7 +2640,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               <div style={{ ...px(b.lx, baseTop(221, BAR_FS) - (AV - BAR_FS) / 2, b.lw, AV), display: "flex", alignItems: "center", justifyContent: "center", columnGap: 7, pointerEvents: "none" }}>
                 {/* 2026-09-23 (owner): no portrait, and the name as it is
                     written — "Style By: Mariam Kvashilava", not all capitals */}
-                <span style={{ font: `700 ${BAR_FS}px ${HNW}`, lineHeight: `${BAR_FS}px`, whiteSpace: "nowrap" }}>{/* 2026-09-23 (owner: "a column that never came showed FUNKY, like
+                <span style={{ font: `700 ${BAR_FS}px/${BAR_FS}px ${HNW}`, whiteSpace: "nowrap" }}>{/* 2026-09-23 (owner: "a column that never came showed FUNKY, like
                     an error — take the old titles out altogether") */}
                   {who ? `${t("Style By:")} ${who}` : ""}</span>
               </div>
@@ -2669,7 +2744,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             const base = 215.6 + i * 32;
             return (
               <span key={k}>
-                <span style={{ ...px(755.5, baseTop(base, 14), 230, 14), font: `700 ${lang === "ge" ? 13 : 14}px ${HNW}`, lineHeight: "14px", color: "#111", whiteSpace: "nowrap" }}>{t(BACK_LABELS[i])}</span>
+                <span style={{ ...px(755.5, baseTop(base, 14), 230, 14), font: `700 ${lang === "ge" ? 13 : 14}px/14px ${HNW}`, color: "#111", whiteSpace: "nowrap" }}>{t(BACK_LABELS[i])}</span>
                 <input value={b[k] || ""} placeholder={t(BACK_PH[i])} {...noFill(k)}
                   onChange={(e) => setB((m) => ({ ...m, [k]: e.target.value }))}
                   style={{ ...px(989, base - IN_BASE * (14 / 15) - 2, 311, 20), ...inputStyle, fontSize: 14 }} />
@@ -3323,7 +3398,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         const ringY = (baseline: number) => baseline - RING_DY;
         /* a price, right-aligned on the column's own edge */
         const priceAt = (baseline: number, v: string, bold = false, right = PRICE_R) => (
-          <span key={"pr" + baseline + right} style={{ ...px(right - 160, baseTop(baseline, 15), 160, 18), font: `${bold ? 700 : 400} 15px ${HNW}`, lineHeight: "15px", textAlign: "right", display: "block" }}>{v}</span>
+          <span key={"pr" + baseline + right} style={{ ...px(right - 160, baseTop(baseline, 15), 160, 18), font: `${bold ? 700 : 400} 15px/15px ${HNW}`, textAlign: "right", display: "block" }}>{v}</span>
         );
         /* ROUND 93 #6 (owner): the total reads at twice the size — word and
            amount 30 px bold on the same left/right edges, and twice the air
@@ -3846,12 +3921,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                progress line's right edge x1303 (round 22 #11) */}
             {/* measured: the menu's letters stood 6 below the folder's top */}
             <div style={{ position: "absolute", right: W - 1200, top: baseTop(FOLDER_TOP + 13 * 0.72, 13) - 6, lineHeight: "13px", display: "flex", alignItems: "baseline", columnGap: 44 }}>
-              <span style={{ font: `700 13px ${HNW}`, color: INK, whiteSpace: "nowrap" }}>{t("About Us")}</span>
+              {/* 2026-09-23 (owner): the menu in capitals, both languages
+                  (Georgian turns to Mtavruli) */}
+              <span style={{ font: `700 13px ${HNW}`, color: INK, whiteSpace: "nowrap", textTransform: "uppercase" }}>{t("About Us")}</span>
               {/* ROUND 112 #4 (owner): Gallery became ARTISTS — the people
                   whose hands the labels are painted in */}
               <button onClick={openArtists}
-                style={{ ...ghost, font: `700 13px ${HNW}`, color: page === "artists" || page === "artist" ? BAR_RED : INK, whiteSpace: "nowrap", textTransform: "none" }}>{t("About artists")}</button>
-              <span style={{ font: `700 13px ${HNW}`, color: INK, whiteSpace: "nowrap" }}>{t("Contact")}</span>
+                style={{ ...ghost, font: `700 13px ${HNW}`, color: page === "artists" || page === "artist" ? BAR_RED : INK, whiteSpace: "nowrap", textTransform: "uppercase" }}>{t("About artists")}</button>
+              <span style={{ font: `700 13px ${HNW}`, color: INK, whiteSpace: "nowrap", textTransform: "uppercase" }}>{t("Contact")}</span>
               <span style={{ display: "flex", alignItems: "baseline", columnGap: 5, whiteSpace: "nowrap" }}>
                 <button onClick={() => pickLang("en")} style={{ ...ghost, font: `${lang === "en" ? 700 : 300} 13px ${HNW}`, color: lang === "en" ? INK : "#8a8a8a" }}>ENG</button>
                 <span style={{ font: `300 13px ${HNW}`, color: "#8a8a8a" }}>/</span>
@@ -3901,7 +3978,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               {SKIP_TO[page] && tut < 0 && guide < 0 && (
                 <button onClick={() => go(SKIP_TO[page]!)}
                   style={{ ...px(thick - 60, baseTop(PROG_Y - 14, BAR_FS), 120, BAR_FS + 4), ...ghost, pointerEvents: modalOpen ? "none" : "auto",
-                    font: `700 ${BAR_FS}px ${HNW}`, lineHeight: `${BAR_FS}px`, color: BAR_RED, textAlign: "center", textTransform: "none", whiteSpace: "nowrap",
+                    font: `700 ${BAR_FS}px/${BAR_FS}px ${HNW}`, color: BAR_RED, textAlign: "center", textTransform: "none", whiteSpace: "nowrap",
                     transition: `left ${SLIDE_MS}ms ${EASE}` }}>
                   {t("SKIP")}
                 </button>
@@ -3911,7 +3988,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   style={{
                     ...px(st.x - 130, baseTop(LABEL_BASE, BAR_FS), 260, 20), ...ghost,
                     cursor: "default", pointerEvents: "none",
-                    font: `${st.big ? 700 : 300} ${BAR_FS}px ${HNW}`, lineHeight: `${BAR_FS}px`,
+                    font: `${st.big ? 700 : 300} ${BAR_FS}px/${BAR_FS}px ${HNW}`,
                     color: INK, textAlign: "center", textTransform: "none", whiteSpace: "nowrap",
                     /* round 72 #6: in the walkthrough a stop stays unnamed
                        until it is REACHED. Round 109 (the owner's artboards):
@@ -3943,11 +4020,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 <div key={"tut" + tut} style={{ position: "absolute", left: L, top: 0, width: W - L, height: PAGE_H, pointerEvents: "none", animation: `nuiFadeIn 320ms ${EASE} both`, transition: `left ${SLIDE_MS}ms ${EASE}` }}>
                   {solo ? (
                     /* on the labels' baseline, centred under the button */
-                    <span style={{ position: "absolute", left: 0, top: baseTop(LABEL_BASE + 0.22, fs), width: 220, textAlign: "center", font: `700 ${fs}px ${HNW}`, lineHeight: `${fs}px`, color: BAR_RED, whiteSpace: "nowrap" }}>{t(card.step)}</span>
+                    <span style={{ position: "absolute", left: 0, top: baseTop(LABEL_BASE + 0.22, fs), width: 220, textAlign: "center", font: `700 ${fs}px/${fs}px ${HNW}`, color: BAR_RED, whiteSpace: "nowrap" }}>{t(card.step)}</span>
                   ) : (<>
-                    <span style={{ position: "absolute", left: 0, top: baseTop(CARD_BASE, fs), font: `700 ${fs}px ${HNW}`, lineHeight: `${fs}px`, color: BAR_RED, fontWeight: 700, whiteSpace: "nowrap" }}>{t(card.step)}</span>
+                    <span style={{ position: "absolute", left: 0, top: baseTop(CARD_BASE, fs), font: `700 ${fs}px/${fs}px ${HNW}`, color: BAR_RED, fontWeight: 700, whiteSpace: "nowrap" }}>{t(card.step)}</span>
                     {card.body.map((ln, i) => (
-                      <span key={"b" + i} style={{ position: "absolute", left: 0, top: baseTop(CARD_BASE + CARD_BODY[i], bfs), font: `italic ${bfs}px ${HNW}`, lineHeight: `${bfs}px`, color: INK, whiteSpace: "nowrap" }}>{t(ln)}</span>
+                      <span key={"b" + i} style={{ position: "absolute", left: 0, top: baseTop(CARD_BASE + CARD_BODY[i], bfs), font: `italic ${bfs}px/${bfs}px ${HNW}`, color: INK, whiteSpace: "nowrap" }}>{t(ln)}</span>
                     ))}
                     {/* round 72 #4: a way out at any point — the last line
                         of the card, so it never runs into the copy */}
@@ -4094,13 +4171,17 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             const show = st.modal ? !!confirmModal : page === st.page && !confirmModal;
             if (!show) return null;
             const BW2 = 250, GAP = 14;
-            const a = st.at, cx = a.x + a.w / 2, cy = a.y + a.h / 2;
+            const a = st.anchor === "create" ? createRect.current : st.at, cx = a.x + a.w / 2, cy = a.y + a.h / 2;
             const left = st.side === "left" ? a.x - GAP - BW2 : st.side === "right" ? a.x + a.w + GAP : Math.max(20, Math.min(W - BW2 - 20, cx - BW2 / 2));
             const top = st.side === "above" ? a.y - GAP : st.side === "below" ? a.y + a.h + GAP : cy;
             const shift = st.side === "above" ? "translateY(-100%)" : st.side === "left" || st.side === "right" ? "translateY(-50%)" : "none";
             const caretX = Math.max(14, Math.min(BW2 - 14, cx - left));
             const last = guide === GUIDE.length - 1;
-            const byHand = !st.done || !["confirm", "assetsReady"].includes(st.done) && !st.done.startsWith("page:");
+            /* 2026-09-23 (owner): "Next" only where it is really needed — a
+               note that is read, or one that asks for typing (the visitor
+               says when they are done). A note that waits for an ACTION —
+               a save, a pick, a press — moves on by that action alone. */
+            const byHand = !st.done;
             const met = st.done ? guideDoneNow(st.done) : guideNeedsMet(st.needs);
             const warned = guideWarn === guide && !met;
             const onNext = () => {
@@ -4115,10 +4196,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 <span style={{ position: "absolute", width: 10, height: 10, background: "#111", transform: "rotate(45deg)",
                   ...(st.side === "above" ? { bottom: -5, left: caretX - 5 } : st.side === "below" ? { top: -5, left: caretX - 5 }
                     : st.side === "left" ? { right: -5, top: "calc(50% - 5px)" } : { left: -5, top: "calc(50% - 5px)" }) }} />
-                <div style={{ font: `${lang === "ge" ? 12 : 13}px ${HNW}`, lineHeight: "17px", position: "relative" }}>
+                {/* 2026-09-23 (owner): Georgian ran with twice the leading it
+                    needs; both languages now set their own, and the box's
+                    line boxes are pinned so a language switch cannot leave
+                    the other's spacing behind */}
+                <div key={"gt" + lang} style={{ font: `${lang === "ge" ? 12 : 13}px/${lang === "ge" ? "15px" : "17px"} ${HNW}`, position: "relative" }}>
                   {warned
                     ? L("You haven't done this step yet. Continue anyway?", "ეს ნაბიჯი ჯერ არ გაგიკეთებია. მაინც გააგრძელებ?")
-                    : L(st.en, st.ge)}
+                    : L(st.en, st.ge).replace("{page}", qrMode === "create" ? L(", and your product's web page", ", და პროდუქტის ვებ-გვერდი") : "")}
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", marginTop: 9, position: "relative" }}>
                   <button onClick={() => { setGuideWarn(-1); setGuide(-1); }} style={{ ...ghost, justifySelf: "start", font: `11px ${HNW}`, color: "#E5484D", textDecoration: "underline", textTransform: "none" }}>{t("Skip")}</button>
@@ -4272,10 +4357,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                at the bottom"): a 15px line box clipped Georgian descenders —
                the line box now has the room the face asks for */
             const LH = `${fs + 6}px`;
-            const cap = (txt: string) => <span style={{ font: `700 ${lang === "ge" ? fs - 2 : fs}px ${HNW}`, lineHeight: LH, whiteSpace: "nowrap" }}>{txt}</span>;
-            const val = (txt: string) => <span style={{ font: `italic ${fs}px ${HNW}`, lineHeight: LH, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{txt}</span>;
+            const cap = (txt: string) => <span style={{ font: `700 ${lang === "ge" ? fs - 2 : fs}px/${LH} ${HNW}`, whiteSpace: "nowrap" }}>{txt}</span>;
+            const val = (txt: string) => <span style={{ font: `italic ${fs}px/${LH} ${HNW}`, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{txt}</span>;
             const colTitle = (x: number, txt: string) => (
-              <span style={{ position: "absolute", left: x, top: baseTop(162.8, 21), font: `700 ${lang === "ge" ? 15 : 18}px ${HNW}`, lineHeight: "21px", whiteSpace: "nowrap" }}>{txt}</span>
+              <span style={{ position: "absolute", left: x, top: baseTop(162.8, 21), font: `700 ${lang === "ge" ? 15 : 18}px/21px ${HNW}`, whiteSpace: "nowrap" }}>{txt}</span>
             );
             /* ROUND 74 #1 (owner): the two label previews must stand the
                SAME height — they are the same physical height on the bottle,
@@ -4336,7 +4421,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   return { sz: 10, lh: 12, h: NAT };
                 })();
                 left.push(<span key="pt">{colTitle(32, t("Prompt:"))}</span>);
-                left.push(<span key="pv" className="nui-noscroll" style={{ position: "absolute", left: 32, top: baseTop(y + 43, fit.sz), width: PW, maxHeight: fit.h, font: `${fit.sz}px ${HNW}`, lineHeight: `${fit.lh}px`, overflowY: "auto" }}>{prompt}</span>);
+                /* 2026-09-24: HNW's roman is taller than its line — the
+                   scroll box clipped p/g descenders; 6 units of room below */
+                left.push(<span key="pv" className="nui-noscroll" style={{ position: "absolute", left: 32, top: baseTop(y + 43, fit.sz), width: PW, maxHeight: fit.h + 6, paddingBottom: 6, boxSizing: "border-box", font: `${fit.sz}px/${fit.lh}px ${HNW}`, overflowY: "auto" }}>{prompt}</span>);
                 y += 59 + fit.h;
                 leftBottom = y - 4;
               }
@@ -4394,6 +4481,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               else { confirmedAssetsSig.current = pendingAssetsSig.current; setAssetsTick((t2) => t2 + 1); }
             };
             const onEdit = () => { setConfirmModal(""); if (isL) go("vision", -1, false); else go("bottle", -1); };
+            /* the guided tour stands its popup note beside this button */
+            createRect.current = { x: B.x + 385.5, y: B.y + btnTop, w: B.w - 385.5, h: 30 };
             return (<>
               <div style={{ ...px(0, 0, W, H), zIndex: 40 }} onClick={closeConfirm} />
               <div style={{ ...px(0, VEIL_TOP, W, VEIL_BOT - VEIL_TOP), background: "rgba(255,255,255,0.88)", zIndex: 40, pointerEvents: "none" }} />
@@ -4410,7 +4499,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   <span key={c}>
                     <span style={{ position: "absolute", left: detX, top: baseTop(212 + i * 19.2, 15), width: valX - detX - 8 }}>{cap(t(c).endsWith(":") ? t(c) : t(c) + ":")}</span>
                     <span style={{ position: "absolute", left: valX, top: baseTop(212 + i * 19.2, 15), width: B.w - valX - 32, display: "flex", alignItems: "center", columnGap: 6 }}>
-                      {v ? val(t(v)) : <span style={{ font: `italic ${fs}px ${HNW}`, lineHeight: LH, color: "#B3B3B3", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ph}</span>}
+                      {v ? val(t(v)) : <span style={{ font: `italic ${fs}px/${LH} ${HNW}`, color: "#B3B3B3", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ph}</span>}
                       {v && c === "Closure Color" && (
                         <span style={{ width: 13, height: 13, background: shadeRgb(), border: "1px solid #111", flex: "0 0 auto" }} />
                       )}
