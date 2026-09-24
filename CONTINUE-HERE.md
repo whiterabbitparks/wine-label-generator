@@ -199,6 +199,23 @@ said "…/4"); the label-size preview box on the details page is removed.
   given up; an empty column no longer shows the old "FUNKY" heading.
 Tests: Desktop/8K-sheet-test/window-test-edge/ (00-fixed.jpg).
 
+**THE GUIDED TOUR (2026-09-23, first version — owner will correct look
+and words):** a second, game-style tutorial. The visitor does ONE real
+round themselves; a small black note (white text, caret, hairline red
+dashed frame round the target, "n / 26", Skip = end the tour, Next on
+read-only notes) stands beside each thing to touch. Steps + EN/GE copy in
+src/app/guide.ts (page, target rect in page units, side, `done`
+condition: vision ≥3 words, a label saved, a market picked, back label
+saved, assets in, assets saved, a popup open, or reaching a page);
+page.tsx advances by itself on `done`, jumps to a page's first note when
+the visitor presses on past it; notes on the check-your-details popups
+are tied to the popup (the page behind it is "blank"). Started by the
+home page's red button when the dev switch "guided tour" is on (third
+switch under live gen / fill details; localStorage nui-guide); off →
+the demo walkthrough as before. Walked through with generation faked up
+to the back label; bottle/assets/Final Pack notes placed from the
+layouts, not yet walked live.
+
 **Open — the owner's decisions**
 0. ANSWERED (see above) — "why is Mariam always a
    small oval?" Cause: this morning's rule "ONE kind of ask" (models.ts:

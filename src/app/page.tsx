@@ -11,6 +11,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { randomDetails } from "./demo-fill";
+import { GUIDE, type GuideStep } from "./guide";
 import { UI_GE, SVG_GE, translateSvg } from "./newui-i18n";
 
 const W = 1440, H = 823;
@@ -572,6 +573,11 @@ export default function NewUI() {
      (demo-fill.ts). Off: both forms are emptied. Remembered per browser;
      a page opened with it on arrives filled. */
   const [fillOn, setFillOn] = useState(false);
+  /* 2026-09-23 — the GUIDED TOUR (guide.ts): its switch, and the step it
+     stands on (-1 = not running) */
+  const [guideOn, setGuideOn] = useState(false);
+  const [guide, setGuide] = useState(-1);
+  useEffect(() => { try { if (localStorage.getItem("nui-guide") === "1") setGuideOn(true); } catch { } }, []);
   const fillDetails = (on: boolean) => {
     if (on) { const r = randomDetails(); setF((m) => ({ width: m.width || "110", height: m.height || "80", ...r.front })); setB(r.back); }
     else { setF((m) => ({ width: m.width || "110", height: m.height || "80" })); setB({}); }
@@ -1286,6 +1292,34 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
      the next step is waiting"): tutIdle is set when a step has played out */
   const [tutIdle, setTutIdle] = useState(false);
   const tutClick = useRef(false);
+
+  /* THE GUIDED TOUR moves on by itself when the visitor has done what its
+     note asked (guide.ts `done`); a note to read waits for Next. Pressing
+     on past a page jumps the tour to that page's first note. */
+  const GUIDE_PAGES = ["vision", "loader", "options", "backdetails", "backdesign", "bottle", "assets", "checkout"];
+  useEffect(() => {
+    if (guide < 0) return;
+    const st = GUIDE[guide];
+    if (!st) { setGuide(-1); return; }
+    const cur = GUIDE_PAGES.indexOf(page);
+    if (!confirmModal && cur > GUIDE_PAGES.indexOf(st.page)) {
+      const k = GUIDE.findIndex((g) => g.page === page && !g.modal);
+      if (k > guide) { setGuide(k); return; }
+    }
+    const d = st.done;
+    if (!d) return;
+    const ok = d.startsWith("page:") ? cur >= GUIDE_PAGES.indexOf(d.slice(5))
+      : d === "vision" ? vision.trim().split(/\s+/).filter(Boolean).length >= 3
+      : d === "selected" ? selected >= 0
+      : d === "markets" ? markets.length > 0
+      : d === "backSaved" ? backSaved
+      : d === "assetsReady" ? !assetsStage && !!assets.front
+      : d === "assetsSaved" ? assetsSaved
+      : d === "confirm" ? !!confirmModal
+      : false;
+    if (ok) setGuide(guide + 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [guide, page, vision, selected, markets, backSaved, assetsStage, assets.front, assetsSaved, confirmModal]);
   useEffect(() => {
     if (tut < 0 || !tutIdle) return;
     setNudge((n) => n + 1);
@@ -3658,7 +3692,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 moved out of the footer, to the left of the logo */}
             <button aria-label="toggle live generation"
               onClick={() => { const v = !liveGen; setLiveGen(v); liveGenRef.current = v; try { localStorage.setItem("nui-live-gen", v ? "1" : "0"); } catch { } }}
-              style={{ ...px(18, 26, 110, 16), ...ghost, display: "flex", alignItems: "center", columnGap: 6, textTransform: "none" }}>
+              style={{ ...px(18, 18, 110, 16), ...ghost, display: "flex", alignItems: "center", columnGap: 6, textTransform: "none" }}>
               <span style={{ width: 22, height: 12, borderRadius: 7, border: "1px solid #bbb", position: "relative", background: "#fff", boxSizing: "border-box", flex: "0 0 auto" }}>
                 <span style={{ position: "absolute", top: 1.5, left: liveGen ? 11.5 : 1.5, width: 7, height: 7, borderRadius: 4, background: liveGen ? "#3fd05e" : "#bbb", transition: "left 160ms" }} />
               </span>
@@ -3667,11 +3701,20 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             {/* 2026-09-23 — TEMP DEV SWITCH: fill the details with a random wine */}
             <button aria-label="toggle fill details"
               onClick={() => { const v = !fillOn; setFillOn(v); fillDetails(v); try { localStorage.setItem("nui-fill", v ? "1" : "0"); } catch { } }}
-              style={{ ...px(18, 44, 110, 16), ...ghost, display: "flex", alignItems: "center", columnGap: 6, textTransform: "none" }}>
+              style={{ ...px(18, 34, 110, 16), ...ghost, display: "flex", alignItems: "center", columnGap: 6, textTransform: "none" }}>
               <span style={{ width: 22, height: 12, borderRadius: 7, border: "1px solid #bbb", position: "relative", background: "#fff", boxSizing: "border-box", flex: "0 0 auto" }}>
                 <span style={{ position: "absolute", top: 1.5, left: fillOn ? 11.5 : 1.5, width: 7, height: 7, borderRadius: 4, background: fillOn ? "#3fd05e" : "#bbb", transition: "left 160ms" }} />
               </span>
               <span style={{ font: `300 9px ${HNW}`, color: "#aaa", whiteSpace: "nowrap" }}>fill details</span>
+            </button>
+            {/* 2026-09-23 — DEV SWITCH: the guided tour instead of the demo walkthrough */}
+            <button aria-label="toggle guided tour"
+              onClick={() => { const v = !guideOn; setGuideOn(v); if (!v) setGuide(-1); try { localStorage.setItem("nui-guide", v ? "1" : "0"); } catch { } }}
+              style={{ ...px(18, 50, 110, 16), ...ghost, display: "flex", alignItems: "center", columnGap: 6, textTransform: "none" }}>
+              <span style={{ width: 22, height: 12, borderRadius: 7, border: "1px solid #bbb", position: "relative", background: "#fff", boxSizing: "border-box", flex: "0 0 auto" }}>
+                <span style={{ position: "absolute", top: 1.5, left: guideOn ? 11.5 : 1.5, width: 7, height: 7, borderRadius: 4, background: guideOn ? "#3fd05e" : "#bbb", transition: "left 160ms" }} />
+              </span>
+              <span style={{ font: `300 9px ${HNW}`, color: "#aaa", whiteSpace: "nowrap" }}>guided tour</span>
             </button>
             <button onClick={() => { if (tutRef.current >= 0) stopTutorial(); go("welcome", -1); }} style={{ ...px(138.2, 25.5, 100, 20), ...ghost, font: `700 19px ${HNW}`, color: INK, textAlign: "left", textTransform: "none" }}>8K</button>
             {/* menu + ENG/GEO: one baseline, even gaps, right edge on the
@@ -3824,6 +3867,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     /* round 72 #3 (owner, TEMP while we test): EVERY arrival
                        gets the walkthrough, refresh included. Later this
                        wants to be per-visitor, not per-load. */
+                    /* 2026-09-23: with "guided tour" on, the visitor does the
+                       round themselves, the notes beside them */
+                    if (guideOn) { setGuide(0); go("vision"); return; }
                     startTutorial(); return;
                   }
                   else if (page === "vision") {
@@ -3915,6 +3961,44 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               ))}
             </div>
           )}
+          {/* 2026-09-23 — THE GUIDED TOUR's note (guide.ts): a small black
+              box beside the thing to touch, a caret toward it, a hairline
+              red frame round it; Skip ends the tour, Next moves a note that
+              only asks to be read. */}
+          {guide >= 0 && GUIDE[guide] && (() => {
+            const st: GuideStep = GUIDE[guide];
+            const show = st.modal ? !!confirmModal : page === st.page && !confirmModal;
+            if (!show) return null;
+            const BW2 = 250, GAP = 14;
+            const a = st.at, cx = a.x + a.w / 2, cy = a.y + a.h / 2;
+            const left = st.side === "left" ? a.x - GAP - BW2 : st.side === "right" ? a.x + a.w + GAP : Math.max(20, Math.min(W - BW2 - 20, cx - BW2 / 2));
+            const top = st.side === "above" ? a.y - GAP : st.side === "below" ? a.y + a.h + GAP : cy;
+            const shift = st.side === "above" ? "translateY(-100%)" : st.side === "left" || st.side === "right" ? "translateY(-50%)" : "none";
+            const caretX = Math.max(14, Math.min(BW2 - 14, cx - left));
+            const isRed = a.w < 40 && a.h < 40;
+            const last = guide === GUIDE.length - 1;
+            return (
+              <>
+                {!isRed && !st.modal && (
+                  <div style={{ ...px(a.x - 6, a.y - 6, a.w + 12, a.h + 12), border: `1px dashed ${BAR_RED}`, zIndex: 79, pointerEvents: "none", animation: `nuiFadeIn 320ms ${EASE} both` }} />
+                )}
+                <div key={"guide" + guide} style={{ position: "absolute", left, top, width: BW2, transform: shift, zIndex: 80, background: "#111", color: "#fff", padding: "11px 13px 9px", boxSizing: "border-box", animation: `nuiFadeIn 320ms ${EASE} both`, pointerEvents: "auto" }}>
+                  {/* the caret, on the side that faces the target */}
+                  <span style={{ position: "absolute", width: 10, height: 10, background: "#111", transform: "rotate(45deg)",
+                    ...(st.side === "above" ? { bottom: -5, left: caretX - 5 } : st.side === "below" ? { top: -5, left: caretX - 5 }
+                      : st.side === "left" ? { right: -5, top: "calc(50% - 5px)" } : { left: -5, top: "calc(50% - 5px)" }) }} />
+                  <div style={{ font: `${lang === "ge" ? 12 : 13}px ${HNW}`, lineHeight: lang === "ge" ? "17px" : "17px", position: "relative" }}>{lang === "ge" ? st.ge : st.en}</div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 9, position: "relative" }}>
+                    <button onClick={() => setGuide(-1)} style={{ ...ghost, font: `11px ${HNW}`, color: "#9a9a9a", textDecoration: "underline", textTransform: "none" }}>{t("Skip")}</button>
+                    <span style={{ font: `10px ${HNW}`, color: "#6f6f6f" }}>{guide + 1} / {GUIDE.length}</span>
+                    {!st.done ? (
+                      <button onClick={() => setGuide(last ? -1 : guide + 1)} style={{ ...ghost, font: `700 11px ${HNW}`, color: "#fff", textTransform: "none" }}>{last ? t("Finish") : t("Next")} →</button>
+                    ) : <span style={{ width: 30 }} />}
+                  </div>
+                </div>
+              </>
+            );
+          })()}
           {/* ROUND 72 #11: the pointer doing the work */}
           {tut >= 0 && cursor && (
             <svg viewBox="0 0 24 24" width="21" height="21" style={{

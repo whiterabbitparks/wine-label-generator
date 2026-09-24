@@ -250,6 +250,8 @@ export const UI_GE: Record<string, string> = {
   "Details": "დეტალები",
   "Market Compliance": "შესაბამისობა",
   "Bottle": "ბოთლი",
+  "Next": "შემდეგი",
+  "Finish": "დასრულება",
   "Download": "ჩამოტვირთვა",
   "Not yet created": "ჯერ არ არის შექმნილი",
   /* round 41 */

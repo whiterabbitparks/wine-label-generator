@@ -81,4 +81,6 @@ John/Doe), MongoDB Atlas db `8k-labels`.
   dev tool that fakes all image generation — remove before launch.
 - The "fill details" switch under it (2026-09-23, src/app/demo-fill.ts)
   fills both detail forms with a random coherent wine — also TEMPORARY,
-  remove with live gen.
+  remove with live gen. The "guided tour" switch under it chooses the
+  game-style tour (src/app/guide.ts) instead of the demo walkthrough — a
+  dev switch until the owner decides which tutorial ships.
