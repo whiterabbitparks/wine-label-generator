@@ -25,7 +25,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   if (!(await requestIsAuthenticated())) return NextResponse.json({ error: "not authenticated" }, { status: 401 });
-  let body: { labelId?: string; before?: unknown; after?: unknown; note?: string };
+  let body: { labelId?: string; before?: unknown; after?: unknown; note?: string; pictureBad?: boolean };
   try { body = await req.json(); } catch { return NextResponse.json({ error: "invalid JSON" }, { status: 400 }); }
   const id = String(body.labelId || "").replace(/[^a-z0-9-]/gi, "");
   const label = id ? readLabel(id) : null;
@@ -36,6 +36,7 @@ export async function POST(req: Request) {
     at, labelId: id, template: label.meta.template, style: label.meta.style,
     widthMm: label.meta.widthMm, heightMm: label.meta.heightMm, artist: (label.meta as { artist?: string }).artist || "",
     note: String(body.note || "").slice(0, 2000),
+    pictureBad: !!body.pictureBad,
     before: body.before, after: body.after,
   };
   fs.mkdirSync(DIR, { recursive: true });

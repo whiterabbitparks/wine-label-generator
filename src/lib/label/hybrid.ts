@@ -41,6 +41,9 @@ export interface HybridInput {
   order?: string;
   /* force one of the artist's reference sets (0-based) — tests only */
   refSet?: number;
+  /* paint FOR this template (the admin's layout batch walks all twelve);
+     its band then decides the column, whatever `style` says */
+  template?: string;
 }
 export interface HybridOutput {
   png: string;          /* data URL — the print bitmap at 12 px/mm */
@@ -94,12 +97,13 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
      paper with its own edge; a bleed runs off the label. They are
      different pictures, so the column decides which it wants, paints
      that, and only ever shows layouts that use it. */
-  const band = bandOf(style);
+  const forced = inp.template ? templatesNow().find((t) => t.id === inp.template) : undefined;
+  const band = forced ? forced.band : bandOf(style);
   /* only the shapes this column's band actually offers — the free
      column has no wide band drawn, so it must not ask for one */
   const offered = [...new Set(templatesOf(band).map(artKindOf))];
-  const kind: ArtKind = offered[mix(seed, 21) % offered.length] || "spot";
-  const tpl = pickTemplate(band, seed, kind);
+  const kind: ArtKind = forced ? artKindOf(forced) : offered[mix(seed, 21) % offered.length] || "spot";
+  const tpl = forced || pickTemplate(band, seed, kind);
   const zone = tpl.art || { w: tpl.refW, h: tpl.refH };
   const zoneAspect = (zone.w / tpl.refW * widthMm) / (zone.h / tpl.refH * heightMm);
   const ap = asKind(await buildArtworkPrompt(brief, model.artist), artKindOf(tpl) === "spot" ? "spot" : "bleed");

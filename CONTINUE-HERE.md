@@ -293,6 +293,23 @@ download), 8K.WINE header, new home label. Live smoke label OK (Giorgi,
 t05, orphan region centred). Layout edits made on the LIVE admin live in
 the server's data/layout-edits — pull them before reading.
 
+**2026-09-24 night — the layout editor became a QUEUE (committed; deploy when he says)**
+- Why: he "fixed layouts but the same unfixed ones came back" — the old
+  editor listed every label ever made and an edit never removed one.
+- Now: "Make 5 new labels" (src/lib/label/layout-batch.ts, API
+  /api/admin/layout-batch) paints 5 labels exactly as the wizard does —
+  real idea (src/app/ideas.ts, moved out of page.tsx), coherent random
+  wine (demo-fill), REAL painting (his choice: he judges pictures too;
+  switch to re-using paintings once pictures hold). Templates in turn
+  t01→t12 (paintHybridLabel `template` option), sizes 110×80 / 80×110 /
+  90×90 / 100×70 and the artists rotating per lap. Three at a time,
+  ~2 min a batch. Queue state: data/layout-batch.json (per server — the
+  live queue is on the live server). A label leaves the queue on "Save my
+  fix" (edit saved, as before) or "The layout is fine" (status ok —
+  that is a signal too: what NOT to change). "The picture itself is
+  wrong" checkbox rides on either (pictureBad + note).
+- Align buttons: the line's current alignment is the black one.
+
 **DEPLOYED 2026-09-24 evening (50f3029)** — the 15-point round and the bleed fix below are LIVE; live smoke label OK (Levan, text on the 5 mm margin).
 
 **2026-09-24 later — the bleed fix + editor tools**

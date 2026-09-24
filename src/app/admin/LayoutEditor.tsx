@@ -11,6 +11,9 @@
    are drawn — black-and-white dashes, so they show on any ground — with a
    grid that starts ON the margin lines (2026-09-24). Shift-click adds or
    removes an element from the selection; the selection moves together.
+   He works through a QUEUE (2026-09-24): "Make 5" paints five new labels
+   the way the wizard does, across all twelve templates at mixed sizes;
+   each leaves the queue once he saves his fix or says the layout is fine.
    Save sends before and after — exact numbers — with a note on why;
    nothing turns into a rule until Claude has read the edits and the
    owner has agreed what they mean (tools/layout-edits-report.mts). */
@@ -22,6 +25,8 @@ type Box = { x: number; y: number; w: number; h: number };
 type Layout = { W: number; H: number; ground: string; art: Box; artCrop?: Box; lines: Line[] };
 type State = { lines: Line[]; art: Box };
 type Meta = { id: string; template?: string; style: string; widthMm: number; heightMm: number; createdAt: string; artist?: string };
+type Item = { id: string; template: string; widthMm: number; heightMm: number; artist: string; idea: string };
+type Batch = { open: Item[]; fixed: number; ok: number; running: { total: number; done: number; failed: string[] } | null };
 
 const PX_PER_MM = 12;
 const PT_PX = PX_PER_MM * 0.3528;          /* 1 pt in label pixels */
@@ -52,7 +57,8 @@ const ui = {
 };
 
 export function LayoutEditor() {
-  const [list, setList] = useState<Meta[]>([]);
+  const [batch, setBatch] = useState<Batch>({ open: [], fixed: 0, ok: 0, running: null });
+  const [pictureBad, setPictureBad] = useState(false);
   const [id, setId] = useState("");
   const [meta, setMeta] = useState<Meta | null>(null);
   const [layout, setLayout] = useState<Layout | null>(null);
@@ -64,7 +70,6 @@ export function LayoutEditor() {
   const [showGrid, setShowGrid] = useState(true);
   const [note, setNote] = useState("");
   const [msg, setMsg] = useState("");
-  const [savedCount, setSavedCount] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const drag = useRef<{ x: number; y: number; from: State; keys: string[] } | null>(null);
   /* the selection boxes are measured off the drawn letters — one more
@@ -72,18 +77,31 @@ export function LayoutEditor() {
   const [, repaint] = useState(0);
   useEffect(() => { repaint((n) => n + 1); }, [st, sel]);
 
-  useEffect(() => {
-    fetch("/api/admin/labels").then((r) => r.json()).then((b) => setList((b.labels || []).filter((m: Meta) => m.template)));
-    fetch("/api/admin/layout-edits").then((r) => r.json()).then((b) => setSavedCount((b.edits || []).length)).catch(() => {});
+  const refresh = useCallback(async () => {
+    const b = await (await fetch("/api/admin/layout-batch")).json().catch(() => null);
+    if (b && Array.isArray(b.open)) setBatch(b);
   }, []);
+  useEffect(() => { refresh(); }, [refresh]);
+  /* while a batch paints, look every few seconds for the ones that are in */
+  useEffect(() => {
+    if (!batch.running) return;
+    const t = setInterval(refresh, 4000);
+    return () => clearInterval(t);
+  }, [batch.running, refresh]);
+  const make = async () => {
+    await fetch("/api/admin/layout-batch", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "make" }) });
+    refresh();
+  };
 
   const open = useCallback(async (lid: string) => {
-    setId(lid); setSel([]); setMsg(""); setNote(""); setHist([]);
+    setId(lid); setSel([]); setMsg(""); setNote(""); setHist([]); setPictureBad(false);
     const b = await (await fetch(`/api/admin/labels?id=${lid}&part=layout`)).json();
     if (!b.layout) { setMsg("This label has no layout on disk."); return; }
     setMeta(b.meta); setLayout(b.layout); setArtSize(b.art); setFaces(b.faces || {});
     setSt({ lines: keyed(b.layout.lines), art: { ...b.layout.art } });
   }, []);
+  /* nothing open → the first label waiting in the queue */
+  useEffect(() => { if (!id && batch.open.length) open(batch.open[0].id); }, [id, batch.open, open]);
 
   /* the faces the label uses, and their bold / regular twins */
   const fontCss = useMemo(() => {
@@ -189,16 +207,20 @@ export function LayoutEditor() {
   const hide = () => { const h = !selLine?.hidden; mapSel((l) => ({ ...l, hidden: h })); };
   const scaleArt = (k: number) => st && push({ ...st, art: { x: st.art.x + (st.art.w * (1 - k)) / 2, y: st.art.y + (st.art.h * (1 - k)) / 2, w: st.art.w * k, h: st.art.h * k } });
 
-  const save = async () => {
+  /* the label leaves the queue: with his fix saved, or as fine */
+  const finish = async (outcome: "fixed" | "ok") => {
     if (!st || !layout) return;
     setMsg("Saving…");
-    const r = await fetch("/api/admin/layout-edits", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ labelId: id, note, before: { lines: keyed(layout.lines), art: layout.art }, after: { lines: st.lines, art: st.art } }),
-    });
-    const b = await r.json().catch(() => ({}));
-    if (r.ok) { setMsg("Saved. Claude will read it with the others."); setSavedCount(b.count ?? null); }
-    else setMsg("Could not save: " + (b.error || r.status));
+    if (outcome === "fixed") {
+      const r = await fetch("/api/admin/layout-edits", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ labelId: id, note, pictureBad, before: { lines: keyed(layout.lines), art: layout.art }, after: { lines: st.lines, art: st.art } }),
+      });
+      if (!r.ok) { const b = await r.json().catch(() => ({})); setMsg("Could not save: " + (b.error || r.status)); return; }
+    }
+    await fetch("/api/admin/layout-batch", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "close", id, outcome, pictureBad, note }) });
+    setId(""); setSt(null); setLayout(null); setMeta(null); setMsg("");
+    refresh();
   };
 
   const changed = !!(st && layout && JSON.stringify({ l: st.lines, a: st.art }) !== JSON.stringify({ l: keyed(layout.lines), a: layout.art }));
@@ -224,15 +246,22 @@ export function LayoutEditor() {
   return (
     <div>
       <style>{fontCss}</style>
-      {/* the labels to pick from */}
-      <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 8 }}>
-        {list.map((m) => (
+      {/* the queue: labels still waiting to be looked at */}
+      <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 8, fontSize: 12 }}>
+        <button style={{ ...ui.btnDark, opacity: batch.running ? 0.4 : 1 }} disabled={!!batch.running} onClick={make}>Make 5 new labels</button>
+        {batch.running
+          ? <span>Painting… {batch.running.done} / {batch.running.total} ready (about a minute each, three at a time)</span>
+          : <span style={ui.small}>{batch.open.length} waiting · {batch.fixed} fixed · {batch.ok} fine so far</span>}
+        {batch.running && batch.running.failed.length > 0 && <span style={{ color: "#B71318" }}>{batch.running.failed.length} failed</span>}
+      </div>
+      <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 8, minHeight: 74 }}>
+        {batch.open.map((m) => (
           // eslint-disable-next-line @next/next/no-img-element
-          <img key={m.id} src={`/api/admin/labels?id=${m.id}`} alt={m.id} title={`${m.template} · ${m.artist || ""} · ${m.createdAt.slice(0, 16)}`}
+          <img key={m.id} src={`/api/admin/labels?id=${m.id}`} alt={m.id} title={`${m.template} · ${m.widthMm}×${m.heightMm} · ${m.artist} · ${m.idea}`}
             onClick={() => open(m.id)}
             style={{ height: 70, border: m.id === id ? "2px solid #B71318" : "1px solid #E3E3E1", cursor: "pointer", flex: "0 0 auto" }} />
         ))}
-        {!list.length && <span style={ui.small}>No labels yet — make some in the wizard.</span>}
+        {!batch.open.length && !batch.running && <span style={ui.small}>The queue is empty — press “Make 5 new labels”.</span>}
       </div>
 
       {st && layout && meta && (
@@ -289,9 +318,10 @@ export function LayoutEditor() {
               </div>
               {one && (
                 <div style={{ display: "flex", gap: 6 }}>
-                  <button style={ui.btn} onClick={() => align("start")}>align left</button>
-                  <button style={ui.btn} onClick={() => align("middle")}>centre</button>
-                  <button style={ui.btn} onClick={() => align("end")}>right</button>
+                  {/* the line's current alignment is the black button */}
+                  {([["start", "align left"], ["middle", "centre"], ["end", "right"]] as const).map(([a, t]) => (
+                    <button key={a} style={selLine?.anchor === a ? { ...ui.btn, background: "#111", color: "#fff" } : ui.btn} onClick={() => align(a)}>{t}</button>
+                  ))}
                 </div>
               )}
             </>)}
@@ -307,9 +337,10 @@ export function LayoutEditor() {
             </div>
             <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Why? (optional — e.g. 'the grape reads too small next to the name')"
               style={{ width: "100%", height: 80, border: "1px solid #111", padding: 6, font: "inherit", fontSize: 12, boxSizing: "border-box" }} />
-            <button style={{ ...ui.btnDark, opacity: changed ? 1 : 0.4 }} disabled={!changed} onClick={save}>Save the edit</button>
+            <label style={{ cursor: "pointer" }}><input type="checkbox" checked={pictureBad} onChange={(e) => setPictureBad(e.target.checked)} /> the picture itself is wrong (say why in the note)</label>
+            <button style={{ ...ui.btnDark, opacity: changed ? 1 : 0.4 }} disabled={!changed} onClick={() => finish("fixed")}>Save my fix — next label</button>
+            <button style={{ ...ui.btn, opacity: changed ? 0.4 : 1 }} disabled={changed} onClick={() => finish("ok")}>The layout is fine — next label</button>
             {msg && <div style={ui.small}>{msg}</div>}
-            {savedCount !== null && <div style={ui.small}>{savedCount} edit{savedCount === 1 ? "" : "s"} saved so far.</div>}
           </div>
         </div>
       )}

@@ -232,7 +232,7 @@ export default function AdminPage() {
         </nav>
 
         {tab === "Layout editor" && (
-          <Section title="Layout editor" note="Open a label the wizard made and correct its layout by hand — drag lines and the picture, change size, weight or alignment. Save keeps your edit exactly; Claude reads the edits and proposes rules for you to approve. Nothing changes the engine by itself.">
+          <Section title="Layout editor" note="Press “Make 5 new labels”: five fresh labels are painted exactly as the wizard makes them (all twelve templates in turn, mixed sizes, the artists taking turns). Correct each by hand, then “Save my fix” or “The layout is fine” — either way it leaves the queue. Claude reads your fixes and proposes rules for you to approve; nothing changes the engine by itself.">
             <LayoutEditor />
           </Section>
         )}
