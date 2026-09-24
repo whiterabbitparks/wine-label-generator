@@ -293,7 +293,9 @@ download), 8K.WINE header, new home label. Live smoke label OK (Giorgi,
 t05, orphan region centred). Layout edits made on the LIVE admin live in
 the server's data/layout-edits — pull them before reading.
 
-**2026-09-24 later — the bleed fix + editor tools (committed, NOT deployed)**
+**DEPLOYED 2026-09-24 evening (50f3029)** — the 15-point round and the bleed fix below are LIVE; live smoke label OK (Levan, text on the 5 mm margin).
+
+**2026-09-24 later — the bleed fix + editor tools**
 - Owner's theory CONFIRMED: his template artboards are 104 × 84 = a
   100 × 80 trim + 2 mm bleed; templates were measured from the bleed
   edge, so type sat ~7 mm from the trim. Now measured from the TrimBox
@@ -319,7 +321,7 @@ the server's data/layout-edits — pull them before reading.
 - Site font: he KEEPS HNW for now; find a licensed/free replacement
   BEFORE publishing (his call, 2026-09-24).
 
-**2026-09-24 round (15 points; committed, NOT yet deployed)**
+**2026-09-24 round (15 points)**
 - Tour wording/positions: vision + bottle popup notes sit beside the
   popup's own Create button (`anchor: "create"`, rect measured in the
   popup → `createRect`); loader note mid empty space; designs note above
