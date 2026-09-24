@@ -203,15 +203,17 @@ export async function vignetteOf(dataUrl: string): Promise<{ ground: string; box
    side's strip and grown only from THAT edge, so a dark painted scene
    touching the other sides is never taken for paper (it was: Mariam's
    navy evening, man and all, came back flattened to one tone). */
-export async function cleanPaper(dataUrl: string, to?: string, side?: "top" | "bottom" | "left" | "right"): Promise<{ art: string; ground: string; cleaned: boolean; ink: { x: number; y: number; w: number; h: number } }> {
+type Side = "top" | "bottom" | "left" | "right";
+export async function cleanPaper(dataUrl: string, to?: string, sideIn?: Side | Side[]): Promise<{ art: string; ground: string; cleaned: boolean; ink: { x: number; y: number; w: number; h: number } }> {
   const buf = Buffer.from(dataUrl.slice(dataUrl.indexOf(",") + 1), "base64");
   const { data, info } = await sharp(buf).flatten({ background: "#ffffff" }).raw().toBuffer({ resolveWithObject: true });
   const W = info.width, H = info.height, C = info.channels;
   const whole = { x: 0, y: 0, w: 1, h: 1 };
   const ring = Math.max(2, Math.round(Math.min(W, H) * 0.05));
-  const onRing = side
-    ? (x: number, y: number) => side === "top" ? y < ring : side === "bottom" ? y >= H - ring : side === "left" ? x < ring : x >= W - ring
-    : (x: number, y: number) => x < ring || x >= W - ring || y < ring || y >= H - ring;
+  /* one side or several (a band in the middle has type above AND below) */
+  const sides: Side[] | null = sideIn ? (Array.isArray(sideIn) ? sideIn : [sideIn]) : null;
+  const on = (k: Side) => !sides || sides.includes(k);
+  const onRing = (x: number, y: number) => (on("top") && y < ring) || (on("bottom") && y >= H - ring) || (on("left") && x < ring) || (on("right") && x >= W - ring);
 
   /* the paper's colour: the commonest on the border ring */
   const bins = new Map<string, { n: number; r: number; g: number; b: number }>();
@@ -257,10 +259,10 @@ export async function cleanPaper(dataUrl: string, to?: string, side?: "top" | "b
     if (dist(p2 * C) >= t1) return;
     paper[p2] = 1; queue[qb++] = p2;
   };
-  if (!side || side === "top") for (let x = 0; x < W; x++) push(x, 0);
-  if (!side || side === "bottom") for (let x = 0; x < W; x++) push(x, H - 1);
-  if (!side || side === "left") for (let y = 0; y < H; y++) push(0, y);
-  if (!side || side === "right") for (let y = 0; y < H; y++) push(W - 1, y);
+  if (on("top")) for (let x = 0; x < W; x++) push(x, 0);
+  if (on("bottom")) for (let x = 0; x < W; x++) push(x, H - 1);
+  if (on("left")) for (let y = 0; y < H; y++) push(0, y);
+  if (on("right")) for (let y = 0; y < H; y++) push(W - 1, y);
   while (qa < qb) {
     const p2 = queue[qa++], x = p2 % W, y = (p2 / W) | 0;
     if (x > 0) push(x - 1, y);
@@ -305,10 +307,10 @@ export async function cleanPaper(dataUrl: string, to?: string, side?: "top" | "b
     return -1;
   };
   const mx = Math.round(W * 0.015), my = Math.round(H * 0.015);
-  if (side === "left") { const k = run(cols, H * 0.05, mx, W - 3); if (k >= 0) x0 = k; }
-  if (side === "right") { const k = run(cols, H * 0.05, W - 1 - mx, 2); if (k >= 0) x1 = k; }
-  if (side === "top") { const k = run(rows, W * 0.05, my, H - 3); if (k >= 0) y0 = k; }
-  if (side === "bottom") { const k = run(rows, W * 0.05, H - 1 - my, 2); if (k >= 0) y1 = k; }
+  if (sides?.includes("left")) { const k = run(cols, H * 0.05, mx, W - 3); if (k >= 0) x0 = k; }
+  if (sides?.includes("right")) { const k = run(cols, H * 0.05, W - 1 - mx, 2); if (k >= 0) x1 = k; }
+  if (sides?.includes("top")) { const k = run(rows, W * 0.05, my, H - 3); if (k >= 0) y0 = k; }
+  if (sides?.includes("bottom")) { const k = run(rows, W * 0.05, H - 1 - my, 2); if (k >= 0) y1 = k; }
   const ink = x1 < 0 || y1 < 0 ? whole : { x: x0 / W, y: y0 / H, w: (x1 - x0 + 1) / W, h: (y1 - y0 + 1) / H };
   const png = await sharp(out, { raw: { width: W, height: H, channels: C as 1 | 2 | 3 | 4 } }).png().toBuffer();
   return { art: `data:image/png;base64,${png.toString("base64")}`, ground: to || ground, cleaned: true, ink };

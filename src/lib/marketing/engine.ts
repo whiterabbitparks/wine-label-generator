@@ -401,20 +401,43 @@ export function dealScenarios(seed: number, pool: { text: string; charter: strin
   const ok = (t: string) => !noGrapes || !/grape/i.test(t);
   const all: DealtScene[] = [
     ...shuffle(pool.filter((p) => ok(p.text))).map((p) => ({ text: p.text, fromBoard: true, charter: p.charter })),
-    ...shuffle(SCENARIOS.filter(([, t]) => ok(t))).map(([, t]) => ({ text: t, fromBoard: false, charter: "" })),
+    /* the old generic list (cellar, crate, sommelier…) read traditional —
+       it only stands in when the boards give nothing */
+    ...(pool.length ? [] : shuffle(SCENARIOS.filter(([, t]) => ok(t))).map(([, t]) => ({ text: t, fromBoard: false, charter: "" }))),
   ];
   /* windows of five (a "More Variations" batch takes the next window):
-     inside a window no motif repeats; the first pass is strict, a second
-     pass only fills a window the pool could not complete */
+     inside a window NO motif repeats. The five are found by a small
+     search — picking one at a time could corner itself (an early pick
+     carrying three motifs left nothing that fitted) — and only when no
+     five share nothing does the window take the closest it can get. */
   const out: DealtScene[] = [];
   const used = new Set<number>();
+  const M = all.map((c) => [...motifsOf(c.text)]);
+  const windowOf = (need: number): number[] => {
+    const avail = all.map((_, i) => i).filter((i) => !used.has(i));
+    let best: number[] = [];
+    let budget = 20000;
+    const walk = (from: number, pick: number[], taken: Set<string>) => {
+      if (pick.length > best.length) best = [...pick];
+      if (pick.length === need || --budget <= 0) return;
+      for (let k = from; k < avail.length; k++) {
+        const i = avail[k];
+        if (M[i].some((m) => taken.has(m))) continue;
+        if (pick.some((j) => sim(all[j].text, all[i].text) >= 0.35)) continue;
+        M[i].forEach((m) => taken.add(m));
+        walk(k + 1, [...pick, i], taken);
+        M[i].forEach((m) => taken.delete(m));
+        if (best.length === need) return;
+      }
+    };
+    walk(0, [], new Set());
+    for (const i of avail) { if (best.length >= need) break; if (!best.includes(i)) best.push(i); }
+    return best.slice(0, need);
+  };
   while (out.length < count && used.size < all.length) {
-    const win = out.slice(out.length - (out.length % 5));
-    const taken = new Set(win.flatMap((w) => [...motifsOf(w.text)]));
-    let pick = all.findIndex((c, i) => !used.has(i) && [...motifsOf(c.text)].every((m) => !taken.has(m)) && win.every((w) => sim(w.text, c.text) < 0.35));
-    if (pick < 0) pick = all.findIndex((c, i) => !used.has(i) && win.every((w) => sim(w.text, c.text) < 0.35));
-    if (pick < 0) pick = all.findIndex((_, i) => !used.has(i));
-    used.add(pick); out.push(all[pick]);
+    const w = windowOf(Math.min(5, count - out.length));
+    if (!w.length) break;
+    for (const i of w) { used.add(i); out.push(all[i]); }
   }
   while (out.length < count) out.push(all[out.length % all.length]);
   return out.slice(0, count);
@@ -488,10 +511,13 @@ export async function loadMarketingCharters(style: string): Promise<{ life: stri
   } catch { return { life: "", shots: "", scenes: [], rules: [] }; }
 }
 
-/* 2026-09-23: ALL three boards at once — their scenes pooled, each scene
-   carrying its own board's charter */
+/* 2026-09-23: the boards pooled, each scene carrying its own board's
+   charter. Later that night (owner: "take the traditional direction out
+   of the marketing images altogether — keep only what we used for
+   contemporary and punk"): contemporary + punk only. */
+export const MARKETING_BOARDS = ["contemporary", "punk"];
 export async function loadMarketingPool(): Promise<{ shots: string; scenes: { text: string; charter: string }[]; rules: string[] }> {
-  const parts = await Promise.all(["traditional", "contemporary", "punk"].map((st) => loadMarketingCharters(st)));
+  const parts = await Promise.all(MARKETING_BOARDS.map((st) => loadMarketingCharters(st)));
   return {
     shots: parts[0].shots, rules: parts[0].rules,
     scenes: parts.flatMap((c) => c.scenes.map((text) => ({ text, charter: c.life }))),

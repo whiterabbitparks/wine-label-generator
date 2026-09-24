@@ -3776,17 +3776,19 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             {(() => {
               const CAP = 13 * 0.72, TOPS = FOLDER_TOP, BASE = TOPS + CAP;
               const PAD = HEADER_H - BASE;
-              const nameW = textW("8K.WINE ©", `700 13px ${HNW}`);
+              /* the block takes the name's REAL width (a measured estimate
+                 came out short and left the right side tighter than the left) */
               return (
                 <button onClick={() => { if (tutRef.current >= 0) stopTutorial(); go("welcome", -1); }}
-                  style={{ ...px(137.14, TOPS - PAD, nameW + PAD * 2, HEADER_H - (TOPS - PAD)), ...ghost, background: "#111", display: "block", textTransform: "none" }}>
-                  <span style={{ position: "absolute", left: PAD, top: baseTop(BASE, 13) - (TOPS - PAD), font: `700 13px ${HNW}`, lineHeight: "13px", color: "#fff", whiteSpace: "nowrap" }}>8K.WINE ©</span>
+                  style={{ position: "absolute", left: 137.14, top: TOPS - PAD, height: HEADER_H - (TOPS - PAD), ...ghost, padding: `0 ${PAD}px`, background: "#111", display: "flex", alignItems: "flex-start", textTransform: "none" }}>
+                  <span style={{ display: "block", position: "relative", top: baseTop(BASE, 13) - (TOPS - PAD), font: `700 13px ${HNW}`, lineHeight: "13px", color: "#fff", whiteSpace: "nowrap" }}>8K.WINE ©</span>
                 </button>
               );
             })()}
             {/* menu + ENG/GEO: one baseline, even gaps, right edge on the
                progress line's right edge x1303 (round 22 #11) */}
-            <div style={{ position: "absolute", right: W - 1200, top: baseTop(FOLDER_TOP + 13 * 0.72, 13), lineHeight: "13px", display: "flex", alignItems: "baseline", columnGap: 44 }}>
+            {/* measured: the menu's letters stood 6 below the folder's top */}
+            <div style={{ position: "absolute", right: W - 1200, top: baseTop(FOLDER_TOP + 13 * 0.72, 13) - 6, lineHeight: "13px", display: "flex", alignItems: "baseline", columnGap: 44 }}>
               <span style={{ font: `700 13px ${HNW}`, color: INK, whiteSpace: "nowrap" }}>{t("About Us")}</span>
               {/* ROUND 112 #4 (owner): Gallery became ARTISTS — the people
                   whose hands the labels are painted in */}

@@ -240,6 +240,23 @@ on the same 13 px size and baseline, caps' tops level with the folder
 mark's top; "Artists" → "About artists". Bar titles (and SKIP, "Style
 By") at 13 px like the menu.
 
+**Same night, round 3:** NO ORPHANS in templates.ts (`tplN`, before
+layout): a row left with ONE element at an edge moves it to the row's
+empty CENTRE place if the row has one (t05 "Vendemmia Manuale"); if the
+row has no centre place, EDGE GRAVITY brings a lone small centred line
+from the row just inside it into the empty edge place, at that place's
+size (t02 "Sangiovese" joins "Vendemmia Manuale" at the right). t02
+appellation: regular, 12 pt (review edit). Pictures with type on TWO
+opposite sides (t10) ask for the painter's edge on both, cleanPaper takes
+several sides, and the painted part is FITTED between them (never taller
+than the window, always wide enough to cross the label) and centred —
+Levan may still overshoot a little. Marketing scenes: contemporary +
+punk boards ONLY (MARKETING_BOARDS; the generic list only if both are
+empty); five theme-disjoint scenes are found by a small search (500
+sets: 0 repeats). Guided tour: the two details notes merged (26 notes).
+Header: menu raised 6 (measured: letters' top 49.5 = folder 50); the
+name block sizes to its real text (pads 9.5/10/9.5/9.6).
+
 **Open — the owner's decisions**
 0. ANSWERED (see above) — "why is Mariam always a
    small oval?" Cause: this morning's rule "ONE kind of ask" (models.ts:

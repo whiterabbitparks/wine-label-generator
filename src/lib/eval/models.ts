@@ -66,7 +66,7 @@ export async function regionNote(region: string): Promise<string> {
 export interface ArtworkPrompt { prompt: string; subject: string; aspect: "landscape" | "portrait" | "square"; kind?: "spot" | "bleed";
   /* 2026-09-23: a band/panel picture ends in the painter's own edge on
      this side (the side facing the type) — see hybrid.ts */
-  edgeSide?: "top" | "bottom" | "left" | "right" }
+  edgeSide?: string }
 
 /* THE VIGNETTE — the one composition every model knows: an isolated spot
    illustration on a flat plain ground with air around it. The composer

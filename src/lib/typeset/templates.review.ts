@@ -17,6 +17,14 @@ const at = (t: Template, base: number, x: TplText, o: Partial<TplText> = {}): Tp
   ({ ...x, baseline: base, fromBottom: +(t.refH - base).toFixed(3), anchor: base > t.refH / 2 ? "bottom" : "top", ...o });
 
 export const REVIEW_EDITS: Record<string, (t: Template) => Template> = {
+  /* t02 (owner, 2026-09-23, on Mariam's label with "Brunello di
+     Montalcino DOCG"): the appellation under the name is not bold — the
+     name already is — and a little smaller; at 14 pt bold beside the
+     16 pt name it read like a slip. */
+  t02: (t) => ({
+    ...t,
+    texts: t.texts.map((x) => (key(x) === "appellation" ? { ...x, bold: false, size: 12 } : x)),
+  }),
   /* t05, the arced name. The real legal line ("13.5% Alc. by Vol. /
      750 mL") is longer than his placeholder, and his foot row could not
      hold it. He re-set the foot: the grape alone under the vintage, in

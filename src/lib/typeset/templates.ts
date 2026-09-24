@@ -263,6 +263,50 @@ export function layoutFromTemplate(inp: TemplateInput): TemplateLayout {
     return { ...t0, texts: t0.texts.map((t) => (t === vin ? small : t)) };
   })();
 
+  /* NO ORPHANS (owner, 2026-09-23, on two labels of one run). A row of
+     his that holds places at the edges keeps them only when they are
+     filled; one element left alone at an edge looks forgotten:
+       · the row has an empty CENTRE place → the orphan moves into it
+         ("Vendemmia Manuale" alone at the left of t05's foot, while
+         everything else is centred and the centre of its row is empty);
+       · the row has no centre place → EDGE GRAVITY: a small line standing
+         alone in the middle of the row just inside it comes out to the
+         empty edge place and takes that place's size ("Sangiovese", small
+         in the middle of t02, joins "Vendemmia Manuale" on its row, at the
+         right — a touch bigger). */
+  const tplN: Template = (() => {
+    const has = (t: TplText) => !!textOf(t);
+    const flat = (t: TplText) => !t.rot && !t.arc;
+    const rows: TplText[][] = [];
+    for (const t of tpl.texts.filter(flat)) {
+      const r = rows.find((g) => g[0].anchor === t.anchor && Math.abs(g[0].baseline - t.baseline) < 0.6);
+      if (r) r.push(t); else rows.push([t]);
+    }
+    const moved = new Map<TplText, TplText>();
+    const gone = new Set<TplText>();
+    for (const row of rows) {
+      const live = row.filter(has);
+      if (live.length !== 1 || live[0].align === "center") continue;
+      const lone = live[0];
+      const centre = row.find((t) => t.align === "center" && !has(t));
+      if (centre) { moved.set(lone, { ...lone, x: tpl.refW / 2, align: "center" }); continue; }
+      const opp = row.find((t) => t !== lone && !has(t) && t.align !== lone.align && t.align !== "center");
+      if (!opp) continue;
+      /* the row just inside this one (toward the middle of the label) */
+      const inward = rows
+        .filter((g) => g !== row && g[0].anchor === row[0].anchor)
+        .filter((g) => row[0].anchor === "bottom" ? g[0].baseline < row[0].baseline : g[0].baseline > row[0].baseline)
+        .sort((a, b) => Math.abs(a[0].baseline - row[0].baseline) - Math.abs(b[0].baseline - row[0].baseline))[0];
+      if (!inward || Math.abs(inward[0].baseline - row[0].baseline) > 8) continue;
+      const inLive = inward.filter(has);
+      const cand = inLive.length === 1 && inLive[0].align === "center" && inLive[0].role === "small" ? inLive[0] : null;
+      if (!cand || moved.has(cand) || gone.has(cand)) continue;
+      moved.set(cand, { ...cand, x: opp.x, align: opp.align, baseline: row[0].baseline, fromBottom: tpl.refH - row[0].baseline, anchor: row[0].anchor, size: Math.max(opp.size, cand.size) });
+    }
+    if (!moved.size) return tpl;
+    return { ...tpl, texts: tpl.texts.filter((t) => !gone.has(t)).map((t) => moved.get(t) || t) };
+  })();
+
   /* ---- HIS ARTBOARD IS THE MEASURE (owner, 2026-09-23, laying the
      engine's labels over his own: "the text runs onto the picture, the
      lines are far apart — compare it with my reference, where and how
@@ -279,7 +323,7 @@ export function layoutFromTemplate(inp: TemplateInput): TemplateLayout {
      across the whole label, so his vintage in the middle of the foot
      "hit" the line above it on the left, and every row was pushed up a
      millimetre or two until the name sat in the picture. */
-  const rows0 = rowsOf(tpl);
+  const rows0 = rowsOf(tplN);
   const hisPt = (r: Row) => Math.max(...r.items.map((t) => t.size));
   const hisMm = (r: Row) => hisPt(r) * PT_MM;
   /* THE AIR BETWEEN ROWS IS HIS WHITE SPACE, not his baseline step
@@ -507,7 +551,7 @@ export function layoutFromTemplate(inp: TemplateInput): TemplateLayout {
 
       }
       const moved = new Map(order.filter((t) => xShift.has(t)).map((t) => [t, xShift.get(t)! - home(t)]));
-      for (const other of tpl.texts) {
+      for (const other of tplN.texts) {
         if (other.rot !== -90 || row.items.includes(other)) continue;
         const twin = [...moved.keys()].find((t) => Math.abs(t.x - other.x) < 0.6);
         if (twin) xShift.set(other, home(other) + moved.get(twin)!);

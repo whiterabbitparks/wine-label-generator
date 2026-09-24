@@ -30,7 +30,7 @@ export interface TemplateComposeInput {
   /* 2026-09-23: a band/panel picture that ends in the painter's own edge
      on this side (and was cleaned there) — that edge is laid on the
      type's boundary instead of a straight cut */
-  edge?: "top" | "bottom" | "left" | "right";
+  edge?: ("top" | "bottom" | "left" | "right")[];
   textless?: boolean;           /* the label WITHOUT its type — the layout bench draws the words itself */
   /* the drawing's box inside the file, as fractions — cleanPaper knows it
      exactly, because it grew the paper in from the edge */
@@ -217,13 +217,29 @@ export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<C
     const offY = bestWindow(detail.rows, ah, by, bh, srcH, visTop, visH);
     const offX = bestWindow(detail.cols, aw, bx, bw, srcW, visLeft, visW);
     pxPos = { x: win.x0 - (bx + offX) * s, y: win.y0 - (by + offY) * s };
-    if (inp.edge) {
+    if (inp.edge && inp.edge.length) {
+      const E = new Set(inp.edge);
+      /* 2026-09-23 (owner, on Giorgi's t10 with type above AND below the
+         picture: "it grew tall and ran over the top lines, and its top was
+         a straight cut again — control the size"). With the painter's own
+         edge on two opposite sides, the painted part is FITTED between
+         them (never taller than the window), yet always wide enough to
+         cross the label; then it is centred between its two edges. */
+      const vPair = E.has("top") && E.has("bottom"), hPair = E.has("left") && E.has("right");
+      if (vPair || hPair) {
+        const visW = Math.min(win.x1, layout.W) - Math.max(win.x0, 0), visH = Math.min(win.y1, layout.H) - Math.max(win.y0, 0);
+        s = vPair ? Math.max(visW / bw, Math.min(ww / bw, wh / bh)) : Math.max(visH / bh, Math.min(wh / bh, ww / bw));
+        if (vPair) pxPos.y = win.y0 + (wh - bh * s) / 2 - by * s;
+        if (hPair) pxPos.x = win.x0 + (ww - bw * s) / 2 - bx * s;
+        if (vPair) pxPos.x = win.x0 - (bx + bestWindow(detail.cols, aw, bx, bw, Math.min(bw, ww / s), visLeft, Math.min(bw, visW / s))) * s;
+        if (hPair) pxPos.y = win.y0 - (by + bestWindow(detail.rows, ah, by, bh, Math.min(bh, wh / s), visTop, Math.min(bh, visH / s))) * s;
+      }
       /* the painter's own edge sits ON the type's boundary; beyond it the
          plain ground, cleaned to the label's ground, simply runs on */
-      if (inp.edge === "bottom") pxPos.y = win.y1 - (by + bh) * s;
-      if (inp.edge === "top") pxPos.y = win.y0 - by * s;
-      if (inp.edge === "right") pxPos.x = win.x1 - (bx + bw) * s;
-      if (inp.edge === "left") pxPos.x = win.x0 - bx * s;
+      if (!vPair && E.has("bottom")) pxPos.y = win.y1 - (by + bh) * s;
+      if (!vPair && E.has("top")) pxPos.y = win.y0 - by * s;
+      if (!hPair && E.has("right")) pxPos.x = win.x1 - (bx + bw) * s;
+      if (!hPair && E.has("left")) pxPos.x = win.x0 - bx * s;
       /* what is drawn: the picture inside the trim plus its bleed */
       const B = { x0: -over, y0: -over, x1: layout.W + over, y1: layout.H + over };
       const d = { x0: Math.max(B.x0, pxPos.x), y0: Math.max(B.y0, pxPos.y), x1: Math.min(B.x1, pxPos.x + aw * s), y1: Math.min(B.y1, pxPos.y + ah * s) };
