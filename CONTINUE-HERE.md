@@ -326,10 +326,10 @@ the server's data/layout-edits — pull them before reading.
   arrows; size/bold/hide apply to all selected). On-canvas pt tags were
   tried and REMOVED at his request — the panel shows the selected line's
   size, as before.
-- WHEN HE COMES BACK (his ask, 2026-09-24): give him impressive stats of
-  the whole project (iterations, rounds, comments, commits, rules…) and
-  honest feedback on his working approach — strengths, weaknesses, what
-  to change.
+- Stats + feedback given 2026-09-24 night. The advice he took: decisions
+  before polish, one launch blocker a day (domain/HTTPS, admin password,
+  generation limit, artist consent, font licence, payments + legal pages,
+  removing the dev switches).
 - His 14 edits (layout-edits-report): the "move toward the edge" ones
   (t02/t04/t06/t07/t08 blocks 1–3 mm outward) are what the bleed fix now
   does by itself. Proposed rules awaiting his yes — see the reply of
