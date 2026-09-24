@@ -88,7 +88,14 @@ const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
 const slug = (p: string) => p.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z]/g, "");
 const maybe = (p = 0.55) => Math.random() < p;
 
-export function randomDetails(): { front: Record<string, string>; back: Record<string, string> } {
+/* a 13-digit EAN whose last digit is its real check digit */
+function randomEan(): string {
+  const d = Array.from({ length: 12 }, (_, i) => (i === 0 ? 4 + Math.floor(Math.random() * 5) : Math.floor(Math.random() * 10)));
+  const sum = d.reduce((a, v, i) => a + v * (i % 2 ? 3 : 1), 0);
+  return d.join("") + String((10 - (sum % 10)) % 10);
+}
+
+export function randomDetails(): { front: Record<string, string>; back: Record<string, string>; gtin: string } {
   const w = pick(WINES);
   const g = pick(w.grapes);
   const producer = pick(w.producers);
@@ -119,5 +126,5 @@ export function randomDetails(): { front: Record<string, string>; back: Record<s
   if (maybe(0.6)) back.bottlingDate = `${String(1 + Math.floor(Math.random() * 28)).padStart(2, "0")}/${String(1 + Math.floor(Math.random() * 12)).padStart(2, "0")}/${year + 1}`;
   if (maybe(0.7)) back.lot = `L${year % 100}${String(Math.floor(Math.random() * 90000) + 10000)}`;
   if (maybe(0.6)) back.web = w.web(producer);
-  return { front, back };
+  return { front, back, gtin: randomEan() };
 }

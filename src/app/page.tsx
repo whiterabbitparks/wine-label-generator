@@ -579,8 +579,8 @@ export default function NewUI() {
   const [guide, setGuide] = useState(-1);
   useEffect(() => { try { if (localStorage.getItem("nui-guide") === "1") setGuideOn(true); } catch { } }, []);
   const fillDetails = (on: boolean) => {
-    if (on) { const r = randomDetails(); setF((m) => ({ width: m.width || "110", height: m.height || "80", ...r.front })); setB(r.back); }
-    else { setF((m) => ({ width: m.width || "110", height: m.height || "80" })); setB({}); }
+    if (on) { const r = randomDetails(); setF((m) => ({ width: m.width || "110", height: m.height || "80", ...r.front })); setB(r.back); setGtin(r.gtin); }
+    else { setF((m) => ({ width: m.width || "110", height: m.height || "80" })); setB({}); setGtin(""); }
   };
   useEffect(() => { try { if (localStorage.getItem("nui-fill") === "1") { setFillOn(true); fillDetails(true); } } catch { } }, []);   // eslint-disable-line react-hooks/exhaustive-deps
   /* round 57 #2: the stand-in is a REAL generated label, not a bottle */
@@ -1239,7 +1239,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const tutReset = useCallback(() => {
     setVision(""); setSketch(null); setF({ width: "110", height: "80" }); setB({});
     /* the dev "fill details" switch, when on, refills what was just wiped */
-    try { if (localStorage.getItem("nui-fill") === "1") { const r = randomDetails(); setF({ width: "110", height: "80", ...r.front }); setB(r.back); } } catch { }
+    try { if (localStorage.getItem("nui-fill") === "1") { const r = randomDetails(); setF({ width: "110", height: "80", ...r.front }); setB(r.back); setGtin(r.gtin); } } catch { }
     setDreams([]); setStyleVars([[], [], []]); setSelected(-1); setFrontSig("");
     setBackPng(""); setBackSig(""); setBackDims({ w: 1, h: 1 });
     setMarkets([]); setNoComp(true); setGtin(""); setQrMode(""); setIngredients("");
@@ -1294,21 +1294,20 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const tutClick = useRef(false);
 
   /* THE GUIDED TOUR moves on by itself when the visitor has done what its
-     note asked (guide.ts `done`); a note to read waits for Next. Pressing
-     on past a page jumps the tour to that page's first note. */
+     note asked (guide.ts `done`); a note to read waits for Next. It follows
+     the visitor BOTH ways (owner, 2026-09-23 #1): pressing on past a page
+     jumps to that page's first note, stepping back (Edit Details, Back)
+     returns to the last note of the page they are on — so the black note
+     is always about where they stand. */
   const GUIDE_PAGES = ["vision", "loader", "options", "backdetails", "backdesign", "bottle", "assets", "checkout"];
-  useEffect(() => {
-    if (guide < 0) return;
-    const st = GUIDE[guide];
-    if (!st) { setGuide(-1); return; }
+  const [guideWarn, setGuideWarn] = useState(-1);      /* the step whose Next already warned once */
+  const [guideTick, setGuideTick] = useState(0);
+  const pageSince = useRef(Date.now());
+  useEffect(() => { pageSince.current = Date.now(); }, [page]);
+  const guideDoneNow = (d?: string) => {
+    if (!d) return true;
     const cur = GUIDE_PAGES.indexOf(page);
-    if (!confirmModal && cur > GUIDE_PAGES.indexOf(st.page)) {
-      const k = GUIDE.findIndex((g) => g.page === page && !g.modal);
-      if (k > guide) { setGuide(k); return; }
-    }
-    const d = st.done;
-    if (!d) return;
-    const ok = d.startsWith("page:") ? cur >= GUIDE_PAGES.indexOf(d.slice(5))
+    return d.startsWith("page:") ? cur >= GUIDE_PAGES.indexOf(d.slice(5))
       : d === "vision" ? vision.trim().split(/\s+/).filter(Boolean).length >= 3
       : d === "selected" ? selected >= 0
       : d === "markets" ? markets.length > 0
@@ -1317,9 +1316,42 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       : d === "assetsSaved" ? assetsSaved
       : d === "confirm" ? !!confirmModal
       : false;
-    if (ok) setGuide(guide + 1);
+  };
+  const guideNeedsMet = (n?: string) =>
+    !n ? true
+      : n === "details" ? FRONT_ROWS.some((k) => (f[k] || "").trim())
+      : n === "backText" ? !!(b.description || "").trim()
+      : n === "backFields" ? ["producerCompany", "producerAddress", "importer", "importerAddress", "bottlingDate", "lot", "web"].some((k) => (b[k] || "").trim())
+      : n === "bottle" ? bottleTouched.current || !!wineColor
+      : true;
+  useEffect(() => {
+    if (guide < 0) return;
+    const st = GUIDE[guide];
+    if (!st) { setGuide(-1); return; }
+    const cur = GUIDE_PAGES.indexOf(page);
+    const stIdx = GUIDE_PAGES.indexOf(st.page);
+    const lastOf = (pg: string) => { for (let k = GUIDE.length - 1; k >= 0; k--) if (GUIDE[k].page === pg && !GUIDE[k].modal) return k; return -1; };
+    /* a popup note whose popup closed back onto its own page: Edit Details */
+    if (st.modal && !confirmModal && page === st.page) { const k = lastOf(page); if (k >= 0 && k !== guide) { setGuide(k); return; } }
+    if (!confirmModal && cur >= 0) {
+      /* stepped back */
+      if (cur < stIdx) { const k = lastOf(page); if (k >= 0) { setGuide(k); return; } }
+      /* pressed on past this page — but a "press the red button" note that
+         opens a popup waits a moment for that popup first */
+      if (cur > stIdx) {
+        if (st.done === "confirm" && Date.now() - pageSince.current < 2500) {
+          const id = setTimeout(() => setGuideTick((n) => n + 1), 2600);
+          return () => clearTimeout(id);
+        }
+        const k = GUIDE.findIndex((g) => g.page === page && !g.modal);
+        if (k > guide) { setGuide(k); return; }
+      }
+    }
+    /* a popup's note is done only once its popup has closed — the
+       marketing popup opens on a page that already "counts" as reached */
+    if (st.done && (!st.modal || !confirmModal) && guideDoneNow(st.done)) setGuide(guide + 1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [guide, page, vision, selected, markets, backSaved, assetsStage, assets.front, assetsSaved, confirmModal]);
+  }, [guide, guideTick, page, vision, selected, markets, backSaved, assetsStage, assets.front, assetsSaved, confirmModal]);
   useEffect(() => {
     if (tut < 0 || !tutIdle) return;
     setNudge((n) => n + 1);
@@ -2118,7 +2150,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
      only clear each other in Georgian at a smaller size. The progress
      bar's title size; round 113 #2 borrows it for the artists' names
      over the three labels. */
-  const BAR_FS = lang === "ge" ? 12 : 15;
+  /* 2026-09-23 (owner): the bar's titles at the header menu's size (13) —
+     the artist heads and SKIP ride this size too */
+  const BAR_FS = lang === "ge" ? 12 : 13;
 
   const OPT_FRAMES = [{ x: 137.1 }, { x: 548.5 }, { x: 960 }];
   const OPT_TOP = 290, OPT_BOT = 540, OPT_W = 342.9;   /* round 98 #1: where the labels sit */
@@ -3255,8 +3289,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
            right-aligned to 617.14; buttons y651.43 h34.29, 480 wide at
            137.14 and 822.86; carousel arrows centred on y308.57. */
         const COL_L = 137.14, COL_R = 822.86, COL_W = 480;
-        const CAR = { x: 160, y: 205.71, w: 434.28, h: 205.71 };   /* the slide's own space */
-        const CAR_MID = 308.57;
+        /* 2026-09-23 (owner): the carousel's centre on the centre of the
+           dashed rule at x720 (171.43 → 685.71); "I agree" on its foot; the
+           right-hand tree and its paragraph brought down so the paragraph's
+           last line sits on that foot too */
+        const RULE_TOP = 171.43, RULE_FOOT = 685.71, RULE_MID = (RULE_TOP + RULE_FOOT) / 2;
+        const CAR = { x: 160, y: RULE_MID - 102.86, w: 434.28, h: 205.71 };   /* the slide's own space */
+        const CAR_MID = RULE_MID;
+        const DY = RULE_FOOT - (559.8 + 3 * 18);
         const TC_B = 468.28;
         const ROWB = [502.2, 536.49, 570.64, 605.06];
         const TOT_B = 639.48, TOT_FOOT = 685.71;   /* the dashed rule's own foot */
@@ -3302,18 +3342,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         );
         return (<>
           {/* ── the right-hand column: what the pack contains ───────────── */}
-          {/* the artboard's paragraph is OUTLINED, so it cannot follow the
-              language switch — it is covered and redrawn as live text */}
-          {patch(COL_R, 542, COL_W, 82, "parawipe")}
-          {["After payment, you’ll be able to download your", "Final Pack with high-resolution, print-ready files,", "instructions, and a Read Me containing", "the link to your published product page."].map((ln, i) => (
-            <span key={"pp" + i} style={{ ...px(COL_R, baseTop(559.8 + i * 18, 15), COL_W, 20), font: `italic 15px ${HNW}`, lineHeight: "15px", color: "#111", whiteSpace: "nowrap" }}>{t(ln)}</span>
-          ))}
           {/* ROUND 88 #1 (owner): the baked tree is wiped and REDRAWN LIVE —
               it reveals from the folder mark downward (trunk, bar, branches,
               icons, names, arrows, then the files line by line) and lists
               the REAL files of the ZIP under the wine's name (Wine_Name
               until one is typed). Unselected rows drop their branch; an
               own-label order has no tree (round 50). */}
+          {patch(COL_R - 6, 542, COL_W + 6, 82, "parawipe")}
           {patch(760, 92, 600, 450, "notree")}
           {!customLabel && (() => {
             const base = (f.wine || "").trim().replace(/[^\w]+/g, "_").replace(/^_+|_+$/g, "") || "Wine_Name";
@@ -3324,7 +3359,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               ...(packSel[2] ? [{ x: 1055, kind: "folder" as const, name: ["MARKETING", "ASSETS"], files: [`${base}_Bottle_Front.png`, `${base}_Bottle_Back.png`, ...[1, 2, 3, 4, 5].map((n) => `${base}_Image0${n}.png`)] }] : []),
               ...(packSel[0] ? [{ x: 1275, kind: "folder" as const, name: ["LABELS"], files: [`${base}_Front_Label.pdf`, `${base}_Front_Label.svg`, `Links/${base}_Front_Artwork.png`, `Fonts/`, `${base}_Back_Label.svg`] }] : []),
             ];
-            const TX = 1275, BAR_Y = 205, TRUNK_TOP = 152;
+            const TX = 1275, BAR_Y = 205 + DY, TRUNK_TOP = 152;
             const leftX = Math.min(...branches.map((b2) => b2.x));
             const A = (delay: number, name: string, ms = 320): React.CSSProperties =>
               treeReveal.current ? { animation: `${name} ${ms}ms ${EASE} ${delay}ms both` } : { animation: `nuiFadeIn 260ms ${EASE} both` };
@@ -3345,22 +3380,22 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     {/* the icon — ROUND 106: the owner's own ReadMe.svg beside
                         the folder mark; ROUND 107 #5: both a fifth smaller,
                         like the mark in the header, on the same centre */}
-                    <div style={{ ...px(b2.x - ICON_W / 2, 255 + (70 - ICON_H) / 2, ICON_W, ICON_H), ...A(880 + i * 120, "nuiPop", 360) }}>
+                    <div style={{ ...px(b2.x - ICON_W / 2, 255 + DY + (70 - ICON_H) / 2, ICON_W, ICON_H), ...A(880 + i * 120, "nuiPop", 360) }}>
                       <svg viewBox={b2.kind === "folder" ? "1232.5 33.9 85.1 70" : "0 0 85 70"} width={ICON_W} height={ICON_H} style={{ display: "block" }}>
                         {b2.kind === "folder" ? FOLDER_MARK : README_MARK}
                       </svg>
                     </div>
                     {/* the name */}
                     {b2.name.map((ln, j) => (
-                      <span key={ln} style={{ ...px(b2.x - 80, baseTop(345 + j * 18, 15), 160, 18), font: `15px ${HNW}`, lineHeight: "15px", textAlign: "center", whiteSpace: "nowrap", ...A(1080 + i * 120, "nuiFadeUp", 300) }}>{t(ln)}</span>
+                      <span key={ln} style={{ ...px(b2.x - 80, baseTop(345 + DY + j * 18, 15), 160, 18), font: `15px ${HNW}`, lineHeight: "15px", textAlign: "center", whiteSpace: "nowrap", ...A(1080 + i * 120, "nuiFadeUp", 300) }}>{t(ln)}</span>
                     ))}
                     {/* the arrow down to the files */}
-                    <div style={{ ...px(b2.x - 4, 372, 8, 1), background: "#000", ...A(1300 + i * 120, "nuiFadeIn", 160) }} />
-                    <div style={{ ...px(b2.x - 0.5, 372, 1, 32), transformOrigin: "top", ...A(1300 + i * 120, "nuiGrowY", 240) }}>{dashRule(0, 0, 32, true)}</div>
-                    <svg viewBox="0 0 10 6" style={{ ...px(b2.x - 5, 402, 10, 6), ...A(1500 + i * 120, "nuiFadeIn", 160) }}><polyline points="0.5,0.5 5,5.5 9.5,0.5" fill="none" stroke="#000" strokeWidth="1" /></svg>
+                    <div style={{ ...px(b2.x - 4, 372 + DY, 8, 1), background: "#000", ...A(1300 + i * 120, "nuiFadeIn", 160) }} />
+                    <div style={{ ...px(b2.x - 0.5, 372 + DY, 1, 32), transformOrigin: "top", ...A(1300 + i * 120, "nuiGrowY", 240) }}>{dashRule(0, 0, 32, true)}</div>
+                    <svg viewBox="0 0 10 6" style={{ ...px(b2.x - 5, 402 + DY, 10, 6), ...A(1500 + i * 120, "nuiFadeIn", 160) }}><polyline points="0.5,0.5 5,5.5 9.5,0.5" fill="none" stroke="#000" strokeWidth="1" /></svg>
                     {/* the files, one line after another */}
                     {b2.files.map((fn, j) => (
-                      <span key={fn} style={{ ...px(b2.x - 110, baseTop(434.45 + j * 10, 9.5), 220, 12), font: `9.5px ${HNW}`, lineHeight: "9.5px", textAlign: "center", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", ...A(1620 + i * 120 + j * 70, "nuiFadeUp", 260) }}>{fn}</span>
+                      <span key={fn} style={{ ...px(b2.x - 110, baseTop(434.45 + DY + j * 10, 9.5), 220, 12), font: `9.5px ${HNW}`, lineHeight: "9.5px", textAlign: "center", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", ...A(1620 + i * 120 + j * 70, "nuiFadeUp", 260) }}>{fn}</span>
                     ))}
                   </span>
                 ))}
@@ -3374,62 +3409,79 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               lands, a download tray after. Both baked bars are wiped. */}
           {patch(COL_R - 2, BTN.y - 2, COL_W + 4, BTN.h + 4, "dlwipe")}
           {patch(COL_L - 2, BTN.y - 2, COL_W + 4, BTN.h + 4, "paywipe")}
+          {/* 2026-09-23: after the wipes — the paragraph now reaches down over
+              where the baked Download bar was */}
+          {/* the artboard's paragraph is OUTLINED, so it cannot follow the
+              language switch — it is covered and redrawn as live text */}
+          {["After payment, you’ll be able to download your", "Final Pack with high-resolution, print-ready files,", "instructions, and a Read Me containing", "the link to your published product page."].map((ln, i) => (
+            <span key={"pp" + i} style={{ ...px(COL_R, baseTop(559.8 + DY + i * 18, 15), COL_W, 20), font: `italic 15px ${HNW}`, lineHeight: "15px", color: "#111", whiteSpace: "nowrap" }}>{t(ln)}</span>
+          ))}
+
           {/* ROUND 93 #11 (owner): what is already made reads crisp, what is
               not yet made reads pale — the rows here and the tree's branches */}
-          {!customLabel && PACK.map((it, i) => (!madeRow[i] && (
-            <div key={"pale" + i} style={{ ...px(COL_L, ROWB[i] - 20, COL_W, 30), background: "rgba(255,255,255,0.62)", pointerEvents: "none", zIndex: 2 }} />
-          )))}
+          {/* 2026-09-23 (owner): no price list and no total — the whole
+              baked left column (slide, chevrons, T&C, rows, total) is wiped
+              and only the carousel and "I agree" are drawn again */}
+          {patch(COL_L - 14, RULE_TOP + 8, PRICE_R - COL_L + 28, 700 - RULE_TOP, "leftwipe")}
           {/* ── the left-hand column: the order ─────────────────────────── */}
-          {/* the live slide, centred between the baked chevrons */}
-          {sl.landing ? (
-            productUrl && selected >= 0 ? (
-              <div style={{ ...px(CAR.x + (CAR.w - 320) / 2, CAR.y, 320, 320 / W * 823 + 13), background: "#fff", borderRadius: 5, boxShadow: "0 8px 22px rgba(0,0,0,0.2)", overflow: "hidden" }}>
-                <div style={{ height: 13, background: "#E8E8E6", display: "flex", alignItems: "center", gap: 3, padding: "0 6px" }}>
-                  {["#FF5F57", "#FEBC2E", "#28C840"].map((c) => <span key={c} style={{ width: 4.5, height: 4.5, borderRadius: 3, background: c }} />)}
-                  <span style={{ flex: 1, margin: "0 8px", height: 7, background: "#fff", borderRadius: 3, font: `5px ${HNW}`, color: "#999", paddingLeft: 4, lineHeight: "7px" }}>8klabels.com{productUrl}</span>
+          {/* 2026-09-23 (owner): A CAROUSEL — the current item big, sharp and
+              in the middle; its neighbours smaller, blurred and pale to each
+              side, as if the items stood on a ring turning past the eye.
+              Each item keeps its own element, so a turn SLIDES: the next
+              one grows into the middle and sharpens, the last one shrinks
+              aside and blurs. */}
+          <div style={{ ...px(COL_L, CAR.y - 30, PRICE_R - COL_L, CAR.h + 60), overflow: "hidden" }}>
+            {slides.map((sd, i) => {
+              const n = slides.length;
+              let rel = ((i - carIdx) % n + n) % n;
+              if (rel > n / 2) rel -= n;
+              if (Math.abs(rel) > 2) return null;
+              const ar = Math.abs(rel);
+              const scale = ar === 0 ? 1 : ar === 1 ? 0.52 : 0.32;
+              const dx = rel === 0 ? 0 : Math.sign(rel) * (ar === 1 ? 178 : 238);
+              const dy = ar === 0 ? 0 : ar === 1 ? -6 : -10;
+              const cx0 = CAR.x + CAR.w / 2 - COL_L, cy0 = 30;
+              const inner = sd.landing
+                ? (ar === 0 && productUrl && selected >= 0 ? (
+                  <div style={{ position: "absolute", left: (CAR.w - 320) / 2, top: 0, width: 320, height: 320 / W * 823 + 13, background: "#fff", borderRadius: 5, boxShadow: "0 8px 22px rgba(0,0,0,0.2)", overflow: "hidden" }}>
+                    <div style={{ height: 13, background: "#E8E8E6", display: "flex", alignItems: "center", gap: 3, padding: "0 6px" }}>
+                      {["#FF5F57", "#FEBC2E", "#28C840"].map((c) => <span key={c} style={{ width: 4.5, height: 4.5, borderRadius: 3, background: c }} />)}
+                      <span style={{ flex: 1, margin: "0 8px", height: 7, background: "#fff", borderRadius: 3, font: `5px ${HNW}`, color: "#999", paddingLeft: 4, lineHeight: "7px" }}>8klabels.com{productUrl}</span>
+                    </div>
+                    <iframe src={productUrl} title="product page" style={{ width: W, height: 823, transform: `scale(${320 / W})`, transformOrigin: "0 0", border: 0, pointerEvents: "none" }} />
+                  </div>
+                ) : <div style={{ position: "absolute", left: 40, top: 0, width: CAR.w - 80, height: CAR.h, background: "#ECECEA" }} />)
+                : sd.img
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  ? <img src={sd.img} alt={sd.name} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain" }} />
+                  : ar === 0 ? <div style={{ position: "absolute", inset: 0 }}>{notMade(40, 0, CAR.w - 80, CAR.h, sd.kind || "front", "nmCar" + i)}</div>
+                    : <div style={{ position: "absolute", left: 40, top: 0, width: CAR.w - 80, height: CAR.h, background: "#ECECEA" }} />;
+              return (
+                <div key={"car" + i} onClick={ar ? () => setCarIdx(i) : undefined}
+                  style={{ position: "absolute", left: cx0 - CAR.w / 2, top: cy0, width: CAR.w, height: CAR.h, zIndex: 10 - ar,
+                    transform: `translate(${dx}px, ${dy}px) scale(${scale})`, filter: ar ? `blur(${ar === 1 ? 2.5 : 4}px)` : "none", opacity: ar === 0 ? 1 : ar === 1 ? 0.55 : 0.28,
+                    transition: `transform 520ms ${EASE}, filter 520ms ${EASE}, opacity 520ms ${EASE}`, cursor: ar ? "pointer" : undefined }}>
+                  {inner}
                 </div>
-                <iframe src={productUrl} title="product page" style={{ width: W, height: 823, transform: `scale(${320 / W})`, transformOrigin: "0 0", border: 0, pointerEvents: "none" }} />
-              </div>
-            ) : notMade(CAR.x + 40, CAR.y, CAR.w - 80, CAR.h, "front", "nmCar")
-          ) : sl.img ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img src={sl.img} alt={sl.name} style={{ ...px(CAR.x, CAR.y, CAR.w, CAR.h), objectFit: "contain" }} />
-          ) : notMade(CAR.x + 40, CAR.y, CAR.w - 80, CAR.h, sl.kind || "front", "nmCar")}
-          {(<>
-            {/* the baked chevrons get their click zones */}
-            <button aria-label="prev slide" onClick={() => setCarIdx((c) => (c + slides.length - 1) % slides.length)}
-              style={{ ...px(COL_L - 8, CAR_MID - 22, 44, 44), ...ghost }} />
-            <button aria-label="next slide" onClick={() => setCarIdx((c) => (c + 1) % slides.length)}
-              style={{ ...px(PRICE_R - 36, CAR_MID - 22, 44, 44), ...ghost }} />
-            {/* T&C — the ring's dot and both click zones are live */}
-            {dotBtn(RING_X, ringY(TC_B), agree, () => setAgree((a) => !a), "agree", { ring: true, r: 9, cover: 24 })}
-            <button onClick={() => setAgree((a) => !a)} style={{ ...px(206, TC_B - 15, 94, 20), ...ghost }} />
-            <button aria-label="terms" onClick={() => { setTermsOpen(true); setTermsPos(0); }} style={{ ...px(298, TC_B - 15, 130, 20), ...ghost, cursor: "pointer" }} />
-          </>)}
-          {customLabel ? (<>
-            {/* own-label order: only Marketing Assets and its price */}
-            {patch(LBL_X - 2, 486, 380, 134, "custrows")}
-            {patch(PRICE_R - 160, 486, 160, 134, "custprices")}
-            {dotBtn(RING_X, ringY(ROWB[0]), !!packSel[2], () => setPackSel((ps) => ps.map((v, k) => (k === 2 ? !v : v))), "pkc", { ring: true, r: 9, cover: 24 })}
-            {[1, 2, 3].map((i) => <span key={"nr" + i} style={{ ...px(RING_X - 13, ringY(ROWB[i]) - 13, 26, 26), background: "#fff" }} />)}
-            {rowLabel(ROWB[0], t("Marketing Assets"), () => setPackSel((ps) => ps.map((v, k) => (k === 2 ? !v : v))), "clm")}
-            {priceAt(ROWB[0], "$" + PACK[2].price)}
-            {bigTotal("$" + total)}
-          </>) : (<>
-            {/* live dots on the baked rings + the row click zones */}
-            {PACK.map((it, i) => (
-              <span key={it.name}>
-                {dotBtn(RING_X, ringY(ROWB[i]), !!packSel[i], () => setPackSel((ps) => ps.map((v, k) => (k === i ? !v : v))), "pk" + i, { ring: true, r: 9, cover: 24 })}
-                <button onClick={() => setPackSel((ps) => ps.map((v, k) => (k === i ? !v : v)))}
-                  style={{ ...px(LBL_X, ROWB[i] - 17, 360, 24), ...ghost }} />
-                {priceAt(ROWB[i], "$" + it.price)}
-              </span>
-            ))}
-            {bigTotal("$" + total)}
-          </>)}
+              );
+            })}
+          </div>
+          {/* the chevrons, live now (the baked ones went with the left column) */}
+          {([["prev slide", COL_L + 4, "13,3 5,11 13,19"], ["next slide", PRICE_R - 18, "5,3 13,11 5,19"]] as const).map(([lab, x, pts]) => (
+            <button key={lab} aria-label={lab} onClick={() => setCarIdx((c) => (c + (lab === "next slide" ? 1 : slides.length - 1)) % slides.length)}
+              style={{ ...px(x - 13, CAR_MID - 22, 44, 44), ...ghost, zIndex: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <svg viewBox="0 0 18 22" width="12" height="16"><polyline points={pts} fill="none" stroke="#111" strokeWidth="1.6" /></svg>
+            </button>
+          ))}
+          {/* "I agree to the Terms & Conditions", alone, on the rule's foot */}
+          {dotBtn(RING_X, RULE_FOOT - RING_DY, agree, () => setAgree((a) => !a), "agree", { ring: true, r: 9, cover: 24 })}
+          <span style={{ ...px(LBL_X, baseTop(RULE_FOOT, 15), 420, 18), font: `italic 15px ${HNW}`, lineHeight: "15px", color: "#111", whiteSpace: "nowrap" }}>
+            <button onClick={() => setAgree((a) => !a)} style={{ ...ghost, font: `italic 15px ${HNW}`, color: "#111", textTransform: "none" }}>{t("I agree to the")}</button>{" "}
+            <button aria-label="terms" onClick={() => { setTermsOpen(true); setTermsPos(0); }} style={{ ...ghost, font: `italic 15px ${HNW}`, color: "#111", textDecoration: "underline", textTransform: "none" }}>{t("Terms & Conditions")}</button>
+          </span>
           {/* round 52 #1: the agree gate message under the Pay bar */}
           {warn && (
-            <span style={{ ...px(137.14, 694, 480, 16), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block" }}>{warn}</span>
+            <span style={{ ...px(137.14, 700, 480, 16), font: `13px ${HNW}`, color: "#BA141A", textAlign: "left", display: "block" }}>{warn}</span>
           )}
           {/* ROUND 52 #3: Terms & Conditions modal — lorem body behind the
               house-style scroll (1px track + black dot, draggable), black
@@ -3716,15 +3768,30 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               </span>
               <span style={{ font: `300 9px ${HNW}`, color: "#aaa", whiteSpace: "nowrap" }}>guided tour</span>
             </button>
-            <button onClick={() => { if (tutRef.current >= 0) stopTutorial(); go("welcome", -1); }} style={{ ...px(138.2, 25.5, 100, 20), ...ghost, font: `700 19px ${HNW}`, color: INK, textAlign: "left", textTransform: "none" }}>8K</button>
+            {/* 2026-09-23 (owner): the name is "8K.WINE ©", white on a black
+                block — the block's foot ON the header's rule, the same air
+                above and at the sides, its left edge on the page margin; the
+                name and the menu share one size and one baseline, their
+                capitals' tops level with the folder mark's top */}
+            {(() => {
+              const CAP = 13 * 0.72, TOPS = FOLDER_TOP, BASE = TOPS + CAP;
+              const PAD = HEADER_H - BASE;
+              const nameW = textW("8K.WINE ©", `700 13px ${HNW}`);
+              return (
+                <button onClick={() => { if (tutRef.current >= 0) stopTutorial(); go("welcome", -1); }}
+                  style={{ ...px(137.14, TOPS - PAD, nameW + PAD * 2, HEADER_H - (TOPS - PAD)), ...ghost, background: "#111", display: "block", textTransform: "none" }}>
+                  <span style={{ position: "absolute", left: PAD, top: baseTop(BASE, 13) - (TOPS - PAD), font: `700 13px ${HNW}`, lineHeight: "13px", color: "#fff", whiteSpace: "nowrap" }}>8K.WINE ©</span>
+                </button>
+              );
+            })()}
             {/* menu + ENG/GEO: one baseline, even gaps, right edge on the
                progress line's right edge x1303 (round 22 #11) */}
-            <div style={{ position: "absolute", right: W - 1200, top: 27.5, display: "flex", alignItems: "baseline", columnGap: 44 }}>
+            <div style={{ position: "absolute", right: W - 1200, top: baseTop(FOLDER_TOP + 13 * 0.72, 13), lineHeight: "13px", display: "flex", alignItems: "baseline", columnGap: 44 }}>
               <span style={{ font: `700 13px ${HNW}`, color: INK, whiteSpace: "nowrap" }}>{t("About Us")}</span>
               {/* ROUND 112 #4 (owner): Gallery became ARTISTS — the people
                   whose hands the labels are painted in */}
               <button onClick={openArtists}
-                style={{ ...ghost, font: `700 13px ${HNW}`, color: page === "artists" || page === "artist" ? BAR_RED : INK, whiteSpace: "nowrap", textTransform: "none" }}>{t("Artists")}</button>
+                style={{ ...ghost, font: `700 13px ${HNW}`, color: page === "artists" || page === "artist" ? BAR_RED : INK, whiteSpace: "nowrap", textTransform: "none" }}>{t("About artists")}</button>
               <span style={{ font: `700 13px ${HNW}`, color: INK, whiteSpace: "nowrap" }}>{t("Contact")}</span>
               <span style={{ display: "flex", alignItems: "baseline", columnGap: 5, whiteSpace: "nowrap" }}>
                 <button onClick={() => pickLang("en")} style={{ ...ghost, font: `${lang === "en" ? 700 : 300} 13px ${HNW}`, color: lang === "en" ? INK : "#8a8a8a" }}>ENG</button>
@@ -3772,7 +3839,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   to the back label details, back label pages to the bottle,
                   the bottle to the Final Pack; not on Marketing Assets, the
                   Final Pack, or while the tutorial tells its story. */}
-              {SKIP_TO[page] && tut < 0 && (
+              {SKIP_TO[page] && tut < 0 && guide < 0 && (
                 <button onClick={() => go(SKIP_TO[page]!)}
                   style={{ ...px(thick - 60, baseTop(PROG_Y - 14, BAR_FS), 120, BAR_FS + 4), ...ghost, pointerEvents: modalOpen ? "none" : "auto",
                     font: `700 ${BAR_FS}px ${HNW}`, lineHeight: `${BAR_FS}px`, color: BAR_RED, textAlign: "center", textTransform: "none", whiteSpace: "nowrap",
@@ -3962,10 +4029,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             </div>
           )}
           {/* 2026-09-23 — THE GUIDED TOUR's note (guide.ts): a small black
-              box beside the thing to touch, a caret toward it, a hairline
-              red frame round it; Skip ends the tour, Next moves a note that
-              only asks to be read. */}
-          {guide >= 0 && GUIDE[guide] && (() => {
+              box beside the thing to touch, its caret pointing at it (no
+              frames — the owner took the red dashed lines out). It shows only
+              once the page has slid in. Skip (red) ends the tour; Next is on
+              every note that the visitor can pass by hand — and if they have
+              not done what it asks, the first Next only asks "are you sure?"
+              and the second lets them through (owner #10). A "press the red
+              button" note has no Next: the red button IS its next. */}
+          {guide >= 0 && GUIDE[guide] && !prev && (() => {
             const st: GuideStep = GUIDE[guide];
             const show = st.modal ? !!confirmModal : page === st.page && !confirmModal;
             if (!show) return null;
@@ -3975,28 +4046,37 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             const top = st.side === "above" ? a.y - GAP : st.side === "below" ? a.y + a.h + GAP : cy;
             const shift = st.side === "above" ? "translateY(-100%)" : st.side === "left" || st.side === "right" ? "translateY(-50%)" : "none";
             const caretX = Math.max(14, Math.min(BW2 - 14, cx - left));
-            const isRed = a.w < 40 && a.h < 40;
             const last = guide === GUIDE.length - 1;
+            const byHand = !st.done || !["confirm", "assetsReady"].includes(st.done) && !st.done.startsWith("page:");
+            const met = st.done ? guideDoneNow(st.done) : guideNeedsMet(st.needs);
+            const warned = guideWarn === guide && !met;
+            const onNext = () => {
+              if (!met && guideWarn !== guide) { setGuideWarn(guide); return; }
+              setGuideWarn(-1);
+              setGuide(last ? -1 : guide + 1);
+            };
+            const L = (en: string, ge: string) => (lang === "ge" ? ge : en);
             return (
-              <>
-                {!isRed && !st.modal && (
-                  <div style={{ ...px(a.x - 6, a.y - 6, a.w + 12, a.h + 12), border: `1px dashed ${BAR_RED}`, zIndex: 79, pointerEvents: "none", animation: `nuiFadeIn 320ms ${EASE} both` }} />
-                )}
-                <div key={"guide" + guide} style={{ position: "absolute", left, top, width: BW2, transform: shift, zIndex: 80, background: "#111", color: "#fff", padding: "11px 13px 9px", boxSizing: "border-box", animation: `nuiFadeIn 320ms ${EASE} both`, pointerEvents: "auto" }}>
-                  {/* the caret, on the side that faces the target */}
-                  <span style={{ position: "absolute", width: 10, height: 10, background: "#111", transform: "rotate(45deg)",
-                    ...(st.side === "above" ? { bottom: -5, left: caretX - 5 } : st.side === "below" ? { top: -5, left: caretX - 5 }
-                      : st.side === "left" ? { right: -5, top: "calc(50% - 5px)" } : { left: -5, top: "calc(50% - 5px)" }) }} />
-                  <div style={{ font: `${lang === "ge" ? 12 : 13}px ${HNW}`, lineHeight: lang === "ge" ? "17px" : "17px", position: "relative" }}>{lang === "ge" ? st.ge : st.en}</div>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 9, position: "relative" }}>
-                    <button onClick={() => setGuide(-1)} style={{ ...ghost, font: `11px ${HNW}`, color: "#9a9a9a", textDecoration: "underline", textTransform: "none" }}>{t("Skip")}</button>
-                    <span style={{ font: `10px ${HNW}`, color: "#6f6f6f" }}>{guide + 1} / {GUIDE.length}</span>
-                    {!st.done ? (
-                      <button onClick={() => setGuide(last ? -1 : guide + 1)} style={{ ...ghost, font: `700 11px ${HNW}`, color: "#fff", textTransform: "none" }}>{last ? t("Finish") : t("Next")} →</button>
-                    ) : <span style={{ width: 30 }} />}
-                  </div>
+              <div key={"guide" + guide} style={{ position: "absolute", left, top, width: BW2, transform: shift, zIndex: 80, background: "#111", color: "#fff", padding: "11px 13px 9px", boxSizing: "border-box", animation: `nuiFadeIn 360ms ${EASE} both`, pointerEvents: "auto" }}>
+                {/* the caret, on the side that faces the target */}
+                <span style={{ position: "absolute", width: 10, height: 10, background: "#111", transform: "rotate(45deg)",
+                  ...(st.side === "above" ? { bottom: -5, left: caretX - 5 } : st.side === "below" ? { top: -5, left: caretX - 5 }
+                    : st.side === "left" ? { right: -5, top: "calc(50% - 5px)" } : { left: -5, top: "calc(50% - 5px)" }) }} />
+                <div style={{ font: `${lang === "ge" ? 12 : 13}px ${HNW}`, lineHeight: "17px", position: "relative" }}>
+                  {warned
+                    ? L("You haven't done this step yet. Continue anyway?", "ეს ნაბიჯი ჯერ არ გაგიკეთებია. მაინც გააგრძელებ?")
+                    : L(st.en, st.ge)}
                 </div>
-              </>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", marginTop: 9, position: "relative" }}>
+                  <button onClick={() => { setGuideWarn(-1); setGuide(-1); }} style={{ ...ghost, justifySelf: "start", font: `11px ${HNW}`, color: "#E5484D", textDecoration: "underline", textTransform: "none" }}>{t("Skip")}</button>
+                  <span style={{ font: `10px ${HNW}`, color: "#7a7a7a", textAlign: "center" }}>{guide + 1} / {GUIDE.length}</span>
+                  {byHand ? (
+                    <button onClick={onNext} style={{ ...ghost, justifySelf: "end", font: `700 11px ${HNW}`, color: "#fff", textTransform: "none", whiteSpace: "nowrap" }}>
+                      {warned ? L("Yes, continue", "კი, გავაგრძელოთ") : last ? t("Finish") : t("Next")} →
+                    </button>
+                  ) : <span />}
+                </div>
+              </div>
             );
           })()}
           {/* ROUND 72 #11: the pointer doing the work */}

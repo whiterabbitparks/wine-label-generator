@@ -216,6 +216,30 @@ the demo walkthrough as before. Walked through with generation faked up
 to the back label; bottle/assets/Final Pack notes placed from the
 layouts, not yet walked live.
 
+**Guided tour round 2 + Final Pack + header (2026-09-23, owner's 24
+points):** tour follows the visitor BOTH ways (Edit Details / Back →
+the last note of the page they are on); a popup's note ends only when
+its popup closes (the marketing popup opens on an already "reached"
+page); a "press red" note that opens a popup waits 2.5 s for it; notes
+appear only after the page has slid in (`!prev`); red dashed frames
+REMOVED; Skip red (#E5484D); "n / 27" centred; no SKIP on the bar during
+the tour; Next on every note the visitor can pass by hand — if its
+`done`/`needs` is unmet the first Next asks "are you sure?" and the
+second passes; new notes/wording (designs → "save it", "More details
+about your wine", QR + landing page, bottle "dress your bottle" + a note
+on uploading your own label, marketing popup "Create or Edit Details",
+Final Pack → "agree, press red"). "fill details" also fills a valid EAN.
+Final Pack: price list and total REMOVED, only "I agree…" on the foot of
+the x720 rule (685.71); the carousel (curved: centre big & sharp,
+neighbours smaller/blurred/pale, items slide) centred on the rule's
+centre (428.57); the tree + "After payment…" moved down 72 so the
+paragraph's last line sits on the rule's foot (trunk from the folder
+lengthened). Header: "8K.WINE ©" white on a black block (foot on the
+header rule, equal air top/sides, left edge on the 137.14 margin), menu
+on the same 13 px size and baseline, caps' tops level with the folder
+mark's top; "Artists" → "About artists". Bar titles (and SKIP, "Style
+By") at 13 px like the menu.
+
 **Open — the owner's decisions**
 0. ANSWERED (see above) — "why is Mariam always a
    small oval?" Cause: this morning's rule "ONE kind of ask" (models.ts:
