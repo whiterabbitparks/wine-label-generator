@@ -250,6 +250,7 @@ export const UI_GE: Record<string, string> = {
   "Details": "დეტალები",
   "Market Compliance": "შესაბამისობა",
   "Bottle": "ბოთლი",
+  "By clinking this glass, I agree to the": "ამ ჭიქის მიჭახუნებით, ვეთანხმები",
   "About artists": "მხატვრების შესახებ",
   "Next": "შემდეგი",
   "Finish": "დასრულება",

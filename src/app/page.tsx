@@ -3357,7 +3357,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             const slug = (f.wine || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "wine-name";
             type Branch = { x: number; kind: "doc" | "folder"; name: string[]; files: string[] };
             const branches: Branch[] = [
-              { x: 856, kind: "doc", name: ["READ ME"], files: ["Instructions.pdf", "Terms&Conditions.pdf", ...(packSel[1] ? [`www.8klabels.com/${slug}`] : [])] },
+              /* 2026-09-23 (owner: "the product page link shows even when no
+                 page was chosen"): it rode the old price row, which no longer
+                 exists to switch off — the link is there only when a QR code
+                 and its page were asked for */
+              { x: 856, kind: "doc", name: ["READ ME"], files: ["Instructions.pdf", "Terms&Conditions.pdf", ...(qrMode === "create" ? [`www.8klabels.com/${slug}`] : [])] },
               ...(packSel[2] ? [{ x: 1055, kind: "folder" as const, name: ["MARKETING", "ASSETS"], files: [`${base}_Bottle_Front.png`, `${base}_Bottle_Back.png`, ...[1, 2, 3, 4, 5].map((n) => `${base}_Image0${n}.png`)] }] : []),
               ...(packSel[0] ? [{ x: 1275, kind: "folder" as const, name: ["LABELS"], files: [`${base}_Front_Label.pdf`, `${base}_Front_Label.svg`, `Links/${base}_Front_Artwork.png`, `Fonts/`, `${base}_Back_Label.svg`] }] : []),
             ];
@@ -3484,6 +3488,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               The whole row — and a margin round it — takes the click. */}
           {(() => {
             const GH = 30, GW = GH * 150 / 305;
+            const UL_LIFT = -1.9;         /* measured: puts the glass's foot on the underline */
             const glass = (fill: number, key: string) => (
               <svg viewBox="225 100 150 305" width={GW} height={GH} style={{ display: "block", overflow: "visible" }}>
                 <defs>
@@ -3502,18 +3507,21 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               <div style={{ position: "absolute", right: W - 1302.86, top: baseTop(RULE_FOOT, 15) - (GH - 15) - 10, display: "flex", alignItems: "flex-end", columnGap: 9, padding: "10px 0 10px 16px", zIndex: 5 }}
                 onClick={() => setAgree((a) => { const v = !a; if (v) setClinkN((n) => n + 1); return v; })}>
                 {/* the glass, with the one that comes to clink it */}
-                <span style={{ position: "relative", width: GW, height: GH, flex: "0 0 auto", cursor: "pointer", marginBottom: 1 }}>
+                {/* its foot on the line that underlines "Terms & Conditions" */}
+                <span style={{ position: "relative", width: GW, height: GH, flex: "0 0 auto", cursor: "pointer", marginBottom: UL_LIFT }}>
                   {clinkN > 0 && (
                     <span key={"clink" + clinkN} style={{ position: "absolute", left: 0, bottom: 0, transformOrigin: "50% 100%", animation: `nuiClinkIn 1150ms cubic-bezier(.3,.7,.3,1) both`, pointerEvents: "none" }}>
                       {glass(0.5, "b" + clinkN)}
                     </span>
                   )}
+                  {/* 2026-09-23 (owner): empty until agreed — it fills as the
+                      other glass comes to clink it */}
                   <span key={"g" + clinkN} style={{ position: "absolute", left: 0, bottom: 0, transformOrigin: "50% 100%", animation: clinkN > 0 ? `nuiClinkHit 1150ms ease both` : "none" }}>
-                    {glass(agree ? 0.72 : 0.5, "a")}
+                    {glass(agree ? 0.55 : 0, "a")}
                   </span>
                 </span>
                 <span style={{ font: `italic 15px ${HNW}`, lineHeight: "15px", color: "#111", whiteSpace: "nowrap", cursor: "pointer" }}>
-                  {t("I agree to the")}{" "}
+                  {t("By clinking this glass, I agree to the")}{" "}
                   <span onClick={(e) => { e.stopPropagation(); setTermsOpen(true); setTermsPos(0); }} style={{ textDecoration: "underline", cursor: "pointer" }}>{t("Terms & Conditions")}</span>
                 </span>
               </div>
@@ -3788,11 +3796,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {/* STATIC header (real fonts, extracted geometry). ROUND 106: no
               ground of its own — the white band behind it carries the rule */}
           <div style={{ ...px(0, 0, W, HEADER_H), background: "transparent", zIndex: 44 }}>
-            {/* round 56 #3 — TEMP DEV SWITCH (remove before launch); ROUND 63
-                moved out of the footer, to the left of the logo */}
+            {/* round 56 #3 — TEMP DEV SWITCHES (remove before launch). 2026-09-23
+                (owner): moved from the top corner to under the footer line,
+                on the same left side */}
             <button aria-label="toggle live generation"
               onClick={() => { const v = !liveGen; setLiveGen(v); liveGenRef.current = v; try { localStorage.setItem("nui-live-gen", v ? "1" : "0"); } catch { } }}
-              style={{ ...px(18, 18, 110, 16), ...ghost, display: "flex", alignItems: "center", columnGap: 6, textTransform: "none" }}>
+              style={{ ...px(18, 768, 110, 16), ...ghost, display: "flex", alignItems: "center", columnGap: 6, textTransform: "none" }}>
               <span style={{ width: 22, height: 12, borderRadius: 7, border: "1px solid #bbb", position: "relative", background: "#fff", boxSizing: "border-box", flex: "0 0 auto" }}>
                 <span style={{ position: "absolute", top: 1.5, left: liveGen ? 11.5 : 1.5, width: 7, height: 7, borderRadius: 4, background: liveGen ? "#3fd05e" : "#bbb", transition: "left 160ms" }} />
               </span>
@@ -3801,7 +3810,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             {/* 2026-09-23 — TEMP DEV SWITCH: fill the details with a random wine */}
             <button aria-label="toggle fill details"
               onClick={() => { const v = !fillOn; setFillOn(v); fillDetails(v); try { localStorage.setItem("nui-fill", v ? "1" : "0"); } catch { } }}
-              style={{ ...px(18, 34, 110, 16), ...ghost, display: "flex", alignItems: "center", columnGap: 6, textTransform: "none" }}>
+              style={{ ...px(18, 784, 110, 16), ...ghost, display: "flex", alignItems: "center", columnGap: 6, textTransform: "none" }}>
               <span style={{ width: 22, height: 12, borderRadius: 7, border: "1px solid #bbb", position: "relative", background: "#fff", boxSizing: "border-box", flex: "0 0 auto" }}>
                 <span style={{ position: "absolute", top: 1.5, left: fillOn ? 11.5 : 1.5, width: 7, height: 7, borderRadius: 4, background: fillOn ? "#3fd05e" : "#bbb", transition: "left 160ms" }} />
               </span>
@@ -3810,7 +3819,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             {/* 2026-09-23 — DEV SWITCH: the guided tour instead of the demo walkthrough */}
             <button aria-label="toggle guided tour"
               onClick={() => { const v = !guideOn; setGuideOn(v); if (!v) setGuide(-1); try { localStorage.setItem("nui-guide", v ? "1" : "0"); } catch { } }}
-              style={{ ...px(18, 50, 110, 16), ...ghost, display: "flex", alignItems: "center", columnGap: 6, textTransform: "none" }}>
+              style={{ ...px(18, 800, 110, 16), ...ghost, display: "flex", alignItems: "center", columnGap: 6, textTransform: "none" }}>
               <span style={{ width: 22, height: 12, borderRadius: 7, border: "1px solid #bbb", position: "relative", background: "#fff", boxSizing: "border-box", flex: "0 0 auto" }}>
                 <span style={{ position: "absolute", top: 1.5, left: guideOn ? 11.5 : 1.5, width: 7, height: 7, borderRadius: 4, background: guideOn ? "#3fd05e" : "#bbb", transition: "left 160ms" }} />
               </span>
