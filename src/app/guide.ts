@@ -108,8 +108,8 @@ export const GUIDE: GuideStep[] = [
     ge: "ახლა ბოთლი.", done: "page:bottle" },
   /* ── bottle ── */
   { page: "bottle", at: { x: 342.9, y: 171.7, w: 960, h: 412 }, side: "below",
-    en: "Now dress your bottle: the wine's colour, the bottle's shape and glass, the closure and its colour. Your photos will show exactly what you pick.",
-    ge: "ახლა ბოთლი მოაწყვე: ღვინის ფერი, ბოთლის ფორმა და მინა, თავსახური და მისი ფერი. ფოტოებზე ზუსტად ის გამოჩნდება, რასაც აირჩევ.", needs: "bottle" },
+    en: "To prepare your marketing materials, tell us what your bottle and closure look like. Your photos will show exactly what you pick.",
+    ge: "სამარკეტინგო მასალა რომ მოგიმზადო, მითხარი ბოთლი და თავსახური როგორი გაქვს? ფოტოებზე ზუსტად ის გამოჩნდება, რასაც აირჩევ.", needs: "bottle" },
   { page: "bottle", at: { x: 150, y: 552, w: 180, h: 18 }, side: "right",
     en: "Have a label of your own? Upload it here — we'll make the bottle shots and marketing images with it.",
     ge: "გაქვს შენი ეტიკეტი? ატვირთე აქ — ბოთლის ფოტოებსა და სარეკლამო სურათებს მასზე გავაკეთებთ." },
