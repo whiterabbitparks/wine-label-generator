@@ -304,8 +304,13 @@ the server's data/layout-edits — pull them before reading.
   dashes (visible on any ground; blue labels hid the old cyan line);
   grid starts ON the margin lines (≈5 mm equal steps between them);
   Shift-click multi-select (lines and/or picture) moves together (drag +
-  arrows; size/bold/hide apply to all selected); every line shows its pt
-  size (toggles: grid, sizes).
+  arrows; size/bold/hide apply to all selected). On-canvas pt tags were
+  tried and REMOVED at his request — the panel shows the selected line's
+  size, as before.
+- WHEN HE COMES BACK (his ask, 2026-09-24): give him impressive stats of
+  the whole project (iterations, rounds, comments, commits, rules…) and
+  honest feedback on his working approach — strengths, weaknesses, what
+  to change.
 - His 14 edits (layout-edits-report): the "move toward the edge" ones
   (t02/t04/t06/t07/t08 blocks 1–3 mm outward) are what the bleed fix now
   does by itself. Proposed rules awaiting his yes — see the reply of

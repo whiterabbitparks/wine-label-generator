@@ -11,8 +11,8 @@
    are drawn — black-and-white dashes, so they show on any ground — with a
    grid that starts ON the margin lines (2026-09-24). Shift-click adds or
    removes an element from the selection; the selection moves together.
-   Every line carries its size in points. Save sends before and after —
-   exact numbers — with a note on why; nothing turns into a rule until Claude has read the edits and the
+   Save sends before and after — exact numbers — with a note on why;
+   nothing turns into a rule until Claude has read the edits and the
    owner has agreed what they mean (tools/layout-edits-report.mts). */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -62,14 +62,13 @@ export function LayoutEditor() {
   const [hist, setHist] = useState<State[]>([]);
   const [sel, setSel] = useState<string[]>([]);       /* line group keys, and/or "art" */
   const [showGrid, setShowGrid] = useState(true);
-  const [showSizes, setShowSizes] = useState(true);
   const [note, setNote] = useState("");
   const [msg, setMsg] = useState("");
   const [savedCount, setSavedCount] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const drag = useRef<{ x: number; y: number; from: State; keys: string[] } | null>(null);
-  /* the selection boxes and the arced names' size tags are measured off
-     the drawn letters — one more paint once they are drawn */
+  /* the selection boxes are measured off the drawn letters — one more
+     paint once they are drawn */
   const [, repaint] = useState(0);
   useEffect(() => { repaint((n) => n + 1); }, [st, sel]);
 
@@ -220,8 +219,7 @@ export function LayoutEditor() {
       <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#000" strokeWidth={w} strokeDasharray={dash} />
     </g>
   );
-  /* one size tag per element (an arced name is one element) */
-  const tags = st ? [...new Map(st.lines.map((l) => [l.key || "", l])).values()] : [];
+
 
   return (
     <div>
@@ -267,23 +265,11 @@ export function LayoutEditor() {
               {guide("mb", M, layout.H - M, layout.W - M, layout.H - M, 2, "10 8")}
               {guide("ml", M, M, M, layout.H - M, 2, "10 8")}
               {guide("mr", layout.W - M, M, layout.W - M, layout.H - M, 2, "10 8")}
-              {/* the size of every line, in points */}
-              {showSizes && tags.map((l) => {
-                const arc = groupOf(l.key || "").length > 1;
-                const b = arc ? bboxOf(l.key || "") : null;
-                const x = b ? b.x + b.w / 2 : l.x, y = b ? b.y - 6 : l.y - l.size * 0.8 - 5;
-                return (
-                  <text key={"sz" + l.key} x={x} y={y} textAnchor={b ? "middle" : l.anchor} fontFamily="Helvetica, Arial, sans-serif" fontWeight={700} fontSize={21}
-                    fill="#fff" stroke="#B71318" strokeWidth={5} paintOrder="stroke" strokeLinejoin="round" pointerEvents="none"
-                    transform={!b && l.rot ? `rotate(${l.rot} ${l.x} ${l.y})` : undefined}>{(l.size / PT_PX).toFixed(1)} pt</text>
-                );
-              })}
               {selBoxes.map((b, i) => <rect key={"sel" + i} x={b.x - 4} y={b.y - 4} width={b.w + 8} height={b.h + 8} fill="none" stroke="#B71318" strokeWidth={2} pointerEvents="none" />)}
             </svg>
             <div style={{ ...ui.small, marginTop: 6 }}>
               {meta.template} · {meta.widthMm} × {meta.heightMm} mm · {meta.artist || meta.style} · bold dashes = 5 mm margin from the trim, fine dashes = centre lines and grid
               <label style={{ marginLeft: 12, cursor: "pointer" }}><input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} /> grid</label>
-              <label style={{ marginLeft: 8, cursor: "pointer" }}><input type="checkbox" checked={showSizes} onChange={(e) => setShowSizes(e.target.checked)} /> sizes</label>
             </div>
           </div>
 
