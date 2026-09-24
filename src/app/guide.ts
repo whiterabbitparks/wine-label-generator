@@ -123,7 +123,7 @@ export const GUIDE: GuideStep[] = [
     en: "Last step — press the red button for your Final Pack.",
     ge: "ბოლო ნაბიჯი — დააჭირე წითელ ღილაკს საბოლოო პაკეტისთვის.", done: "page:checkout" },
   /* ── final pack ── */
-  { page: "checkout", at: { x: 150, y: 670, w: 290, h: 24 }, side: "above",
-    en: "Your Final Pack. Agree to the terms, then press the red button to pay and download. That's the whole round — well done!",
-    ge: "შენი საბოლოო პაკეტი. დაეთანხმე პირობებს და გადასახდელად და ჩამოსატვირთად დააჭირე წითელ ღილაკს. ეს იყო მთელი რაუნდი — ყოჩაღ!" },
+  { page: "checkout", at: { x: 1010, y: 660, w: 293, h: 32 }, side: "above",
+    en: "Your Final Pack. Agree to the terms (press the glass), then press the red button to download. That's the whole round — well done!",
+    ge: "შენი საბოლოო პაკეტი. დაეთანხმე პირობებს (დააჭირე ჭიქას) და ჩამოსატვირთად დააჭირე წითელ ღილაკს. ეს იყო მთელი რაუნდი — ყოჩაღ!" },
 ];

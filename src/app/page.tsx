@@ -576,6 +576,7 @@ export default function NewUI() {
   /* 2026-09-23 — the GUIDED TOUR (guide.ts): its switch, and the step it
      stands on (-1 = not running) */
   const [guideOn, setGuideOn] = useState(false);
+  const [clinkN, setClinkN] = useState(0);        /* 2026-09-23: the agree glasses' clink */
   const [guide, setGuide] = useState(-1);
   useEffect(() => { try { if (localStorage.getItem("nui-guide") === "1") setGuideOn(true); } catch { } }, []);
   const fillDetails = (on: boolean) => {
@@ -3296,6 +3297,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         const RULE_TOP = 171.43, RULE_FOOT = 685.71, RULE_MID = (RULE_TOP + RULE_FOOT) / 2;
         const CAR = { x: 160, y: RULE_MID - 102.86, w: 434.28, h: 205.71 };   /* the slide's own space */
         const CAR_MID = RULE_MID;
+        const ARR_L = 137.14, ARR_R = 700;     /* the chevrons' outer edges */
         const DY = RULE_FOOT - (559.8 + 3 * 18);
         const TC_B = 468.28;
         const ROWB = [502.2, 536.49, 570.64, 605.06];
@@ -3359,7 +3361,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               ...(packSel[2] ? [{ x: 1055, kind: "folder" as const, name: ["MARKETING", "ASSETS"], files: [`${base}_Bottle_Front.png`, `${base}_Bottle_Back.png`, ...[1, 2, 3, 4, 5].map((n) => `${base}_Image0${n}.png`)] }] : []),
               ...(packSel[0] ? [{ x: 1275, kind: "folder" as const, name: ["LABELS"], files: [`${base}_Front_Label.pdf`, `${base}_Front_Label.svg`, `Links/${base}_Front_Artwork.png`, `Fonts/`, `${base}_Back_Label.svg`] }] : []),
             ];
-            const TX = 1275, BAR_Y = 205 + DY, TRUNK_TOP = 152;
+            /* 2026-09-23 (owner): the bar sits HALFWAY between the folder
+               mark above and the icons below, the branches dropping the rest */
+            const TRUNK_TOP = 152, ICON_TOP = 255 + DY + (70 - ICON_H) / 2;
+            const TX = 1275, BAR_Y = (TRUNK_TOP + ICON_TOP) / 2, DROP = ICON_TOP - 14 - BAR_Y;
             const leftX = Math.min(...branches.map((b2) => b2.x));
             const A = (delay: number, name: string, ms = 320): React.CSSProperties =>
               treeReveal.current ? { animation: `${name} ${ms}ms ${EASE} ${delay}ms both` } : { animation: `nuiFadeIn 260ms ${EASE} both` };
@@ -3375,8 +3380,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 )}
                 {branches.map((b2, i) => (
                   <span key={b2.name[0]} style={{ opacity: (b2.name[0] === "LABELS" ? madeRow[0] : b2.name[0] === "MARKETING" ? madeRow[2] : true) ? 1 : 0.32 }}>
-                    <div style={{ ...px(b2.x - 0.5, BAR_Y, 1, 44), transformOrigin: "top", ...A(600 + i * 90, "nuiGrowY", 220) }}>{dashRule(0, 0, 44, true)}</div>
-                    <div style={{ ...px(b2.x - 4, BAR_Y + 43, 8, 1), background: "#000", ...A(780 + i * 90, "nuiFadeIn", 160) }} />
+                    <div style={{ ...px(b2.x - 0.5, BAR_Y, 1, DROP + 1), transformOrigin: "top", ...A(600 + i * 90, "nuiGrowY", 220) }}>{dashRule(0, 0, DROP + 1, true)}</div>
+                    <div style={{ ...px(b2.x - 4, BAR_Y + DROP, 8, 1), background: "#000", ...A(780 + i * 90, "nuiFadeIn", 160) }} />
                     {/* the icon — ROUND 106: the owner's own ReadMe.svg beside
                         the folder mark; ROUND 107 #5: both a fifth smaller,
                         like the mark in the header, on the same centre */}
@@ -3409,14 +3414,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               lands, a download tray after. Both baked bars are wiped. */}
           {patch(COL_R - 2, BTN.y - 2, COL_W + 4, BTN.h + 4, "dlwipe")}
           {patch(COL_L - 2, BTN.y - 2, COL_W + 4, BTN.h + 4, "paywipe")}
-          {/* 2026-09-23: after the wipes — the paragraph now reaches down over
-              where the baked Download bar was */}
-          {/* the artboard's paragraph is OUTLINED, so it cannot follow the
-              language switch — it is covered and redrawn as live text */}
-          {["After payment, you’ll be able to download your", "Final Pack with high-resolution, print-ready files,", "instructions, and a Read Me containing", "the link to your published product page."].map((ln, i) => (
-            <span key={"pp" + i} style={{ ...px(COL_R, baseTop(559.8 + DY + i * 18, 15), COL_W, 20), font: `italic 15px ${HNW}`, lineHeight: "15px", color: "#111", whiteSpace: "nowrap" }}>{t(ln)}</span>
-          ))}
-
+          {/* 2026-09-23 (owner): no "After payment…" paragraph any more (the
+              baked one stays wiped) */}
           {/* ROUND 93 #11 (owner): what is already made reads crisp, what is
               not yet made reads pale — the rows here and the tree's branches */}
           {/* 2026-09-23 (owner): no price list and no total — the whole
@@ -3430,7 +3429,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               Each item keeps its own element, so a turn SLIDES: the next
               one grows into the middle and sharpens, the last one shrinks
               aside and blurs. */}
-          <div style={{ ...px(COL_L, CAR.y - 30, PRICE_R - COL_L, CAR.h + 60), overflow: "hidden" }}>
+          {/* 2026-09-23 (owner): the left chevron on the page margin, the right
+              one out toward the rule, the carousel centred between them and
+              its side items drawn in closer */}
+          <div style={{ ...px(ARR_L, CAR.y - 30, ARR_R - ARR_L, CAR.h + 60), overflow: "hidden" }}>
             {slides.map((sd, i) => {
               const n = slides.length;
               let rel = ((i - carIdx) % n + n) % n;
@@ -3438,9 +3440,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               if (Math.abs(rel) > 2) return null;
               const ar = Math.abs(rel);
               const scale = ar === 0 ? 1 : ar === 1 ? 0.52 : 0.32;
-              const dx = rel === 0 ? 0 : Math.sign(rel) * (ar === 1 ? 178 : 238);
+              const dx = rel === 0 ? 0 : Math.sign(rel) * (ar === 1 ? 150 : 200);
               const dy = ar === 0 ? 0 : ar === 1 ? -6 : -10;
-              const cx0 = CAR.x + CAR.w / 2 - COL_L, cy0 = 30;
+              const cx0 = (ARR_R - ARR_L) / 2, cy0 = 30;
               const inner = sd.landing
                 ? (ar === 0 && productUrl && selected >= 0 ? (
                   <div style={{ position: "absolute", left: (CAR.w - 320) / 2, top: 0, width: 320, height: 320 / W * 823 + 13, background: "#fff", borderRadius: 5, boxShadow: "0 8px 22px rgba(0,0,0,0.2)", overflow: "hidden" }}>
@@ -3467,21 +3469,59 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             })}
           </div>
           {/* the chevrons, live now (the baked ones went with the left column) */}
-          {([["prev slide", COL_L + 4, "13,3 5,11 13,19"], ["next slide", PRICE_R - 18, "5,3 13,11 5,19"]] as const).map(([lab, x, pts]) => (
+          {([["prev slide", ARR_L, "13,3 5,11 13,19"], ["next slide", ARR_R - 12, "5,3 13,11 5,19"]] as const).map(([lab, x, pts]) => (
             <button key={lab} aria-label={lab} onClick={() => setCarIdx((c) => (c + (lab === "next slide" ? 1 : slides.length - 1)) % slides.length)}
-              style={{ ...px(x - 13, CAR_MID - 22, 44, 44), ...ghost, zIndex: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              style={{ ...px(x - 16, CAR_MID - 22, 44, 44), ...ghost, zIndex: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <svg viewBox="0 0 18 22" width="12" height="16"><polyline points={pts} fill="none" stroke="#111" strokeWidth="1.6" /></svg>
             </button>
           ))}
-          {/* "I agree to the Terms & Conditions", alone, on the rule's foot */}
-          {dotBtn(RING_X, RULE_FOOT - RING_DY, agree, () => setAgree((a) => !a), "agree", { ring: true, r: 9, cover: 24 })}
-          <span style={{ ...px(LBL_X, baseTop(RULE_FOOT, 15), 420, 18), font: `italic 15px ${HNW}`, lineHeight: "15px", color: "#111", whiteSpace: "nowrap" }}>
-            <button onClick={() => setAgree((a) => !a)} style={{ ...ghost, font: `italic 15px ${HNW}`, color: "#111", textTransform: "none" }}>{t("I agree to the")}</button>{" "}
-            <button aria-label="terms" onClick={() => { setTermsOpen(true); setTermsPos(0); }} style={{ ...ghost, font: `italic 15px ${HNW}`, color: "#111", textDecoration: "underline", textTransform: "none" }}>{t("Terms & Conditions")}</button>
-          </span>
+          {/* 2026-09-23 (owner): "I agree to the Terms & Conditions" at the
+              bottom right of the folders' side, its right edge on the page
+              margin, on the rule's foot. Its ring is our loader's wine glass
+              (no dots), twice the text's height, standing on the text's
+              baseline, half full. Agreeing brings a second glass in from the
+              left, tilted and a little raised; it clinks this one and fades.
+              The whole row — and a margin round it — takes the click. */}
+          {(() => {
+            const GH = 30, GW = GH * 150 / 305;
+            const glass = (fill: number, key: string) => (
+              <svg viewBox="225 100 150 305" width={GW} height={GH} style={{ display: "block", overflow: "visible" }}>
+                <defs>
+                  <clipPath id={"agr-" + key}>
+                    <rect x="230" y={266.6 - fill * 95} width="140" height={fill * 95 + 4} style={{ transition: "y 600ms ease, height 600ms ease" }} />
+                  </clipPath>
+                </defs>
+                <path fill="#BA141A" clipPath={`url(#agr-${key})`} d="M352.397 185.696 C353.872 199.478 353.325 211.872 350.76 222.63 C346.838 239.075 336.88 251.431 321.163 259.355 C311.285 264.336 301.979 266.038 298.571 266.527 C296.674 266.308 286.165 264.888 274.916 259.216 C259.199 251.292 249.241 238.936 245.319 222.491 C242.762 211.769 242.21 199.422 243.667 185.696 Z" />
+                <g fill="none" stroke="#231F20" strokeWidth="9">
+                  <path d="M254.813 401.491 L297.631 401.491 L297.631 276.2 C297.631 276.2 246.711 271.948 235.438 224.682 C222.211 169.219 254.078 108.466 254.078 108.466 L341.155 108.635 C341.155 108.635 373.068 169.358 359.84 224.821 C348.568 272.087 297.648 276.339 297.648 276.339" />
+                  <path d="M297.8 276.2 L297.8 401.491 L340.618 401.491" />
+                </g>
+              </svg>
+            );
+            return (
+              <div style={{ position: "absolute", right: W - 1302.86, top: baseTop(RULE_FOOT, 15) - (GH - 15) - 10, display: "flex", alignItems: "flex-end", columnGap: 9, padding: "10px 0 10px 16px", zIndex: 5 }}
+                onClick={() => setAgree((a) => { const v = !a; if (v) setClinkN((n) => n + 1); return v; })}>
+                {/* the glass, with the one that comes to clink it */}
+                <span style={{ position: "relative", width: GW, height: GH, flex: "0 0 auto", cursor: "pointer", marginBottom: 1 }}>
+                  {clinkN > 0 && (
+                    <span key={"clink" + clinkN} style={{ position: "absolute", left: 0, bottom: 0, transformOrigin: "50% 100%", animation: `nuiClinkIn 1150ms cubic-bezier(.3,.7,.3,1) both`, pointerEvents: "none" }}>
+                      {glass(0.5, "b" + clinkN)}
+                    </span>
+                  )}
+                  <span key={"g" + clinkN} style={{ position: "absolute", left: 0, bottom: 0, transformOrigin: "50% 100%", animation: clinkN > 0 ? `nuiClinkHit 1150ms ease both` : "none" }}>
+                    {glass(agree ? 0.72 : 0.5, "a")}
+                  </span>
+                </span>
+                <span style={{ font: `italic 15px ${HNW}`, lineHeight: "15px", color: "#111", whiteSpace: "nowrap", cursor: "pointer" }}>
+                  {t("I agree to the")}{" "}
+                  <span onClick={(e) => { e.stopPropagation(); setTermsOpen(true); setTermsPos(0); }} style={{ textDecoration: "underline", cursor: "pointer" }}>{t("Terms & Conditions")}</span>
+                </span>
+              </div>
+            );
+          })()}
           {/* round 52 #1: the agree gate message under the Pay bar */}
           {warn && (
-            <span style={{ ...px(137.14, 700, 480, 16), font: `13px ${HNW}`, color: "#BA141A", textAlign: "left", display: "block" }}>{warn}</span>
+            <span style={{ ...px(822.86, 700, 480, 16), font: `13px ${HNW}`, color: "#BA141A", textAlign: "right", display: "block" }}>{warn}</span>
           )}
           {/* ROUND 52 #3: Terms & Conditions modal — lorem body behind the
               house-style scroll (1px track + black dot, draggable), black
@@ -3589,6 +3629,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         @keyframes btnFly { from { left: ${WELCOME_X - NEXT_R}px } to { left: ${NEXT_X - NEXT_R}px } }
         @keyframes nuiFadeIn { from { opacity: 0 } to { opacity: 1 } }
         @keyframes nuiHomeIn { from { transform: translateX(1440px) } to { transform: translateX(0) } }
+        @keyframes nuiClinkIn {
+          0% { opacity: 0; transform: translate(-44px, -2px) rotate(8deg) }
+          40% { opacity: 1; transform: translate(-23px, -5px) rotate(16deg) }
+          52% { opacity: 1; transform: translate(-21px, -5px) rotate(19deg) }
+          64% { opacity: 1; transform: translate(-24px, -5px) rotate(15deg) }
+          100% { opacity: 0; transform: translate(-40px, -2px) rotate(9deg) }
+        }
+        @keyframes nuiClinkHit { 0%, 46% { transform: rotate(0) } 54% { transform: rotate(5deg) } 66% { transform: rotate(-2deg) } 78%, 100% { transform: rotate(0) } }
         @keyframes nuiFadeOut { from { opacity: 1 } to { opacity: 0 } }
         @keyframes szGrow { from { transform: scale(0) } to { transform: scale(1) } }`}</style>
       {/* round 40: the page bands extend to the window edges so the 80%
@@ -3969,9 +4017,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   else if (page === "assets") go("checkout");
                   /* round 85 #3: on the Final Pack the button is the payment,
                      then the download */
+                  /* 2026-09-23 (owner): no payment step for now — the button
+                     downloads the pack as soon as the terms are agreed */
                   else if (page === "checkout") {
-                    if (!paid) { if (requireAgree()) setPaid(true); }
-                    else proceedToPayment();
+                    if (requireAgree()) { setPaid(true); proceedToPayment(); }
                   }
                 }}
                 style={{
@@ -3991,19 +4040,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     <line x1="9.12" y1="0" x2="-9.13" y2="0" stroke="#fff" strokeWidth="1.6" strokeMiterlimit="10" />
                     <polyline points="-3.53,5.6 -9.13,0 -3.53,-5.6" fill="none" stroke="#fff" strokeWidth="1.6" strokeMiterlimit="10" />
                   </svg>
-                ) : page === "checkout" && paid ? (
+                ) : page === "checkout" ? (
                   /* the owner's download tray (Red_Buttons_Pay&Download.svg) */
                   <svg viewBox="0 0 40 40" width="21" height="21">
                     <path d="M8 20 V32 H32 V20" fill="none" stroke="#fff" strokeWidth="3.4" strokeLinejoin="miter" />
                     <line x1="20" y1="6" x2="20" y2="24" stroke="#fff" strokeWidth="3.4" />
                     <polyline points="13,17 20,24.5 27,17" fill="none" stroke="#fff" strokeWidth="3.4" />
-                  </svg>
-                ) : page === "checkout" ? (
-                  /* the owner's card */
-                  <svg viewBox="0 0 44 32" width="23.5" height="17">
-                    <rect x="2.5" y="2.5" width="39" height="27" rx="3.5" fill="none" stroke="#fff" strokeWidth="3.4" />
-                    <line x1="2.5" y1="11" x2="41.5" y2="11" stroke="#fff" strokeWidth="3.4" />
-                    <rect x="29" y="19" width="7" height="4" fill="#fff" />
                   </svg>
                 ) : (
                   <svg viewBox="-9.93 -6.4 20.05 12.8" width="20.05" height="12.8">

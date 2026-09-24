@@ -257,6 +257,16 @@ sets: 0 repeats). Guided tour: the two details notes merged (26 notes).
 Header: menu raised 6 (measured: letters' top 49.5 = folder 50); the
 name block sizes to its real text (pads 9.5/10/9.5/9.6).
 
+**Final Pack, round 2 (owner):** no payment step for now — the red button
+downloads (after "I agree"); no "After payment…" paragraph; "I agree to
+the Terms & Conditions" at the bottom right of the folders' side (right
+edge on the 1302.86 margin, baseline on the rule's foot), its ring is the
+loader's wine glass (2× the text height, half full; agreeing clinks a
+second glass in from the left and fades it; the whole row + margin is the
+hit area); the tree's bar sits halfway between the folder mark and the
+icons; chevrons at 137.14 and 700, carousel centred between them, side
+items drawn in (150/200).
+
 **Open — the owner's decisions**
 0. ANSWERED (see above) — "why is Mariam always a
    small oval?" Cause: this morning's rule "ONE kind of ask" (models.ts:
