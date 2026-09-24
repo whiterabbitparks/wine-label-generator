@@ -61,8 +61,8 @@ export const GUIDE: GuideStep[] = [
     en: "All set? Press the red button.",
     ge: "მზად ხარ? დააჭირე წითელ ღილაკს.", done: "confirm" },
   { page: "vision", at: { x: 350, y: 150, w: 740, h: 520 }, side: "right", modal: true, anchor: "create",
-    en: "Check what you wrote; Edit Details takes you back if you want to change the details.",
-    ge: "გადაამოწმე რაც ჩაწერე; რედაქტირება უკან დაგაბრუნებს, თუ დეტალების შეცვლა გინდა.", done: "page:loader" },
+    en: "Check what you wrote; Edit Details takes you back if you want to change the details. Hit Create to see labels.",
+    ge: "გადაამოწმე რაც ჩაწერე; რედაქტირება უკან დაგაბრუნებს, თუ დეტალების შეცვლა გინდა. დააჭირე შექმნას, რომ ეტიკეტები ნახო.", done: "page:loader" },
   /* ── painting ── */
   { page: "loader", at: { x: 620, y: 592, w: 200, h: 4 }, side: "below",
     en: "Three artists are painting right now. It takes about a minute.",
