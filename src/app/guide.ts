@@ -39,6 +39,9 @@ export interface GuideStep {
   /* placed beside the popup's own Create button (the popup's height
      changes with what it lists) */
   anchor?: "create";
+  /* the words when a product web page is being made too (QR "create") */
+  enPage?: string;
+  gePage?: string;
 }
 
 const RED = { x: 1284.8, y: 735.8, w: 36.1, h: 36.2 };   /* the red round button */
@@ -121,8 +124,10 @@ export const GUIDE: GuideStep[] = [
     ge: "გადაამოწმე დეტალები. თუ ყველაფერი სწორია, დააჭირე შექმნას — ან რედაქტირებას, თუ რამის შეცვლა გინდა.", done: "page:assets" },
   /* ── marketing assets ── */
   { page: "assets", at: { x: 137, y: 274, w: 1165, h: 343 }, side: "above",
-    en: "Two bottle photos and five marketing images{page} are being made — about two minutes in all.",
-    ge: "მზადდება ბოთლის ორი ფოტო და ხუთი სარეკლამო სურათი{page} — ყველაფერს დაახლოებით ორი წუთი დასჭირდება.", done: "assetsReady" },
+    en: "Two bottle photos and five marketing images are being made — about two minutes in all.",
+    ge: "მზადდება ბოთლის ორი ფოტო და ხუთი სარეკლამო სურათი — ყველაფერს დაახლოებით ორი წუთი დასჭირდება.",
+    enPage: "Two bottle photos, five marketing images and your product's web page are being made — about two minutes in all.",
+    gePage: "მზადდება ბოთლის ორი ფოტო, ხუთი სარეკლამო სურათი და პროდუქტის ვებ-გვერდი — ყველაფერს დაახლოებით ორი წუთი დასჭირდება.", done: "assetsReady" },
   { page: "assets", at: { x: 583, y: 657.6, w: 274, h: 34.3 }, side: "right",
     en: "Save them to your folder.",
     ge: "შეინახე ისინი შენს საქაღალდეში.", done: "assetsSaved" },

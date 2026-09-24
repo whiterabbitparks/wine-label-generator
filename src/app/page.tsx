@@ -4180,7 +4180,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 <div key={"gt" + lang} style={{ font: `${lang === "ge" ? 12 : 13}px/${lang === "ge" ? "15px" : "17px"} ${HNW}`, position: "relative" }}>
                   {warned
                     ? L("You haven't done this step yet. Continue anyway?", "ეს ნაბიჯი ჯერ არ გაგიკეთებია. მაინც გააგრძელებ?")
-                    : L(st.en, st.ge).replace("{page}", qrMode === "create" ? L(", and your product's web page", ", და პროდუქტის ვებ-გვერდი") : "")}
+                    : qrMode === "create" && st.enPage && st.gePage ? L(st.enPage, st.gePage) : L(st.en, st.ge)}
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", marginTop: 9, position: "relative" }}>
                   <button onClick={() => { setGuideWarn(-1); setGuide(-1); }} style={{ ...ghost, justifySelf: "start", font: `11px ${HNW}`, color: "#E5484D", textDecoration: "underline", textTransform: "none" }}>{t("Skip")}</button>
