@@ -10,7 +10,9 @@ import type { Template, TplText } from "./templates";
      his drawing  →  his review edits (this file)  →  his bench nudges
 
    Numbers are his, read off his edited PDF: millimetres from the label's
-   top-left at the 104 × 84 reference, sizes in points. */
+   top-left at the 104 × 84 reference, sizes in points — and since
+   2026-09-24 measured from his TRIM (100 × 80; the 2 mm bleed is outside),
+   so each of his numbers below is 2 mm less than on his artboard. */
 
 const key = (t: TplText) => t.fields.join("+");
 const at = (t: Template, base: number, x: TplText, o: Partial<TplText> = {}): TplText =>
@@ -35,19 +37,19 @@ export const REVIEW_EDITS: Record<string, (t: Template) => Template> = {
   t05: (t) => {
     const by = (k: string) => t.texts.find((x) => key(x) === k)!;
     const legal: TplText = {
-      ...at(t, 76.71, by("wineTypeLine"), { align: "center", x: t.refW / 2, size: 7, bold: false, accent: false }),
+      ...at(t, 74.71, by("wineTypeLine"), { align: "center", x: t.refW / 2, size: 7, bold: false, accent: false }),
       fields: ["wineTypeLine", "alcVol"], join: " / ", sample: "Dry Red Wine / Alc.: 13.5% / 750 ml.",
     };
     return {
       ...t,
-      art: { kind: "oval", x: 18.24, y: 23.73, w: 67.52, h: 32.24 },
+      art: { kind: "oval", x: 16.24, y: 21.73, w: 67.52, h: 32.24 },
       texts: [
         by("producer"), by("wineName"),
-        at(t, 61.63, by("vintage")),
-        at(t, 66.26, by("grape"), { size: 10, bold: true, accent: true }),
-        at(t, 71.61, by("special"), { size: 7.52, bold: false, x: 7.0 }),
-        at(t, 71.61, by("classification"), { size: 7.52, bold: true }),
-        at(t, 71.61, by("regionCountry"), { size: 7.52, bold: false, x: 97.0 }),
+        at(t, 59.63, by("vintage")),
+        at(t, 64.26, by("grape"), { size: 10, bold: true, accent: true }),
+        at(t, 69.61, by("special"), { size: 7.52, bold: false, x: 5.0 }),
+        at(t, 69.61, by("classification"), { size: 7.52, bold: true }),
+        at(t, 69.61, by("regionCountry"), { size: 7.52, bold: false, x: 95.0 }),
         legal,
       ],
     };
@@ -56,7 +58,7 @@ export const REVIEW_EDITS: Record<string, (t: Template) => Template> = {
      pair and the two rows under the name each came down, the name, the
      vintage and the legal line stayed */
   t06: (t) => {
-    const nb: Record<string, number> = { producer: 56.37, appellation: 56.42, special: 68.53, classification: 68.53, grape: 72.14, regionCountry: 72.14 };
+    const nb: Record<string, number> = { producer: 54.37, appellation: 54.42, special: 66.53, classification: 66.53, grape: 70.14, regionCountry: 70.14 };
     return { ...t, texts: t.texts.map((x) => (nb[key(x)] !== undefined ? at(t, nb[key(x)], x) : x)) };
   },
 };

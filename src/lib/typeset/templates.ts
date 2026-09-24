@@ -356,7 +356,12 @@ export function layoutFromTemplate(inp: TemplateInput): TemplateLayout {
       const fromRight = tpl.refW - t.x;
       return t.x <= fromRight ? t.x : inp.widthMm - fromRight;
     }
-    return t.align === "center" ? inp.widthMm / 2 + (t.x - tpl.refW / 2) : t.align === "right" ? inp.widthMm - (tpl.refW - t.x) : t.x;
+    /* 2026-09-24: measured from his TRIM, a few of his lines start on or
+       just over the 5 mm line (the contemporary column at 4.6 mm) — the
+       margin wins, the line stops ON it rather than shrinking */
+    return t.align === "center" ? inp.widthMm / 2 + (t.x - tpl.refW / 2)
+      : t.align === "right" ? Math.min(inp.widthMm - MARGIN_MM, inp.widthMm - (tpl.refW - t.x))
+      : Math.max(MARGIN_MM, t.x);
   };
 
   /* ---- rule 4: sizes, hierarchy, and the two bounds --------------- */
@@ -544,6 +549,9 @@ export function layoutFromTemplate(inp: TemplateInput): TemplateLayout {
         const outer = (onLeft ? e.up : e.down) / PX_PER_MM;   /* ink toward the edge */
         const inner = (onLeft ? e.down : e.up) / PX_PER_MM;   /* ink toward the picture */
         let x: number = prev === null ? home(order[0]) : prev.x + dir * Math.abs(t.x - order[k - 1].x);
+        /* the column at the edge keeps its ink inside the 5 mm margin
+           (an accented capital on his t12 reached 4.6 mm from the trim) */
+        if (prev === null) x = onLeft ? Math.max(x, MARGIN_MM + outer) : Math.min(x, inp.widthMm - MARGIN_MM - outer);
         if (prev && dir * (x - prev.x) < 0) x = prev.x;
         if (prev) { const need = prev.inner + 0.3 + outer; if (dir * (x - prev.x) < need) x = prev.x + dir * need; }
         xShift.set(t, x);

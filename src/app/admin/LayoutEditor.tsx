@@ -8,8 +8,11 @@
    its picture are live: drag them, nudge them with the arrow keys
    (0.1 mm; Shift 1 mm), change a line's size, weight or alignment, hide a
    line, move or scale the picture. The 5 mm margins and the centre lines
-   are drawn. Save sends before and after — exact numbers — with a note on
-   why; nothing turns into a rule until Claude has read the edits and the
+   are drawn — black-and-white dashes, so they show on any ground — with a
+   grid that starts ON the margin lines (2026-09-24). Shift-click adds or
+   removes an element from the selection; the selection moves together.
+   Every line carries its size in points. Save sends before and after —
+   exact numbers — with a note on why; nothing turns into a rule until Claude has read the edits and the
    owner has agreed what they mean (tools/layout-edits-report.mts). */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -57,12 +60,18 @@ export function LayoutEditor() {
   const [faces, setFaces] = useState<Record<string, number[]>>({});
   const [st, setSt] = useState<State | null>(null);
   const [hist, setHist] = useState<State[]>([]);
-  const [sel, setSel] = useState<string>("");          /* a line group's key, or "art" */
+  const [sel, setSel] = useState<string[]>([]);       /* line group keys, and/or "art" */
+  const [showGrid, setShowGrid] = useState(true);
+  const [showSizes, setShowSizes] = useState(true);
   const [note, setNote] = useState("");
   const [msg, setMsg] = useState("");
   const [savedCount, setSavedCount] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
-  const drag = useRef<{ x: number; y: number; from: State } | null>(null);
+  const drag = useRef<{ x: number; y: number; from: State; keys: string[] } | null>(null);
+  /* the selection boxes and the arced names' size tags are measured off
+     the drawn letters — one more paint once they are drawn */
+  const [, repaint] = useState(0);
+  useEffect(() => { repaint((n) => n + 1); }, [st, sel]);
 
   useEffect(() => {
     fetch("/api/admin/labels").then((r) => r.json()).then((b) => setList((b.labels || []).filter((m: Meta) => m.template)));
@@ -70,7 +79,7 @@ export function LayoutEditor() {
   }, []);
 
   const open = useCallback(async (lid: string) => {
-    setId(lid); setSel(""); setMsg(""); setNote(""); setHist([]);
+    setId(lid); setSel([]); setMsg(""); setNote(""); setHist([]);
     const b = await (await fetch(`/api/admin/labels?id=${lid}&part=layout`)).json();
     if (!b.layout) { setMsg("This label has no layout on disk."); return; }
     setMeta(b.meta); setLayout(b.layout); setArtSize(b.art); setFaces(b.faces || {});
@@ -95,7 +104,7 @@ export function LayoutEditor() {
 
   const push = (next: State) => { if (st) setHist((h) => [...h.slice(-60), st]); setSt(next); };
   const groupOf = (key: string) => (st ? st.lines.map((l, i) => (l.key === key ? i : -1)).filter((i) => i >= 0) : []);
-  const mapGroup = (key: string, f: (l: Line) => Line) => st && push({ ...st, lines: st.lines.map((l) => (l.key === key ? f(l) : l)) });
+  const mapSel = (f: (l: Line) => Line) => st && push({ ...st, lines: st.lines.map((l) => (sel.includes(l.key || "") ? f(l) : l)) });
   const bboxOf = (key: string): Box | null => {
     const svg = svgRef.current; if (!svg) return null;
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
@@ -111,34 +120,33 @@ export function LayoutEditor() {
     return x0 < Infinity ? { x: x0, y: y0, w: x1 - x0, h: y1 - y0 } : null;
   };
 
-  /* moving: drag, or the arrow keys */
-  const move = (dx: number, dy: number, from?: State) => {
-    const base = from || st; if (!base || !sel) return;
-    const next = sel === "art"
-      ? { ...base, art: { ...base.art, x: base.art.x + dx, y: base.art.y + dy } }
-      : { ...base, lines: base.lines.map((l) => (l.key === sel ? { ...l, x: l.x + dx, y: l.y + dy } : l)) };
-    if (from) setSt(next); else push(next);
-  };
+  /* moving: drag, or the arrow keys — everything selected, together */
+  const shifted = (base: State, keys: string[], dx: number, dy: number): State => ({
+    art: keys.includes("art") ? { ...base.art, x: base.art.x + dx, y: base.art.y + dy } : base.art,
+    lines: base.lines.map((l) => (keys.includes(l.key || "") ? { ...l, x: l.x + dx, y: l.y + dy } : l)),
+  });
+  const move = (dx: number, dy: number) => { if (st && sel.length) push(shifted(st, sel, dx, dy)); };
   const toLabel = (e: { clientX: number; clientY: number }) => {
     const svg = svgRef.current!; const r = svg.getBoundingClientRect();
     return { x: (e.clientX - r.left) * ((layout?.W || 1) / r.width), y: (e.clientY - r.top) * ((layout?.H || 1) / r.height) };
   };
   const onDown = (key: string) => (e: React.PointerEvent) => {
     e.stopPropagation(); if (!st) return;
-    setSel(key);
+    /* Shift adds or takes away; a plain click on something already
+       selected keeps the selection, so the group can be dragged */
+    let keys = sel;
+    if (e.shiftKey) keys = sel.includes(key) ? sel.filter((k) => k !== key) : [...sel, key];
+    else if (!sel.includes(key)) keys = [key];
+    setSel(keys);
+    if (!keys.includes(key)) return;
     const p = toLabel(e);
-    drag.current = { x: p.x, y: p.y, from: st };
+    drag.current = { x: p.x, y: p.y, from: st, keys };
     (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
   };
   const onMove = (e: React.PointerEvent) => {
     if (!drag.current || !st) return;
     const p = toLabel(e);
-    const base = drag.current.from;
-    const dx = p.x - drag.current.x, dy = p.y - drag.current.y;
-    const next = sel === "art"
-      ? { ...base, art: { ...base.art, x: base.art.x + dx, y: base.art.y + dy } }
-      : { ...base, lines: base.lines.map((l) => (l.key === sel ? { ...l, x: l.x + dx, y: l.y + dy } : l)) };
-    setSt(next);
+    setSt(shifted(drag.current.from, drag.current.keys, p.x - drag.current.x, p.y - drag.current.y));
   };
   const onUp = () => {
     if (drag.current) { const from = drag.current.from; drag.current = null; setHist((h) => [...h.slice(-60), from]); }
@@ -146,7 +154,7 @@ export function LayoutEditor() {
 
   useEffect(() => {
     const k = (e: KeyboardEvent) => {
-      if (!st || !sel || (e.target as HTMLElement)?.tagName === "TEXTAREA") return;
+      if (!st || !sel.length || (e.target as HTMLElement)?.tagName === "TEXTAREA") return;
       const step = (e.shiftKey ? 1 : 0.1) * PX_PER_MM;
       const d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key];
       if (d) { e.preventDefault(); move(d[0], d[1]); }
@@ -159,22 +167,27 @@ export function LayoutEditor() {
   const undo = () => setHist((h) => { if (!h.length) return h; setSt(h[h.length - 1]); return h.slice(0, -1); });
   const reset = () => { if (layout) push({ lines: keyed(layout.lines), art: { ...layout.art } }); };
 
-  /* the selected line's tools */
-  const selLine = st && sel && sel !== "art" ? st.lines.find((l) => l.key === sel) : null;
-  const resize = (dPt: number) => mapGroup(sel, (l) => ({ ...l, size: Math.max(5 * PT_PX, l.size + dPt * PT_PX) }));
+  /* the selected lines' tools — size, weight and hide work on every
+     selected line; alignment only on one straight line */
+  const selKeys = sel.filter((k) => k !== "art");
+  const selLine = st && selKeys.length ? st.lines.find((l) => l.key === selKeys[0]) : null;
+  const one = sel.length === 1 && !!selLine && groupOf(selKeys[0]).length === 1;
+  const resize = (dPt: number) => mapSel((l) => ({ ...l, size: Math.max(5 * PT_PX, l.size + dPt * PT_PX) }));
   const toggleBold = () => {
     if (!selLine) return;
-    const ws = (faces[selLine.family.replace(/\s+/g, "")] || [400, 700]).sort((a, b) => a - b);
-    const heavy = ws[ws.length - 1], light = ws.find((w) => w >= 400) || ws[0];
-    mapGroup(sel, (l) => ({ ...l, weight: l.weight >= 600 ? light : heavy }));
+    const heavier = selLine.weight < 600;                        /* all follow the first */
+    mapSel((l) => {
+      const ws = (faces[l.family.replace(/\s+/g, "")] || [400, 700]).sort((a, b) => a - b);
+      return { ...l, weight: heavier ? ws[ws.length - 1] : ws.find((w) => w >= 400) || ws[0] };
+    });
   };
   const align = (a: Line["anchor"]) => {
-    if (!selLine || groupOf(sel).length > 1) return;            /* an arced name keeps its arc */
-    const b = bboxOf(sel); if (!b) return;
+    if (!one) return;                                            /* an arced name keeps its arc */
+    const b = bboxOf(selKeys[0]); if (!b) return;
     const edge = (an: Line["anchor"]) => (an === "start" ? b.x : an === "middle" ? b.x + b.w / 2 : b.x + b.w);
-    mapGroup(sel, (l) => ({ ...l, anchor: a, x: edge(a) }));
+    mapSel((l) => ({ ...l, anchor: a, x: edge(a) }));
   };
-  const hide = () => mapGroup(sel, (l) => ({ ...l, hidden: !l.hidden }));
+  const hide = () => { const h = !selLine?.hidden; mapSel((l) => ({ ...l, hidden: h })); };
   const scaleArt = (k: number) => st && push({ ...st, art: { x: st.art.x + (st.art.w * (1 - k)) / 2, y: st.art.y + (st.art.h * (1 - k)) / 2, w: st.art.w * k, h: st.art.h * k } });
 
   const save = async () => {
@@ -192,7 +205,23 @@ export function LayoutEditor() {
   const changed = !!(st && layout && JSON.stringify({ l: st.lines, a: st.art }) !== JSON.stringify({ l: keyed(layout.lines), a: layout.art }));
   const scaleView = layout ? VIEW_W / layout.W : 1;
   const M = 5 * PX_PER_MM;
-  const selBox = st && sel ? (sel === "art" ? st.art : bboxOf(sel)) : null;
+  const selBoxes = st ? sel.map((k) => (k === "art" ? st.art : bboxOf(k))).filter((b): b is Box => !!b) : [];
+  /* the grid starts ON the margin lines and ends on them: the space
+     between is cut into equal steps of about 5 mm */
+  const grid = (() => {
+    if (!layout) return { xs: [] as number[], ys: [] as number[] };
+    const steps = (len: number) => { const n = Math.max(1, Math.round(len / (5 * PX_PER_MM))); return Array.from({ length: n - 1 }, (_, i) => M + ((i + 1) * len) / n); };
+    return { xs: steps(layout.W - 2 * M), ys: steps(layout.H - 2 * M) };
+  })();
+  /* a guide that shows on ANY ground: white under, black dashes over */
+  const guide = (key: string, x1: number, y1: number, x2: number, y2: number, w: number, dash: string, op = 1) => (
+    <g key={key} opacity={op} pointerEvents="none">
+      <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#fff" strokeWidth={w} />
+      <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#000" strokeWidth={w} strokeDasharray={dash} />
+    </g>
+  );
+  /* one size tag per element (an arced name is one element) */
+  const tags = st ? [...new Map(st.lines.map((l) => [l.key || "", l])).values()] : [];
 
   return (
     <div>
@@ -213,7 +242,7 @@ export function LayoutEditor() {
           <div>
             <svg ref={svgRef} viewBox={`0 0 ${layout.W} ${layout.H}`} width={VIEW_W} height={layout.H * scaleView}
               style={{ display: "block", border: "1px solid #E3E3E1", touchAction: "none", userSelect: "none", background: layout.ground }}
-              onPointerMove={onMove} onPointerUp={onUp} onPointerDown={() => setSel("")}>
+              onPointerMove={onMove} onPointerUp={onUp} onPointerDown={(e) => { if (!e.shiftKey) setSel([]); }}>
               <rect width={layout.W} height={layout.H} fill={layout.ground} />
               {/* the picture, cropped as the label shows it */}
               <svg x={st.art.x} y={st.art.y} width={st.art.w} height={st.art.h} preserveAspectRatio="none" overflow="hidden"
@@ -228,23 +257,43 @@ export function LayoutEditor() {
                   transform={l.rot ? `rotate(${l.rot} ${l.x} ${l.y})` : undefined}
                   style={{ cursor: "move", whiteSpace: "pre" }} onPointerDown={onDown(l.key || `line${i}`)}>{l.text}</text>
               ))}
-              {/* the 5 mm margin and the centre lines */}
-              <rect x={M} y={M} width={layout.W - 2 * M} height={layout.H - 2 * M} fill="none" stroke="#00A0E0" strokeWidth={1.5} strokeDasharray="10 8" pointerEvents="none" />
-              <line x1={layout.W / 2} y1={0} x2={layout.W / 2} y2={layout.H} stroke="#00A0E0" strokeWidth={1} strokeDasharray="4 10" opacity={0.6} pointerEvents="none" />
-              <line x1={0} y1={layout.H / 2} x2={layout.W} y2={layout.H / 2} stroke="#00A0E0" strokeWidth={1} strokeDasharray="4 10" opacity={0.6} pointerEvents="none" />
-              {selBox && <rect x={selBox.x - 4} y={selBox.y - 4} width={selBox.w + 8} height={selBox.h + 8} fill="none" stroke="#B71318" strokeWidth={2} pointerEvents="none" />}
+              {/* the grid, from margin line to margin line */}
+              {showGrid && grid.xs.map((x) => guide(`gx${x}`, x, M, x, layout.H - M, 1, "3 5", 0.35))}
+              {showGrid && grid.ys.map((y) => guide(`gy${y}`, M, y, layout.W - M, y, 1, "3 5", 0.35))}
+              {/* the centre lines and the 5 mm margin */}
+              {guide("cx", layout.W / 2, 0, layout.W / 2, layout.H, 1, "4 8", 0.7)}
+              {guide("cy", 0, layout.H / 2, layout.W, layout.H / 2, 1, "4 8", 0.7)}
+              {guide("mt", M, M, layout.W - M, M, 2, "10 8")}
+              {guide("mb", M, layout.H - M, layout.W - M, layout.H - M, 2, "10 8")}
+              {guide("ml", M, M, M, layout.H - M, 2, "10 8")}
+              {guide("mr", layout.W - M, M, layout.W - M, layout.H - M, 2, "10 8")}
+              {/* the size of every line, in points */}
+              {showSizes && tags.map((l) => {
+                const arc = groupOf(l.key || "").length > 1;
+                const b = arc ? bboxOf(l.key || "") : null;
+                const x = b ? b.x + b.w / 2 : l.x, y = b ? b.y - 6 : l.y - l.size * 0.8 - 5;
+                return (
+                  <text key={"sz" + l.key} x={x} y={y} textAnchor={b ? "middle" : l.anchor} fontFamily="Helvetica, Arial, sans-serif" fontWeight={700} fontSize={21}
+                    fill="#fff" stroke="#B71318" strokeWidth={5} paintOrder="stroke" strokeLinejoin="round" pointerEvents="none"
+                    transform={!b && l.rot ? `rotate(${l.rot} ${l.x} ${l.y})` : undefined}>{(l.size / PT_PX).toFixed(1)} pt</text>
+                );
+              })}
+              {selBoxes.map((b, i) => <rect key={"sel" + i} x={b.x - 4} y={b.y - 4} width={b.w + 8} height={b.h + 8} fill="none" stroke="#B71318" strokeWidth={2} pointerEvents="none" />)}
             </svg>
             <div style={{ ...ui.small, marginTop: 6 }}>
-              {meta.template} · {meta.widthMm} × {meta.heightMm} mm · {meta.artist || meta.style} · blue dashes = 5 mm margin and centre lines
+              {meta.template} · {meta.widthMm} × {meta.heightMm} mm · {meta.artist || meta.style} · bold dashes = 5 mm margin from the trim, fine dashes = centre lines and grid
+              <label style={{ marginLeft: 12, cursor: "pointer" }}><input type="checkbox" checked={showGrid} onChange={(e) => setShowGrid(e.target.checked)} /> grid</label>
+              <label style={{ marginLeft: 8, cursor: "pointer" }}><input type="checkbox" checked={showSizes} onChange={(e) => setShowSizes(e.target.checked)} /> sizes</label>
             </div>
           </div>
 
           {/* the tools */}
           <div style={{ width: 280, display: "flex", flexDirection: "column", gap: 10, fontSize: 12 }}>
             <div style={{ fontWeight: 700 }}>
-              {sel === "art" ? "Picture" : selLine ? `${selLine.key} — ${(selLine.size / PT_PX).toFixed(1)} pt, ${selLine.weight >= 600 ? "bold" : "regular"}` : "Click a line or the picture"}
+              {sel.length > 1 ? `${sel.length} selected` : sel[0] === "art" ? "Picture" : selLine ? `${selLine.key} — ${(selLine.size / PT_PX).toFixed(1)} pt, ${selLine.weight >= 600 ? "bold" : "regular"}` : "Click a line or the picture"}
             </div>
-            {sel && <div style={ui.small}>Drag it, or use the arrow keys: 0.1 mm a press, 1 mm with Shift.</div>}
+            <div style={ui.small}>Shift-click adds or removes a line (or the picture) from the selection.</div>
+            {sel.length > 0 && <div style={ui.small}>Drag, or use the arrow keys: 0.1 mm a press, 1 mm with Shift. Everything selected moves together.</div>}
             {selLine && (<>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 <button style={ui.btn} onClick={() => resize(-0.5)}>size −</button>
@@ -252,7 +301,7 @@ export function LayoutEditor() {
                 <button style={ui.btn} onClick={toggleBold}>bold on/off</button>
                 <button style={ui.btn} onClick={hide}>{selLine.hidden ? "show" : "hide"}</button>
               </div>
-              {groupOf(sel).length === 1 && (
+              {one && (
                 <div style={{ display: "flex", gap: 6 }}>
                   <button style={ui.btn} onClick={() => align("start")}>align left</button>
                   <button style={ui.btn} onClick={() => align("middle")}>centre</button>
@@ -260,7 +309,7 @@ export function LayoutEditor() {
                 </div>
               )}
             </>)}
-            {sel === "art" && (
+            {sel.includes("art") && (
               <div style={{ display: "flex", gap: 6 }}>
                 <button style={ui.btn} onClick={() => scaleArt(0.97)}>smaller</button>
                 <button style={ui.btn} onClick={() => scaleArt(1 / 0.97)}>bigger</button>

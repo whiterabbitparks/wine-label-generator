@@ -217,7 +217,9 @@ export async function geom(file) {
     for (const st of arr) if (st instanceof PDFRawStream) s += Buffer.from(decodePDFRawStream(st).decode()).toString("latin1");
     const out = { texts: [], rects: [], paths: [], images: [], errors: [] };
     walk(ctx, s, p.node.Resources(), [1,0,0,1,0,0], out);
-    pages.push({ w: p.getWidth(), h: p.getHeight(), ...out });
+    /* the TRIM — the label itself; the artboard around it is bleed */
+    const tb = p.getTrimBox();
+    pages.push({ w: p.getWidth(), h: p.getHeight(), trim: { x: tb.x, y: tb.y, w: tb.width, h: tb.height }, ...out });
   }
   return pages;
 }

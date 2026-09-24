@@ -204,6 +204,17 @@ Now:
   engine | overlay) and `tools/show-layouts.mts "t02:80x110:long,…"`.
 - Source PDF now lives in `NEW UI/Comments/Achive/Layout_Options.pdf`;
   his PNG exports of the same twelve are in `Comments/New`.
+- **2026-09-24 — MEASURED FROM THE TRIM.** His artboards are 104 × 84
+  with a 2 mm bleed round a 100 × 80 TrimBox. Until today every number
+  was measured from the bleed edge, so on real labels the type sat ~7 mm
+  in instead of 5 (the owner spotted it). `extract-templates.mjs` now
+  reads the TrimBox; refW/refH are 100 × 80; his review edits
+  (templates.review.ts) were shifted by the same 2 mm. Measured from the
+  trim, a few of his lines sit on/over the 5 mm line — the margin wins:
+  a flat line stops ON the margin (contemporary names at 4.6 → 5 mm), the
+  turned column keeps its ink inside, bottom rows lift by their
+  descenders (≤0.84 mm), t11/t12's turned vintage comes down 2.2 mm.
+  `match-artboards` accepts exactly those inward pushes, nothing else.
 
 ## 6c. His first review (2026-09-23)
 

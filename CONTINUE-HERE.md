@@ -293,6 +293,27 @@ download), 8K.WINE header, new home label. Live smoke label OK (Giorgi,
 t05, orphan region centred). Layout edits made on the LIVE admin live in
 the server's data/layout-edits — pull them before reading.
 
+**2026-09-24 later — the bleed fix + editor tools (committed, NOT deployed)**
+- Owner's theory CONFIRMED: his template artboards are 104 × 84 = a
+  100 × 80 trim + 2 mm bleed; templates were measured from the bleed
+  edge, so type sat ~7 mm from the trim. Now measured from the TrimBox
+  (see LAYOUT-TEMPLATES.md §6b "MEASURED FROM THE TRIM"). New labels sit
+  ON the 5 mm margin; OLD saved labels keep their old layout until
+  re-laid. Before/after: Desktop/8K-sheet-test/bleed-fix-before-after.png.
+- Layout editor: margins/centre lines/grid drawn white-under-black
+  dashes (visible on any ground; blue labels hid the old cyan line);
+  grid starts ON the margin lines (≈5 mm equal steps between them);
+  Shift-click multi-select (lines and/or picture) moves together (drag +
+  arrows; size/bold/hide apply to all selected); every line shows its pt
+  size (toggles: grid, sizes).
+- His 14 edits (layout-edits-report): the "move toward the edge" ones
+  (t02/t04/t06/t07/t08 blocks 1–3 mm outward) are what the bleed fix now
+  does by itself. Proposed rules awaiting his yes — see the reply of
+  2026-09-24 (bigger pictures in ovals; smaller producer; region/grape
+  small + bold; lone small lines to the corners).
+- Site font: he KEEPS HNW for now; find a licensed/free replacement
+  BEFORE publishing (his call, 2026-09-24).
+
 **2026-09-24 round (15 points; committed, NOT yet deployed)**
 - Tour wording/positions: vision + bottle popup notes sit beside the
   popup's own Create button (`anchor: "create"`, rect measured in the
