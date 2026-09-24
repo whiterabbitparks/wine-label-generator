@@ -23,6 +23,10 @@ export interface ArtistProfile {
      label the next set, so the three columns of one order stand on three
      different sets. When present they replace `refs`. */
   refSets?: string[][];
+  /* 2026-09-23: the ART DIRECTOR's note on a painter's hand, kept apart
+     from the artist's own answers above (never edited into them) — it
+     rides at the end of the charter */
+  note?: string;
   status?: string;
   /* 2026-09-22 (owner: "remove Tal's model at the moment, let's use
      Mariam and Keta's art"). An artist set to false is OUT of the whole
@@ -88,5 +92,5 @@ export function nextRefSet(id: string, want?: number): { set: string; files?: st
 
 /* the artist's charter — their own answers, as the STYLE line of the ask */
 export function artistCharter(p: ArtistProfile): string {
-  return `${p.medium}; ${p.words.join(", ")}; colour: ${p.colour}; form: ${p.form}; ${p.never}; mood: ${p.mood}`;
+  return `${p.medium}; ${p.words.join(", ")}; colour: ${p.colour}; form: ${p.form}; ${p.never}; mood: ${p.mood}${p.note ? `; ${p.note}` : ""}`;
 }

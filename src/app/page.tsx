@@ -2465,7 +2465,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
            air above the buttons */
         const CUBE = 34.3, AREA_TOP = 290, AREA_BOT = 540;
         /* ROUND 94 #5 (owner): "Punk" is FUNKY everywhere the customer reads */
-        const STYLE_NAMES = ["Traditional", "Contemporary", "Funky"];
         /* ROUND 94 #6 (owner's Front_Label_UI reference): the style's NAME
            over each column with a dashed rule, the label with its crosses,
            three dots (the three layouts of one painting), then SAVE. No
@@ -2497,7 +2496,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               <div style={{ ...px(b.lx, baseTop(221, BAR_FS) - (AV - BAR_FS) / 2, b.lw, AV), display: "flex", alignItems: "center", justifyContent: "center", columnGap: 7, pointerEvents: "none" }}>
                 {/* 2026-09-23 (owner): no portrait, and the name as it is
                     written — "Style By: Mariam Kvashilava", not all capitals */}
-                <span style={{ font: `700 ${BAR_FS}px ${HNW}`, lineHeight: `${BAR_FS}px`, whiteSpace: "nowrap" }}>{who ? `${t("Style By:")} ${who}` : t(STYLE_NAMES[fi]).toUpperCase()}</span>
+                <span style={{ font: `700 ${BAR_FS}px ${HNW}`, lineHeight: `${BAR_FS}px`, whiteSpace: "nowrap" }}>{/* 2026-09-23 (owner: "a column that never came showed FUNKY, like
+                    an error — take the old titles out altogether") */}
+                  {who ? `${t("Style By:")} ${who}` : ""}</span>
               </div>
               {/* round 114 (owner): the dashed rule under the artist's
                   name is gone — the name stands on its own */}
@@ -3569,18 +3570,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   <span style={{ ...px(137.14, baseTop(149.08, 24), 620, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t(PAGE_TITLE[p]!)}</span>
                 </>)}
                 {renderOverlay(p, inSlide, layer)}
-                {/* 2026-09-23 (owner): a red SKIP on the title's line, at the
-                    page's right margin, same size as the title. Front label
-                    pages skip to the back label details, back label pages
-                    to the bottle, the bottle straight to the Final Pack. Not
-                    on Marketing Assets or the Final Pack, and not while the
-                    tutorial is telling its story. */}
-                {SKIP_TO[p] && tut < 0 && (
-                  <button onClick={() => go(SKIP_TO[p]!)}
-                    style={{ ...px(W - 137.14 - 200, baseTop(149.08, 24), 200, 24), ...ghost, font: `700 24px ${HNW}`, lineHeight: "24px", color: BAR_RED, textAlign: "right", whiteSpace: "nowrap", padding: 0, cursor: "pointer", zIndex: 5 }}>
-                    {t("SKIP")}
-                  </button>
-                )}
               </>
             );
             /* content-aware slices (round 16 #3): clip rects with per-slice
@@ -3734,6 +3723,20 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   </button>
                 );
               })}
+              {/* 2026-09-23 (owner): SKIP rides the progress bar — centred over
+                  the red dot the thick line stands on, a clear gap above the
+                  line, and it travels with the line. Front label pages skip
+                  to the back label details, back label pages to the bottle,
+                  the bottle to the Final Pack; not on Marketing Assets, the
+                  Final Pack, or while the tutorial tells its story. */}
+              {SKIP_TO[page] && tut < 0 && (
+                <button onClick={() => go(SKIP_TO[page]!)}
+                  style={{ ...px(thick - 60, baseTop(PROG_Y - 14, BAR_FS), 120, BAR_FS + 4), ...ghost, pointerEvents: modalOpen ? "none" : "auto",
+                    font: `700 ${BAR_FS}px ${HNW}`, lineHeight: `${BAR_FS}px`, color: BAR_RED, textAlign: "center", textTransform: "none", whiteSpace: "nowrap",
+                    transition: `left ${SLIDE_MS}ms ${EASE}` }}>
+                  {t("SKIP")}
+                </button>
+              )}
               {STEPS.map((st, i) => (
                 <button key={st.label + i} tabIndex={-1}
                   style={{

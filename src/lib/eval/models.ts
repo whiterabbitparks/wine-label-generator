@@ -63,7 +63,10 @@ export async function regionNote(region: string): Promise<string> {
   return key && map[key]?.trim() ? ` ${region.trim()} looks like this: ${map[key].trim()} ` : "";
 }
 
-export interface ArtworkPrompt { prompt: string; subject: string; aspect: "landscape" | "portrait" | "square"; kind?: "spot" | "bleed" }
+export interface ArtworkPrompt { prompt: string; subject: string; aspect: "landscape" | "portrait" | "square"; kind?: "spot" | "bleed";
+  /* 2026-09-23: a band/panel picture ends in the painter's own edge on
+     this side (the side facing the type) — see hybrid.ts */
+  edgeSide?: "top" | "bottom" | "left" | "right" }
 
 /* THE VIGNETTE — the one composition every model knows: an isolated spot
    illustration on a flat plain ground with air around it. The composer
@@ -86,7 +89,7 @@ const VIGNETTE = "A spot illustration: one self-contained drawing isolated on a 
    runs off every edge, so a band is a band in Mariam's hand too (her
    LoRA had kept her paper and floated a small oval in every layout).
    The spot layouts keep the vignette — a spot IS a drawing on paper. */
-const BLEED = "A full painting that covers the whole canvas right to every edge: no empty margin, no plain paper showing, no frame, no border — the scene simply runs off all four sides, as if the sheet were cut from a larger painting.";
+export const BLEED = "A full painting that covers the whole canvas right to every edge: no empty margin, no plain paper showing, no frame, no border — the scene simply runs off all four sides, as if the sheet were cut from a larger painting.";
 
 /* rebuild the ask for the OTHER kind of picture, keeping everything the
    artist's charter and the story already put into it */
@@ -116,9 +119,9 @@ const GPT_SIZE = { landscape: { w: 1536, h: 1024 }, portrait: { w: 1024, h: 1536
    the arrangement, not gpt-image's own rendering. The quality is a knob,
    not a constant, so it can be proven and then set — see STORY_QUALITY. */
 export const STORY_QUALITY = (process.env.STORY_QUALITY as "low" | "medium" | "high") || "medium";
-export async function paintStory(model: EvalModel, ap: ArtworkPrompt, extra: { sketch?: string | null; quality?: "low" | "medium" | "high"; refFiles?: string[] } = {}): Promise<string> {
+export async function paintStory(model: EvalModel, ap: ArtworkPrompt, extra: { sketch?: string | null; quality?: "low" | "medium" | "high"; refFiles?: string[]; noRefs?: boolean } = {}): Promise<string> {
   const sketch = extra.sketch && extra.sketch.startsWith("data:image/") ? extra.sketch : null;
-  const refs = artistRefs(model.artist.id, 4, extra.refFiles);
+  const refs = extra.noRefs ? [] : artistRefs(model.artist.id, 4, extra.refFiles);
   return generateOpenAIImage({
     prompt: ap.prompt + (sketch ? " The last image is the customer's own sketch: follow its subject and arrangement." : ""),
     references: [...refs, ...(sketch ? [sketch] : [])],
@@ -132,7 +135,11 @@ export async function repaintInHand(model: EvalModel, story: string, ap: Artwork
   const key = process.env.FAL_KEY;
   if (!key) throw new Error("FAL_KEY is not set");
   const url = await falUpload(Buffer.from(story.slice(story.indexOf(",") + 1), "base64"), "story.png", "image/png");
-  const prompt = `${model.lora.trigger} style. Repaint this picture in your own hand — same scene, same subjects in the same places, your own colours and brush: ${ap.subject} Painted as ${artistCharter(model.artist)}. ${ap.kind === "bleed" ? "Paint right to every edge — no empty paper, no margin, no border." : "Keep the plain, empty paper around the drawing."}`.slice(0, 1900);
+  const prompt = `${model.lora.trigger} style. Repaint this picture in your own hand — same scene, same subjects in the same places, your own colours and brush: ${ap.subject} Painted as ${artistCharter(model.artist)}. ${ap.kind === "bleed"
+    ? (ap.edgeSide
+      ? `Keep the composition exactly: the painting runs off the other edges, and on the ${ap.edgeSide} side it ends in its own loose irregular edge with the plain, flat, empty ground beyond it — keep that ground plain and empty, never paint into it, never add a border.`
+      : "Paint right to every edge — no empty paper, no margin, no border.")
+    : "Keep the plain, empty paper around the drawing."}`.slice(0, 1900);
   const res = await fetch("https://fal.run/fal-ai/flux-lora/image-to-image", {
     method: "POST", headers: { Authorization: `Key ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({ prompt, image_url: url, strength: REPAINT_STRENGTH, num_inference_steps: 28, guidance_scale: 3.5, num_images: 1, output_format: "png", loras: [{ path: model.lora.url, scale: LORA_SCALE }] }),
@@ -147,8 +154,26 @@ export async function repaintInHand(model: EvalModel, story: string, ap: Artwork
 /* both steps; `story` is kept so a failed repaint still yields a picture.
    `refSet` is the letter of the owner's set the story was shown (A–D). */
 export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt, extra: { sketch?: string | null; quality?: "low" | "medium" | "high"; refSet?: number } = {}): Promise<{ art: string; story: string; repainted: boolean; error?: string; refSet: string }> {
-  const { set: refSet, files: refFiles } = nextRefSet(model.artist.id, extra.refSet);
-  const story = await paintStory(model, ap, { ...extra, refFiles });
+  let { set: refSet, files: refFiles } = nextRefSet(model.artist.id, extra.refSet);
+  /* 2026-09-23 (owner: "sometimes one of the three labels never comes —
+     its place stays empty"): OpenAI's filter refuses some asks at random
+     ("moderation_blocked / other"), and the refusal usually rides on a
+     reference work. A refused story is asked again on the artist's NEXT
+     trio, and once more with no reference works at all (the charter and
+     the LoRA still carry the hand), before a column is given up. */
+  let story = "";
+  for (let attempt = 0; ; attempt++) {
+    try {
+      story = await paintStory(model, ap, { ...extra, refFiles: attempt < 2 ? refFiles : [] , noRefs: attempt >= 2 });
+      break;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (!/moderation|safety system/i.test(msg) || attempt >= 2) throw e;
+      console.warn(`[painter] ${model.id}: refused on set ${refSet || "-"} — ${attempt === 0 ? "next trio" : "no reference works"}`);
+      if (attempt === 0) ({ set: refSet, files: refFiles } = nextRefSet(model.artist.id));
+      else refSet = refSet ? `${refSet} (no refs)` : "no refs";
+    }
+  }
   try {
     return { art: await repaintInHand(model, story, ap), story, repainted: true, refSet };
   } catch (e) {

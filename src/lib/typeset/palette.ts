@@ -197,13 +197,21 @@ export async function vignetteOf(dataUrl: string): Promise<{ ground: string; box
    It refuses to run on a picture whose border is not paper at all (a
    painting that fills its frame), so nothing is ever scrubbed out of a
    full-bleed image. */
-export async function cleanPaper(dataUrl: string, to?: string): Promise<{ art: string; ground: string; cleaned: boolean; ink: { x: number; y: number; w: number; h: number } }> {
+/* `side` (2026-09-23): a picture for a band or panel runs off three sides
+   and ends in the painter's own edge only on the side that faces the type
+   — there alone lies plain ground. The paper is then measured on THAT
+   side's strip and grown only from THAT edge, so a dark painted scene
+   touching the other sides is never taken for paper (it was: Mariam's
+   navy evening, man and all, came back flattened to one tone). */
+export async function cleanPaper(dataUrl: string, to?: string, side?: "top" | "bottom" | "left" | "right"): Promise<{ art: string; ground: string; cleaned: boolean; ink: { x: number; y: number; w: number; h: number } }> {
   const buf = Buffer.from(dataUrl.slice(dataUrl.indexOf(",") + 1), "base64");
   const { data, info } = await sharp(buf).flatten({ background: "#ffffff" }).raw().toBuffer({ resolveWithObject: true });
   const W = info.width, H = info.height, C = info.channels;
   const whole = { x: 0, y: 0, w: 1, h: 1 };
   const ring = Math.max(2, Math.round(Math.min(W, H) * 0.05));
-  const onRing = (x: number, y: number) => x < ring || x >= W - ring || y < ring || y >= H - ring;
+  const onRing = side
+    ? (x: number, y: number) => side === "top" ? y < ring : side === "bottom" ? y >= H - ring : side === "left" ? x < ring : x >= W - ring
+    : (x: number, y: number) => x < ring || x >= W - ring || y < ring || y >= H - ring;
 
   /* the paper's colour: the commonest on the border ring */
   const bins = new Map<string, { n: number; r: number; g: number; b: number }>();
@@ -249,8 +257,10 @@ export async function cleanPaper(dataUrl: string, to?: string): Promise<{ art: s
     if (dist(p2 * C) >= t1) return;
     paper[p2] = 1; queue[qb++] = p2;
   };
-  for (let x = 0; x < W; x++) { push(x, 0); push(x, H - 1); }
-  for (let y = 0; y < H; y++) { push(0, y); push(W - 1, y); }
+  if (!side || side === "top") for (let x = 0; x < W; x++) push(x, 0);
+  if (!side || side === "bottom") for (let x = 0; x < W; x++) push(x, H - 1);
+  if (!side || side === "left") for (let y = 0; y < H; y++) push(0, y);
+  if (!side || side === "right") for (let y = 0; y < H; y++) push(W - 1, y);
   while (qa < qb) {
     const p2 = queue[qa++], x = p2 % W, y = (p2 / W) | 0;
     if (x > 0) push(x - 1, y);
@@ -283,6 +293,22 @@ export async function cleanPaper(dataUrl: string, to?: string): Promise<{ art: s
   let x0 = W, y0 = H, x1 = -1, y1 = -1;
   for (let y = 0; y < H; y++) if (rows[y] > W * 0.006) { if (y < y0) y0 = y; if (y > y1) y1 = y; }
   for (let x = 0; x < W; x++) if (cols[x] > H * 0.006) { if (x < x0) x0 = x; if (x > x1) x1 = x; }
+  /* on the painter's-edge side the edge is where REAL ink starts — a
+     column or row at least 5 % inked — not a lone speck left in the plain
+     ground (a white dot in Giorgi's yellow once pushed his whole picture
+     off to the right) */
+  /* …and the sheet's outer 1.5 % is skipped (the repaint leaves a light
+     hairline there) and the ink must hold for three lines running */
+  const run = (a: Uint32Array, lim: number, from: number, to: number) => {
+    const st = from < to ? 1 : -1;
+    for (let k = from; k !== to; k += st) if (a[k] > lim && a[k + st] > lim && a[k + 2 * st] > lim) return k;
+    return -1;
+  };
+  const mx = Math.round(W * 0.015), my = Math.round(H * 0.015);
+  if (side === "left") { const k = run(cols, H * 0.05, mx, W - 3); if (k >= 0) x0 = k; }
+  if (side === "right") { const k = run(cols, H * 0.05, W - 1 - mx, 2); if (k >= 0) x1 = k; }
+  if (side === "top") { const k = run(rows, W * 0.05, my, H - 3); if (k >= 0) y0 = k; }
+  if (side === "bottom") { const k = run(rows, W * 0.05, H - 1 - my, 2); if (k >= 0) y1 = k; }
   const ink = x1 < 0 || y1 < 0 ? whole : { x: x0 / W, y: y0 / H, w: (x1 - x0 + 1) / W, h: (y1 - y0 + 1) / H };
   const png = await sharp(out, { raw: { width: W, height: H, channels: C as 1 | 2 | 3 | 4 } }).png().toBuffer();
   return { art: `data:image/png;base64,${png.toString("base64")}`, ground: to || ground, cleaned: true, ink };

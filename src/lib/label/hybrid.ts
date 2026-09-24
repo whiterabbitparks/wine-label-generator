@@ -1,9 +1,9 @@
-import { buildArtworkPrompt, asKind, evalModel, generateArtwork, artistModels } from "@/lib/eval/models";
+import { buildArtworkPrompt, asKind, evalModel, generateArtwork, artistModels, BLEED } from "@/lib/eval/models";
 import { composeTemplateLabel, templatesOf, pickTemplate, inkLost } from "@/lib/typeset/compose-template";
 import { templatesNow } from "@/lib/typeset/overrides";
 import type { Template } from "@/lib/typeset/templates";
 import { cleanPaper } from "@/lib/typeset/palette";
-import { artKindOf, layoutFromTemplate, templateFields, type ArtKind, type Band } from "@/lib/typeset/templates";
+import { artKindOf, bleedsOf, layoutFromTemplate, templateFields, type ArtKind, type Band } from "@/lib/typeset/templates";
 import { faceFile, pickRoles, mix } from "@/lib/typeset/fonts";
 import type { Layout } from "@/lib/typeset/compose";
 import { painterFor, mixedPainter } from "./painters";
@@ -104,22 +104,33 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
   const zoneAspect = (zone.w / tpl.refW * widthMm) / (zone.h / tpl.refH * heightMm);
   const ap = asKind(await buildArtworkPrompt(brief, model.artist), artKindOf(tpl) === "spot" ? "spot" : "bleed");
   ap.aspect = zoneAspect > 1.25 ? "landscape" : zoneAspect < 0.8 ? "portrait" : "square";
-  /* 2026-09-23 (owner: "only the legs of a person on the chair showed —
-     more than half the image lay outside the label; work the picture's
-     proportion out from the room the label leaves"). The painter has
-     three canvas shapes; a band can be 2.8:1. So the painter is TOLD the
-     window: everything that matters goes into the strip of the canvas
-     that the window will show, the rest is calm continuation. The
-     composer then shows exactly that strip (compose-template.ts). */
+  /* 2026-09-23 (owner, twice): "only the legs of a person on the chair
+     showed — work the picture's proportion out from the room the label
+     leaves", and "a picture that runs off three sides must not be cut
+     with a straight line on the type's side — its edge should look like
+     the artist meant it". Now that a painting serves ONE label, it can be
+     painted for it: it runs off the sides that leave the label and, on
+     the side that faces the type, ends in the painter's own edge with
+     plain ground beyond. The painted part is given the WINDOW's shape, so
+     nothing that matters falls outside the label. */
+  let edgeSide: "top" | "bottom" | "left" | "right" | undefined;
   if (artKindOf(tpl) !== "spot") {
-    const canvas = ap.aspect === "landscape" ? 1.5 : ap.aspect === "portrait" ? 2 / 3 : 1;
-    const wide = zoneAspect > canvas;
-    const frac = wide ? canvas / zoneAspect : zoneAspect / canvas;
-    if (frac < 0.85) {
+    const bl = bleedsOf(tpl);
+    edgeSide = (["bottom", "top", "right", "left"] as const).find((k) => !bl[k]);
+    if (edgeSide) {
+      const horiz = edgeSide === "top" || edgeSide === "bottom";
+      ap.aspect = horiz
+        ? (zoneAspect >= 1.2 ? "landscape" : zoneAspect >= 0.8 ? "square" : "portrait")
+        : (zoneAspect <= 1.2 ? "landscape" : "square");
+      const canvas = ap.aspect === "landscape" ? 1.5 : ap.aspect === "portrait" ? 2 / 3 : 1;
+      const frac = Math.min(0.85, Math.max(0.35, horiz ? canvas / zoneAspect : zoneAspect / canvas));
       const pct = Math.round(frac * 100);
-      ap.prompt += wide
-        ? ` COMPOSITION — THE WINDOW: this painting will be seen through a wide window about ${zoneAspect.toFixed(1)} times wider than tall. Put EVERYTHING that matters — every figure whole, every face, the whole story — inside a horizontal strip across the MIDDLE of the canvas, about ${pct}% of its height. Above and below that strip only continue the ground, sky, wall or floor calmly, with nothing important in them.`
-        : ` COMPOSITION — THE WINDOW: this painting will be seen through a tall window. Put EVERYTHING that matters — every figure whole, every face, the whole story — inside a vertical strip down the MIDDLE of the canvas, about ${pct}% of its width. Left and right of that strip only continue the ground, sky, wall or floor calmly, with nothing important in them.`;
+      const runs = (["top", "bottom", "left", "right"] as const).filter((k) => bl[k]).join(", ");
+      const where = edgeSide === "bottom" ? `the top ${pct}% of the canvas` : edgeSide === "top" ? `the bottom ${pct}% of the canvas`
+        : edgeSide === "right" ? `the left ${pct}% of the canvas` : `the right ${pct}% of the canvas`;
+      const edgeText = `THE PAINTING AND ITS EDGE: the painting fills ${where} and runs off the ${runs} edges of the canvas, cut by them as if the sheet were larger. Toward the ${edgeSide} it does NOT reach the edge: it ends in the painter's own loose, irregular edge — brushed, torn or dissolving, never a straight line, never a frame — and beyond that edge the rest of the canvas is plain, flat, EMPTY ground in one tone taken from the painting's own palette, with nothing drawn on it. Everything that matters — every figure whole, every face, the whole story — sits inside the painted part.`;
+      ap.prompt = ap.prompt.includes(BLEED) ? ap.prompt.replace(BLEED, edgeText) : `${ap.prompt} ${edgeText}`;
+      ap.edgeSide = edgeSide;
     }
   }
   const painted = await gen429(() => generateArtwork(model, ap, { sketch: inp.sketch || null, refSet: inp.refSet }));
@@ -133,7 +144,9 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
   /* the paper is flattened and MEASURED: cleanPaper grows the paper in
      from the edge, so it knows exactly where the drawing is. Inside the
      drawing nothing is touched — a flat ground Levan painted is his. */
-  const cleaned = await cleanPaper(painted.art);
+  /* a band/panel picture has plain ground only on its type-facing side —
+     the paper is looked for there and nowhere else */
+  const cleaned = await cleanPaper(painted.art, undefined, edgeSide);
   const art = cleaned.art;
 
   /* 2026-09-23 (owner: "we no longer generate variations — the rules
@@ -145,6 +158,7 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
 
   const out = await composeTemplateLabel({
     artwork: art, band, template: chosen.id, data: inp.data, ink: cleaned.ink, paper: cleaned.ground,
+    edge: cleaned.cleaned ? edgeSide : undefined,
     widthMm, heightMm, seed, wineColour: inp.data.wineColorName,
   });
   if (out.warnings.length) console.warn(`[template ${out.template}] ${out.warnings.join("; ")}`);

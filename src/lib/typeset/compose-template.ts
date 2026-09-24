@@ -27,6 +27,10 @@ export interface TemplateComposeInput {
   seed: number;
   wineColour?: string;
   paper?: string;               /* the painting's own paper, from cleanPaper */
+  /* 2026-09-23: a band/panel picture that ends in the painter's own edge
+     on this side (and was cleaned there) — that edge is laid on the
+     type's boundary instead of a straight cut */
+  edge?: "top" | "bottom" | "left" | "right";
   textless?: boolean;           /* the label WITHOUT its type — the layout bench draws the words itself */
   /* the drawing's box inside the file, as fractions — cleanPaper knows it
      exactly, because it grew the paper in from the edge */
@@ -213,9 +217,23 @@ export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<C
     const offY = bestWindow(detail.rows, ah, by, bh, srcH, visTop, visH);
     const offX = bestWindow(detail.cols, aw, bx, bw, srcW, visLeft, visW);
     pxPos = { x: win.x0 - (bx + offX) * s, y: win.y0 - (by + offY) * s };
-    layout.art = { x: win.x0, y: win.y0, w: ww, h: wh };
-    layout.artCrop = { x: bx + offX, y: by + offY, w: srcW, h: srcH };
-    clip = layout.art;
+    if (inp.edge) {
+      /* the painter's own edge sits ON the type's boundary; beyond it the
+         plain ground, cleaned to the label's ground, simply runs on */
+      if (inp.edge === "bottom") pxPos.y = win.y1 - (by + bh) * s;
+      if (inp.edge === "top") pxPos.y = win.y0 - by * s;
+      if (inp.edge === "right") pxPos.x = win.x1 - (bx + bw) * s;
+      if (inp.edge === "left") pxPos.x = win.x0 - bx * s;
+      /* what is drawn: the picture inside the trim plus its bleed */
+      const B = { x0: -over, y0: -over, x1: layout.W + over, y1: layout.H + over };
+      const d = { x0: Math.max(B.x0, pxPos.x), y0: Math.max(B.y0, pxPos.y), x1: Math.min(B.x1, pxPos.x + aw * s), y1: Math.min(B.y1, pxPos.y + ah * s) };
+      layout.art = { x: d.x0, y: d.y0, w: d.x1 - d.x0, h: d.y1 - d.y0 };
+      layout.artCrop = { x: (d.x0 - pxPos.x) / s, y: (d.y0 - pxPos.y) / s, w: (d.x1 - d.x0) / s, h: (d.y1 - d.y0) / s };
+    } else {
+      layout.art = { x: win.x0, y: win.y0, w: ww, h: wh };
+      layout.artCrop = { x: bx + offX, y: by + offY, w: srcW, h: srcH };
+      clip = layout.art;
+    }
   }
   const pw = aw * s, ph = ah * s;
 

@@ -174,6 +174,31 @@ Mariam top band — whole figures, faces in).
 Also: the assets page's lifestyle glasses now fill (ASSET_STAGES still
 said "…/4"); the label-size preview box on the details page is removed.
 
+**Later the same night (local + origin):**
+- SKIP moved onto the PROGRESS BAR: centred over the red dot the thick
+  line stands on, 14 px above the line, travels with it (page.tsx bar
+  layer; SKIP_TO unchanged).
+- Band/panel pictures now END IN THE PAINTER'S OWN EDGE on the side that
+  faces the type (owner: "no straight cut there — an edge the artist
+  meant"). hybrid.ts asks for it (painted part given the window's shape:
+  "fills the top 54 % of the canvas, runs off top/left/right, ends in
+  its own loose edge, plain ground beyond"); cleanPaper(…, side) measures
+  and grows paper ONLY from that side (this also fixed Mariam's navy
+  evening being flattened man and all — the all-sides flood took her dark
+  scene for paper); the edge is found where ink holds ≥5 % for three
+  lines, skipping the outer 1.5 % (a speck and a repaint hairline had
+  fooled it); compose-template lays that edge ON the type boundary (no
+  clip). No plain ground found → the old detail-window with a clip.
+  Known limit: if the painter paints a bigger part than asked (Levan
+  tends to), the overflow goes off the bleeding side.
+- Mariam: an ART DIRECTOR's `note` (profile.json, rides after her own
+  answers, which stay untouched): light and airy, thin washes over white
+  paper, never a heavy dark ground. First tests: pale grounds.
+- A refused story (OpenAI filter) is retried on the next trio, then with
+  no reference works (models.ts generateArtwork), before a column is
+  given up; an empty column no longer shows the old "FUNKY" heading.
+Tests: Desktop/8K-sheet-test/window-test-edge/ (00-fixed.jpg).
+
 **Open — the owner's decisions**
 0. ANSWERED (see above) — "why is Mariam always a
    small oval?" Cause: this morning's rule "ONE kind of ask" (models.ts:
