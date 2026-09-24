@@ -651,7 +651,7 @@ export function layoutFromTemplate(inp: TemplateInput): TemplateLayout {
         if (t.arc) {
           const cy = px(t.arc.cy + (baseMm - t.baseline));
           for (const g of arcGlyphs(t, text, face, sizePx, x, cy)) {
-            laid.push({ text: g.ch, size: sizePx, tracking: 0, family: face.family, weight: face.weight, italic: false, anchor: "middle", colour, x: g.x, y: g.y, rot: g.rot });
+            laid.push({ text: g.ch, size: sizePx, tracking: 0, family: face.family, weight: face.weight, italic: false, anchor: "middle", colour, x: g.x, y: g.y, rot: g.rot, key: t.fields.join("+") });
           }
           continue;
         }
@@ -660,6 +660,7 @@ export function layoutFromTemplate(inp: TemplateInput): TemplateLayout {
           family: face.family, weight: face.weight, italic: false,
           anchor: t.align === "center" ? "middle" : t.align === "right" ? "end" : "start", colour,
           ...(t.rot ? { rot: t.rot } : {}),
+          key: t.fields.join("+"),
         });
       }
     }

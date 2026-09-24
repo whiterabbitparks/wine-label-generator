@@ -42,7 +42,11 @@ export interface ComposeInput {
    may now anchor at its END and may carry its own rotation, in degrees
    clockwise about its anchor point. Both are optional; nothing that was
    already laid out uses them. */
-export interface LaidLine { text: string; x: number; y: number; size: number; tracking: number; family: string; weight: number; italic: boolean; anchor: "start" | "middle" | "end"; colour: string; rot?: number }
+export interface LaidLine { text: string; x: number; y: number; size: number; tracking: number; family: string; weight: number; italic: boolean; anchor: "start" | "middle" | "end"; colour: string; rot?: number;
+  /* 2026-09-23: which of the label's elements this line is ("producer",
+     "wineTypeLine+alcVol"…) — the admin's layout editor and the reading of
+     its edits need it; an arced name's letters all carry the same key */
+  key?: string }
 export interface Layout { W: number; H: number; ground: string; art: { x: number; y: number; w: number; h: number }; artCrop?: { x: number; y: number; w: number; h: number }; lines: LaidLine[] }
 export interface ComposeOutput { svg: string; png: string; faces: string; ink: string; layout: Layout }
 

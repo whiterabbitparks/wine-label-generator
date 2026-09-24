@@ -23,8 +23,9 @@ import { RegionsCard } from "./RegionsCard";
 import { PaintersCard } from "./PaintersCard";
 import { EvalPanel } from "./EvalPanel";
 import { LayoutBench } from "./LayoutBench";
+import { LayoutEditor } from "./LayoutEditor";
 
-const TABS = ["Artists & Rules", "Marketing", "Evaluate", "System"] as const;
+const TABS = ["Layout editor", "Artists & Rules", "Marketing", "Evaluate", "System"] as const;
 type Tab = (typeof TABS)[number];
 
 function LinesRulesCard({ title, note, api }: { title: string; note: string; api: string }) {
@@ -229,6 +230,12 @@ export default function AdminPage() {
             <button key={t} onClick={() => setTab(t)} style={{ ...S.tab, ...(tab === t ? S.tabActive : {}) }}>{t}</button>
           ))}
         </nav>
+
+        {tab === "Layout editor" && (
+          <Section title="Layout editor" note="Open a label the wizard made and correct its layout by hand — drag lines and the picture, change size, weight or alignment. Save keeps your edit exactly; Claude reads the edits and proposes rules for you to approve. Nothing changes the engine by itself.">
+            <LayoutEditor />
+          </Section>
+        )}
 
         {tab === "Artists & Rules" && (<>
             <LayoutBench />

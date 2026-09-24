@@ -267,6 +267,24 @@ hit area); the tree's bar sits halfway between the folder mark and the
 icons; chevrons at 137.14 and 700, carousel centred between them, side
 items drawn in (150/200).
 
+**THE LAYOUT EDITOR (2026-09-23, owner approved the plan):** admin tab
+"Layout editor" (src/app/admin/LayoutEditor.tsx). He opens a REAL label
+(data/labels) — painting + every line live (fonts from
+public/fonts/labels); drag / arrow keys (0.1 mm, Shift 1 mm), size ±0.5 pt,
+bold on/off, align L/C/R (keeps the visual edge), hide, picture move +
+scale; 5 mm margin + centre lines; undo/reset; a note. Save →
+POST /api/admin/layout-edits → data/layout-edits/<time>-<label>.json
+(before + after, exact numbers, template, size, artist, note) — NOTHING
+becomes a rule by itself. Lines now carry `key` (the element: "producer",
+"wineTypeLine+alcVol"…; LaidLine.key, set in templates.ts); older labels
+fall back to line#/arc# (arc letters grouped). READING THEM:
+`npx tsx tools/layout-edits-report.mts` (SINCE=YYYY-MM-DD) → per template
++ element what moved/resized/re-weighted, and before|after sheets in
+Desktop/8K-sheet-test/layout-edits/. If he edits on the LIVE admin, pull
+first: rsync root@2.28.48.43:/opt/8klabels/data/layout-edits/ and the
+labels they name (data/labels/<id>/). Then: say in words what the edits
+show → he agrees → write the rule (review edit or engine rule) → gates.
+
 **Open — the owner's decisions**
 0. ANSWERED (see above) — "why is Mariam always a
    small oval?" Cause: this morning's rule "ONE kind of ask" (models.ts:
