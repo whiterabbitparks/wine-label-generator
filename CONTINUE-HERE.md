@@ -285,6 +285,14 @@ first: rsync root@2.28.48.43:/opt/8klabels/data/layout-edits/ and the
 labels they name (data/labels/<id>/). Then: say in words what the edits
 show → he agrees → write the rule (review edit or engine rule) → gates.
 
+**DEPLOYED 2026-09-24 (940e632)** — everything above is LIVE: Giorgi
+Akhuashvili (3 painters, one each per run), mixed marketing
+(contemporary + punk), painter's-edge pictures, no-orphans, guided tour
+(dev switch), layout editor (admin), Final Pack v2 (glass clink, direct
+download), 8K.WINE header, new home label. Live smoke label OK (Giorgi,
+t05, orphan region centred). Layout edits made on the LIVE admin live in
+the server's data/layout-edits — pull them before reading.
+
 **Open — the owner's decisions**
 0. ANSWERED (see above) — "why is Mariam always a
    small oval?" Cause: this morning's rule "ONE kind of ask" (models.ts:
