@@ -293,6 +293,27 @@ download), 8K.WINE header, new home label. Live smoke label OK (Giorgi,
 t05, orphan region centred). Layout edits made on the LIVE admin live in
 the server's data/layout-edits — pull them before reading.
 
+**2026-09-25 — his three picture points (committed; NOT deployed)**
+1. Spot drawings are centred by their CORE (ink with the outermost 3%
+   trimmed per side — strays like a cloud or a speck no longer pull the
+   drawing off-centre); the whole drawing stays inside its room, shrinking
+   at most to 88% (compose-template.ts inkCore + spot placement).
+2. No more ovals: the spot ask said "the drawing will sit in a wide OVAL"
+   and the model drew one (Levan filled it edge to edge). Now the room is
+   "only its rough proportion, not its shape" + "outline NOT a geometric
+   shape… made by the things drawn" (hybrid.ts), and VIGNETTE says "never
+   an oval or circular patch" (models.ts).
+3. Levan's blue: his works sit on blue 7/18, his labels were blue 9/18.
+   Touched ONLY his profile: an art-director `note` — the ground takes
+   whichever of his colours the scene calls for, sky blue only for sky or
+   water. Giorgi and Mariam untouched.
+Test (data/experiments/spot-test.mts, 9 real paintings; sheet on the
+Desktop 2026-09-25-picture-points-test.png): Levan grounds 3 yellow,
+3 pink/red, 1 blue; no ovals; centred.
+FOUND, not fixed (pre-existing, ask him): Levan t10 (band with type
+above AND below) — the painting ran up into the wine name (vPair fit
+makes it wide enough to cross the label, so a tall painting overflows).
+
 **2026-09-24 late night — ADMIN TIDY (committed; NOT deployed; owner reviews in the morning)**
 - Tabs now: Layouts (queue, opens first) · Artists (new read-only
   ArtistsCard: on/off, model, his sets of works as thumbnails, consent —

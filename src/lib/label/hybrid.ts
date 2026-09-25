@@ -126,9 +126,15 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
   if (artKindOf(tpl) === "spot") {
     const canvas = ap.aspect === "landscape" ? 1.5 : ap.aspect === "portrait" ? 2 / 3 : 1;
     if (zoneAspect > canvas * 1.15 || zoneAspect < canvas / 1.15) {
+      /* 2026-09-25 (owner: "many of Levan's pictures sit in a rather
+         sharp oval — we passed that; let the illustration make its own
+         edge; take the oval as rough margins, not as the ink's shape").
+         The ask said "a wide OVAL", and the model drew one. Now the room
+         is only a proportion; the outline belongs to the drawing. */
       ap.prompt += zoneAspect > canvas
-        ? ` COMPOSITION — THE WINDOW: the drawing will sit in a wide oval about ${zoneAspect.toFixed(1)} times wider than tall. Make it a WIDE, horizontal vignette of that shape — spread across most of the canvas's width, low in height, with the plain empty margin above and below it. Never a tall or square scene.`
-        : ` COMPOSITION — THE WINDOW: the drawing will sit in a tall window about ${(1 / zoneAspect).toFixed(1)} times taller than wide. Make it a TALL, upright vignette of that shape, with the plain empty margin at its sides.`;
+        ? ` COMPOSITION — THE PROPORTION: the drawing will be placed in an area about ${zoneAspect.toFixed(1)} times wider than tall — that is only its rough proportion, not its shape. Spread it across most of the canvas's width, low in height, with plain empty margin above and below. Never a tall or square scene.`
+        : ` COMPOSITION — THE PROPORTION: the drawing will be placed in an area about ${(1 / zoneAspect).toFixed(1)} times taller than wide — that is only its rough proportion, not its shape. Make it tall and upright, with plain empty margin at its sides.`;
+      ap.prompt += ` Its outline is NOT a geometric shape: never an oval, circle, ellipse or rectangle, never a patch of colour with a smooth rounded edge. The silhouette is free, irregular and lively, made by the things drawn themselves — a figure, a plant, a patch of ground that breaks off unevenly.`;
     }
   }
   type Side = "top" | "bottom" | "left" | "right";

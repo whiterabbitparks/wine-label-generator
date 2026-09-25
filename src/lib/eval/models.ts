@@ -72,7 +72,9 @@ export interface ArtworkPrompt { prompt: string; subject: string; aspect: "lands
    illustration on a flat plain ground with air around it. The composer
    trims the air and sets the type on that same paper: nothing is ever
    cut or covered, the drawing ends where the artist ended it. */
-const VIGNETTE = "A spot illustration: one self-contained drawing isolated on a flat, plain, single-colour background with empty margin all around; the drawing's edges finish naturally — they are the edges the painter chose, soft and irregular, never a frame, never a straight cut, never a border.";
+/* 2026-09-25: "never an oval" — the drawing's outline is its own, not a
+   geometric patch (the owner, on Levan's sharp ovals) */
+const VIGNETTE = "A spot illustration: one self-contained drawing isolated on a flat, plain, single-colour background with empty margin all around; the drawing's edges finish naturally — they are the edges the painter chose, soft and irregular, never a frame, never a straight cut, never a border, never an oval or circular patch.";
 /* 2026-09-23 (owner, exhausted and right): "generate the image the way I
    showed you — with the free zones and the ink at the proportion I
    explained". Asking the model to fill a whole sheet was my mistake: it

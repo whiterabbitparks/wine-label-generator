@@ -192,8 +192,25 @@ export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<C
   let s: number, pxPos: { x: number; y: number };
   let clip: { x: number; y: number; w: number; h: number } | null = null;
   if (kind === "spot") {
-    s = Math.min(art.w / bw, art.h / bh);
-    pxPos = { x: art.x + (art.w - bw * s) / 2 - bx * s, y: art.y + (art.h - bh * s) / 2 - by * s };
+    /* 2026-09-25 (owner: "the ink has more free space on one side, and
+       centred as a whole it looks oddly placed — centre the drawing").
+       The box around ALL the ink is stretched by strays — a cloud, a
+       speck, a blade of grass off to one side — so its middle is not the
+       drawing's. The drawing's own middle is its CORE: the ink with the
+       outermost 3% trimmed on each side. The core is centred in the room,
+       and the whole drawing still stays inside it: it shrinks a little to
+       make that room, but never below 88% of its size — past that the
+       core only moves as far as the room allows. */
+    const s0 = Math.min(art.w / bw, art.h / bh);
+    const core = await inkCore(inp.artwork, ground, box);
+    const cx = core ? core.cx * aw : bx + bw / 2, cy = core ? core.cy * ah : by + bh / 2;
+    const reachX = Math.max(cx - bx, bx + bw - cx), reachY = Math.max(cy - by, by + bh - cy);
+    s = Math.max(0.88 * s0, Math.min(s0, art.w / (2 * reachX), art.h / (2 * reachY)));
+    const fit = (lo: number, room: number, len: number, want: number) => Math.min(Math.max(want, lo), lo + room - len);
+    pxPos = {
+      x: fit(art.x, art.w, bw * s, art.x + art.w / 2 - (cx - bx) * s) - bx * s,
+      y: fit(art.y, art.h, bh * s, art.y + art.h / 2 - (cy - by) * s) - by * s,
+    };
     layout.art = { x: pxPos.x + bx * s, y: pxPos.y + by * s, w: bw * s, h: bh * s };
     layout.artCrop = { x: bx, y: by, w: bw, h: bh };
   } else {
@@ -280,6 +297,27 @@ export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<C
 
 export { MARGIN_MM, PX_PER_MM };
 
+
+/* THE DRAWING'S CORE (2026-09-25): where the ink lies once the outermost
+   3% of it is set aside on each side — the middle a designer would centre
+   by eye. Ink is whatever stands clearly off the flat paper. Fractions of
+   the picture; null when there is too little ink to judge. */
+async function inkCore(dataUrl: string, paper: string, box: { x: number; y: number; w: number; h: number }): Promise<{ cx: number; cy: number } | null> {
+  const N = 200;
+  const { data, info } = await sharp(Buffer.from(dataUrl.slice(dataUrl.indexOf(",") + 1), "base64"))
+    .resize(N, N, { fit: "fill" }).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  const g = (paper.match(/[0-9a-f]{2}/gi) || ["ff", "ff", "ff"]).map((h) => parseInt(h, 16));
+  const c = info.channels, xs = new Array(N).fill(0), ys = new Array(N).fill(0);
+  let n = 0;
+  const x0 = Math.floor(box.x * N), x1 = Math.ceil((box.x + box.w) * N), y0 = Math.floor(box.y * N), y1 = Math.ceil((box.y + box.h) * N);
+  for (let y = Math.max(0, y0); y < Math.min(N, y1); y++) for (let x = Math.max(0, x0); x < Math.min(N, x1); x++) {
+    const i = (y * N + x) * c;
+    if (Math.abs(data[i] - g[0]) + Math.abs(data[i + 1] - g[1]) + Math.abs(data[i + 2] - g[2]) > 60) { xs[x]++; ys[y]++; n++; }
+  }
+  if (n < 50) return null;
+  const q = (h: number[], p: number) => { let t = 0; for (let i = 0; i < N; i++) { t += h[i]; if (t >= p * n) return (i + 0.5) / N; } return 1; };
+  return { cx: (q(xs, 0.03) + q(xs, 0.97)) / 2, cy: (q(ys, 0.03) + q(ys, 0.97)) / 2 };
+}
 
 /* WHERE A PICTURE'S DETAIL IS (2026-09-23): gradient energy per row and
    per column of a small copy — figures, faces and drawn edges carry it, a
