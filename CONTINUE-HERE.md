@@ -293,6 +293,11 @@ download), 8K.WINE header, new home label. Live smoke label OK (Giorgi,
 t05, orphan region centred). Layout edits made on the LIVE admin live in
 the server's data/layout-edits — pull them before reading.
 
+**2026-09-25 — CONSENT:** the owner has a VERBAL agreement with all three
+painting artists (Mariam, Levan, Giorgi A.). Recorded in their profiles.
+Still open before any SALE: a short written agreement (share, credit,
+withdrawal).
+
 **DEPLOYED 2026-09-25 (5656411)** — everything below down to the 24th is LIVE: admin tidy, layout queue, tour texts, picture points, lower t10 strip. Live smoke: Levan t06, organic outline, centred, pink ground.
 
 **2026-09-25 — his three picture points**
