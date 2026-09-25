@@ -293,7 +293,9 @@ download), 8K.WINE header, new home label. Live smoke label OK (Giorgi,
 t05, orphan region centred). Layout edits made on the LIVE admin live in
 the server's data/layout-edits — pull them before reading.
 
-**2026-09-25 — his three picture points (committed; NOT deployed)**
+**DEPLOYED 2026-09-25 (5656411)** — everything below down to the 24th is LIVE: admin tidy, layout queue, tour texts, picture points, lower t10 strip. Live smoke: Levan t06, organic outline, centred, pink ground.
+
+**2026-09-25 — his three picture points**
 1. Spot drawings are centred by their CORE (ink with the outermost 3%
    trimmed per side — strays like a cloud or a speck no longer pull the
    drawing off-centre); the whole drawing stays inside its room, shrinking
@@ -316,7 +318,7 @@ tall leaves the strip" (hybrid.ts edgeText, both-sides case). Tested on
 all three artists (Desktop 2026-09-25-t10-low-strip.png): Levan clean;
 Giorgi's trees and Mariam's balloon come close to the name, not over it.
 
-**2026-09-24 late night — ADMIN TIDY (committed; NOT deployed; owner reviews in the morning)**
+**2026-09-24 late night — ADMIN TIDY**
 - Tabs now: Layouts (queue, opens first) · Artists (new read-only
   ArtistsCard: on/off, model, his sets of works as thumbnails, consent —
   red when NOT OBTAINED — labels painted; + Regions) · Marketing (boards
@@ -340,7 +342,7 @@ Giorgi's trees and Mariam's balloon come close to the name, not over it.
   image-rules, layout-feedback, layout-refs, layout-rules, playground,
   style-refs, dream-feedback, fal-lora…) — propose deleting.
 
-**2026-09-24 night — the layout editor became a QUEUE (committed; deploy when he says)**
+**2026-09-24 night — the layout editor became a QUEUE**
 - Why: he "fixed layouts but the same unfixed ones came back" — the old
   editor listed every label ever made and an edit never removed one.
 - Now: "Make 5 new labels" (src/lib/label/layout-batch.ts, API
