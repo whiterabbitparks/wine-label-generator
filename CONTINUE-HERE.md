@@ -310,9 +310,11 @@ the server's data/layout-edits — pull them before reading.
 Test (data/experiments/spot-test.mts, 9 real paintings; sheet on the
 Desktop 2026-09-25-picture-points-test.png): Levan grounds 3 yellow,
 3 pink/red, 1 blue; no ovals; centred.
-FOUND, not fixed (pre-existing, ask him): Levan t10 (band with type
-above AND below) — the painting ran up into the wine name (vPair fit
-makes it wide enough to cross the label, so a tall painting overflows).
+t10 (band with type above AND below; the painting ran up into the wine
+name): HIS CHOICE — ask for a LOWER strip: a fifth lower, and "nothing
+tall leaves the strip" (hybrid.ts edgeText, both-sides case). Tested on
+all three artists (Desktop 2026-09-25-t10-low-strip.png): Levan clean;
+Giorgi's trees and Mariam's balloon come close to the name, not over it.
 
 **2026-09-24 late night — ADMIN TIDY (committed; NOT deployed; owner reviews in the morning)**
 - Tabs now: Layouts (queue, opens first) · Artists (new read-only

@@ -151,11 +151,18 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
         : (zoneAspect <= 1.2 ? "landscape" : "square");
       const canvas = ap.aspect === "landscape" ? 1.5 : ap.aspect === "portrait" ? 2 / 3 : 1;
       const frac = Math.min(0.85, Math.max(0.35, horiz ? canvas / zoneAspect : zoneAspect / canvas));
-      const pct = Math.round(frac * 100);
       const runs = (["top", "bottom", "left", "right"] as const).filter((k) => bl[k]).join(", ");
       const both = edgeSides.length > 1;
+      /* 2026-09-25 (owner, on Levan's t10: the cypresses rose into the
+         wine name): with type on BOTH sides the painting is stretched
+         across the label, so a strip painted too tall runs into the type.
+         He chose to ask for a LOWER strip — a fifth lower, and said so
+         plainly: nothing tall may leave it. */
+      const pct = Math.round(frac * (both ? 0.8 : 1) * 100);
       const where = both
-        ? (horiz ? `a horizontal strip across the MIDDLE of the canvas, about ${pct}% of its height` : `a vertical strip down the MIDDLE of the canvas, about ${pct}% of its width`)
+        ? (horiz
+          ? `a LOW horizontal strip across the MIDDLE of the canvas, only about ${pct}% of its height — and it stays that low: nothing in it (no tree, tower, figure or branch) rises above or hangs below the strip; tall things are drawn short, leaning or lying down so they fit inside it`
+          : `a NARROW vertical strip down the MIDDLE of the canvas, only about ${pct}% of its width — and it stays that narrow: nothing in it reaches out past the strip's sides`)
         : edgeSides[0] === "bottom" ? `the top ${pct}% of the canvas` : edgeSides[0] === "top" ? `the bottom ${pct}% of the canvas`
           : edgeSides[0] === "right" ? `the left ${pct}% of the canvas` : `the right ${pct}% of the canvas`;
       const toward = edgeSides.join(" and toward the ");
