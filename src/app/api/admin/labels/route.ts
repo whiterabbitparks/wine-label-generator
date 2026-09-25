@@ -6,7 +6,8 @@ import { requestIsAuthenticated } from "@/lib/admin/session";
 import { LABEL_DIR, readLabel } from "@/lib/label/store";
 
 /* ROUND 98: the hybrid engine's recent labels for the admin — the list
-   (newest 40) and, with ?id=, the label's PNG */
+   (newest 40, with counts) and, with ?id=, the label's PNG (&part=thumb
+   a small JPEG) */
 export async function GET(req: Request) {
   if (!(await requestIsAuthenticated())) return NextResponse.json({ error: "not authenticated" }, { status: 401 });
   const url = new URL(req.url);
@@ -28,13 +29,23 @@ export async function GET(req: Request) {
       }
       return NextResponse.json({ meta: l.meta, layout: l.layout, art: { w: m.width || 1, h: m.height || 1 }, faces });
     }
+    /* a small JPEG for the lists — the full PNG is 1320 px and heavy */
+    if (part === "thumb") {
+      const jpg = await sharp(l.png).resize({ width: 480 }).jpeg({ quality: 80 }).toBuffer();
+      return new Response(new Uint8Array(jpg), { headers: { "Content-Type": "image/jpeg", "Cache-Control": "private, max-age=3600" } });
+    }
     return new Response(new Uint8Array(l.png), { headers: { "Content-Type": "image/png", "Cache-Control": "private, max-age=3600" } });
   }
   if (!fs.existsSync(LABEL_DIR)) return NextResponse.json({ labels: [] });
-  const labels = fs.readdirSync(LABEL_DIR)
+  const all = fs.readdirSync(LABEL_DIR)
     .filter((d) => fs.existsSync(path.join(LABEL_DIR, d, "meta.json")))
     .map((d) => JSON.parse(fs.readFileSync(path.join(LABEL_DIR, d, "meta.json"), "utf8")))
-    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
-    .slice(0, 40);
-  return NextResponse.json({ labels });
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  /* how much is being PAINTED — every painting is a paid model call; a
+     re-set of the type on the same painting ("(the same painting…)") is not */
+  const now = Date.now(), day = 86400000;
+  const paintedOnes = all.filter((m) => { try { return !fs.readFileSync(path.join(LABEL_DIR, m.id, "prompt.txt"), "utf8").startsWith("("); } catch { return true; } });
+  const since = (ms: number) => paintedOnes.filter((m) => now - Date.parse(m.createdAt) < ms).length;
+  const counts = { total: paintedOnes.length, today: since(day), week: since(7 * day) };
+  return NextResponse.json({ labels: all.slice(0, 40), counts });
 }

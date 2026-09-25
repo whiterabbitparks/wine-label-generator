@@ -257,7 +257,7 @@ export function LayoutEditor() {
       <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 8, minHeight: 74 }}>
         {batch.open.map((m) => (
           // eslint-disable-next-line @next/next/no-img-element
-          <img key={m.id} src={`/api/admin/labels?id=${m.id}`} alt={m.id} title={`${m.template} · ${m.widthMm}×${m.heightMm} · ${m.artist} · ${m.idea}`}
+          <img key={m.id} src={`/api/admin/labels?id=${m.id}&part=thumb`} alt={m.id} title={`${m.template} · ${m.widthMm}×${m.heightMm} · ${m.artist} · ${m.idea}`}
             onClick={() => open(m.id)}
             style={{ height: 70, border: m.id === id ? "2px solid #B71318" : "1px solid #E3E3E1", cursor: "pointer", flex: "0 0 auto" }} />
         ))}

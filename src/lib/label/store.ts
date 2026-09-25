@@ -35,7 +35,8 @@ export function readLabel(id: string): { meta: StoredLabel; svg: string; png: Bu
   const lp = path.join(dir, "layout.json");
   return {
     meta: JSON.parse(fs.readFileSync(path.join(dir, "meta.json"), "utf8")) as StoredLabel,
-    svg: fs.readFileSync(path.join(dir, "label.svg"), "utf8"),
+    /* a label saved by a test tool may have no SVG — it still opens */
+    svg: fs.existsSync(path.join(dir, "label.svg")) ? fs.readFileSync(path.join(dir, "label.svg"), "utf8") : "",
     png: fs.readFileSync(path.join(dir, "label.png")),
     art: fs.readFileSync(path.join(dir, "art.png")),
     layout: fs.existsSync(lp) ? (JSON.parse(fs.readFileSync(lp, "utf8")) as Layout) : null,

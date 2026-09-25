@@ -186,7 +186,7 @@ export function EvalPanel() {
           <div>
             <label style={{ ...S.label, marginTop: 0 }}>Painter</label>
             <select value={model} onChange={(e) => setModel(e.target.value)} style={{ ...S.input, width: 230 }}>
-              <option value="wizard">As the wizard (each column its own)</option>
+              <option value="wizard">One artist per column (in their page order)</option>
               {data.models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
             </select>
           </div>

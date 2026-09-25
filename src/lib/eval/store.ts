@@ -20,6 +20,9 @@ export function listRuns(): EvalRun[] {
   return fs.readdirSync(EVAL_DIR)
     .filter((d) => fs.existsSync(path.join(EVAL_DIR, d, "run.json")))
     .map((d) => JSON.parse(fs.readFileSync(path.join(EVAL_DIR, d, "run.json"), "utf8")) as EvalRun)
+    /* a tool's record without pictures (the 2026-09-22 cost tests) is not
+       a run to mark — it broke the whole Evaluate tab */
+    .filter((r) => Array.isArray(r.items))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 

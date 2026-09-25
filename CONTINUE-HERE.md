@@ -293,6 +293,30 @@ download), 8K.WINE header, new home label. Live smoke label OK (Giorgi,
 t05, orphan region centred). Layout edits made on the LIVE admin live in
 the server's data/layout-edits — pull them before reading.
 
+**2026-09-24 late night — ADMIN TIDY (committed; NOT deployed; owner reviews in the morning)**
+- Tabs now: Layouts (queue, opens first) · Artists (new read-only
+  ArtistsCard: on/off, model, his sets of works as thumbnails, consent —
+  red when NOT OBTAINED — labels painted; + Regions) · Marketing (boards
+  contemporary / funky / product shots — traditional retired — + the
+  marketing rules, moved here) · Evaluate · System (labels with a
+  PAINTINGS count today / 7 days / all — re-sets not counted; users).
+  Old ?tab= bookmarks map to the new names.
+- REMOVED: LayoutBench (+ /api/admin/layouts) — a second layout tool that
+  wrote straight into templates-overrides (empty) around the approval
+  loop; PaintersCard (+ /api/admin/painters) — "who paints each column"
+  meant nothing since the mixed cast. painterFor still serves Evaluate
+  ("one artist per column, in page order").
+- FIXED: Evaluate tab was broken since 2026-09-22 (two cost-test runs
+  without items crashed the list); a label folder without label.svg
+  crashed its picture. Lists use small JPEG thumbs (&part=thumb).
+- Artist switches stay with Claude: deploy step 2 rsyncs data/artists
+  over the server, so a live toggle would be undone. To give him the
+  switch, deploy must stop overwriting profile.json (his decision).
+- NOT touched (invisible): ~16 APIs only the old /legacy admin used
+  (config, custom-font, feedback, font-feedback, generations, hard-rules,
+  image-rules, layout-feedback, layout-refs, layout-rules, playground,
+  style-refs, dream-feedback, fal-lora…) — propose deleting.
+
 **2026-09-24 night — the layout editor became a QUEUE (committed; deploy when he says)**
 - Why: he "fixed layouts but the same unfixed ones came back" — the old
   editor listed every label ever made and an edit never removed one.
