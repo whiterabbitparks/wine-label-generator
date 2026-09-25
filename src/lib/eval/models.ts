@@ -120,7 +120,10 @@ const GPT_SIZE = { landscape: { w: 1536, h: 1024 }, portrait: { w: 1024, h: 1536
    it at strength 0.60, so what survives into the label is the story and
    the arrangement, not gpt-image's own rendering. The quality is a knob,
    not a constant, so it can be proven and then set — see STORY_QUALITY. */
-export const STORY_QUALITY = (process.env.STORY_QUALITY as "low" | "medium" | "high") || "medium";
+/* 2026-09-25: LOW — the owner judged the 2026-09-22 low-vs-medium test
+   ("the high-quality sketch isn't needed"; FLUX repaints it anyway), and
+   measured, low costs $0.042 a sketch against medium's $0.078 */
+export const STORY_QUALITY = (process.env.STORY_QUALITY as "low" | "medium" | "high") || "low";
 export async function paintStory(model: EvalModel, ap: ArtworkPrompt, extra: { sketch?: string | null; quality?: "low" | "medium" | "high"; refFiles?: string[]; noRefs?: boolean } = {}): Promise<string> {
   const sketch = extra.sketch && extra.sketch.startsWith("data:image/") ? extra.sketch : null;
   const refs = extra.noRefs ? [] : artistRefs(model.artist.id, 4, extra.refFiles);
