@@ -293,6 +293,16 @@ download), 8K.WINE header, new home label. Live smoke label OK (Giorgi,
 t05, orphan region centred). Layout edits made on the LIVE admin live in
 the server's data/layout-edits — pull them before reading.
 
+**2026-09-25 — Final Pack: prices and payment BACK** (owner; reverses
+2026-09-23): the carousel back up at its artboard place (centre 308.57),
+the price rows / pale not-made rows / big total restored as before
+6f088ab (only the baked slide, chevrons and T&C row above them wiped —
+the "I agree" glass stays right), the red button pays (card; only marks
+paid until Paddle) then downloads (tray). Tree: a folder with nothing
+SAVED is grey with no arrow and no files; nothing saved → READ ME grey
+too. The tour's last note still says "press the red button to download"
+(now two presses) — his wording, left as is.
+
 **2026-09-25 — FLUX repaint strength 0.60 → 0.55** (owner). Test
 (data/experiments/strength-test.mts, Desktop/8K-sheet-test/flux-strength):
 the same sketch at 0.60 vs 0.50 for all three artists — 0.50 kept the

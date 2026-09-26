@@ -3360,8 +3360,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
            right-hand tree and its paragraph brought down so the paragraph's
            last line sits on that foot too */
         const RULE_TOP = 171.43, RULE_FOOT = 685.71, RULE_MID = (RULE_TOP + RULE_FOOT) / 2;
-        const CAR = { x: 160, y: RULE_MID - 102.86, w: 434.28, h: 205.71 };   /* the slide's own space */
-        const CAR_MID = RULE_MID;
+        /* 2026-09-25 (owner): the carousel back UP to its artboard place
+           (centre y308.57) — the price list is back beneath it */
+        void RULE_MID;
+        const CAR = { x: 160, y: 205.71, w: 434.28, h: 205.71 };   /* the slide's own space */
+        const CAR_MID = 308.57;
         const ARR_L = 137.14, ARR_R = 700;     /* the chevrons' outer edges */
         const DY = RULE_FOOT - (559.8 + 3 * 18);
         const TC_B = 468.28;
@@ -3435,6 +3438,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             const TRUNK_TOP = 152, ICON_TOP = 255 + DY + (70 - ICON_H) / 2;
             const TX = 1275, BAR_Y = (TRUNK_TOP + ICON_TOP) / 2, DROP = ICON_TOP - 14 - BAR_Y;
             const leftX = Math.min(...branches.map((b2) => b2.x));
+            /* 2026-09-25 (owner): a folder with nothing SAVED in it is grey,
+               with no arrow and no file list — and with nothing saved at all
+               the READ ME is grey too */
+            const savedLabels = selected >= 0 || backSaved, savedAssets = assetsSaved;
+            const isSaved = (b2: Branch) => (b2.name[0] === "LABELS" ? savedLabels : b2.name[0] === "MARKETING" ? savedAssets : savedLabels || savedAssets);
             const A = (delay: number, name: string, ms = 320): React.CSSProperties =>
               treeReveal.current ? { animation: `${name} ${ms}ms ${EASE} ${delay}ms both` } : { animation: `nuiFadeIn 260ms ${EASE} both` };
             return (
@@ -3448,7 +3456,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   <div style={{ ...px(leftX, BAR_Y - 0.5, TX - leftX, 1), transformOrigin: "right", ...A(260, "nuiGrowXR", 340) }}>{dashRule(0, 0, TX - leftX, false)}</div>
                 )}
                 {branches.map((b2, i) => (
-                  <span key={b2.name[0]} style={{ opacity: (b2.name[0] === "LABELS" ? madeRow[0] : b2.name[0] === "MARKETING" ? madeRow[2] : true) ? 1 : 0.32 }}>
+                  <span key={b2.name[0]} style={{ opacity: isSaved(b2) ? 1 : 0.32 }}>
                     <div style={{ ...px(b2.x - 0.5, BAR_Y, 1, DROP + 1), transformOrigin: "top", ...A(600 + i * 90, "nuiGrowY", 220) }}>{dashRule(0, 0, DROP + 1, true)}</div>
                     <div style={{ ...px(b2.x - 4, BAR_Y + DROP, 8, 1), background: "#000", ...A(780 + i * 90, "nuiFadeIn", 160) }} />
                     {/* the icon — ROUND 106: the owner's own ReadMe.svg beside
@@ -3463,12 +3471,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     {b2.name.map((ln, j) => (
                       <span key={ln} style={{ ...px(b2.x - 80, baseTop(345 + DY + j * 18, 15), 160, 18), font: `15px ${HNW}`, lineHeight: "15px", textAlign: "center", whiteSpace: "nowrap", ...A(1080 + i * 120, "nuiFadeUp", 300) }}>{t(ln)}</span>
                     ))}
-                    {/* the arrow down to the files */}
+                    {/* the arrow down to the files — only when something is saved */}
+                    {isSaved(b2) && (<>
                     <div style={{ ...px(b2.x - 4, 372 + DY, 8, 1), background: "#000", ...A(1300 + i * 120, "nuiFadeIn", 160) }} />
                     <div style={{ ...px(b2.x - 0.5, 372 + DY, 1, 32), transformOrigin: "top", ...A(1300 + i * 120, "nuiGrowY", 240) }}>{dashRule(0, 0, 32, true)}</div>
                     <svg viewBox="0 0 10 6" style={{ ...px(b2.x - 5, 402 + DY, 10, 6), ...A(1500 + i * 120, "nuiFadeIn", 160) }}><polyline points="0.5,0.5 5,5.5 9.5,0.5" fill="none" stroke="#000" strokeWidth="1" /></svg>
+                    </>)}
                     {/* the files, one line after another */}
-                    {b2.files.map((fn, j) => (
+                    {isSaved(b2) && b2.files.map((fn, j) => (
                       <span key={fn} style={{ ...px(b2.x - 110, baseTop(434.45 + DY + j * 10, 9.5), 220, 12), font: `9.5px ${HNW}`, lineHeight: "9.5px", textAlign: "center", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", ...A(1620 + i * 120 + j * 70, "nuiFadeUp", 260) }}>{fn}</span>
                     ))}
                   </span>
@@ -3487,10 +3497,34 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               baked one stays wiped) */}
           {/* ROUND 93 #11 (owner): what is already made reads crisp, what is
               not yet made reads pale — the rows here and the tree's branches */}
-          {/* 2026-09-23 (owner): no price list and no total — the whole
-              baked left column (slide, chevrons, T&C, rows, total) is wiped
-              and only the carousel and "I agree" are drawn again */}
-          {patch(COL_L - 14, RULE_TOP + 8, PRICE_R - COL_L + 28, 700 - RULE_TOP, "leftwipe")}
+          {/* 2026-09-25 (owner): the PRICE LIST is back, as it was — only the
+              baked slide, chevrons and T&C row above it are wiped (the
+              "I agree" glass stays on the right) */}
+          {patch(COL_L - 14, RULE_TOP + 8, PRICE_R - COL_L + 28, 480 - RULE_TOP, "leftwipe")}
+          {!customLabel && PACK.map((it, i) => (!madeRow[i] && (
+            <div key={"pale" + i} style={{ ...px(COL_L, ROWB[i] - 20, COL_W, 30), background: "rgba(255,255,255,0.62)", pointerEvents: "none", zIndex: 2 }} />
+          )))}
+          {customLabel ? (<>
+            {/* own-label order: only Marketing Assets and its price */}
+            {patch(LBL_X - 2, 486, 380, 134, "custrows")}
+            {patch(PRICE_R - 160, 486, 160, 134, "custprices")}
+            {dotBtn(RING_X, ringY(ROWB[0]), !!packSel[2], () => setPackSel((ps) => ps.map((v, k) => (k === 2 ? !v : v))), "pkc", { ring: true, r: 9, cover: 24 })}
+            {[1, 2, 3].map((i) => <span key={"nr" + i} style={{ ...px(RING_X - 13, ringY(ROWB[i]) - 13, 26, 26), background: "#fff" }} />)}
+            {rowLabel(ROWB[0], t("Marketing Assets"), () => setPackSel((ps) => ps.map((v, k) => (k === 2 ? !v : v))), "clm")}
+            {priceAt(ROWB[0], "$" + PACK[2].price)}
+            {bigTotal("$" + total)}
+          </>) : (<>
+            {/* live dots on the baked rings + the row click zones */}
+            {PACK.map((it, i) => (
+              <span key={it.name}>
+                {dotBtn(RING_X, ringY(ROWB[i]), !!packSel[i], () => setPackSel((ps) => ps.map((v, k) => (k === i ? !v : v))), "pk" + i, { ring: true, r: 9, cover: 24 })}
+                <button onClick={() => setPackSel((ps) => ps.map((v, k) => (k === i ? !v : v)))}
+                  style={{ ...px(LBL_X, ROWB[i] - 17, 360, 24), ...ghost }} />
+                {priceAt(ROWB[i], "$" + it.price)}
+              </span>
+            ))}
+            {bigTotal("$" + total)}
+          </>)}
           {/* ── the left-hand column: the order ─────────────────────────── */}
           {/* 2026-09-23 (owner): A CAROUSEL — the current item big, sharp and
               in the middle; its neighbours smaller, blurred and pale to each
@@ -4095,8 +4129,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                      then the download */
                   /* 2026-09-23 (owner): no payment step for now — the button
                      downloads the pack as soon as the terms are agreed */
+                  /* 2026-09-25 (owner): the payment step is back — the card pays,
+                     then the tray downloads (the card only marks the order
+                     paid until Paddle is connected) */
                   else if (page === "checkout") {
-                    if (requireAgree()) { setPaid(true); proceedToPayment(); }
+                    if (!paid) { if (requireAgree()) setPaid(true); }
+                    else proceedToPayment();
                   }
                 }}
                 style={{
@@ -4116,12 +4154,19 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     <line x1="9.12" y1="0" x2="-9.13" y2="0" stroke="#fff" strokeWidth="1.6" strokeMiterlimit="10" />
                     <polyline points="-3.53,5.6 -9.13,0 -3.53,-5.6" fill="none" stroke="#fff" strokeWidth="1.6" strokeMiterlimit="10" />
                   </svg>
-                ) : page === "checkout" ? (
+                ) : page === "checkout" && paid ? (
                   /* the owner's download tray (Red_Buttons_Pay&Download.svg) */
                   <svg viewBox="0 0 40 40" width="21" height="21">
                     <path d="M8 20 V32 H32 V20" fill="none" stroke="#fff" strokeWidth="3.4" strokeLinejoin="miter" />
                     <line x1="20" y1="6" x2="20" y2="24" stroke="#fff" strokeWidth="3.4" />
                     <polyline points="13,17 20,24.5 27,17" fill="none" stroke="#fff" strokeWidth="3.4" />
+                  </svg>
+                ) : page === "checkout" ? (
+                  /* the owner's card — back 2026-09-25 with the payment step */
+                  <svg viewBox="0 0 44 32" width="23.5" height="17">
+                    <rect x="2.5" y="2.5" width="39" height="27" rx="3.5" fill="none" stroke="#fff" strokeWidth="3.4" />
+                    <line x1="2.5" y1="11" x2="41.5" y2="11" stroke="#fff" strokeWidth="3.4" />
+                    <rect x="29" y="19" width="7" height="4" fill="#fff" />
                   </svg>
                 ) : (
                   <svg viewBox="-9.93 -6.4 20.05 12.8" width="20.05" height="12.8">
