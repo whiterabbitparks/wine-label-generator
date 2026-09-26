@@ -77,7 +77,11 @@ export const GUIDE: GuideStep[] = [
     ge: "მიუთითე ეტიკეტის სიგანე და სიმაღლე მილიმეტრებში." },
   { page: "vision", at: RED, side: "above",
     en: "All set? Press the red button.",
-    ge: "მზად ხარ? დააჭირე წითელ ღილაკს.", done: "page:loader", press: PRESS_RED },
+    ge: "მზად ხარ? დააჭირე წითელ ღილაკს.", done: "confirm", press: PRESS_RED },
+  /* 2026-09-27 (owner): the check-your-details popups are back, with their notes */
+  { page: "vision", at: { x: 350, y: 150, w: 740, h: 520 }, side: "right", modal: true, anchor: "create", press: { en: "“Create”", ge: "„შექმნა“" },
+    en: "Check what you wrote; Edit Details takes you back if you want to change the details. Hit Create to see labels.",
+    ge: "გადაამოწმე რაც ჩაწერე; რედაქტირება უკან დაგაბრუნებს, თუ დეტალების შეცვლა გინდა. დააჭირე შექმნას, რომ ეტიკეტები ნახო.", done: "page:loader" },
   /* ── painting ── */
   { page: "loader", at: { x: 620, y: 592, w: 200, h: 4 }, side: "below",
     en: "Three artists are painting right now. It takes about a minute.",
@@ -122,12 +126,13 @@ export const GUIDE: GuideStep[] = [
     en: "On to the bottle.",
     ge: "ახლა ბოთლი.", done: "page:bottle", press: PRESS_RED },
   /* ── bottle ── */
-  { page: "bottle", at: { x: 342.9, y: 171.7, w: 960, h: 412 }, side: "below",
-    en: "To prepare your marketing materials, tell us what your bottle and closure look like. Your photos will show exactly what you pick.",
-    ge: "სამარკეტინგო მასალა რომ მოგიმზადო, მითხარი ბოთლი და თავსახური როგორი გაქვს? ფოტოებზე ზუსტად ის გამოჩნდება, რასაც აირჩევ.", needs: "bottle" },
+  /* 2026-09-27 (owner): the bottle's two notes in one, at the red button */
   { page: "bottle", at: RED, side: "above",
-    en: "Press the red button.",
-    ge: "დააჭირე წითელ ღილაკს.", done: "page:assets", press: PRESS_RED },
+    en: "To prepare your marketing materials, tell us what your bottle and closure look like — whatever you pick shows exactly so. When you're ready, press the red button.",
+    ge: "სამარკეტინგო მასალა რომ მოგიმზადო, მითხარი ბოთლი და თავსახური როგორი გაქვს? რასაც აირჩევ ზუსტად ისე გამოჩნდება. როცა მზად იქნები წითელ ღილაკს დააჭირე.", done: "confirm", press: PRESS_RED },
+  { page: "bottle", at: { x: 350, y: 150, w: 740, h: 520 }, side: "right", modal: true, anchor: "create", press: { en: "“Create”", ge: "„შექმნა“" },
+    en: "Check your details. If all is right, press Create — or Edit Details if you want to change something.",
+    ge: "გადაამოწმე დეტალები. თუ ყველაფერი სწორია, დააჭირე შექმნას — ან რედაქტირებას, თუ რამის შეცვლა გინდა.", done: "page:assets" },
   /* ── marketing assets ── */
   { page: "assets", at: { x: 137, y: 274, w: 1165, h: 343 }, side: "above",
     en: "Two bottle photos and five marketing images are being made — about two minutes in all.",
@@ -141,7 +146,9 @@ export const GUIDE: GuideStep[] = [
     en: "Last step — press the red button for your Final Pack.",
     ge: "ბოლო ნაბიჯი — დააჭირე წითელ ღილაკს საბოლოო პაკეტისთვის.", done: "page:checkout", press: PRESS_RED },
   /* ── final pack ── */
-  { page: "checkout", at: { x: 1010, y: 660, w: 293, h: 32 }, side: "above",
-    en: "Your Final Pack is ready. Read and agree to the terms (press the glass), and after payment press the red button to download your materials. That was the whole round — cheers!",
-    ge: "შენი საბოლოო პაკეტი მზად არის. გაეცანი და დაეთანხმე პირობებს (დააჭირე ჭიქას) და გადახდის შემდეგ, მასალის ჩამოსატვირთად დააჭირე წითელ ღილაკს. ეს იყო მთელი რაუნდი, გაგვიმარჯოს!" },
+  /* 2026-09-27 (owner): under the red button, so it covers none of the files
+     (below the bar's own titles) */
+  { page: "checkout", at: { x: 1284.8, y: 790, w: 36.1, h: 1 }, side: "below",
+    en: "Your Final Pack is ready. Read and agree to the terms (press the glass), and after payment press the red button to download your materials. That's all. Cheers!",
+    ge: "შენი საბოლოო პაკეტი მზად არის. გაეცანი და დაეთანხმე პირობებს (დააჭირე ჭიქას) და გადახდის შემდეგ, მასალის ჩამოსატვირთად დააჭირე წითელ ღილაკს. სულ ეს იყო. გაგვიმარჯოს!" },
 ];

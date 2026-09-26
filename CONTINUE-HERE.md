@@ -293,6 +293,19 @@ download), 8K.WINE header, new home label. Live smoke label OK (Giorgi,
 t05, orphan region centred). Layout edits made on the LIVE admin live in
 the server's data/layout-edits — pull them before reading.
 
+**2026-09-27 — WALK-THROUGH, not a tutorial (owner):** it runs on the
+real site for a NEW visitor only — the home red button checks the
+browser's `nui-walked` (set on first start; IP rejected: many Georgians
+share one IP); a returning visitor goes straight to the site; the
+"guided tour" dev switch forces it on for testing. The demo walkthrough
+(TSINANDALI, startTutorial) is no longer started from the home page. No
+Skip on the notes. The check-your-details POPUPS are back, each with its
+note beside "Create" (Create pulses). A step the visitor already did
+(typed/picked/saved — needs met or done met on arrival) is NEVER shown
+(guideArrived ref) — it used to flash and jump. Bottle: one note at the
+red button (owner's text + "როცა მზად იქნები წითელ ღილაკს დააჭირე").
+Final note under the red button, below the bar titles (covers no files).
+
 **2026-09-27 — tour round 2 (owner's eleven):** new texts (idea note,
 details "won't appear", designs "in a different artist's style", back
 description "your wine, your winemaking", QR "with the ingredients",

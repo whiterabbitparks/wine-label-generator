@@ -893,9 +893,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     /* ROUND 54 #2: a NEW brief pauses for the confirmation popup — the
        run starts from its Create button (revisits of the same brief
        replay the server cache silently) */
-    /* …except in the guided tour (owner, 2026-09-26: no "check your
-       details" in either tutorial mode — the walkthrough never reaches here) */
-    if (sig !== assetsSig && confirmedAssetsSig.current !== sig && guide < 0) {
+    if (sig !== assetsSig && confirmedAssetsSig.current !== sig) {
       pendingAssetsSig.current = sig;
       setConfirmModal("assets");
       return;
@@ -1337,6 +1335,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   /* 2026-09-27: a note whose action is done shows "✓" a moment first */
   const [guideOk, setGuideOk] = useState(-1);
   const guideOkRef = useRef(-1);
+  const guideArrived = useRef(-1);
   const [guideTick, setGuideTick] = useState(0);
   const createRect = useRef({ x: 735.5, y: 560, w: 354.5, h: 30 });
   const pageSince = useRef(Date.now());
@@ -1366,6 +1365,15 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     if (guide < 0) return;
     const st = GUIDE[guide];
     if (!st) { setGuide(-1); return; }
+    /* 2026-09-27 (owner): a step the visitor has ALREADY done by
+       themselves — typed, picked, saved — is never shown at all (it used
+       to flash up, notice, and jump on, which looked like a fault) */
+    if (guideArrived.current !== guide) {
+      guideArrived.current = guide;
+      const already = (!!st.needs && guideNeedsMet(st.needs))
+        || (!!st.done && !st.wait && !st.modal && st.done !== "confirm" && !st.done.startsWith("page:") && guideDoneNow(st.done));
+      if (already) { setGuide(guide + 1); return; }
+    }
     const cur = GUIDE_PAGES.indexOf(page);
     const stIdx = GUIDE_PAGES.indexOf(st.page);
     const lastOf = (pg: string) => { for (let k = GUIDE.length - 1; k >= 0; k--) if (GUIDE[k].page === pg && !GUIDE[k].modal) return k; return -1; };
@@ -4110,16 +4118,21 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                        wants to be per-visitor, not per-load. */
                     /* 2026-09-23: with "guided tour" on, the visitor does the
                        round themselves, the notes beside them */
-                    if (guideOn) { setGuide(0); go("vision"); return; }
-                    startTutorial(); return;
+                    /* 2026-09-27 (owner: "it is a walk-through, not a tutorial —
+                       everything as on the real site; on for a NEW visitor,
+                       never repeated for one who comes back"). The browser
+                       remembers it (IP would lump together the many who share
+                       one); the dev switch forces it on for testing. */
+                    let firstVisit = true;
+                    try { firstVisit = !localStorage.getItem("nui-walked"); localStorage.setItem("nui-walked", "1"); } catch { /* private mode: show it */ }
+                    if (guideOn || firstVisit) { setGuide(0); go("vision"); return; }
+                    go("vision"); return;
                   }
                   else if (page === "vision") {
                     /* round 54 #2: a REAL generation asks for confirmation;
                        unchanged inputs just move along */
                     if (dreams.length && frontSig === sigFront()) nextFromFront();
                     else if (!FRONT_ROWS.some((k2) => (f[k2] || "").trim())) setEmptyWarn("front");
-                    /* 2026-09-26 (owner): no "check your details" in the tour */
-                    else if (guide >= 0) nextFromFront();
                     else openConfirm("labels", "vision");
                   }
                   else if (page === "options") {
@@ -4276,7 +4289,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     {canBack && (
                       <button aria-label="previous note" onClick={() => { setGuideWarn(-1); setGuide(guide - 1); }} style={{ ...ghost, font: `700 12px ${HNW}`, color: "#fff", textTransform: "none", padding: 0 }}>←</button>
                     )}
-                    <button onClick={() => { setGuideWarn(-1); setGuide(-1); }} style={{ ...ghost, font: `11px ${HNW}`, color: "#111", textDecoration: "underline", textTransform: "none", padding: 0 }}>{t("Skip")}</button>
                   </span>
                   {/* the foot says what moves this note on — always in this place */}
                   {okNow ? (
@@ -4403,7 +4415,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               confirmation or the next page */}
           {emptyWarn && (() => {
             const front = emptyWarn === "front";
-            const proceed = () => { setEmptyWarn(""); if (front) { if (guide >= 0) nextFromFront(); else openConfirm("labels", "vision"); } else nextFromCompliance(); };
+            const proceed = () => { setEmptyWarn(""); if (front) openConfirm("labels", "vision"); else nextFromCompliance(); };
             const edit = () => { setEmptyWarn(""); if (!front) go("backdetails", -1); };
             const B2 = { x: 420, y: 250, w: 600, h: 250 };
             return (<>
