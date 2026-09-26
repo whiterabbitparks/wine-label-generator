@@ -383,6 +383,7 @@ export const UI_GE: Record<string, string> = {
   "Create": "შექმნა",
   "Edit Details": "დეტალების რედაქტირება",
   "Prompt:": "იდეა:",
+  "An abstraction in the artist's own style": "აბსტრაქცია მხატვრის სტილში",
   "Sketch:": "ესკიზი:",
   "Size:": "ზომა:",
   "Label size:": "ეტიკეტის ზომა:",

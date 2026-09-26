@@ -293,6 +293,23 @@ download), 8K.WINE header, new home label. Live smoke label OK (Giorgi,
 t05, orphan region centred). Layout edits made on the LIVE admin live in
 the server's data/layout-edits — pull them before reading.
 
+**2026-09-26 later — ABSTRACTION + Dachi retrained (committed, NOT deployed):**
+- No idea AND no sketch → an ABSTRACT picture in the artist's hand
+  (models.ts abstractSubject: marks, patches, lines, drips, nothing
+  recognisable, no text; the wine only leans the palette). The FLUX
+  repaint of an abstraction says "stays abstract, never a person/face/
+  animal/letters/signature" and runs gentler: ABSTRACT_STRENGTH 0.35
+  (0.55 turned marks into faces and animals — the LoRAs learned from
+  figurative works; the gpt sketch itself was clean). Test sheets on the
+  Desktop abstract-test/. Levan's band may still hide a small face.
+  Tour's first note + the details popup ("აბსტრაქცია მხატვრის სტილში")
+  say so; the note no longer waits for 3 words (an empty box is a choice).
+- Guided tour: NO check-your-details popups at all (red button goes
+  straight on; the walkthrough never showed them).
+- Dachi RETRAINED on cleaned works: signatures cut from 01 and 10, the
+  newspaper text and icon cut from 08, 13/14 only their left page (no
+  book fold). Result: no signatures, no fold line.
+
 **DEPLOYED 2026-09-26 (b1284ed)** — Dachi live as the 4th painter (live smoke: his hand, 0 FLUX failures), back-label tour note beside Save. He now TESTS and will send comments.
 
 **2026-09-26 — Dachi SWITCHED ON** (owner: "I like the small

@@ -106,7 +106,9 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
   const tpl = forced || pickTemplate(band, seed, kind);
   const zone = tpl.art || { w: tpl.refW, h: tpl.refH };
   const zoneAspect = (zone.w / tpl.refW * widthMm) / (zone.h / tpl.refH * heightMm);
-  const ap = asKind(await buildArtworkPrompt(brief, model.artist), artKindOf(tpl) === "spot" ? "spot" : "bleed");
+  /* no idea and no sketch → an abstraction in the artist's hand (owner, 2026-09-26) */
+  const abstract = !String(inp.vision || "").trim() && !inp.sketch;
+  const ap = asKind(await buildArtworkPrompt(brief, model.artist, abstract), artKindOf(tpl) === "spot" ? "spot" : "bleed");
   ap.aspect = zoneAspect > 1.25 ? "landscape" : zoneAspect < 0.8 ? "portrait" : "square";
   /* 2026-09-23 (owner, twice): "only the legs of a person on the chair
      showed — work the picture's proportion out from the room the label

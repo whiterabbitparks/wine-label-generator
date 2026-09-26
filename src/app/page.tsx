@@ -4465,6 +4465,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 left.push(<span key="pv" className="nui-noscroll" style={{ position: "absolute", left: 32, top: baseTop(y + 43, fit.sz), width: PW, maxHeight: fit.h + 6, paddingBottom: 6, boxSizing: "border-box", font: `${fit.sz}px/${fit.lh}px ${HNW}`, overflowY: "auto" }}>{prompt}</span>);
                 y += 59 + fit.h;
                 leftBottom = y - 4;
+              } else if (!sketch) {
+                /* 2026-09-26 (owner): no idea and no sketch → an abstraction
+                   in the artist's own hand — the popup says so */
+                left.push(<span key="pt">{colTitle(32, t("Prompt:"))}</span>);
+                left.push(<span key="pv" style={{ position: "absolute", left: 32, top: baseTop(y + 43, 15), width: 329, font: `italic 15px/18px ${HNW}` }}>{t("An abstraction in the artist's own style")}</span>);
+                leftBottom = y + 60;
               }
               if (sketch) {
                 const ty = prompt ? y : 162.8;

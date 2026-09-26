@@ -72,7 +72,9 @@ export async function regionNote(region: string): Promise<string> {
 export interface ArtworkPrompt { prompt: string; subject: string; aspect: "landscape" | "portrait" | "square"; kind?: "spot" | "bleed";
   /* 2026-09-23: a band/panel picture ends in the painter's own edge on
      this side (the side facing the type) — see hybrid.ts */
-  edgeSide?: string }
+  edgeSide?: string;
+  /* 2026-09-26: no idea and no sketch — an abstraction (see abstractSubject) */
+  abstract?: boolean }
 
 /* THE VIGNETTE — the one composition every model knows: an isolated spot
    illustration on a flat plain ground with air around it. The composer
@@ -106,8 +108,32 @@ export function asKind(ap: ArtworkPrompt, kind: "spot" | "bleed"): ArtworkPrompt
   const swap = kind === "bleed" ? [VIGNETTE, BLEED] : [BLEED, VIGNETTE];
   return { ...ap, kind, prompt: ap.prompt.replace(swap[0], swap[1]) };
 }
-export async function buildArtworkPrompt(brief: EvalBrief, artist: ArtistProfile): Promise<ArtworkPrompt> {
+/* 2026-09-26 (owner: "when they write nothing and upload no sketch, let
+   it be an ABSTRACTION — the artist's style told through patches,
+   colours and shapes, without needless concreteness"). No story means no
+   story: the ask is the artist's own marks, composed; the wine is present
+   only as a leaning of colour and energy. */
+const WINE_MOOD: [RegExp, string][] = [
+  [/ros/i, "a soft blush of pink and coral"],
+  [/amber|orange/i, "warm amber, honey and apricot notes"],
+  [/white/i, "light, airy notes of pale gold and green"],
+  [/red/i, "a warm, deep accent of wine red and plum"],
+];
+function abstractSubject(d: EvalBrief["data"]): string {
+  const mood = WINE_MOOD.find(([re]) => re.test(String((d as { wineColorName?: string }).wineColorName || "")))?.[1];
+  return "ABSTRACT — NO STORY, NO SUBJECT: there is no scene to tell. Paint an ABSTRACT composition made only of this artist's own marks — patches and washes of colour, brushstrokes, lines, scribbles, dots, drips and textures — arranged into one lively, balanced composition with rhythm, contrast and a clear focal area, exactly as the artist would compose them. " +
+    "No people, no faces, no animals, no objects, no plants, no landscape, no horizon, no sky, no buildings — nothing recognisable at all. " +
+    (mood ? `Within the artist's own palette, lean a little toward ${mood}. ` : "") +
+    "No text, no letters, no signature, no border.";
+}
+
+export async function buildArtworkPrompt(brief: EvalBrief, artist: ArtistProfile, abstract = false): Promise<ArtworkPrompt> {
   const d = brief.data;
+  if (abstract) {
+    const subject = abstractSubject(d);
+    const inStyle = `Painted by ${artist.name}, whose works are the reference images: ${artistCharter(artist)}. Paint a NEW picture in exactly this artist's manner, medium and palette — take only the HAND from the references, never their subjects.`;
+    return { prompt: `${inStyle} ${VIGNETTE} ${subject}`, subject, aspect: aspectOf(brief), kind: "spot", abstract: true };
+  }
   const place = [d.region, d.country].filter(Boolean).join(", ");
   const gaz = await regionNote(d.region);
   const subject = `${brief.vision} ${place ? `Set in ${place}.${gaz}` : ""} No buildings unless the story names them. No text, no letters, no border.`;
@@ -141,12 +167,18 @@ export async function paintStory(model: EvalModel, ap: ArtworkPrompt, extra: { s
 }
 
 /* STEP 2 — the hand: FLUX + the artist's LoRA repaints the story picture */
-export async function repaintInHand(model: EvalModel, story: string, ap: ArtworkPrompt, strength = REPAINT_STRENGTH): Promise<string> {
+/* an abstraction is repainted more gently: the artist's LoRA learned from
+   figurative works, and at full strength it found faces, animals and a
+   signature in the marks (2026-09-26 test — the sketch was clean) */
+export const ABSTRACT_STRENGTH = 0.35;
+export async function repaintInHand(model: EvalModel, story: string, ap: ArtworkPrompt, strength = ap.abstract ? ABSTRACT_STRENGTH : REPAINT_STRENGTH): Promise<string> {
   if (!model.lora) throw new Error(`${model.name} has no trained LoRA yet`);
   const key = process.env.FAL_KEY;
   if (!key) throw new Error("FAL_KEY is not set");
   const url = await falUpload(Buffer.from(story.slice(story.indexOf(",") + 1), "base64"), "story.png", "image/png");
-  const prompt = `${model.lora.trigger} style. Repaint this picture in your own hand — same scene, same subjects in the same places, your own colours and brush: ${ap.subject} Painted as ${artistCharter(model.artist)}. ${ap.kind === "bleed"
+  const prompt = `${model.lora.trigger} style. ${ap.abstract
+    ? "Repaint this ABSTRACT picture in your own hand — the same marks, patches and shapes in the same places, your own brush, texture and colour. It stays abstract: never turn a mark into a person, face, animal, object or place, never add letters or a signature."
+    : "Repaint this picture in your own hand — same scene, same subjects in the same places, your own colours and brush:"} ${ap.abstract ? "" : ap.subject} Painted as ${artistCharter(model.artist)}. ${ap.kind === "bleed"
     ? (ap.edgeSide
       ? `Keep the composition exactly: the painting runs off the other edges, and on the ${ap.edgeSide} side it ends in its own loose irregular edge with the plain, flat, empty ground beyond it — keep that ground plain and empty, never paint into it, never add a border.`
       : "Paint right to every edge — no empty paper, no margin, no border.")

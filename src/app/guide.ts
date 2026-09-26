@@ -49,8 +49,9 @@ const RED = { x: 1284.8, y: 735.8, w: 36.1, h: 36.2 };   /* the red round button
 export const GUIDE: GuideStep[] = [
   /* ── front label details ── */
   { page: "vision", at: { x: 136, y: 342, w: 551, h: 207 }, side: "below",
-    en: "Describe the picture for your label in a few words — or press “Give me an idea”.",
-    ge: "რამდენიმე სიტყვით აღწერე ეტიკეტის სურათი — ან დააჭირე „მომეცი იდეა“-ს.", done: "vision" },
+    /* 2026-09-26 (owner): an empty box is a choice too — an abstraction */
+    en: "Describe the picture for your label in a few words — or press “Give me an idea”. Leave it empty, and the artist paints an abstraction in their own style.",
+    ge: "რამდენიმე სიტყვით აღწერე ეტიკეტის სურათი — ან დააჭირე „მომეცი იდეა“-ს. თუ ველს ცარიელს დატოვებ, მხატვარი თავის სტილში აბსტრაქციას დახატავს." },
   { page: "vision", at: { x: 137, y: 275, w: 241, h: 34 }, side: "above",
     en: "Optional: upload a sketch or a photo to show what you mean.",
     ge: "სურვილისამებრ: ატვირთე ესკიზი ან ფოტო, რომ აჩვენო რა გინდა." },
