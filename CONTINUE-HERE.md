@@ -293,6 +293,8 @@ download), 8K.WINE header, new home label. Live smoke label OK (Giorgi,
 t05, orphan region centred). Layout edits made on the LIVE admin live in
 the server's data/layout-edits — pull them before reading.
 
+**DEPLOYED 2026-09-26 (b1284ed)** — Dachi live as the 4th painter (live smoke: his hand, 0 FLUX failures), back-label tour note beside Save. He now TESTS and will send comments.
+
 **2026-09-26 — Dachi SWITCHED ON** (owner: "I like the small
 illustrations as they came out"; "if I have you test someone, I have
 their verbal permission — contracts before launch"). consent = VERBAL;
