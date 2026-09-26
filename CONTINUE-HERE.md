@@ -293,6 +293,18 @@ download), 8K.WINE header, new home label. Live smoke label OK (Giorgi,
 t05, orphan region centred). Layout edits made on the LIVE admin live in
 the server's data/layout-edits — pull them before reading.
 
+**2026-09-25 — guided tour trimmed to 24 notes (committed; NOT deployed):**
+no "check your details" notes on either popup (the red-button note's
+`done: "confirm"` moves on when the popup opens; Edit steps back); no
+"own label upload" note; shorter options/bottle red-button notes; new
+back-details and Final Pack texts. Market menu: white 12 px margin so
+the page's rules and the QR button don't run into its edge (read as
+"cut off"), button above it (z 14), ring SVGs overflow visible.
+Marketing resolution test on the Desktop (marketing-resolution/): LOW
+misspelt the bottle label ("Whiie", "Georgio"), MEDIUM didn't; Recraft
+Crisp AI upscale ~$0.004/img. My advice: bottle shots medium + AI,
+lifestyle low + AI, and state the real 2500 px — awaiting his choice.
+
 **2026-09-25 — CONSENT:** the owner has a VERBAL agreement with all three
 painting artists (Mariam, Levan, Giorgi A.). Recorded in their profiles.
 Still open before any SALE: a short written agreement (share, credit,

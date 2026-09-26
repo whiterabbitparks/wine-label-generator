@@ -2074,7 +2074,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const ringSvg = (size: number, on: boolean, o?: { stroke?: number; color?: string; dot?: number; noRing?: boolean }) => {
     const sw = o?.stroke ?? 2, col = o?.color || "#111", dot = o?.dot ?? size / 2;
     return (
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display: "block", flex: "0 0 auto" }}>
+      /* overflow visible: at a scaled page the stroke's last soft pixel
+         fell outside the box and was shaved off one side */
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} overflow="visible" style={{ display: "block", flex: "0 0 auto", overflow: "visible" }}>
         {!o?.noRing && <circle cx={size / 2} cy={size / 2} r={(size - sw) / 2} fill="#fff" stroke={col} strokeWidth={sw} />}
         {on && <circle cx={size / 2} cy={size / 2} r={dot / 2} fill={col} />}
       </svg>
@@ -2820,7 +2822,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               <button onClick={() => setMarketOpen((o) => !o)}
                 /* while the panel is open the button rides ABOVE its
                    click-blocker, so pressing it closes the menu */
-                style={{ ...px(MB.x, MB.y, MB.w, MB.h), background: dark ? "#111" : "#fff", border: "1px solid #111", cursor: "pointer", padding: 0, textTransform: "none", boxSizing: "border-box", transition: `all 240ms ${EASE}`, zIndex: marketOpen ? 13 : undefined }}>
+                style={{ ...px(MB.x, MB.y, MB.w, MB.h), background: dark ? "#111" : "#fff", border: "1px solid #111", cursor: "pointer", padding: 0, textTransform: "none", boxSizing: "border-box", transition: `all 240ms ${EASE}`, zIndex: marketOpen ? 14 : undefined }}>
                 <span style={{ position: "absolute", left: 0, top: baseTop(MB.h / 2 + 4.5, 12), width: MB.w, textAlign: "center", font: `12px ${HNW}`, letterSpacing: 0.3, lineHeight: "12px", color: ink }}>{label}</span>
                 <svg viewBox="0 0 22 11" width={AW} height={AH} style={{ position: "absolute", right: 11, top: (MB.h - AH) / 2 }}>
                   <polyline points={up ? "1,10 11,1 21,10" : "1,1 11,10 21,1"} fill="none" stroke={ink} strokeWidth="2" />
@@ -2839,7 +2841,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               )}
               {marketOpen && (<>
                 <div style={{ ...px(0, 0, W, H), zIndex: 12 }} onClick={() => setMarketOpen(false)} />
-                <div style={{ ...px(MB.x, MB.y - panelH, MB.w, panelH), background: "#fff", border: "1px solid #111", boxSizing: "border-box", zIndex: 13, padding: `${PAD}px 0` }}>
+                {/* 2026-09-25 (owner: "the menu's right side looks cut off"):
+                    the input rules and the QR button behind ran right up to
+                    its edge — a white margin keeps the page off it */}
+                <div style={{ ...px(MB.x, MB.y - panelH, MB.w, panelH), background: "#fff", border: "1px solid #111", boxSizing: "border-box", zIndex: 13, padding: `${PAD}px 0`, boxShadow: "0 0 0 12px #fff" }}>
                   <button onClick={() => { setMarkets([]); setNoComp(true); }}
                     style={{ position: "relative", display: "flex", alignItems: "center", width: "100%", height: HEAD_H, padding: "0 14px", background: "transparent", border: "none", cursor: "pointer", textTransform: "none" }}>
                     <span style={{ font: `700 14px ${HNW}`, color: "#111", whiteSpace: "nowrap" }}>{t("No compliance needed")}</span>

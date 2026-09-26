@@ -36,7 +36,7 @@ const BOTTLE_SLUG: Record<string, string> = {
   "Bordeaux": "bordeaux", "Bordeaux Prestige": "bordeaux-prestige", "Burgundy": "burgundy",
   "Sparkling": "sparkling", "Alsace / Rhine": "alsace-rhine", "Ice Wine": "ice-wine",
 };
-function bottleShapeRef(type: string, closure?: string): string | null {
+export function bottleShapeRef(type: string, closure?: string): string | null {
   const slug = BOTTLE_SLUG[type];
   if (!slug) return null;
   /* Screw Cap uses the owner's -screw outline so the drawn closure matches
