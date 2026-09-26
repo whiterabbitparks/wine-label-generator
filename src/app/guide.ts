@@ -100,7 +100,8 @@ export const GUIDE: GuideStep[] = [
     en: "Press the red button to build your back label.",
     ge: "დააჭირე წითელ ღილაკს, რომ უკანა ეტიკეტი აიწყოს.", done: "page:backdesign" },
   /* ── back label ── */
-  { page: "backdesign", at: { x: 548.6, y: 171.5, w: 342.9, h: 342.9 }, side: "right",
+  /* 2026-09-26 (owner): beside the Save button, not the label */
+  { page: "backdesign", at: { x: 548.6, y: 657.6, w: 341.4, h: 34.3 }, side: "right",
     en: "Your back label is ready to print. Save it — or press Edit if you want to change something.",
     ge: "შენი უკანა ეტიკეტი ბეჭდვისთვის მზად არის. შეინახე — ან დააჭირე რედაქტირებას, თუ გინდა რამის შეცვლა.", done: "backSaved" },
   { page: "backdesign", at: RED, side: "above",
