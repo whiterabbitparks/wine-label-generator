@@ -293,6 +293,19 @@ download), 8K.WINE header, new home label. Live smoke label OK (Giorgi,
 t05, orphan region centred). Layout edits made on the LIVE admin live in
 the server's data/layout-edits — pull them before reading.
 
+**2026-09-26 — NEW ARTIST Dachi Mindadze (prepared, NOT trained):**
+data/artists/dachi-mindadze — 14 works (sheet numbering; work 11 left
+out, Georgian handwriting would teach painted letters; edges trimmed of
+Instagram arrows/dots), my charter draft, 4 ref sets (A 01-06-09 · B
+03-05-10 · C 02-07-14 · D 04-13-15), consent NOT OBTAINED, active:false,
+no page. Test-only door: PREVIEW_ARTISTS=dachi-mindadze lets a switched-
+off artist paint in scripts (models.ts artistModel; the server never
+sets it). BLOCKED: fal.ai balance EXHAUSTED ("User is locked") — no
+training AND no FLUX repaints: the live site ships the gpt-image sketch
+unrepainted until he tops up fal. Resume: ARTIST=dachi-mindadze
+TRIGGER=DMNDZ npx tsx data/experiments/train-lora.ts, then 3–5 test
+labels with PREVIEW_ARTISTS set.
+
 **DEPLOYED 2026-09-26 (5e833fb)** — everything from 2026-09-25 is LIVE (tour 24 notes, market menu, no grapes, real image sizes, medium shots + label words front and back, back-label fixes, low sketch, FLUX 0.55, Final Pack prices + pay). Live smoke: Mariam, 'The Second Moon' — two people, two moons, story intact.
 
 **2026-09-25 — Final Pack: prices and payment BACK** (owner; reverses

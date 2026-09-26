@@ -1,0 +1,20 @@
+{
+  "id": "dachi-mindadze",
+  "name": "Dachi Mindadze",
+  "country": "Georgia",
+  "portfolio": "",
+  "medium": "Ink, brush and pen drawing with watercolour and acrylic washes, sometimes collage and oil stick, on warm toned paper",
+  "words": ["gestural", "raw", "expressive"],
+  "colour": "sepia and warm cream paper grounds and dense black ink, with bold patches of crimson red, magenta, chrome yellow and a little sky blue",
+  "form": "figures and animals — horses, bulls, dogs, lone men — drawn with fast scratchy pen lines and heavy dry-brush ink, loose scribbled details and collage fragments around them; long, gangly, distorted anatomy",
+  "never": "never neat or polished, never smooth digital rendering, never realistic proportions, never printed text or letters",
+  "mood": "restless, witty and a little melancholic",
+  "consent": "NOT OBTAINED — works sent by the owner 2026-09-26 as screenshots; training and test labels only; nothing may be published or sold until the artist agrees",
+  "status": "pilot",
+  "active": false,
+  "bio": "",
+  "page": false,
+  "charterBy": "Claude's draft from the 14 works, 2026-09-26 (work 11 left out: Georgian handwriting would teach the model to paint letters) — the owner replaces it with the artist's own answers",
+  "refs": ["work-01.jpg", "work-03.jpg", "work-07.jpg", "work-13.jpg"],
+  "refSets": [["work-01.jpg", "work-06.jpg", "work-09.jpg"], ["work-03.jpg", "work-05.jpg", "work-10.jpg"], ["work-02.jpg", "work-07.jpg", "work-14.jpg"], ["work-04.jpg", "work-13.jpg", "work-15.jpg"]]
+}

@@ -42,7 +42,11 @@ export function artistModel(artistId: string): EvalModel | null {
   /* an artist switched off (profile.json "active": false) has no model,
      so even a saved column map pointing at her falls through to one of
      the artists who are on */
-  if (!a || !isActive(a.profile)) return null;
+  /* 2026-09-26: a new artist under test is switched off on the site but
+     may paint in a test script that names her in PREVIEW_ARTISTS (the
+     server never sets it) */
+  const preview = (process.env.PREVIEW_ARTISTS || "").split(",").map((x) => x.trim()).includes(artistId);
+  if (!a || (!isActive(a.profile) && !preview)) return null;
   return { id: `artist:${a.profile.id}`, name: a.profile.name, artist: a.profile, lora: a.lora ? { url: a.lora.url, trigger: a.lora.trigger } : null };
 }
 export function artistModels(): EvalModel[] {
