@@ -4230,9 +4230,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             };
             const L = (en: string, ge: string) => (lang === "ge" ? ge : en);
             return (
-              <div key={"guide" + guide} style={{ position: "absolute", left, top, width: BW2, transform: shift, zIndex: 80, background: "#111", color: "#fff", padding: "11px 13px 9px", boxSizing: "border-box", animation: `nuiFadeIn 360ms ${EASE} both`, pointerEvents: "auto" }}>
+              <div key={"guide" + guide} style={{ position: "absolute", left, top, width: BW2, transform: shift, zIndex: 80, background: BAR_RED, color: "#fff", padding: "11px 13px 9px", boxSizing: "border-box", animation: `nuiFadeIn 360ms ${EASE} both`, pointerEvents: "auto" }}>
                 {/* the caret, on the side that faces the target */}
-                <span style={{ position: "absolute", width: 10, height: 10, background: "#111", transform: "rotate(45deg)",
+                {/* 2026-09-27 (owner): the notes in our red, white text, a black Skip */}
+                <span style={{ position: "absolute", width: 10, height: 10, background: BAR_RED, transform: "rotate(45deg)",
                   ...(st.side === "above" ? { bottom: -5, left: caretX - 5 } : st.side === "below" ? { top: -5, left: caretX - 5 }
                     : st.side === "left" ? { right: -5, top: "calc(50% - 5px)" } : { left: -5, top: "calc(50% - 5px)" }) }} />
                 {/* 2026-09-23 (owner): Georgian ran with twice the leading it
@@ -4245,8 +4246,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     : qrMode === "create" && st.enPage && st.gePage ? L(st.enPage, st.gePage) : L(st.en, st.ge)}
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", marginTop: 9, position: "relative" }}>
-                  <button onClick={() => { setGuideWarn(-1); setGuide(-1); }} style={{ ...ghost, justifySelf: "start", font: `11px ${HNW}`, color: "#E5484D", textDecoration: "underline", textTransform: "none" }}>{t("Skip")}</button>
-                  <span style={{ font: `10px ${HNW}`, color: "#7a7a7a", textAlign: "center" }}>{guide + 1} / {GUIDE.length}</span>
+                  <button onClick={() => { setGuideWarn(-1); setGuide(-1); }} style={{ ...ghost, justifySelf: "start", font: `11px ${HNW}`, color: "#111", textDecoration: "underline", textTransform: "none" }}>{t("Skip")}</button>
+                  <span style={{ font: `10px ${HNW}`, color: "rgba(255,255,255,0.75)", textAlign: "center" }}>{guide + 1} / {GUIDE.length}</span>
                   {byHand ? (
                     <button onClick={onNext} style={{ ...ghost, justifySelf: "end", font: `700 11px ${HNW}`, color: "#fff", textTransform: "none", whiteSpace: "nowrap" }}>
                       {warned ? L("Yes, continue", "კი, გავაგრძელოთ") : last ? t("Finish") : t("Next")} →
