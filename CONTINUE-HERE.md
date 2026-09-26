@@ -293,6 +293,8 @@ download), 8K.WINE header, new home label. Live smoke label OK (Giorgi,
 t05, orphan region centred). Layout edits made on the LIVE admin live in
 the server's data/layout-edits — pull them before reading.
 
+**DEPLOYED 2026-09-26 (5e833fb)** — everything from 2026-09-25 is LIVE (tour 24 notes, market menu, no grapes, real image sizes, medium shots + label words front and back, back-label fixes, low sketch, FLUX 0.55, Final Pack prices + pay). Live smoke: Mariam, 'The Second Moon' — two people, two moons, story intact.
+
 **2026-09-25 — Final Pack: prices and payment BACK** (owner; reverses
 2026-09-23): the carousel back up at its artboard place (centre 308.57),
 the price rows / pale not-made rows / big total restored as before
@@ -334,7 +336,7 @@ it; the route re-sets the back label and reads its <text> lines. Real run
 back label itself: a lot typed "L23…" printed "LOT: LL23…"; the "By"
 line dropped apostrophes ("GIORGIS MARANI").
 
-**2026-09-25 — guided tour trimmed to 24 notes (committed; NOT deployed):**
+**2026-09-25 — guided tour trimmed to 24 notes :**
 no "check your details" notes on either popup (the red-button note's
 `done: "confirm"` moves on when the popup opens; Edit steps back); no
 "own label upload" note; shorter options/bottle red-button notes; new
