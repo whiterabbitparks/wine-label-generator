@@ -293,7 +293,18 @@ download), 8K.WINE header, new home label. Live smoke label OK (Giorgi,
 t05, orphan region centred). Layout edits made on the LIVE admin live in
 the server's data/layout-edits — pull them before reading.
 
-**2026-09-27 — GUIDED TOUR REDESIGN (committed, NOT deployed):** notes in
+**2026-09-27 — tour round 2 (owner's eleven):** new texts (idea note,
+details "won't appear", designs "in a different artist's style", back
+description "your wine, your winemaking", QR "with the ingredients",
+Final Pack "after payment… download"); "მხატვარი" → "არტისტი" in every
+Georgian UI string (EN already "artist"); an ACTION note shows no button
+name and no pointer (only the pulsing ring on the button); no "optional"
+tag, no step count; "Next" is white bold on the red (no white box). He
+asked to drop the prices in the tour's Final Pack, then said "keep the
+prices" — so the Final Pack is unchanged (no room to lower the carousel
+with the price list there).
+
+**2026-09-27 — GUIDED TOUR REDESIGN:** notes in
 our red (BAR_RED), white text, black Skip. Every note's FOOT says what
 moves it on, always in the same place: read → white "Next →" (optional
 ones carry "Optional" on top); action → a pointer + the button's name

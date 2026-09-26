@@ -4264,12 +4264,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     needs; both languages now set their own, and the box's
                     line boxes are pinned so a language switch cannot leave
                     the other's spacing behind */}
-                {/* the count in the corner, out of the foot's way */}
-                <span style={{ position: "absolute", top: 7, right: 9, font: `9px ${HNW}`, color: "rgba(255,255,255,0.75)" }}>{guide + 1} / {GUIDE.length}</span>
-                <div key={"gt" + lang} style={{ font: `${lang === "ge" ? 12 : 13}px/${lang === "ge" ? "15px" : "17px"} ${HNW}`, position: "relative", marginRight: 26 }}>
-                  {st.optional && !warned && (
-                    <div style={{ font: `italic 10px/13px ${HNW}`, opacity: 0.8, marginBottom: 3 }}>{L("Optional", "არასავალდებულო")}</div>
-                  )}
+                {/* 2026-09-27 (owner): no step count, no "optional" tag */}
+                <div key={"gt" + lang} style={{ font: `${lang === "ge" ? 12 : 13}px/${lang === "ge" ? "15px" : "17px"} ${HNW}`, position: "relative" }}>
                   {warned
                     ? L("You haven't done this step yet. Continue anyway?", "ეს ნაბიჯი ჯერ არ გაგიკეთებია. მაინც გააგრძელებ?")
                     : phase2 ? L(st.then!.en, st.then!.ge)
@@ -4286,7 +4282,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   {okNow ? (
                     <span style={{ justifySelf: "end", font: `700 11px ${HNW}`, whiteSpace: "nowrap" }}>✓ {L("Done", "მზადაა")}</span>
                   ) : byHand ? (
-                    <button onClick={onNext} style={{ ...ghost, justifySelf: "end", font: `700 11px ${HNW}`, color: BAR_RED, background: "#fff", padding: "4px 9px", textTransform: "none", whiteSpace: "nowrap" }}>
+                    <button onClick={onNext} style={{ ...ghost, justifySelf: "end", font: `700 11px ${HNW}`, color: "#fff", textTransform: "none", whiteSpace: "nowrap" }}>
                       {warned ? L("Yes, continue", "კი, გავაგრძელოთ") : last ? t("Finish") : t("Next")} →
                     </button>
                   ) : st.wait ? (
@@ -4294,12 +4290,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                       {L("Being made", "მზადდება")}
                       {[0, 1, 2].map((k) => <span key={k} style={{ animation: `nuiBlink 1.2s ease-in-out ${k * 0.2}s infinite` }}>.</span>)}
                     </span>
-                  ) : press ? (
-                    <span style={{ justifySelf: "end", display: "flex", alignItems: "center", columnGap: 5, font: `700 11px ${HNW}`, whiteSpace: "nowrap" }}>
-                      <svg viewBox="0 0 24 24" width="13" height="13" style={{ flex: "0 0 auto" }}><path d="M3 2 L3 18.2 L7.3 14.2 L10 20.6 L12.9 19.3 L10.3 13.1 L16.2 12.9 Z" fill="#fff" stroke="#111" strokeWidth="1.2" strokeLinejoin="round" /></svg>
-                      {L(press.en, press.ge)}
-                    </span>
                   ) : <span />}
+                  {/* 2026-09-27 (owner): an action note names no button and
+                      shows no pointer — the button itself pulses (ring above) */}
                 </div>
               </div>
               </>
