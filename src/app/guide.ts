@@ -62,7 +62,7 @@ export const GUIDE: GuideStep[] = [
     ge: "მიუთითე ეტიკეტის სიგანე და სიმაღლე მილიმეტრებში." },
   { page: "vision", at: RED, side: "above",
     en: "All set? Press the red button.",
-    ge: "მზად ხარ? დააჭირე წითელ ღილაკს.", done: "confirm" },
+    ge: "მზად ხარ? დააჭირე წითელ ღილაკს.", done: "page:loader" },
   /* ── painting ── */
   { page: "loader", at: { x: 620, y: 592, w: 200, h: 4 }, side: "below",
     en: "Three artists are painting right now. It takes about a minute.",
@@ -113,7 +113,7 @@ export const GUIDE: GuideStep[] = [
     ge: "სამარკეტინგო მასალა რომ მოგიმზადო, მითხარი ბოთლი და თავსახური როგორი გაქვს? ფოტოებზე ზუსტად ის გამოჩნდება, რასაც აირჩევ.", needs: "bottle" },
   { page: "bottle", at: RED, side: "above",
     en: "Press the red button.",
-    ge: "დააჭირე წითელ ღილაკს.", done: "confirm" },
+    ge: "დააჭირე წითელ ღილაკს.", done: "page:assets" },
   /* ── marketing assets ── */
   { page: "assets", at: { x: 137, y: 274, w: 1165, h: 343 }, side: "above",
     en: "Two bottle photos and five marketing images are being made — about two minutes in all.",

@@ -893,7 +893,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     /* ROUND 54 #2: a NEW brief pauses for the confirmation popup — the
        run starts from its Create button (revisits of the same brief
        replay the server cache silently) */
-    if (sig !== assetsSig && confirmedAssetsSig.current !== sig) {
+    /* …except in the guided tour (owner, 2026-09-26: no "check your
+       details" in either tutorial mode — the walkthrough never reaches here) */
+    if (sig !== assetsSig && confirmedAssetsSig.current !== sig && guide < 0) {
       pendingAssetsSig.current = sig;
       setConfirmModal("assets");
       return;
@@ -4104,6 +4106,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                        unchanged inputs just move along */
                     if (dreams.length && frontSig === sigFront()) nextFromFront();
                     else if (!FRONT_ROWS.some((k2) => (f[k2] || "").trim())) setEmptyWarn("front");
+                    /* 2026-09-26 (owner): no "check your details" in the tour */
+                    else if (guide >= 0) nextFromFront();
                     else openConfirm("labels", "vision");
                   }
                   else if (page === "options") {
@@ -4357,7 +4361,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               confirmation or the next page */}
           {emptyWarn && (() => {
             const front = emptyWarn === "front";
-            const proceed = () => { setEmptyWarn(""); if (front) openConfirm("labels", "vision"); else nextFromCompliance(); };
+            const proceed = () => { setEmptyWarn(""); if (front) { if (guide >= 0) nextFromFront(); else openConfirm("labels", "vision"); } else nextFromCompliance(); };
             const edit = () => { setEmptyWarn(""); if (!front) go("backdetails", -1); };
             const B2 = { x: 420, y: 250, w: 600, h: 250 };
             return (<>
