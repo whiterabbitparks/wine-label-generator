@@ -939,6 +939,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             front: sel.dream, back: backData,
+            /* 2026-09-25: the server reads the label's own words from it */
+            frontId: customLabel ? undefined : sel.id,
             bottle: { type: bottle.type, color: bottle.color, closure: bottle.closure, finish: bottle.finish, closureColour: shadeRgb() },
             wine: { colour: wineColor || f.colour || "Red", name: f.wine || "Wine", grape: (f.grape || "").trim() },
             labelMM: customLabel ? customDims : { w: Number(f.width) || 110, h: Number(f.height) || 80 },
@@ -1043,7 +1045,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         const r = await fetch("/api/marketing-assets", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            front: sel.dream, back: null,
+            front: sel.dream, back: null, frontId: customLabel ? undefined : sel.id,
             bottle: { type: bottle.type, color: bottle.color, closure: bottle.closure, finish: bottle.finish, closureColour: shadeRgb() },
             wine: { colour: wineColor || f.colour || "Red", name: f.wine || "Wine", grape: (f.grape || "").trim() },
             labelMM: customLabel ? customDims : { w: Number(f.width) || 110, h: Number(f.height) || 80 },

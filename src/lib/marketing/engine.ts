@@ -210,6 +210,31 @@ export interface MarketingBrief {
   backWmm?: number; backHmm?: number;
   style: string;
   seed: number;
+  /* 2026-09-25 (owner: "a slight change is bearable, but the label should
+     be as close to the real one as possible"): the label's own printed
+     words, top to bottom — the model copies letters far better when it is
+     TOLD them than when it only sees them */
+  frontText?: string[]; backText?: string[];
+  /* the real label rides FIRST into the scenes (before the product shot),
+     so a scene copies the label itself, not the shot's copy of it */
+  labelFirst?: boolean;
+}
+
+/* a saved label's printed words, top to bottom — an arced name's letters
+   (one element, one key) joined back into the word */
+export function labelWords(lines: { key?: string; text: string; x: number; y: number }[]): string[] {
+  const groups = new Map<string, { t: string; y: number; x: number }>();
+  lines.forEach((l, i) => {
+    const k = l.key || `l${i}`, g = groups.get(k);
+    if (g) g.t += l.text; else groups.set(k, { t: l.text, y: l.y, x: l.x });
+  });
+  return [...groups.values()].sort((a, b) => a.y - b.y || a.x - b.x).map((g) => g.t.trim()).filter(Boolean);
+}
+
+export function labelWording(lines?: string[]): string {
+  const ls = (lines || []).map((l) => l.replace(/\s+/g, " ").trim()).filter(Boolean).slice(0, 24);
+  if (!ls.length) return "";
+  return `EXACT WORDING — NON-NEGOTIABLE: the label's printed text, top to bottom, is exactly: ${ls.map((l) => `"${l}"`).join(" · ")}. Copy every word letter for letter — the same spelling, capitals, numbers and punctuation, in the same places; never alter, add, drop or invent a word or letter. Small type stays small, but correct. `;
 }
 
 function bottleDescription(b: MarketingBrief) {
@@ -249,6 +274,7 @@ export function buildShotPrompt(b: MarketingBrief, side: "front" | "back", hasSh
     `${side === "front" ? "showing the FRONT of the bottle" : "showing the BACK of the bottle"}, the whole bottle in frame from base to closure with a small margin. ` +
     (charter ? `Art director's studio notes (follow their spirit): ${charter} ` : "") +
     `${d.text} ` +
+    labelWording(side === "back" ? b.backText : b.frontText) +
     `The FIRST attached image is the wine's ${side} label — apply it to the bottle EXACTLY as given: identical layout, typography, artwork and colours, ` +
     `perfectly legible, wrapped naturally onto the glass curvature. Do NOT redraw, reinterpret, crop or add any text. ` +
     /* round 29 #6: never fake paper grain on the label */
@@ -302,7 +328,12 @@ export function buildLifestylePrompt(b: MarketingBrief, scenario: string, charte
      product shot riding FIRST, the scene copies a photographed bottle —
      its shape, glass, closure and the label at its true size and place —
      instead of rebuilding them from a flat label and a line drawing */
-  const n = (k: number) => ["FIRST", "SECOND", "THIRD"][k + (hasBottlePhoto ? 1 : 0)];
+  const ORD = ["FIRST", "SECOND", "THIRD"];
+  const lf = !!b.labelFirst && hasBottlePhoto;
+  /* where each attached image stands: [photo?] label shape, or with the
+     label first: label [photo?] shape */
+  const photoAt = lf ? 1 : 0, labelAt = lf ? 0 : hasBottlePhoto ? 1 : 0, shapeAt = labelAt + 1 + (lf ? 1 : 0);
+  const n = (k: number) => ORD[k === 0 ? labelAt : shapeAt];
   const d = bottleDescription(b);
   return (
     /* round 31: a board-derived scene LEADS — recreate the reference's own
@@ -330,9 +361,10 @@ export function buildLifestylePrompt(b: MarketingBrief, scenario: string, charte
       ? `SERIES — NON-NEGOTIABLE: this photo is one of a ${others.length + 1}-image campaign series. The OTHER images in the series already show: ${others.map((o) => o.slice(0, 80)).join("; ")}. THIS scene must read clearly DIFFERENT from every one of them — a different setting, different props, a different story. Never a second variation of a motif the series already has. `
       : "") +
     (hasBottlePhoto
-      ? `THE BOTTLE — COPY IT, DO NOT REDESIGN IT: the FIRST attached image is a finished studio photograph of THIS EXACT bottle with its label applied. The bottle in the scene IS that bottle: the same silhouette, shoulder curve, neck length and width-to-height ratio, the same glass colour, the same closure, and the label at EXACTLY the same size, position and proportions on the glass, with the same layout. Only the pose, the angle and the light change with the scene. `
+      ? `THE BOTTLE — COPY IT, DO NOT REDESIGN IT: the ${ORD[photoAt]} attached image is a finished studio photograph of THIS EXACT bottle with its label applied. The bottle in the scene IS that bottle: the same silhouette, shoulder curve, neck length and width-to-height ratio, the same glass colour, the same closure, and the label at EXACTLY the same size, position and proportions on the glass, with the same layout. Only the pose, the angle and the light change with the scene. ${lf ? "For WHAT the label shows — its words, type and artwork — the label artwork image is the authority, not this photograph. " : ""}`
       : "") +
     `The ${n(0)} attached image is the wine's front label artwork — it appears on the bottle EXACTLY as given: the same proportions, the same layout, every line of type where it is, legible and true to its colours; never redraw, re-set, stretch or replace it. ` +
+    labelWording(b.frontText) +
     `The label is lit by the same scene light as the bottle (one photographed object, never a pasted-on graphic), and its surface is smooth flat print — no invented paper grain or fibre texture. ` +
     /* round 31b (owner clarification): the bottle may be in ANY pose —
        the real rule is that the label sits ON THE BOTTLE'S AXIS, glued
@@ -583,7 +615,7 @@ export async function generateMarketingAssets(
       const img = await generateImageRawWithRetry({
         prompt: buildLifestylePrompt(b, scenarios[i].text, scenarios[i].charter, !!shape, scenarios[i].fromBoard, rules,
           scenarios.filter((_, j) => j !== i).map((x) => x.text), !!bottlePhoto),
-        references: [...(bottlePhoto ? [bottlePhoto] : []), frontLabel, ...(shape ? [shape] : [])], size: { w: 1024, h: 1024 },
+        references: (b.labelFirst && bottlePhoto ? [frontLabel, bottlePhoto] : [...(bottlePhoto ? [bottlePhoto] : []), frontLabel]).concat(shape ? [shape] : []), size: { w: 1024, h: 1024 },
       });
       send({ type: "life", i, image: await sizeLifestyle(img, final), preview: await previewOf(img) });
     } catch (e) {

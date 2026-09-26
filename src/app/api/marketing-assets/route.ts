@@ -1,4 +1,5 @@
-import { generateMarketingAssets, loadMarketingPool, type MarketingBrief, type AssetEvent } from "@/lib/marketing/engine";
+import { generateMarketingAssets, loadMarketingPool, labelWords, type MarketingBrief, type AssetEvent } from "@/lib/marketing/engine";
+import { readLabel } from "@/lib/label/store";
 
 /* PUBLIC customer endpoint (owner 2026-09-06): the marketing-asset run in
    one streamed call — 2 studio product shots (front/back, transparent
@@ -14,7 +15,7 @@ const cache = new Map<string, AssetEvent[]>();
 
 export async function POST(req: Request) {
   let body: {
-    front?: string; back?: string | null;
+    front?: string; back?: string | null; frontId?: string;
     bottle?: { type?: string; color?: string; closure?: string; finish?: string; closureColour?: string };
     wine?: { colour?: string; name?: string; grape?: string };
     labelMM?: { w?: number; h?: number };
@@ -51,6 +52,12 @@ export async function POST(req: Request) {
     style: ["traditional", "contemporary", "punk"].includes(String(body.style)) ? String(body.style) : "contemporary",
     seed: (Number(body.seed) || 0) >>> 0,
   };
+  /* 2026-09-25 (owner: "the label as close to the real one as possible"):
+     the label's own words ride the ask, and the real label leads the
+     scenes' references */
+  const fid = String(body.frontId || "").replace(/[^a-z0-9-]/gi, "");
+  const saved = fid ? readLabel(fid) : null;
+  if (saved?.layout?.lines?.length) { brief.frontText = labelWords(saved.layout.lines as never); brief.labelFirst = true; }
 
   /* signature: everything that changes the output — label pixels AND the
      current charters (an edited/analyzed board must bust the cache) */
