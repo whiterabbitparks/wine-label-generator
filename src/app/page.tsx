@@ -3231,9 +3231,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         return (<>
           {patch(0, 160, W, 500, "aswipe")}
           {custom
-            ? head(137.14, "Product Shot", "Face", "Transparent PNG / 700x2500px / 72dpi")
-            : head(137.14, "Two Product Shots", "Face & Back", "Transparent PNG / 700x2500px / 72dpi")}
-          {head(R2 + 0.3, "Five Marketing Images", "Product placed in contextual environments", "JPEG / 2500x2500px / 72dpi")}
+            /* 2026-09-25 (owner): the REAL sizes the files come in — the
+               promised 700x2500 / 2500x2500 were never delivered */
+            ? head(137.14, "Product Shot", "Face", "Transparent PNG / 1024x1536px / 72dpi")
+            : head(137.14, "Two Product Shots", "Face & Back", "Transparent PNG / 1024x1536px / 72dpi")}
+          {head(R2 + 0.3, "Five Marketing Images", "Product placed in contextual environments", "PNG / 1024x1024px / 72dpi")}
           {landingCol && head(R3 + 0.3, "Product Landing Page", "You will be provided with the link\nto your product page.", "")}
           {/* status line above the progress bar (round 47) */}
           {assetsStage && (

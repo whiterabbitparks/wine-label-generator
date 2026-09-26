@@ -93,15 +93,12 @@ function glassWineShade(wineColour: string) {
    variety is known — and then they are THAT variety. No variety → no
    grapes anywhere (no pink grapes under a rosé that is made from red
    grapes, no guessing). Rosé = red-skinned grapes, never pink. */
-export function grapeLine(wineColour: string, grape?: string) {
-  const v = (grape || "").trim();
-  if (!v) return "GRAPES — NON-NEGOTIABLE: NO grapes anywhere in the scene — no grape clusters, no bunches, no grapes on the table, no fruiting vines in focus; the variety is not specified, so none may be invented. ";
-  const skin = /red|ros/i.test(wineColour)
-    ? "dark red-skinned grapes (deep purple-black / blue-black clusters with a dusty bloom) — a rosé is made from RED grapes, never pink ones"
-    : /amber|orange/i.test(wineColour)
-      ? "ripe amber-golden grapes (deep yellow-gold clusters)"
-      : "green-gold white-wine grapes (pale green to golden clusters)";
-  return `GRAPES — NON-NEGOTIABLE: if grapes appear ANYWHERE in the scene they are exactly the variety ${v}, true to that variety's berry size, cluster shape and skin colour — ${skin}. Never a generic or different grape. `;
+/* 2026-09-25 (owner, after several reports of red wine among white grapes:
+   "if it can't be controlled, take that prompt out and never show grapes
+   at all"): NO grapes in any image, whatever the wine or its variety. */
+export function grapeLine(_wineColour?: string, _grape?: string) {
+  void _wineColour; void _grape;
+  return "GRAPES — NON-NEGOTIABLE: NO grapes anywhere in the scene — no grape clusters, no bunches, no loose berries, no grapes on the table or in a bowl, no fruiting vines in focus. ";
 }
 
 /* ---- closure ------------------------------------------------------- */
@@ -398,7 +395,9 @@ export function dealScenarios(seed: number, pool: { text: string; charter: strin
   };
   /* round 93 #2: no known variety → no grape scene is ever dealt (board
      scenes included now — a grape scene with "no grapes" is nonsense) */
-  const ok = (t: string) => !noGrapes || !/grape/i.test(t);
+  /* no grape scenes at all since 2026-09-25 (see grapeLine) */
+  void noGrapes;
+  const ok = (t: string) => !/grape|harvest|vendange|cluster/i.test(t);
   const all: DealtScene[] = [
     ...shuffle(pool.filter((p) => ok(p.text))).map((p) => ({ text: p.text, fromBoard: true, charter: p.charter })),
     /* the old generic list (cellar, crate, sommelier…) read traditional —

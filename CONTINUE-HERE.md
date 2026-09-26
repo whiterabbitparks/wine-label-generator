@@ -293,6 +293,16 @@ download), 8K.WINE header, new home label. Live smoke label OK (Giorgi,
 t05, orphan region centred). Layout edits made on the LIVE admin live in
 the server's data/layout-edits — pull them before reading.
 
+**2026-09-25 — marketing: NO GRAPES at all** (owner, after repeated
+red-wine-among-white-grapes: "if it can't be controlled, never show
+grapes") — grapeLine() always forbids grapes; dealScenarios drops any
+grape/harvest/cluster scene (0 in 300 simulated sets). Resolution stays
+as it is (his call); the page now states the REAL sizes: shots
+1024x1536 transparent PNG, scenes 1024x1024 PNG. OPEN: he wants the
+label in every marketing image IDENTICAL to the real one — reverses his
+2026-09-23 "no exact compositing"; proposal = key-colour label patch +
+composite (see reply), awaiting his yes for a prototype.
+
 **2026-09-25 — guided tour trimmed to 24 notes (committed; NOT deployed):**
 no "check your details" notes on either popup (the red-button note's
 `done: "confirm"` moves on when the popup opens; Edit steps back); no
