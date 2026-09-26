@@ -208,7 +208,9 @@ export async function composeBackLabel(
   const impSuffix = opts.markets.length === 1 ? ` (${opts.markets[0]})` : "";
   const BAND_TOP = 61.5;             // the ground colour stops here (template 174.33pt)
   const LH8 = 3.38, LH7 = 2.9;
-  const brand = up(d.producerCompany.replace(/["\u201c\u201d'\u2019]/g, "").replace(/\b(LLC|LTD|INC|GMBH|S\.?A\.?|CO\.?|COMPANY|WINERY|CELLARS?)\.?,?\s*$/i, "").trim());
+  /* quote marks go, an apostrophe inside a word stays (2026-09-25:
+     "Giorgi's Marani" printed as "GIORGIS MARANI") */
+  const brand = up(d.producerCompany.replace(/["\u201c\u201d]/g, "").replace(/(^|\s)['\u2019]|['\u2019](?=\s|,|$)/g, "$1").replace(/\b(LLC|LTD|INC|GMBH|S\.?A\.?|CO\.?|COMPANY|WINERY|CELLARS?)\.?,?\s*$/i, "").trim());
 
   const layoutAt = (W: number) => {
     const RM = W - 4;                // right margin (template 11.34pt = 4mm)
@@ -248,7 +250,8 @@ export async function composeBackLabel(
     y += 3.4 + 1.9; rules.push(y);   // rule (template @31.30)
     /* ONE line: LOT / ALC / CONTAINS SULFITES (template @34.80, 7pt) */
     const lotBits = [
-      d.lot ? `LOT: L${d.lot}` : "",
+      /* 2026-09-25: a lot typed as "L23…" printed as "LOT: LL23…" */
+      d.lot ? `LOT: ${/^L/i.test(d.lot.trim()) ? d.lot.trim() : `L${d.lot.trim()}`}` : "",
       d.alcohol && d.volume ? `${d.alcohol}% ALC./VOL. ${d.volume} ML` : d.alcohol ? `${d.alcohol}% ALC./VOL.` : "",
       allergen.join(" / "),
     ].filter(Boolean);

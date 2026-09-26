@@ -941,6 +941,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             front: sel.dream, back: backData,
             /* 2026-09-25: the server reads the label's own words from it */
             frontId: customLabel ? undefined : sel.id,
+            backSpec: backData ? backSpec.current : undefined,
             bottle: { type: bottle.type, color: bottle.color, closure: bottle.closure, finish: bottle.finish, closureColour: shadeRgb() },
             wine: { colour: wineColor || f.colour || "Red", name: f.wine || "Wine", grape: (f.grape || "").trim() },
             labelMM: customLabel ? customDims : { w: Number(f.width) || 110, h: Number(f.height) || 80 },
@@ -1277,6 +1278,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
      the next step is waiting"): tutIdle is set when a step has played out */
   const [tutIdle, setTutIdle] = useState(false);
   const tutClick = useRef(false);
+  /* the back label's own data — the marketing ask reads its words from it */
+  const backSpec = useRef<unknown>(null);
 
   /* THE ORDER KEPT (owner, 2026-09-23: "keep the generated label for the
      session — even if the browser reloads or the internet drops; it
@@ -1929,6 +1932,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       },
       markets, heightMM: Number(f.height) || 80, bgColor: bg,
     };
+    backSpec.current = { ...payload, data: { ...payload.data, qrImage: "" } };
     try {
       const r = await fetch("/api/back-label", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...payload, format: "png" }) });
       if (!r.ok) throw new Error("back label failed");

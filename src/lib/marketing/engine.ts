@@ -579,6 +579,9 @@ export async function generateMarketingAssets(
   /* the owner's line-art drawing of the chosen bottle rides along as a
      silhouette spec (round 14 #4) */
   const shape = bottleShapeRef(b.bottleType, b.closure);
+  /* 2026-09-25 (owner): the two PRODUCT SHOTS at medium — measured, low
+     misspelt the label's small type ("Whiie", "Georgio"), medium read
+     77/80 words true against 55/80. The scenes stay at the tier's default. */
 
   /* sequential on purpose: OpenAI allows ~5 images/min — the retry absorbs
      the occasional 429, and the stream keeps the page honest meanwhile */
@@ -589,7 +592,7 @@ export async function generateMarketingAssets(
     send({ type: "progress", stage: "front shot" });
     const front = await generateImageRawWithRetry({
       prompt: buildShotPrompt(b, "front", !!shape, shotCharter, rules),
-      references: shape ? [frontLabel, shape] : [frontLabel], transparent: true, size: { w: 1024, h: 1536 },
+      references: shape ? [frontLabel, shape] : [frontLabel], transparent: true, size: { w: 1024, h: 1536 }, quality: "medium",
     });
     bottlePhoto = front;
     const frontSized = await sizeShot(front, final);
@@ -601,7 +604,7 @@ export async function generateMarketingAssets(
          COPIES its scale, so the two labels can never differ in height */
       const back = await generateImageRawWithRetry({
         prompt: buildShotPrompt(b, "back", !!shape, shotCharter, rules, true),
-        references: shape ? [backLabel, shape, front] : [backLabel, front], transparent: true, size: { w: 1024, h: 1536 },
+        references: shape ? [backLabel, shape, front] : [backLabel, front], transparent: true, size: { w: 1024, h: 1536 }, quality: "medium",
       });
       send({ type: "shot", side: "back", image: await sizeShot(back, final), preview: await previewOf(back) });
     }

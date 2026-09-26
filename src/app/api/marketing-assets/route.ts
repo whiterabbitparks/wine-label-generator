@@ -1,5 +1,7 @@
 import { generateMarketingAssets, loadMarketingPool, labelWords, type MarketingBrief, type AssetEvent } from "@/lib/marketing/engine";
 import { readLabel } from "@/lib/label/store";
+import { composeBackLabel, MARKETS, type BackLabelData } from "@/lib/back-label";
+import { properFields } from "@/lib/label/casing";
 
 /* PUBLIC customer endpoint (owner 2026-09-06): the marketing-asset run in
    one streamed call — 2 studio product shots (front/back, transparent
@@ -15,7 +17,7 @@ const cache = new Map<string, AssetEvent[]>();
 
 export async function POST(req: Request) {
   let body: {
-    front?: string; back?: string | null; frontId?: string;
+    front?: string; back?: string | null; frontId?: string; backSpec?: unknown;
     bottle?: { type?: string; color?: string; closure?: string; finish?: string; closureColour?: string };
     wine?: { colour?: string; name?: string; grape?: string };
     labelMM?: { w?: number; h?: number };
@@ -58,6 +60,15 @@ export async function POST(req: Request) {
   const fid = String(body.frontId || "").replace(/[^a-z0-9-]/gi, "");
   const saved = fid ? readLabel(fid) : null;
   if (saved?.layout?.lines?.length) { brief.frontText = labelWords(saved.layout.lines as never); brief.labelFirst = true; }
+  /* the back label is set again from its own data, and its lines read off */
+  const bs = body.backSpec as { data?: BackLabelData; markets?: string[]; heightMM?: number } | undefined;
+  if (back && bs?.data) {
+    try {
+      const out = await composeBackLabel(properFields(bs.data), { heightMM: Math.min(200, Math.max(40, Number(bs.heightMM) || 80)), markets: (bs.markets || []).filter((m) => m in MARKETS), bleedMM: 0 });
+      const dec = (t: string) => t.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+      brief.backText = [...out.svg.matchAll(/<text\b[^>]*>([\s\S]*?)<\/text>/g)].map((m) => dec(m[1].replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim()).filter(Boolean);
+    } catch { /* the back shot simply goes without its words */ }
+  }
 
   /* signature: everything that changes the output — label pixels AND the
      current charters (an edited/analyzed board must bust the cache) */

@@ -309,8 +309,13 @@ carries EXACT WORDING, and in the scenes the REAL label rides first
 gpt-image-2 has NO input_fidelity (400). Test: data/experiments/
 fidelity-test.mts → Desktop/8K-sheet-test/label-fidelity/ — wording
 alone at low barely helps; MEDIUM shots read truest (77/80 words vs
-55/80 today). Proposed: shots at medium (+~$0.07, +~40 s) — his call.
-Back label: no wording yet (its text isn't at hand).
+55/80 today). He said YES to medium: both PRODUCT SHOTS now at medium (engine.ts),
+scenes stay at the tier's default. The BACK shot now carries its words
+too: the page keeps the back label's own data (`backSpec` ref) and sends
+it; the route re-sets the back label and reads its <text> lines. Real run
+(front 39 s, back 81 s): both labels word for word. Found + fixed on the
+back label itself: a lot typed "L23…" printed "LOT: LL23…"; the "By"
+line dropped apostrophes ("GIORGIS MARANI").
 
 **2026-09-25 — guided tour trimmed to 24 notes (committed; NOT deployed):**
 no "check your details" notes on either popup (the red-button note's
