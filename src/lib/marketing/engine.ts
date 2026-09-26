@@ -218,6 +218,55 @@ export interface MarketingBrief {
   /* the real label rides FIRST into the scenes (before the product shot),
      so a scene copies the label itself, not the shot's copy of it */
   labelFirst?: boolean;
+  /* the label's own colours, named (labelPalette) — the scenes are set in them */
+  palette?: string[];
+}
+
+/* THE LABEL'S PALETTE (owner, 2026-09-26: "a green-and-pink label came
+   back against a brick-red wall — let the label's colours set the
+   photograph's gamut"). Its main colours, found by a small k-means on a
+   thumbnail and NAMED, because the image model reads words, not hex. */
+const NAMED: [string, number, number, number][] = [
+  ["white", 250, 250, 248], ["warm cream", 243, 234, 214], ["ivory", 238, 232, 205], ["pale grey", 205, 205, 205], ["mid grey", 140, 140, 140], ["charcoal", 55, 55, 58], ["black", 18, 18, 18],
+  ["sand beige", 214, 196, 160], ["warm brown", 130, 88, 55], ["dark brown", 72, 48, 32], ["terracotta", 190, 95, 60], ["brick red", 160, 60, 45],
+  ["deep red", 150, 20, 35], ["bright red", 220, 40, 40], ["wine red", 110, 20, 45], ["coral", 240, 120, 100], ["salmon pink", 240, 160, 140], ["soft pink", 240, 190, 200], ["hot pink", 235, 70, 140], ["magenta", 200, 40, 160],
+  ["plum", 110, 50, 100], ["lavender", 190, 170, 220], ["purple", 120, 60, 170], ["navy blue", 30, 45, 95], ["cobalt blue", 40, 80, 190], ["sky blue", 120, 185, 235], ["pale blue", 190, 215, 235], ["teal", 30, 125, 130], ["turquoise", 60, 190, 190],
+  ["sage green", 160, 180, 145], ["olive green", 110, 115, 50], ["moss green", 90, 110, 60], ["leaf green", 70, 160, 70], ["bright green", 90, 200, 80], ["forest green", 30, 80, 45], ["mint", 180, 230, 200],
+  ["lemon yellow", 245, 225, 70], ["chrome yellow", 250, 200, 20], ["mustard", 200, 160, 40], ["ochre", 200, 145, 60], ["orange", 240, 130, 30], ["peach", 250, 200, 160],
+];
+const nameOf = (r: number, g: number, b: number) => NAMED.reduce((best, n) => {
+  const d = (n[1] - r) ** 2 * 0.3 + (n[2] - g) ** 2 * 0.59 + (n[3] - b) ** 2 * 0.11;
+  return d < best.d ? { d, n: n[0] } : best;
+}, { d: Infinity, n: "" }).n;
+export async function labelPalette(dataUrl: string): Promise<string[]> {
+  try {
+    const { data, info } = await sharp(Buffer.from(dataUrl.slice(dataUrl.indexOf(",") + 1), "base64")).flatten({ background: "#ffffff" }).resize(48, 48, { fit: "fill" }).raw().toBuffer({ resolveWithObject: true });
+    const px: number[][] = [];
+    for (let i = 0; i < info.width * info.height; i++) px.push([data[i * info.channels], data[i * info.channels + 1], data[i * info.channels + 2]]);
+    const K = 6;
+    let cs = Array.from({ length: K }, (_, k) => px[Math.floor(((k + 0.5) / K) * px.length)].slice());
+    let lab = new Array(px.length).fill(0);
+    for (let it = 0; it < 12; it++) {
+      lab = px.map((p) => cs.reduce((bi, c, k) => ((p[0] - c[0]) ** 2 + (p[1] - c[1]) ** 2 + (p[2] - c[2]) ** 2 < (p[0] - cs[bi][0]) ** 2 + (p[1] - cs[bi][1]) ** 2 + (p[2] - cs[bi][2]) ** 2 ? k : bi), 0));
+      cs = cs.map((c, k) => { const m = px.filter((_, i) => lab[i] === k); return m.length ? [0, 1, 2].map((j) => m.reduce((s2, p) => s2 + p[j], 0) / m.length) : c; });
+    }
+    const share = cs.map((_, k) => lab.filter((l) => l === k).length / px.length);
+    /* a colour's shade is not a colour of its own: a darker pink must not
+       come back as "brick red" and license a brick wall — a saturated
+       colour within 30° of hue AND close in lightness to one already kept is dropped */
+    const hsl = (c: number[]) => { const r = c[0] / 255, g = c[1] / 255, bb = c[2] / 255, mx = Math.max(r, g, bb), mn = Math.min(r, g, bb), d = mx - mn, l = (mx + mn) / 2;
+      const sat = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1)); let h = 0;
+      if (d) h = mx === r ? ((g - bb) / d) % 6 : mx === g ? (bb - r) / d + 2 : (r - g) / d + 4;
+      return { h: (h * 60 + 360) % 360, s: sat, l }; };
+    const kept: { n: string; h: number; l: number; chroma: boolean }[] = [];
+    cs.map((c, k) => ({ c, n: nameOf(c[0], c[1], c[2]), w: share[k] })).sort((a, b) => b.w - a.w).forEach(({ c, n, w }) => {
+      if (w < 0.03 || kept.some((x) => x.n === n)) return;
+      const { h, s: sat, l } = hsl(c), chroma = sat > 0.25 && l > 0.12 && l < 0.92;
+      if (chroma && kept.some((x) => x.chroma && Math.min(Math.abs(x.h - h), 360 - Math.abs(x.h - h)) < 30 && Math.abs(x.l - l) < 0.2)) return;
+      kept.push({ n, h, l, chroma });
+    });
+    return kept.map((x) => x.n).slice(0, 5);
+  } catch { return []; }
 }
 
 /* a saved label's printed words, top to bottom — an arced name's letters
@@ -335,7 +384,7 @@ export function buildLifestylePrompt(b: MarketingBrief, scenario: string, charte
   const photoAt = lf ? 1 : 0, labelAt = lf ? 0 : hasBottlePhoto ? 1 : 0, shapeAt = labelAt + 1 + (lf ? 1 : 0);
   const n = (k: number) => ORD[k === 0 ? labelAt : shapeAt];
   const d = bottleDescription(b);
-  return (
+  const out = (
     /* round 31: a board-derived scene LEADS — recreate the reference's own
        story with OUR bottle; the generic style world stays out of its way */
     (fromBoard
@@ -384,6 +433,12 @@ export function buildLifestylePrompt(b: MarketingBrief, scenario: string, charte
     `Shot on professional camera, beautiful natural light for the scene, crisp focus on the bottle and label. Square composition. No added text, no watermarks, no logos other than the label itself.` +
     houseRules(rules)
   );
+  /* 2026-09-26 (owner): the label's colours set the photograph's gamut —
+     said LAST, and said to override the scene's own colour words (its
+     "terracotta floor" or "rusted wall" won when this sat in the middle) */
+  return out + (b.palette && b.palette.length
+    ? ` COLOUR — FROM THE LABEL, THIS OVERRIDES EVERY COLOUR WORD ABOVE: the label's palette is ${b.palette.join(", ")}. Keep the scene's materials, composition, light and atmosphere, but re-colour its set — backdrop, wall, floor, surfaces, fabric and props — in these colours and in tones in harmony with them (lighter, darker, muted or dusty versions are welcome): a "terracotta floor" or a "rusted wall" in the scene becomes a floor or wall in one of these tones. Never a strong colour foreign to this palette. Keep enough contrast that the label still stands out from what is right behind it.`
+    : "");
 }
 
 /* 2026-09-23 (owner: "we no longer have traditional / contemporary /

@@ -119,12 +119,26 @@ const WINE_MOOD: [RegExp, string][] = [
   [/white/i, "light, airy notes of pale gold and green"],
   [/red/i, "a warm, deep accent of wine red and plum"],
 ];
+/* 2026-09-26 (owner): the wine's own details may INSPIRE — its name's
+   meaning, its place — but only ever as mood and colour, never over the
+   customer's own words, and never as written words in the picture */
+function inspiration(d: EvalBrief["data"], abstract: boolean): string {
+  const x = d as { wine?: string; region?: string; country?: string; special?: string };
+  const name = String(x.wine || "").trim(), place = [x.region, x.country].filter(Boolean).join(", ");
+  if (!name && !place) return "";
+  const bits = [name ? `the wine is called “${name}” — take only what that name MEANS or evokes (a light, a season, a feeling, a rhythm)` : "", place && abstract ? `it comes from ${place} — take only a hint of that place's COLOURS, as marks: never its land, horizon, hills, houses or people` : ""].filter(Boolean);
+  return ` ${abstract ? "INSPIRATION" : "SECONDARY INSPIRATION — it never changes, adds to or replaces the story above"}: ${bits.join("; ")}. NEVER write these words, or any letters, anywhere in the picture.`;
+}
+
 function abstractSubject(d: EvalBrief["data"]): string {
   const mood = WINE_MOOD.find(([re]) => re.test(String((d as { wineColorName?: string }).wineColorName || "")))?.[1];
   return "ABSTRACT — NO STORY, NO SUBJECT: there is no scene to tell. Paint an ABSTRACT composition made only of this artist's own marks — patches and washes of colour, brushstrokes, lines, scribbles, dots, drips and textures — arranged into one lively, balanced composition with rhythm, contrast and a clear focal area, exactly as the artist would compose them. " +
-    "No people, no faces, no animals, no objects, no plants, no landscape, no horizon, no sky, no buildings — nothing recognisable at all. " +
+    "No people, no faces, no animals, no objects, no landscape, no horizon, no buildings. " +
+    /* owner: "if it must draw something, let it be nature — carefully, so it
+       never starts on qvevri or white grapes for a red" — no wine, no grapes */
+    "If any mark does become recognisable, let it be a natural, organic form only — a leaf, a stem, a petal, a reed, a curling vine tendril — never a grape or a bunch, never a vessel, bottle or glass. " +
     (mood ? `Within the artist's own palette, lean a little toward ${mood}. ` : "") +
-    "No text, no letters, no signature, no border.";
+    inspiration(d, true) + " No signature, no border.";
 }
 
 export async function buildArtworkPrompt(brief: EvalBrief, artist: ArtistProfile, abstract = false): Promise<ArtworkPrompt> {
@@ -136,9 +150,11 @@ export async function buildArtworkPrompt(brief: EvalBrief, artist: ArtistProfile
   }
   const place = [d.region, d.country].filter(Boolean).join(", ");
   const gaz = await regionNote(d.region);
+  /* the inspiration rides the SKETCH's ask only — the FLUX repaint reads
+     `subject`, and a quoted name there could come back as painted letters */
   const subject = `${brief.vision} ${place ? `Set in ${place}.${gaz}` : ""} No buildings unless the story names them. No text, no letters, no border.`;
   const inStyle = `Painted by ${artist.name}, whose works are the reference images: ${artistCharter(artist)}. Paint a NEW picture in exactly her manner, medium and palette (do not copy the reference subjects).`;
-  return { prompt: `${inStyle} ${VIGNETTE} ${subject}`, subject, aspect: aspectOf(brief), kind: "spot" };
+  return { prompt: `${inStyle} ${VIGNETTE} ${subject}${inspiration(d, false)}`, subject, aspect: aspectOf(brief), kind: "spot" };
 }
 
 const GPT_SIZE = { landscape: { w: 1536, h: 1024 }, portrait: { w: 1024, h: 1536 }, square: { w: 1024, h: 1024 } } as const;
@@ -176,7 +192,7 @@ export async function repaintInHand(model: EvalModel, story: string, ap: Artwork
   if (!key) throw new Error("FAL_KEY is not set");
   const url = await falUpload(Buffer.from(story.slice(story.indexOf(",") + 1), "base64"), "story.png", "image/png");
   const prompt = `${model.lora.trigger} style. ${ap.abstract
-    ? "Repaint this ABSTRACT picture in your own hand — the same marks, patches and shapes in the same places, your own brush, texture and colour. It stays abstract: never turn a mark into a person, face, animal, object or place, never add letters or a signature."
+    ? "Repaint this ABSTRACT picture in your own hand — the same marks, patches and shapes in the same places, your own brush, texture and colour. It stays abstract: never turn a mark into a person, face, animal, object or place (at most a leaf, a stem or a tendril), never add letters or a signature."
     : "Repaint this picture in your own hand — same scene, same subjects in the same places, your own colours and brush:"} ${ap.abstract ? "" : ap.subject} Painted as ${artistCharter(model.artist)}. ${ap.kind === "bleed"
     ? (ap.edgeSide
       ? `Keep the composition exactly: the painting runs off the other edges, and on the ${ap.edgeSide} side it ends in its own loose irregular edge with the plain, flat, empty ground beyond it — keep that ground plain and empty, never paint into it, never add a border.`

@@ -1,4 +1,4 @@
-import { generateMarketingAssets, loadMarketingPool, labelWords, type MarketingBrief, type AssetEvent } from "@/lib/marketing/engine";
+import { generateMarketingAssets, loadMarketingPool, labelWords, labelPalette, type MarketingBrief, type AssetEvent } from "@/lib/marketing/engine";
 import { readLabel } from "@/lib/label/store";
 import { composeBackLabel, MARKETS, type BackLabelData } from "@/lib/back-label";
 import { properFields } from "@/lib/label/casing";
@@ -60,6 +60,8 @@ export async function POST(req: Request) {
   const fid = String(body.frontId || "").replace(/[^a-z0-9-]/gi, "");
   const saved = fid ? readLabel(fid) : null;
   if (saved?.layout?.lines?.length) { brief.frontText = labelWords(saved.layout.lines as never); brief.labelFirst = true; }
+  /* the label's colours set the scenes' gamut (owner, 2026-09-26) */
+  if (front) brief.palette = await labelPalette(front);
   /* the back label is set again from its own data, and its lines read off */
   const bs = body.backSpec as { data?: BackLabelData; markets?: string[]; heightMM?: number } | undefined;
   if (back && bs?.data) {

@@ -293,7 +293,27 @@ download), 8K.WINE header, new home label. Live smoke label OK (Giorgi,
 t05, orphan region centred). Layout edits made on the LIVE admin live in
 the server's data/layout-edits — pull them before reading.
 
-**2026-09-26 later — ABSTRACTION + Dachi retrained (committed, NOT deployed):**
+**2026-09-26 evening — nature, inspiration, palette (committed, NOT deployed):**
+- Abstraction: "if any mark becomes recognisable, only a natural form —
+  leaf, stem, petal, reed, vine tendril — never grapes, vessels, bottles,
+  glasses" (no wine words: qvevri/grape-colour risk). Place in an
+  abstraction = only a hint of its COLOURS, never land/horizon/houses
+  (Giorgi's "Tierra Roja" drew a landscape before that).
+- INSPIRATION from the wine's details (models.ts inspiration()): the
+  wine's NAME (what it means/evokes) and, in abstractions, the place's
+  colours — a SECONDARY line that never overrides the customer's story,
+  "never write these words". It rides the SKETCH ask only, never the
+  FLUX repaint (a quoted name there could come back as letters). Test:
+  stories intact, no letters.
+- MARKETING PALETTE (engine.ts labelPalette): k-means on the label →
+  up to 5 NAMED colours (shades of one colour merged: a darker pink is
+  not "brick red"); the lifestyle prompt ENDS with "COLOUR — FROM THE
+  LABEL, THIS OVERRIDES EVERY COLOUR WORD ABOVE…" (in the middle the
+  scene's "terracotta floor" won). Test (palette-test.mts, Desktop
+  palette-test/): rusted wall → cobalt with its rust, terracotta floor →
+  coral pink.
+
+**2026-09-26 later — ABSTRACTION + Dachi retrained:**
 - No idea AND no sketch → an ABSTRACT picture in the artist's hand
   (models.ts abstractSubject: marks, patches, lines, drips, nothing
   recognisable, no text; the wine only leans the palette). The FLUX
