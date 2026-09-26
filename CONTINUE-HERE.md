@@ -293,6 +293,13 @@ download), 8K.WINE header, new home label. Live smoke label OK (Giorgi,
 t05, orphan region centred). Layout edits made on the LIVE admin live in
 the server's data/layout-edits — pull them before reading.
 
+**2026-09-25 — FLUX repaint strength 0.60 → 0.55** (owner). Test
+(data/experiments/strength-test.mts, Desktop/8K-sheet-test/flux-strength):
+the same sketch at 0.60 vs 0.50 for all three artists — 0.50 kept the
+story in 5/6 (0.60 added a woman, dropped a church, painted a signature,
+lost the shadows' embrace); the hand stayed recognisable. He chose the
+middle, 0.55, and will judge it in use (models.ts REPAINT_STRENGTH).
+
 **2026-09-25 — marketing: NO GRAPES at all** (owner, after repeated
 red-wine-among-white-grapes: "if it can't be controlled, never show
 grapes") — grapeLine() always forbids grapes; dealScenarios drops any

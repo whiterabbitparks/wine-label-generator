@@ -22,7 +22,9 @@ import { readArtist, listArtists, artistRefs, nextRefSet, artistCharter, isActiv
    Nothing else paints. The test scripts that found this live in
    data/experiments/ (git-ignored); the marks in data/eval/. */
 
-export const REPAINT_STRENGTH = 0.60;
+/* 2026-09-25 (owner, after the 0.60 vs 0.50 test — 0.50 kept the story
+   better, 0.60 invented extras): 0.55 for now, "I'll watch how it goes" */
+export const REPAINT_STRENGTH = 0.55;
 export const LORA_SCALE = 1.0;
 
 export interface EvalModel {
