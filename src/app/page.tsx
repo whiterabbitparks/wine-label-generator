@@ -1334,6 +1334,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
      is always about where they stand. */
   const GUIDE_PAGES = ["vision", "loader", "options", "backdetails", "backdesign", "bottle", "assets", "checkout"];
   const [guideWarn, setGuideWarn] = useState(-1);      /* the step whose Next already warned once */
+  /* 2026-09-27: a note whose action is done shows "✓" a moment first */
+  const [guideOk, setGuideOk] = useState(-1);
+  const guideOkRef = useRef(-1);
   const [guideTick, setGuideTick] = useState(0);
   const createRect = useRef({ x: 735.5, y: 560, w: 354.5, h: 30 });
   const pageSince = useRef(Date.now());
@@ -1384,7 +1387,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     }
     /* a popup's note is done only once its popup has closed — the
        marketing popup opens on a page that already "counts" as reached */
-    if (st.done && (!st.modal || !confirmModal) && guideDoneNow(st.done)) setGuide(guide + 1);
+    if (st.done && (!st.modal || !confirmModal) && guideDoneNow(st.done)) {
+      /* an action done on this page shows its "✓" for a moment; a page
+         change moves on at once (the note has already left with its page) */
+      if (st.done.startsWith("page:") || st.wait) { setGuide(guide + 1); return; }
+      if (guideOkRef.current === guide) return;
+      guideOkRef.current = guide; setGuideOk(guide);
+      setTimeout(() => { setGuideOk(-1); setGuide((g) => (g === guide ? g + 1 : g)); }, 700);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [guide, guideTick, page, vision, selected, markets, marketOpen, backSaved, assetsStage, assets.front, assetsSaved, confirmModal]);
   useEffect(() => {
@@ -3746,6 +3756,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           100% { opacity: 0; transform: translate(-40px, -2px) rotate(9deg) }
         }
         @keyframes nuiClinkHit { 0%, 46% { transform: rotate(0) } 54% { transform: rotate(5deg) } 66% { transform: rotate(-2deg) } 78%, 100% { transform: rotate(0) } }
+        @keyframes nuiRing { 0%, 100% { transform: scale(1); opacity: .95 } 50% { transform: scale(1.06); opacity: .35 } }
+        @keyframes nuiBlink { 0%, 100% { opacity: .25 } 50% { opacity: 1 } }
         @keyframes nuiFadeOut { from { opacity: 1 } to { opacity: 0 } }
         @keyframes szGrow { from { transform: scale(0) } to { transform: scale(1) } }`}</style>
       {/* round 40: the page bands extend to the window edges so the 80%
@@ -4221,6 +4233,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                says when they are done). A note that waits for an ACTION —
                a save, a pick, a press — moves on by that action alone. */
             const byHand = !st.done;
+            /* the markets note changes its words once a market is picked */
+            const phase2 = !!st.then && guideDoneNow(st.then.when);
+            const press = phase2 ? st.then!.press : st.press;
+            const okNow = guideOk === guide;
+            /* ← back to the previous note, when it is a note to read on this page */
+            const canBack = guide > 0 && GUIDE[guide - 1].page === page && !GUIDE[guide - 1].done;
             const met = st.done ? guideDoneNow(st.done) : guideNeedsMet(st.needs);
             const warned = guideWarn === guide && !met;
             const onNext = () => {
@@ -4230,6 +4248,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             };
             const L = (en: string, ge: string) => (lang === "ge" ? ge : en);
             return (
+              <>
+              {/* the thing to press breathes with a red ring */}
+              {press && !okNow && (
+                <div style={{ position: "absolute", left: a.x - 5, top: a.y - 5, width: a.w + 10, height: a.h + 10, border: `2px solid ${BAR_RED}`, boxSizing: "border-box",
+                  borderRadius: Math.abs(a.w - a.h) < 4 ? "50%" : 3, zIndex: 79, pointerEvents: "none", animation: "nuiRing 1.6s ease-in-out infinite" }} />
+              )}
               <div key={"guide" + guide} style={{ position: "absolute", left, top, width: BW2, transform: shift, zIndex: 80, background: BAR_RED, color: "#fff", padding: "11px 13px 9px", boxSizing: "border-box", animation: `nuiFadeIn 360ms ${EASE} both`, pointerEvents: "auto" }}>
                 {/* the caret, on the side that faces the target */}
                 {/* 2026-09-27 (owner): the notes in our red, white text, a black Skip */}
@@ -4240,21 +4264,45 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     needs; both languages now set their own, and the box's
                     line boxes are pinned so a language switch cannot leave
                     the other's spacing behind */}
-                <div key={"gt" + lang} style={{ font: `${lang === "ge" ? 12 : 13}px/${lang === "ge" ? "15px" : "17px"} ${HNW}`, position: "relative" }}>
+                {/* the count in the corner, out of the foot's way */}
+                <span style={{ position: "absolute", top: 7, right: 9, font: `9px ${HNW}`, color: "rgba(255,255,255,0.75)" }}>{guide + 1} / {GUIDE.length}</span>
+                <div key={"gt" + lang} style={{ font: `${lang === "ge" ? 12 : 13}px/${lang === "ge" ? "15px" : "17px"} ${HNW}`, position: "relative", marginRight: 26 }}>
+                  {st.optional && !warned && (
+                    <div style={{ font: `italic 10px/13px ${HNW}`, opacity: 0.8, marginBottom: 3 }}>{L("Optional", "არასავალდებულო")}</div>
+                  )}
                   {warned
                     ? L("You haven't done this step yet. Continue anyway?", "ეს ნაბიჯი ჯერ არ გაგიკეთებია. მაინც გააგრძელებ?")
+                    : phase2 ? L(st.then!.en, st.then!.ge)
                     : qrMode === "create" && st.enPage && st.gePage ? L(st.enPage, st.gePage) : L(st.en, st.ge)}
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", marginTop: 9, position: "relative" }}>
-                  <button onClick={() => { setGuideWarn(-1); setGuide(-1); }} style={{ ...ghost, justifySelf: "start", font: `11px ${HNW}`, color: "#111", textDecoration: "underline", textTransform: "none" }}>{t("Skip")}</button>
-                  <span style={{ font: `10px ${HNW}`, color: "rgba(255,255,255,0.75)", textAlign: "center" }}>{guide + 1} / {GUIDE.length}</span>
-                  {byHand ? (
-                    <button onClick={onNext} style={{ ...ghost, justifySelf: "end", font: `700 11px ${HNW}`, color: "#fff", textTransform: "none", whiteSpace: "nowrap" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", columnGap: 10, marginTop: 9, position: "relative" }}>
+                  <span style={{ justifySelf: "start", display: "flex", alignItems: "center", columnGap: 10 }}>
+                    {canBack && (
+                      <button aria-label="previous note" onClick={() => { setGuideWarn(-1); setGuide(guide - 1); }} style={{ ...ghost, font: `700 12px ${HNW}`, color: "#fff", textTransform: "none", padding: 0 }}>←</button>
+                    )}
+                    <button onClick={() => { setGuideWarn(-1); setGuide(-1); }} style={{ ...ghost, font: `11px ${HNW}`, color: "#111", textDecoration: "underline", textTransform: "none", padding: 0 }}>{t("Skip")}</button>
+                  </span>
+                  {/* the foot says what moves this note on — always in this place */}
+                  {okNow ? (
+                    <span style={{ justifySelf: "end", font: `700 11px ${HNW}`, whiteSpace: "nowrap" }}>✓ {L("Done", "მზადაა")}</span>
+                  ) : byHand ? (
+                    <button onClick={onNext} style={{ ...ghost, justifySelf: "end", font: `700 11px ${HNW}`, color: BAR_RED, background: "#fff", padding: "4px 9px", textTransform: "none", whiteSpace: "nowrap" }}>
                       {warned ? L("Yes, continue", "კი, გავაგრძელოთ") : last ? t("Finish") : t("Next")} →
                     </button>
+                  ) : st.wait ? (
+                    <span style={{ justifySelf: "end", font: `italic 11px ${HNW}`, whiteSpace: "nowrap" }}>
+                      {L("Being made", "მზადდება")}
+                      {[0, 1, 2].map((k) => <span key={k} style={{ animation: `nuiBlink 1.2s ease-in-out ${k * 0.2}s infinite` }}>.</span>)}
+                    </span>
+                  ) : press ? (
+                    <span style={{ justifySelf: "end", display: "flex", alignItems: "center", columnGap: 5, font: `700 11px ${HNW}`, whiteSpace: "nowrap" }}>
+                      <svg viewBox="0 0 24 24" width="13" height="13" style={{ flex: "0 0 auto" }}><path d="M3 2 L3 18.2 L7.3 14.2 L10 20.6 L12.9 19.3 L10.3 13.1 L16.2 12.9 Z" fill="#fff" stroke="#111" strokeWidth="1.2" strokeLinejoin="round" /></svg>
+                      {L(press.en, press.ge)}
+                    </span>
                   ) : <span />}
                 </div>
               </div>
+              </>
             );
           })()}
           {/* ROUND 72 #11: the pointer doing the work */}

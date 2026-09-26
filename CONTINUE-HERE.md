@@ -293,6 +293,18 @@ download), 8K.WINE header, new home label. Live smoke label OK (Giorgi,
 t05, orphan region centred). Layout edits made on the LIVE admin live in
 the server's data/layout-edits — pull them before reading.
 
+**2026-09-27 — GUIDED TOUR REDESIGN (committed, NOT deployed):** notes in
+our red (BAR_RED), white text, black Skip. Every note's FOOT says what
+moves it on, always in the same place: read → white "Next →" (optional
+ones carry "Optional" on top); action → a pointer + the button's name
+("წითელი ღილაკი", „შენახვა“, „აირჩიე ბაზარი“) AND that button pulses
+with a red ring; wait (loader, assets) → "მზადდება…" blinking dots. A
+finished on-page action flashes "✓ მზადაა" 0.7 s before moving on; "←"
+returns to the previous read note on the same page; the count sits in
+the corner. The two market notes merged into one whose words change
+(pick → "now press Select"). 23 notes. guide.ts fields: wait, optional,
+press, then.
+
 **DEPLOYED 2026-09-26 evening (1a774f9)** — abstraction, nature forms, inspiration, label palette, Dachi retrained, no popups in the tour. Live smoke: empty idea → Dachi abstraction, red-wine accents, 0 FLUX failures.
 
 **2026-09-26 evening — nature, inspiration, palette:**
