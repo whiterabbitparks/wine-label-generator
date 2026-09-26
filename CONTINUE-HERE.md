@@ -293,7 +293,13 @@ download), 8K.WINE header, new home label. Live smoke label OK (Giorgi,
 t05, orphan region centred). Layout edits made on the LIVE admin live in
 the server's data/layout-edits — pull them before reading.
 
-**2026-09-26 — NEW ARTIST Dachi Mindadze (prepared, NOT trained):**
+**2026-09-26 — Dachi SWITCHED ON** (owner: "I like the small
+illustrations as they came out"; "if I have you test someone, I have
+their verbal permission — contracts before launch"). consent = VERBAL;
+active:true (4 painters now, three per run); no page yet (needs
+public/newui/artists/dachi-mindadze/ portrait + works).
+
+**2026-09-26 — NEW ARTIST Dachi Mindadze:**
 data/artists/dachi-mindadze — 14 works (sheet numbering; work 11 left
 out, Georgian handwriting would teach painted letters; edges trimmed of
 Instagram arrows/dots), my charter draft, 4 ref sets (A 01-06-09 · B
