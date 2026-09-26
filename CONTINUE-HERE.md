@@ -300,11 +300,15 @@ Instagram arrows/dots), my charter draft, 4 ref sets (A 01-06-09 · B
 03-05-10 · C 02-07-14 · D 04-13-15), consent NOT OBTAINED, active:false,
 no page. Test-only door: PREVIEW_ARTISTS=dachi-mindadze lets a switched-
 off artist paint in scripts (models.ts artistModel; the server never
-sets it). BLOCKED: fal.ai balance EXHAUSTED ("User is locked") — no
-training AND no FLUX repaints: the live site ships the gpt-image sketch
-unrepainted until he tops up fal. Resume: ARTIST=dachi-mindadze
-TRIGGER=DMNDZ npx tsx data/experiments/train-lora.ts, then 3–5 test
-labels with PREVIEW_ARTISTS set.
+sets it). fal ran DRY 2026-09-26 (~03:20 UTC; one live
+label shipped unrepainted — my own smoke test); he topped up, FLUX live
+again (checked). TRAINED 2026-09-26 (trigger DMNDZ, 14 works, 6 min).
+5 test labels (t02 t05 t07 t10 t12) → Desktop/8K-sheet-test/dachi-test/:
+his hand is there (scratchy ink, washes, red/yellow patches, warm paper;
+t12 two spiky figures strongest). Weak: the spot ovals come out thin and
+sparse; t10 shows a vertical FOLD down the middle (works 13/14 are book
+spreads with a centre crease — like Mariam's fold). Suggest a fal
+low-balance alert / auto top-up.
 
 **DEPLOYED 2026-09-26 (5e833fb)** — everything from 2026-09-25 is LIVE (tour 24 notes, market menu, no grapes, real image sizes, medium shots + label words front and back, back-label fixes, low sketch, FLUX 0.55, Final Pack prices + pay). Live smoke: Mariam, 'The Second Moon' — two people, two moons, story intact.
 
