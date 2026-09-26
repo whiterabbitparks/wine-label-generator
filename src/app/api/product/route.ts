@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { properCase, CASED_FIELDS } from "@/lib/label/casing";
+import { savePack, type PackBody } from "@/lib/package";
 
 /* PRODUCT PAGE SNAPSHOT (owner 2026-09-08): when a QR code is requested,
    the wizard posts everything known about the wine at the moment the
@@ -43,6 +44,8 @@ export async function POST(req: Request) {
   };
   const db = await getDb();
   await db.collection("products").updateOne({ _id: code } as never, { $set: doc }, { upsert: true });
+  /* the Final Pack's makings, full size, for the page's DOWNLOAD ASSETS */
+  if (body.pack && typeof body.pack === "object") try { savePack(code, body.pack as PackBody); } catch { /* the page still stands */ }
   return NextResponse.json({ ok: true, url: `/p/${code}` });
 }
 

@@ -1,10 +1,18 @@
 "use client";
 
-/* PRODUCT PAGE CLIENT (owner 2026-09-08): three sections — About the wine ·
-   Ingredients · Gallery — on the owner's artboards (stripped to chrome in
-   public/newui/product/*.svg; ALL text/images render live from the product
-   snapshot). Wizard-style 3-band parallax slides; arrows AND the bar words
-   navigate. Geometry decoded from the artboards (viewBox 1440×822.86). */
+/* PRODUCT PAGE CLIENT — the owner's second design (2026-09-26, NEW UI/
+   Product Page/Product page.ai, artboard 1440×822.86). A white header
+   with the wine's name and five words: WINE DETAILS · INGREDIENTS ·
+   GALLERY · DOWNLOAD ASSETS · GEO / ENG (the page shown in bold).
+     page one — the front bottle shot, the title and the description stay
+       put; the right-hand column lists the wine's details OR its
+       ingredients, whichever word was clicked.
+     page two — the gallery: a carousel as on the Final Pack, bigger and
+       centred between the margin crosses; its neighbours smaller and
+       blurred; the Final Pack's chevrons; "Download Image" under it.
+   DOWNLOAD ASSETS hands out the Final Pack folder (api/product/pack).
+   Everything is live — no baked artboard. Wizard-style 3-band slide
+   between the two pages. */
 
 import { useCallback, useEffect, useState } from "react";
 
@@ -20,71 +28,114 @@ const W = 1440, H = 822.86;
 const EASE = "cubic-bezier(0.33, 1, 0.68, 1)";
 const SLIDE_MS = 650;
 const DELAYS = [0, 55, 110];
-/* ROUND 28 #5: wizard logic — header and progress bar are STATIC live
-   chrome; only the zone between them slides, and the thick progress
-   segment animates its width */
-const HEADER_H = 68.57, BAR_TOP = 740;
-const BAR_Y = 754.16, DOT_X = [142.06, 720.28, 1297.94];
-const BOUNDS = [190, 640];   // strip cuts in the artboards' empty bands
+const HEADER_H = 68.57, FOOT_Y = 754.18;
+const BOUNDS = [190, 640];   // the slide's strip cuts
+const M_L = 137.14, M_R = 1302.86, M_T = 137.14, M_B = 685.73;   // the margin crosses
 const HNW = "'HNW', 'Helvetica Neue', Helvetica, sans-serif";
+const INK = "#231f20";
 const SECTIONS = ["about", "ingredients", "gallery"] as const;
 type Section = (typeof SECTIONS)[number];
+type Lang = "en" | "ge";
+const pageOf = (s: Section) => (s === "gallery" ? "gallery" : "one");
 
-const FIELDS: [string, string][] = [
-  ["Producer:", "producer"], ["Wine Name:", "wine"], ["Appellation:", "appellation"],
-  ["Classification:", "classification"], ["Vintage:", "vintage"], ["Grape Variety:", "grape"],
-  ["Region, Country:", "regionCountry"], ["Special mention:", "special"], ["Sweetness:", "sweetness"],
-  ["Colour:", "colour"], ["Wine Type:", "wineType"], ["Alcohol:", "alcohol"], ["Volume:", "volume"],
-  ["Producer Company:", "producerCompany"], ["Company Address:", "producerAddress"],
-  ["Importer:", "importer"], ["Importer Address:", "importerAddress"],
-  ["Bottling Date:", "bottlingDate"], ["LOT Number:", "lot"], ["Web Page:", "web"],
+/* HNW's hhea metrics (ascent 1.479, descent 0.428): with an explicit line
+   height L the baseline sits L/2 + 0.5255·size below the line box's top */
+const topFor = (baseline: number, size: number, lh: number) => baseline - lh / 2 - 0.5255 * size;
+
+const FIELDS: [string, string, string][] = [
+  ["Producer:", "მწარმოებელი:", "producer"], ["Wine Name:", "ღვინის სახელი:", "wine"],
+  ["Appellation:", "აპელასიონი:", "appellation"], ["Classification:", "კლასიფიკაცია:", "classification"],
+  ["Vintage:", "მოსავლის წელი:", "vintage"], ["Grape Variety:", "ყურძნის ჯიში:", "grape"],
+  ["Region, Country:", "წარმოშობა:", "regionCountry"], ["Special mention:", "მინაწერი:", "special"],
+  ["Sweetness:", "სიტკბო:", "sweetness"], ["Colour:", "ფერი:", "colour"], ["Wine Type:", "ღვინის ტიპი:", "wineType"],
+  ["Alcohol:", "ალკოჰოლი:", "alcohol"], ["Volume:", "მოცულობა:", "volume"],
+  ["Producer Company:", "მწარმოებელი კომპანია:", "producerCompany"], ["Company Address:", "კომპანიის მისამართი:", "producerAddress"],
+  ["Importer:", "იმპორტიორი:", "importer"], ["Importer Address:", "იმპორტიორის მისამართი:", "importerAddress"],
+  ["Bottling Date:", "ჩამოსხმის თარიღი:", "bottlingDate"], ["LOT Number:", "LOT ნომერი:", "lot"], ["Web Page:", "ვებგვერდი:", "web"],
 ];
+const T: Record<string, [string, string]> = {
+  about: ["WINE DETAILS", "ᲦᲕᲘᲜᲘᲡ ᲓᲔᲢᲐᲚᲔᲑᲘ"],
+  ingredients: ["INGREDIENTS", "ᲘᲜᲒᲠᲔᲓᲘᲔᲜᲢᲔᲑᲘ"],
+  gallery: ["GALLERY", "ᲒᲐᲚᲔᲠᲔᲐ"],
+  /* the longer Georgian "…the materials" ran into GEO */
+  assets: ["DOWNLOAD ASSETS", "ᲩᲐᲛᲝᲢᲕᲘᲠᲗᲕᲐ"],
+  image: ["Download Image", "სურათის ჩამოტვირთვა"],
+  front: ["Front of the bottle", "ბოთლი წინიდან"],
+  back: ["Back of the bottle", "ბოთლი უკნიდან"],
+};
+const ING_GE: Record<string, string> = {
+  "Grapes:": "ყურძენი:", "Preservative:": "კონსერვანტი:", "Acidity regulator:": "მჟავიანობის რეგულატორი:",
+  "Stabiliser:": "სტაბილიზატორი:", "Nutrition per 100 ml:": "კვებითი ღირებულება 100 მლ-ზე:", "Energy:": "ენერგია:",
+  "Carbohydrates:": "ნახშირწყლები:", "Protein:": "ცილა:", "Fat:": "ცხიმი:", "Alcohol:": "ალკოჰოლი:",
+};
 
-function namespaceSvg(t: string, key: string) {
-  return t
-    .replace(/\.st(\d+)/g, `.${key}-st$1`)
-    .replace(/class="([^"]*)"/g, (_, cls: string) => `class="${cls.split(/\s+/).map((c) => (/^st\d+$/.test(c) ? `${key}-${c}` : c)).join(" ")}"`)
-    .replace(/id="([^"]*)"/g, (_, id: string) => `id="${key}--${id}"`)
-    .replace(/url\(#([^)]+)\)/g, (_, id: string) => `url(#${key}--${id})`)
-    .replace(/href="#([^"]+)"/g, (_, id: string) => `href="#${key}--${id}"`);
-}
+/* the carousel: the current picture big in the middle, its neighbours
+   smaller, raised a little and blurred (positions from the artboard) */
+const CAR_S = 445.72, CAR_CX = 720, CAR_CY = (M_T + M_B) / 2;
+/* blur is set before the scale shrinks it, so it is divided by the scale:
+   the eye sees 3 px next to the middle, 4 px further out */
+const RING: Record<number, { s: number; dx: number; dy: number; blur: number }> = {
+  0: { s: 1, dx: 0, dy: 0, blur: 0 },
+  1: { s: 0.5, dx: 222.86, dy: -17, blur: 3 / 0.5 },
+  2: { s: 0.3077, dx: 334.29, dy: -17, blur: 4 / 0.3077 },
+  3: { s: 0.2, dx: 400, dy: -17, blur: 5 / 0.2 },
+};
 
 export default function ProductClient({ doc }: { doc: ProductDoc }) {
   const [sec, setSec] = useState<Section>("about");
   const [prev, setPrev] = useState<Section | null>(null);
   const [dir, setDir] = useState(1);
   const [scale, setScale] = useState(1);
-  const [boards, setBoards] = useState<Record<string, string>>({});
-  const [gallery, setGallery] = useState<{ imgs: string[]; i: number } | null>(null);
+  const [lang, setLang] = useState<Lang>("en");
+
+  /* the gallery: both bottle shots, then the lifestyle pictures; k is the
+     picture's place in the pack (api/product/pack?img=k) */
+  const pics = [
+    { src: doc.images.front, k: 0 }, { src: doc.images.back, k: 1 },
+    ...(doc.images.life || []).map((src, i) => ({ src, k: 2 + i })),
+  ].filter((p) => p.src);
+  const firstLife = pics.findIndex((p) => p.k >= 2);
+  const [car, setCar] = useState(Math.max(0, firstLife));
 
   useEffect(() => {
     const fit = () => setScale(Math.max(1, window.innerWidth / W));
     fit(); window.addEventListener("resize", fit);
     return () => window.removeEventListener("resize", fit);
   }, []);
-  useEffect(() => {
-    SECTIONS.forEach((p) => {
-      fetch(`/newui/product/${p}.svg`).then((r) => r.text()).then((t) =>
-        setBoards((m) => ({ ...m, [p]: namespaceSvg(t, p).replace(/<\?xml[^>]*\?>/, "").replace(/<svg /, '<svg preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%" ') }))
-      ).catch(() => { });
-    });
-  }, []);
+  /* the same language as the wizard (and the other way round) */
+  useEffect(() => { try { if (localStorage.getItem("nui-lang") === "ge") setLang("ge"); } catch { } }, []);
+  const pickLang = (l: Lang) => { setLang(l); try { localStorage.setItem("nui-lang", l); } catch { } };
+  const t = (k: string) => T[k][lang === "ge" ? 1 : 0];
 
   const go = useCallback((next: Section) => {
     if (next === sec || prev) return;
-    setDir(SECTIONS.indexOf(next) > SECTIONS.indexOf(sec) ? 1 : -1);
+    /* WINE DETAILS ↔ INGREDIENTS is the same page — only its list changes */
+    if (pageOf(next) === pageOf(sec)) { setSec(next); return; }
+    setDir(next === "gallery" ? 1 : -1);
     setPrev(sec); setSec(next);
     setTimeout(() => setPrev(null), SLIDE_MS + DELAYS[2] + 60);
   }, [sec, prev]);
-  const step = (d: number) => {
-    const i = SECTIONS.indexOf(sec) + d;
-    if (i >= 0 && i < SECTIONS.length) go(SECTIONS[i]);
-  };
+  const turn = useCallback((d: number) => setCar((c) => (c + d + pics.length) % Math.max(1, pics.length)), [pics.length]);
+  useEffect(() => {
+    if (sec !== "gallery") return;
+    const key = (e: KeyboardEvent) => { if (e.key === "ArrowLeft") turn(-1); if (e.key === "ArrowRight") turn(1); };
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  }, [sec, turn]);
 
   const w = doc.wine || {};
-  const title = [w.producer, w.wine].filter(Boolean);
+  const code = encodeURIComponent(doc._id);
   const px = (x: number, y: number, w2?: number, h2?: number): React.CSSProperties => ({ position: "absolute", left: x, top: y, width: w2, height: h2 });
-  const ghost: React.CSSProperties = { background: "transparent", border: "none", cursor: "pointer", padding: 0, position: "absolute" };
+  /* one line of type with its baseline exactly on y */
+  const line = (x: number, y: number, size: number, extra?: React.CSSProperties): React.CSSProperties =>
+    ({ position: "absolute", left: x, top: topFor(y, size, size * 1.4), height: size * 1.4, lineHeight: `${size * 1.4}px`, fontSize: size, fontFamily: HNW, color: INK, whiteSpace: "nowrap", ...extra });
+  const ghost: React.CSSProperties = { background: "transparent", border: "none", cursor: "pointer", padding: 0, margin: 0 };
+  const cross = (x: number, y: number) => (
+    <span key={`${x}-${y}`}>
+      <span style={{ ...px(x - 8.24, y - 0.5, 16.48, 1), background: "#000" }} />
+      <span style={{ ...px(x - 0.5, y - 8.24, 1, 16.48), background: "#000" }} />
+    </span>
+  );
 
   /* placeholder ingredients until the upload flow feeds real ones */
   const ING_PLACEHOLDER: [string, string][] = [
@@ -101,144 +152,150 @@ export default function ProductClient({ doc }: { doc: ProductDoc }) {
     ["Alcohol:", `${w.alcohol || "12.5"} % vol`],
   ];
   const ingRows: [string, string][] = doc.ingredients
-    ? doc.ingredients.split(/\r?\n/).filter(Boolean).slice(0, 16).map((l) => {
+    ? doc.ingredients.split(/\r?\n/).filter(Boolean).slice(0, 20).map((l) => {
         const i = l.indexOf(":");
         return i > 0 ? [l.slice(0, i + 1).trim(), l.slice(i + 1).trim()] as [string, string] : ["", l.trim()] as [string, string];
       })
-    : ING_PLACEHOLDER;
+    : ING_PLACEHOLDER.map(([l, v]) => [lang === "ge" ? ING_GE[l] || l : l, v] as [string, string]);
+  const detailRows: [string, string][] = FIELDS.filter(([, , k]) => (w[k] || "").trim())
+    .map(([en, ge, k]) => [lang === "ge" ? ge : en, w[k]]);
 
-  const bottle = (img: string) => img ? (
-    /* eslint-disable-next-line @next/next/no-img-element */
-    <img src={img} alt="" style={{ ...px(132.41, 197.76, 286.7, 430.1), objectFit: "contain", pointerEvents: "none" }} />
-  ) : null;
+  /* the right-hand column: label in bold, the value in italic on its rule */
+  /* Georgian names are wider — they set a size smaller to fit the column */
+  const rows = (list: [string, string][]) => list.map(([lbl, val], i) => {
+    const y = 215.12 + i * 21;
+    return (
+      <span key={i}>
+        {lbl && <span style={line(821.41, y, lang === "ge" ? 12.5 : 14, { fontWeight: 700, maxWidth: 994.95 - 821.41 - 6, overflow: "hidden", textOverflow: "ellipsis", color: "#000" })}>{lbl}</span>}
+        {val && <span title={val} style={line(994.95, y, 15, { fontStyle: "italic", width: M_R - 994.95, overflow: "hidden", textOverflow: "ellipsis", color: "#000" })}>{val}</span>}
+        {(lbl || val) && <span style={{ ...px(994.95, y + 1.12 - 0.375, M_R - 994.95, 0.75), background: "#000" }} />}
+      </span>
+    );
+  });
 
-  const overlay = (p: Section) => (
+  const title = (w.producer || "").trim();
+  const name = (w.wine || "").trim();
+  const long = (title + name).length > 34;
+  const TS = long ? 30 : 38.27, TL = long ? 38 : 48.52;
+
+  const pageOne = (
     <>
-      {p === "about" && (<>
-        <span style={{ ...px(478.91, 156.08 - 20, 500, 26), font: `700 24.27px ${HNW}` }}>WINE DETAILS</span>
-        {bottle(doc.images.front)}
-        <span style={{ ...px(480, 234.14 - 34, 340, 44), font: `700 38.27px ${HNW}`, color: "#231f20", whiteSpace: "nowrap" }}>{(w.producer || w.wine || "WINE").toUpperCase()}</span>
-        {(w.wine || "").split(/\s+/).slice(0, 2).map((word, i) => (
-          <span key={i} style={{ ...px(480, 234.14 + 48.54 * (i + 1) - 34, 340, 44), font: `38.27px ${HNW}`, color: "#231f20", whiteSpace: "nowrap" }}>{word}</span>
-        ))}
-        {doc.description && (
-          <span style={{ ...px(480, 540, 300, 110), font: `italic 13px ${HNW}`, color: "#333", lineHeight: 1.45, display: "block", overflow: "hidden" }}>{doc.description.slice(0, 300)}</span>
-        )}
-        {FIELDS.map(([lbl, key], i) => w[key] ? (
-          <span key={key}>
-            <span style={{ ...px(821.41, 215.12 + i * 21 - 13, 170, 16), font: `700 14px ${HNW}` }}>{lbl}</span>
-            {/* height 26: HNW's line box is ~25px at 15px — anything tighter clips at the baseline */}
-            <span style={{ ...px(994.95, 215.12 + i * 21 - 13, 320, 26), font: `italic 15px ${HNW}`, textDecoration: "underline", whiteSpace: "nowrap", overflow: "hidden" }}>{w[key]}</span>
-          </span>
-        ) : null)}
-      </>)}
-
-      {p === "ingredients" && (<>
-        <span style={{ ...px(483.06, 156.08 - 20, 500, 26), font: `700 24.27px ${HNW}` }}>INGREDIENTS</span>
-        {bottle(doc.images.back || doc.images.front)}
-        {ingRows.map(([lbl, val], i) => (
-          <span key={i}>
-            {lbl && <span style={{ ...px(483.06, 215.12 + i * 21 - 13, 175, 16), font: `700 14px ${HNW}` }}>{lbl}</span>}
-            {val && <span style={{ ...px(656.6, 215.12 + i * 21 - 13, 420, 17), font: `italic 15px ${HNW}`, whiteSpace: "nowrap" }}>{val}</span>}
-          </span>
-        ))}
-      </>)}
-
-      {p === "gallery" && (<>
-        <span style={{ ...px(480.06, 156.08 - 20, 500, 26), font: `700 24.27px ${HNW}` }}>GALLERY</span>
-        {bottle(doc.images.front)}
-        {[
-          { x: 480, y: 205.71, s: 409.6, i: 0 },
-          { x: 891.43, y: 205.71, s: 204.8, i: 1 }, { x: 1097.14, y: 205.71, s: 204.8, i: 2 },
-          { x: 891.43, y: 411.43, s: 204.8, i: 3 }, { x: 1097.14, y: 411.43, s: 204.8, i: 4 },
-        ].map((f) => doc.images.life[f.i] ? (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img key={f.i} src={doc.images.life[f.i]} alt="" onClick={() => setGallery({ imgs: doc.images.life.filter(Boolean), i: f.i })}
-            style={{ ...px(f.x, f.y, f.s, f.s), objectFit: "cover", cursor: "zoom-in" }} />
-        ) : (
-          <div key={f.i} style={{ ...px(f.x, f.y, f.s, f.s), background: "#F4F3EE" }} />
-        ))}
-      </>)}
-
+      {[[M_L, M_T], [411.43, M_T], [M_R, M_T], [M_L, M_B], [411.43, M_B], [M_R, M_B]].map(([x, y]) => cross(x, y))}
+      {doc.images.front && (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img src={doc.images.front} alt="" style={{ ...px(112.47, 171.43, 323.63, 485.45), objectFit: "contain", pointerEvents: "none" }} />
+      )}
+      <div style={{ ...px(480, topFor(234.14, TS, TL), 320, 330), font: `${TS}px/${TL}px ${HNW}`, color: INK, overflow: "hidden" }}>
+        {title && <div style={{ fontWeight: 700 }}>{title.toUpperCase()}</div>}
+        {name && <div>{name}</div>}
+      </div>
+      {doc.description && (
+        <div lang="en" style={{ position: "absolute", left: 480, bottom: H - (615.62 + 3.12), width: 285, maxHeight: 22 * 9, overflow: "hidden", font: `italic 15px/22px ${HNW}`, color: "#000", hyphens: "auto", WebkitHyphens: "auto" }}>
+          {doc.description}
+        </div>
+      )}
+      {/* the list swaps in place — details or ingredients */}
+      <div key={sec === "gallery" ? "about" : sec} style={{ position: "absolute", inset: 0, animation: `ppFade 260ms ${EASE} both`, pointerEvents: "none" }}>
+        {rows(sec === "ingredients" ? ingRows : detailRows)}
+      </div>
     </>
   );
 
-  const pageSpace = (p: Section) => (
+  const pageTwo = (
+    <>
+      {[[M_L, M_T], [M_R, M_T], [M_L, M_B], [M_R, M_B]].map(([x, y]) => cross(x, y))}
+      {pics.map((p, i) => {
+        const n = pics.length;
+        let rel = ((i - car) % n + n) % n;
+        if (rel > n / 2) rel -= n;
+        const ar = Math.min(3, Math.abs(rel));
+        const r = RING[ar];
+        return (
+          <div key={p.k} onClick={rel ? () => setCar(i) : undefined}
+            style={{ ...px(CAR_CX - CAR_S / 2, CAR_CY - CAR_S / 2, CAR_S, CAR_S), zIndex: 10 - ar,
+              transform: `translate(${Math.sign(rel) * r.dx}px, ${r.dy}px) scale(${r.s})`,
+              filter: r.blur ? `blur(${r.blur}px)` : "none", opacity: ar === 3 ? 0 : 1,
+              transition: `transform 520ms ${EASE}, filter 520ms ${EASE}, opacity 520ms ${EASE}`,
+              cursor: rel ? "pointer" : undefined, pointerEvents: ar === 3 ? "none" : undefined }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={p.src} alt={p.k === 0 ? t("front") : p.k === 1 ? t("back") : ""} draggable={false}
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: p.k < 2 ? "contain" : "cover" }} />
+          </div>
+        );
+      })}
+      {pics.length > 1 && ([["previous picture", M_L - 3.33, "13,3 5,11 13,19", -1], ["next picture", M_R - 8.67, "5,3 13,11 5,19", 1]] as const).map(([lab, x, pts, d]) => (
+        <button key={lab} aria-label={lab} onClick={() => turn(d)}
+          style={{ ...ghost, ...px(x - 16, CAR_CY - 22, 44, 44), zIndex: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <svg viewBox="0 0 18 22" width="12" height="16"><polyline points={pts} fill="none" stroke="#111" strokeWidth="1.6" /></svg>
+        </button>
+      ))}
+      {pics[car] && (
+        <a href={`/api/product/pack?code=${code}&img=${pics[car].k}`} download
+          style={{ ...line(0, M_B, 12, { width: W, textAlign: "center", color: "#000" }), pointerEvents: "none" }}>
+          <span style={{ textDecoration: "underline", textUnderlineOffset: 2, pointerEvents: "auto", cursor: "pointer" }}>{t("image")}</span>
+        </a>
+      )}
+    </>
+  );
+
+  const pageSpace = (s: Section) => (
     <div style={{ position: "absolute", left: 0, top: 0, width: W, height: H }}>
-      <div style={{ position: "absolute", inset: 0, userSelect: "none" }} dangerouslySetInnerHTML={{ __html: boards[p] || "" }} />
-      {overlay(p)}
+      {pageOf(s) === "gallery" ? pageTwo : pageOne}
     </div>
   );
-  /* strips live INSIDE the content zone (header→bar); chrome never moves */
-  const strips = (p: Section, dirIn: boolean) => {
-    const cuts = [HEADER_H, ...BOUNDS, BAR_TOP];
+  /* strips live INSIDE the content zone (header→foot rule); chrome never moves */
+  const strips = (s: Section, dirIn: boolean) => {
+    const cuts = [HEADER_H, ...BOUNDS, FOOT_Y];
     return cuts.slice(0, -1).map((y0, si) => (
-      <div key={`${p}-${si}`} style={{ position: "absolute", left: 0, top: y0 - HEADER_H, width: W, height: cuts[si + 1] - y0, overflow: "hidden", animation: `${dirIn ? "ppIn" : "ppOut"} ${SLIDE_MS}ms ${EASE} ${DELAYS[si]}ms both`, pointerEvents: "none" }}>
-        <div style={{ position: "absolute", left: 0, top: -y0, width: W, height: H, background: "#fff" }}>{pageSpace(p)}</div>
+      <div key={`${pageOf(s)}-${si}`} style={{ position: "absolute", left: 0, top: y0 - HEADER_H, width: W, height: cuts[si + 1] - y0, overflow: "hidden", animation: `${dirIn ? "ppIn" : "ppOut"} ${SLIDE_MS}ms ${EASE} ${DELAYS[si]}ms both`, pointerEvents: "none" }}>
+        <div style={{ position: "absolute", left: 0, top: -y0, width: W, height: H, background: "#fff" }}>{pageSpace(s)}</div>
       </div>
     ));
   };
-  const idx = SECTIONS.indexOf(sec);
+
+  const nav = (k: Section) => (
+    <button key={k} onClick={() => go(k)}
+      style={{ ...ghost, ...line({ about: 483.06, ingredients: 669.59, gallery: 868.04 }[k], 58.62, 15, { fontWeight: sec === k ? 700 : 400 }) }}>{t(k)}</button>
+  );
 
   return (
     // not <main>: configurator.css pads the main tag 44/40px and would shift every hit zone
-    <div style={{ background: "#000", minHeight: "100vh", margin: 0, padding: 0 }}>
-      <style>{`html, body { margin: 0; padding: 0; background: #000; font-synthesis: none; }
+    <div style={{ background: "#fff", minHeight: "100vh", margin: 0, padding: 0 }}>
+      <style>{`html, body { margin: 0; padding: 0; background: #fff; font-synthesis: none; }
         @font-face { font-family: 'HNW'; src: url('/newui/fonts/HNW-55Roman.woff2') format('woff2'); font-weight: 400; font-style: normal; font-display: block; }
         @font-face { font-family: 'HNW'; src: url('/newui/fonts/HNW-56It.woff2') format('woff2'); font-weight: 400; font-style: italic; font-display: block; }
         @font-face { font-family: 'HNW'; src: url('/newui/fonts/HNW-75Bold.woff2') format('woff2'); font-weight: 700; font-style: normal; font-display: block; }
-        @font-face { font-family: 'HelveticaNeueWorld-55Roman'; src: url('/newui/fonts/HNW-55Roman.woff2') format('woff2'); font-weight: 400; font-display: block; }
-        @font-face { font-family: 'HelveticaNeueWorld-75Bold'; src: url('/newui/fonts/HNW-75Bold.woff2') format('woff2'); font-weight: 700; font-display: block; }
-        @font-face { font-family: 'HelveticaNeueWorld-56It'; src: url('/newui/fonts/HNW-56It.woff2') format('woff2'); font-weight: 400; font-style: italic; font-display: block; }
-        @font-face { font-family: 'Helvetica Neue World'; src: url('/newui/fonts/HNW-55Roman.woff2') format('woff2'); font-weight: 400; font-display: block; }
-        @font-face { font-family: 'Helvetica Neue World'; src: url('/newui/fonts/HNW-75Bold.woff2') format('woff2'); font-weight: 700; font-display: block; }
         @keyframes ppIn { from { transform: translateX(${dir > 0 ? 1440 : -1440}px) } to { transform: translateX(0) } }
-        @keyframes ppOut { from { transform: translateX(0) } to { transform: translateX(${dir > 0 ? -1440 : 1440}px) } }`}</style>
+        @keyframes ppOut { from { transform: translateX(0) } to { transform: translateX(${dir > 0 ? -1440 : 1440}px) } }
+        @keyframes ppFade { from { opacity: 0 } to { opacity: 1 } }`}</style>
       <div style={{ width: W * scale, height: H * scale, position: "relative", margin: "0 auto" }}>
         <div style={{ width: W, height: H, transform: `scale(${scale})`, transformOrigin: "top left", position: "absolute", overflow: "hidden", background: "#fff" }}>
-          {/* sliding CONTENT zone between the static header and bar */}
-          <div style={{ position: "absolute", left: 0, top: HEADER_H, width: W, height: BAR_TOP - HEADER_H, overflow: "hidden" }}>
+          {/* sliding CONTENT zone between the static header and the foot rule */}
+          <div style={{ position: "absolute", left: 0, top: HEADER_H, width: W, height: FOOT_Y - HEADER_H, overflow: "hidden" }}>
             {prev && strips(prev, false)}
             {prev
               ? strips(sec, true)
               : <div style={{ position: "absolute", left: 0, top: -HEADER_H, width: W, height: H }}>{pageSpace(sec)}</div>}
           </div>
 
-          {/* STATIC header */}
-          <div style={{ ...px(0, 0, W, HEADER_H), background: "#000" }}>
-            <span style={{ ...px(138.18, 42.37 - 14, 900, 20), font: `16px ${HNW}`, color: "#fff", lineHeight: "20px" }}>
-              <b>{(title[0] || "WINE").toUpperCase()}</b>{title[1] ? <span style={{ fontWeight: 400 }}> / {title[1]}</span> : null}
+          {/* STATIC header: the wine's name, the five words, the rule */}
+          <div style={{ ...px(0, 0, W, HEADER_H), background: "#fff" }}>
+            <span style={line(137.15, 58.62, 15, { fontWeight: 700, maxWidth: 483.06 - 137.15 - 30, overflow: "hidden", textOverflow: "ellipsis" })}>
+              {(name || title || "WINE").toUpperCase()}
             </span>
-            <span style={{ ...px(1242.09, 42.37 - 11, 90, 14), font: `11px ${HNW}`, color: "#fff" }}>© 8K Labels</span>
+            {SECTIONS.map(nav)}
+            <a href={`/api/product/pack?code=${code}`} download style={{ ...line(1011.02, 58.62, 15), textDecoration: "none", cursor: "pointer" }}>{t("assets")}</a>
+            <span style={line(1228.36, 58.62, 15)}>
+              <button onClick={() => pickLang("ge")} style={{ ...ghost, font: "inherit", color: "inherit", fontWeight: lang === "ge" ? 700 : 400 }}>GEO</button>
+              {" / "}
+              <button onClick={() => pickLang("en")} style={{ ...ghost, font: "inherit", color: "inherit", fontWeight: lang === "en" ? 700 : 400 }}>ENG</button>
+            </span>
+            <div style={{ ...px(0, HEADER_H - 0.5, W, 1), background: "#000" }} />
           </div>
 
-          {/* STATIC progress bar — thick segment animates width, dots fill */}
-          <div style={{ ...px(0, BAR_TOP, W, H - BAR_TOP), background: "#fff" }}>
-            <div style={{ ...px(137.14, BAR_Y - BAR_TOP, 1303.41 - 137.14, 1), background: "#111" }} />
-            <div style={{ ...px(DOT_X[0], BAR_Y - 1 - BAR_TOP, DOT_X[idx] - DOT_X[0], 3), background: "#111", transition: `width ${SLIDE_MS}ms ${EASE}` }} />
-            {DOT_X.map((cx, i) => (
-              <span key={i} style={{ ...px(cx - 4.92, BAR_Y - 4.92 - BAR_TOP, 9.84, 9.84), borderRadius: 5, border: "1px solid #111", background: idx >= i ? "#111" : "#fff", transition: `background 300ms ${EASE}`, boxSizing: "border-box" }} />
-            ))}
-            <button onClick={() => go("about")} style={{ ...ghost, ...px(137.15, 788.56 - 15 - BAR_TOP, 130, 22), font: `700 15px ${HNW}`, color: "#111", textAlign: "left" }}>About the wine</button>
-            <button onClick={() => go("ingredients")} style={{ ...ghost, ...px(679.83 - 40, 788.56 - 15 - BAR_TOP, 160, 22), font: `700 15px ${HNW}`, color: "#111", textAlign: "center" }}>Ingredients</button>
-            <button onClick={() => go("gallery")} style={{ ...ghost, ...px(1251.61 - 20, 788.56 - 15 - BAR_TOP, 90, 22), font: `700 15px ${HNW}`, color: "#111", textAlign: "right" }}>Gallery</button>
-            {idx > 0 && (
-              <button aria-label="back" onClick={() => step(-1)} style={{ ...ghost, ...px(60, BAR_Y - 20 - BAR_TOP, 60, 40) }}>
-                <svg viewBox="0 0 60 40" width="60" height="40"><line x1="47" y1="20" x2="13" y2="20" stroke="#000" strokeWidth="1.6" /><polyline points="23.5,9.5 13,20 23.5,30.5" fill="none" stroke="#000" strokeWidth="1.6" /></svg>
-              </button>)}
-            {idx < SECTIONS.length - 1 && (
-              <button aria-label="next" onClick={() => step(1)} style={{ ...ghost, ...px(1325, BAR_Y - 20 - BAR_TOP, 60, 40) }}>
-                <svg viewBox="0 0 60 40" width="60" height="40"><line x1="13" y1="20" x2="47" y2="20" stroke="#000" strokeWidth="1.6" /><polyline points="36.5,9.5 47,20 36.5,30.5" fill="none" stroke="#000" strokeWidth="1.6" /></svg>
-              </button>)}
-          </div>
-          {gallery && (
-            <div style={{ position: "absolute", inset: 0, background: "rgba(17,17,17,0.92)", zIndex: 10, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setGallery(null)}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={gallery.imgs[gallery.i]} alt="" onClick={(e) => e.stopPropagation()} style={{ maxWidth: W * 0.8, maxHeight: H * 0.8 }} />
-              <button onClick={(e) => { e.stopPropagation(); setGallery((g) => g && { ...g, i: (g.i + g.imgs.length - 1) % g.imgs.length }); }} style={{ ...ghost, left: 40, top: H / 2 - 30, width: 60, height: 60, color: "#fff", font: `300 46px ${HNW}` }}>‹</button>
-              <button onClick={(e) => { e.stopPropagation(); setGallery((g) => g && { ...g, i: (g.i + 1) % g.imgs.length }); }} style={{ ...ghost, left: W - 100, top: H / 2 - 30, width: 60, height: 60, color: "#fff", font: `300 46px ${HNW}` }}>›</button>
-            </div>
-          )}
+          {/* the foot rule and its end tick */}
+          <div style={{ ...px(0, FOOT_Y - 0.5, 1439.5, 1), background: "#000" }} />
+          <div style={{ ...px(1439, 750.93, 1, 6.5), background: "#000" }} />
         </div>
       </div>
     </div>

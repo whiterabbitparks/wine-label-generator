@@ -293,6 +293,29 @@ download), 8K.WINE header, new home label. Live smoke label OK (Giorgi,
 t05, orphan region centred). Layout edits made on the LIVE admin live in
 the server's data/layout-edits — pull them before reading.
 
+**2026-09-27 — PRODUCT PAGE v2 (owner's new artboards, NEW UI/Product
+Page/Product page.ai + .pdf, 2 artboards):** /p/<code> is now fully
+live-drawn (the old chrome boards public/newui/product/*.svg are gone).
+White header: wine name · WINE DETAILS · INGREDIENTS · GALLERY ·
+DOWNLOAD ASSETS · GEO / ENG (current one bold; language shared with the
+wizard's `nui-lang`). Page one: front bottle shot, producer (bold caps)
++ wine name, description bottom-aligned to the list; the right column is
+the details OR the ingredients (same page, the list fades). Page two:
+carousel (front shot, back shot, five lifestyle) centred between the
+margin crosses, neighbours ×0.5 / ×0.31 raised 17px and blurred
+(3/4 px as seen), Final Pack chevrons, "Download Image" (full size). The
+two pages swap with the wizard 3-strip slide. Baselines verified against
+his PDF by overlay. DOWNLOAD ASSETS = the Final Pack ZIP: the builder
+moved to src/lib/package.ts; the pack's makings are kept in
+data/products/<code>.json when the page is published and refreshed on
+every Final Pack download (api/package gets `code`); api/product/pack
+serves the ZIP or one picture. Pages published before this have no
+kept pack → pictures only. Georgian field names set at 12.5px to fit;
+GE "DOWNLOAD ASSETS" = "ᲩᲐᲛᲝᲢᲕᲘᲠᲗᲕᲐ" (the long form hit GEO).
+OPEN: the public page hands the paid pack to anyone with the QR; the
+ingredients column still shows placeholder values when none uploaded;
+phones get the desktop page scaled.
+
 **2026-09-27 — WALK-THROUGH, not a tutorial (owner):** it runs on the
 real site for a NEW visitor only — the home red button checks the
 browser's `nui-walked` (set on first start; IP rejected: many Georgians

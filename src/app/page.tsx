@@ -922,6 +922,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         return;
       }
       const got = { front: "", back: "", life: [] as string[] };
+      /* the full-size files, kept with the product page's pack */
+      const gotFull = { front: "", back: "", life: [] as string[] };
       try {
         setAssets({ life: [] }); setLifeTarget(5); setLifeOrder([0, 1, 2, 3, 4]);
         assetT.current = { run: Date.now(), stage: Date.now() };
@@ -966,8 +968,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             if (!line) continue;
             const m = JSON.parse(line);
             if (m.type === "progress") { assetT.current.stage = Date.now(); setAssetsStage(m.stage || ""); }
-            else if (m.type === "shot") { if (m.side === "front") got.front = m.preview || m.image; else got.back = m.preview || m.image; setAssets((a) => ({ ...a, [m.side]: { full: m.image, prev: m.preview || m.image } })); }
-            else if (m.type === "life") { got.life[m.i] = m.preview || m.image; setAssets((a) => { const life = [...a.life]; life[m.i] = { full: m.image, prev: m.preview || m.image }; return { ...a, life }; }); }
+            else if (m.type === "shot") { if (m.side === "front") got.front = m.preview || m.image; else got.back = m.preview || m.image; gotFull[m.side as "front" | "back"] = m.image; setAssets((a) => ({ ...a, [m.side]: { full: m.image, prev: m.preview || m.image } })); }
+            else if (m.type === "life") { got.life[m.i] = m.preview || m.image; gotFull.life[m.i] = m.image; setAssets((a) => { const life = [...a.life]; life[m.i] = { full: m.image, prev: m.preview || m.image }; return { ...a, life }; }); }
           }
         }
         setAssetsSig(sig);
@@ -996,6 +998,15 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 description: b.description || "",
                 ingredients,
                 images: { front: got.front, back: got.back, life: got.life.filter(Boolean) },
+                /* 2026-09-26 (owner): the page's DOWNLOAD ASSETS hands out
+                   the same folder as the Final Pack — its makings are kept
+                   beside the page (a later pack download refreshes them) */
+                pack: {
+                  wineName: f.wine || "Wine",
+                  front: sel.dream || null, frontId: ("id" in sel && sel.id) || null, back: backPayload,
+                  shots: { front: gotFull.front, back: gotFull.back },
+                  lifestyle: gotFull.life.filter(Boolean),
+                },
               }),
             });
             if (r2.ok) {
@@ -1984,6 +1995,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       const r = await fetch("/api/package", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          /* keeps this pack beside the order's product page */
+          code: productUrl ? productCode.current : undefined,
           wineName: f.wine || "Wine",
           /* ROUND 47: an own-label order ships marketing assets only —
              the customer already has their printed labels */
