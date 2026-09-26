@@ -135,7 +135,7 @@ export async function paintStory(model: EvalModel, ap: ArtworkPrompt, extra: { s
 }
 
 /* STEP 2 — the hand: FLUX + the artist's LoRA repaints the story picture */
-export async function repaintInHand(model: EvalModel, story: string, ap: ArtworkPrompt): Promise<string> {
+export async function repaintInHand(model: EvalModel, story: string, ap: ArtworkPrompt, strength = REPAINT_STRENGTH): Promise<string> {
   if (!model.lora) throw new Error(`${model.name} has no trained LoRA yet`);
   const key = process.env.FAL_KEY;
   if (!key) throw new Error("FAL_KEY is not set");
@@ -147,7 +147,7 @@ export async function repaintInHand(model: EvalModel, story: string, ap: Artwork
     : "Keep the plain, empty paper around the drawing."}`.slice(0, 1900);
   const res = await fetch("https://fal.run/fal-ai/flux-lora/image-to-image", {
     method: "POST", headers: { Authorization: `Key ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt, image_url: url, strength: REPAINT_STRENGTH, num_inference_steps: 28, guidance_scale: 3.5, num_images: 1, output_format: "png", loras: [{ path: model.lora.url, scale: LORA_SCALE }] }),
+    body: JSON.stringify({ prompt, image_url: url, strength, num_inference_steps: 28, guidance_scale: 3.5, num_images: 1, output_format: "png", loras: [{ path: model.lora.url, scale: LORA_SCALE }] }),
   });
   const out = (await res.json().catch(() => ({}))) as { images?: { url?: string; content_type?: string }[]; detail?: unknown; error?: string };
   if (!res.ok || !out.images?.[0]?.url) throw new Error(`FLUX + LoRA failed (${res.status}): ${JSON.stringify(out.detail || out.error || out).slice(0, 240)}`);
