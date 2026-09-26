@@ -293,7 +293,9 @@ download), 8K.WINE header, new home label. Live smoke label OK (Giorgi,
 t05, orphan region centred). Layout edits made on the LIVE admin live in
 the server's data/layout-edits — pull them before reading.
 
-**2026-09-26 evening — nature, inspiration, palette (committed, NOT deployed):**
+**DEPLOYED 2026-09-26 evening (1a774f9)** — abstraction, nature forms, inspiration, label palette, Dachi retrained, no popups in the tour. Live smoke: empty idea → Dachi abstraction, red-wine accents, 0 FLUX failures.
+
+**2026-09-26 evening — nature, inspiration, palette:**
 - Abstraction: "if any mark becomes recognisable, only a natural form —
   leaf, stem, petal, reed, vine tendril — never grapes, vessels, bottles,
   glasses" (no wine words: qvevri/grape-colour risk). Place in an
