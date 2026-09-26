@@ -298,9 +298,9 @@ the server's data/layout-edits — pull them before reading.
   (models.ts abstractSubject: marks, patches, lines, drips, nothing
   recognisable, no text; the wine only leans the palette). The FLUX
   repaint of an abstraction says "stays abstract, never a person/face/
-  animal/letters/signature" and runs gentler: ABSTRACT_STRENGTH 0.35
-  (0.55 turned marks into faces and animals — the LoRAs learned from
-  figurative works; the gpt sketch itself was clean). Test sheets on the
+  animal/letters/signature" — at the NORMAL strength 0.55 (owner: "stray
+  elements are better than weakening FLUX, we lose the style"; 0.35 was
+  tried and reverted). Test sheets on the
   Desktop abstract-test/. Levan's band may still hide a small face.
   Tour's first note + the details popup ("აბსტრაქცია მხატვრის სტილში")
   say so; the note no longer waits for 3 words (an empty box is a choice).

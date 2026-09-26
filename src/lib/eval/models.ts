@@ -167,11 +167,10 @@ export async function paintStory(model: EvalModel, ap: ArtworkPrompt, extra: { s
 }
 
 /* STEP 2 — the hand: FLUX + the artist's LoRA repaints the story picture */
-/* an abstraction is repainted more gently: the artist's LoRA learned from
-   figurative works, and at full strength it found faces, animals and a
-   signature in the marks (2026-09-26 test — the sketch was clean) */
-export const ABSTRACT_STRENGTH = 0.35;
-export async function repaintInHand(model: EvalModel, story: string, ap: ArtworkPrompt, strength = ap.abstract ? ABSTRACT_STRENGTH : REPAINT_STRENGTH): Promise<string> {
+/* an abstraction is repainted at the SAME strength (owner, 2026-09-26:
+   "a few stray elements are better than weakening FLUX — we lose the
+   style"); only the words ask it to stay abstract */
+export async function repaintInHand(model: EvalModel, story: string, ap: ArtworkPrompt, strength = REPAINT_STRENGTH): Promise<string> {
   if (!model.lora) throw new Error(`${model.name} has no trained LoRA yet`);
   const key = process.env.FAL_KEY;
   if (!key) throw new Error("FAL_KEY is not set");
