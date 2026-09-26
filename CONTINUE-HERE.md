@@ -298,10 +298,17 @@ red-wine-among-white-grapes: "if it can't be controlled, never show
 grapes") — grapeLine() always forbids grapes; dealScenarios drops any
 grape/harvest/cluster scene (0 in 300 simulated sets). Resolution stays
 as it is (his call); the page now states the REAL sizes: shots
-1024x1536 transparent PNG, scenes 1024x1024 PNG. OPEN: he wants the
-label in every marketing image IDENTICAL to the real one — reverses his
-2026-09-23 "no exact compositing"; proposal = key-colour label patch +
-composite (see reply), awaiting his yes for a prototype.
+1024x1536 transparent PNG, scenes 1024x1024 PNG. IDENTICAL LABEL (reverses
+his 2026-09-23 "no exact compositing", he said go for a prototype):
+src/lib/marketing/label-composite.ts — the model gets a BLANK magenta
+label with a cyan top stripe (keyLabel + KEY_PROMPT), then the real
+label file is laid into the patch: stripe gives "up" at any tilt,
+cylinder wrap softened by half, per-column top/bottom fitted as curves,
+patch light carried over, occluders kept, magenta despilled. Test
+data/experiments/composite-test.mts → Desktop/8K-sheet-test/
+label-composite/ (00-compare.jpg, 00-detail-100pct.jpg): 4/4 placed,
+exact type. Left: patch off-centre squeezes one edge; faint cyan trace.
+NOT wired into the site — awaiting his yes.
 
 **2026-09-25 — guided tour trimmed to 24 notes (committed; NOT deployed):**
 no "check your details" notes on either popup (the red-button note's
