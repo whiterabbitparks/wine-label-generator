@@ -72,6 +72,10 @@ const HNW = "'HNW', 'Helvetica Neue', Helvetica, sans-serif";
    Your Vision second — generation fires from the vision page now */
 /* ROUND 63 (owner's new mocks): Your Vision + Front Label Details are ONE
    page, and Back Label Details + Market Compliance are ONE page. */
+/* 2026-09-28: the address the page was OPENED with — read before any effect
+   rewrites it (the history seed below turns it into ?page=…, which wiped
+   the e-mail link's ?resume= and landed the visitor on the home page) */
+const BOOT_SEARCH = typeof window !== "undefined" ? window.location.search : "";
 const ORDER = ["welcome", "vision", "loader", "options", "backdetails", "backdesign", "bottle", "assets", "checkout", "blank",
   /* 2026-09-27 (owner): buying NEW VERSIONS — a page of its own, off the
      labels page (no artboard; the bar stands on FRONT LABEL) */
@@ -1371,7 +1375,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       /* 2026-09-27 (owner): the e-mail link brings the visitor back — on
          this browser or another — to the SAME labels page, their versions
          waiting and "new versions" ready; the order was kept with the link */
-      const sp = new URLSearchParams(window.location.search);
+      const sp = new URLSearchParams(BOOT_SEARCH);
       const resume = sp.get("resume");
       if (sp.get("verify") === "expired") { setMailNote("expired"); setEmailOpen(true); }
       if (resume) {

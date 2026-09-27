@@ -1,5 +1,6 @@
+import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { setVisitorCookie } from "@/lib/guard";
+import { visitorCookie } from "@/lib/guard";
 
 /* the link in the e-mail: proves the address, gives its one free run
    (once per address, ever), and puts THIS browser on the visitor who
@@ -11,7 +12,7 @@ export async function GET(req: Request) {
   const home = new URL("/", req.headers.get("x-forwarded-host") ? `${req.headers.get("x-forwarded-proto") || "https"}://${req.headers.get("x-forwarded-host")}` : req.url);
   if (!ver || Date.now() - new Date(ver.createdAt).getTime() > 48 * 3600 * 1000) {
     home.searchParams.set("verify", "expired");
-    return Response.redirect(home, 302);
+    return NextResponse.redirect(home, 302);
   }
   await db.collection("verifications").updateOne({ _id: t } as never, { $set: { usedAt: new Date() } } as never);
   /* the address's free run goes to the first visitor who confirms it */
@@ -21,7 +22,11 @@ export async function GET(req: Request) {
   const gotRun = !!(claim.upsertedCount || claim.modifiedCount);
   await db.collection("visitors").updateOne({ _id: ver.visitor } as never,
     { $set: { email: ver.email, verifiedAt: new Date().toISOString(), ...(gotRun ? { emailRun: 1 } : {}) } } as never);
-  await setVisitorCookie(ver.visitor);
   home.searchParams.set("resume", t);
-  return Response.redirect(home, 302);
+  /* the cookie rides on the redirect itself, so a phone or another browser
+     opening the link becomes this visitor */
+  const res = NextResponse.redirect(home, 302);
+  const c = visitorCookie(ver.visitor);
+  res.cookies.set(c.name, c.value, c.options);
+  return res;
 }

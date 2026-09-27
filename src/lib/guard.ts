@@ -102,6 +102,8 @@ export async function visitorOf(req: Request, create = true): Promise<Visitor | 
   await setVisitorCookie(v._id);
   return v;
 }
+/* the cookie itself, for a response that sets it directly (a redirect) */
+export const visitorCookie = (id: string) => ({ name: VISITOR_COOKIE, value: sign(id), options: { httpOnly: true, sameSite: "lax" as const, path: "/", maxAge: 400 * 24 * 3600 } });
 export async function setVisitorCookie(id: string) {
   const jar = await cookies();
   jar.set(VISITOR_COOKIE, sign(id), { httpOnly: true, sameSite: "lax", path: "/", maxAge: 400 * 24 * 3600 });
