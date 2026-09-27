@@ -386,10 +386,19 @@ const TAP = {
 /* the wheel's colour at angle `a` (radians) and radius r (0 centre → 1 rim):
    white at the centre, the pure hue across a wide middle ring, black at the
    rim */
-/* 2026-09-28 (owner): a small pure-WHITE core, so a pick near the centre
-   stays white instead of taking a tint at once */
-const W_CORE = 0.1, W_IN = 0.32, W_OUT = 0.72;
-function wheelL(r: number) { return r < W_CORE ? 1 : r < W_IN ? 1 - 0.5 * ((r - W_CORE) / (W_IN - W_CORE)) : r <= W_OUT ? 0.5 : 0.5 * (1 - (r - W_OUT) / (1 - W_OUT)); }
+/* 2026-09-28 (owner): a small pure-WHITE core, then ONE even ramp from
+   white through the pure hue (half way) to black at the rim — no wide band
+   of plain colour */
+const W_CORE = 0.1, W_MAX = 0.985;   /* a pick stops just inside the rim */
+function wheelL(r: number) { return r < W_CORE ? 1 : Math.max(0, 1 - (r - W_CORE) / (1 - W_CORE)); }
+/* a pointer anywhere → the point on the wheel it means: outside the rim it
+   stays ON the rim (the darkest), never follows the pointer out */
+function wheelAt(fx: number, fy: number) {
+  let dx = fx * 2 - 1, dy = fy * 2 - 1;
+  const r = Math.hypot(dx, dy);
+  if (r > W_MAX) { dx *= W_MAX / r; dy *= W_MAX / r; }
+  return { x: 0.5 + dx / 2, y: 0.5 + dy / 2, rgb: wheelRgb(Math.atan2(dy, dx), Math.min(r, W_MAX)) as number[] };
+}
 function hslRgb(h: number, s2: number, l: number): [number, number, number] {
   const k = (n: number) => (n + h / 30) % 12, a = s2 * Math.min(l, 1 - l);
   const f2 = (n: number) => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
@@ -406,7 +415,7 @@ function capPreset(wine: string): { x: number; y: number; rgb: number[] } | null
   const p2 = CAP_PRESET[wine];
   if (!p2) return null;
   if (p2 === "white") return { x: 0.5, y: 0.5, rgb: [255, 255, 255] };
-  const r = W_OUT + (1 - W_OUT) * (1 - p2.l / 0.5), a = p2.hue * Math.PI / 180;
+  const r = W_CORE + (1 - p2.l) * (1 - W_CORE), a = p2.hue * Math.PI / 180;
   const x = 0.5 + 0.5 * r * Math.cos(a), y = 0.5 + 0.5 * r * Math.sin(a);
   return { x, y, rgb: wheelRgb(a, r) };
 }
@@ -1705,16 +1714,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     };
     /* round 73 #4: a pick on the colour wheel, sampled the same way the
        real pointer handler samples it */
-    const pickWheel = (fx: number, fy: number) => {
-      let rgb = DEMO_WHEEL.rgb as number[];
-      const c = wheelCanvas.current;
-      if (c) {
-        const d = c.getContext("2d")!.getImageData(Math.round(fx * 273), Math.round(fy * 273), 1, 1).data;
-        if (d[3] > 40) rgb = [d[0], d[1], d[2]];
-      }
-      setWheel({ x: fx, y: fy, rgb });
-    };
-
+    const pickWheel = (fx: number, fy: number) => setWheel(wheelAt(fx, fy));
 
     /* anything the visitor jumped over is filled in at once, so each step
        stands on its own however they got there */
@@ -2574,14 +2574,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
   const wheelPick = (clientX: number, clientY: number, el: HTMLElement) => {
     const r = el.getBoundingClientRect();
-    const fx = Math.min(1, Math.max(0, (clientX - r.left) / r.width));
-    const fy = Math.min(1, Math.max(0, (clientY - r.top) / r.height));
-    let rgb = wheel.rgb;
-    if (wheelCanvas.current) {
-      const d = wheelCanvas.current.getContext("2d")!.getImageData(Math.round(fx * 273), Math.round(fy * 273), 1, 1).data;
-      if (d[3] > 40) rgb = [d[0], d[1], d[2]];
-    }
-    setWheel({ x: fx, y: fy, rgb });
+    setWheel(wheelAt((clientX - r.left) / r.width, (clientY - r.top) / r.height));
   };
   /* the capsule colour — the wheel's pick itself (the lightness bar went
      into the wheel, 2026-09-28) */

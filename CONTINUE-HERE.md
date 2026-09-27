@@ -293,6 +293,8 @@ download), 8K.WINE header, new home label. Live smoke label OK (Giorgi,
 t05, orphan region centred). Layout edits made on the LIVE admin live in
 the server's data/layout-edits — pull them before reading.
 
+**2026-09-28 (night 5):** colour wheel — the white core kept (r < 0.1), then ONE even lightness ramp to black at the rim (wheelL); a pick is computed, not sampled (wheelAt): a pointer outside the circle keeps the marker ON the rim (r 0.985, the darkest), it never follows the pointer out.
+
 **2026-09-28 (night 4) — bottle page, owner's six:** the silhouette is FIRST again (B_SIL 137.14–342.86, B_COLS the original five; the grid stays centred by B_DY); the capsule canvas is PAINTED over the glass (normal blend, under the multiplied line art) so a white capsule reads white; the wheel has a pure-white core (W_CORE 0.1, colour ramps 0.1–0.32, pure to 0.72, black at the rim); Transparent is the default glass and shows the cell's #E6E6E6; the grid (with its SIDE lines now) lies on top at z 3; a bottle-type change keeps the last measured bottle until the new drawing is loaded and measured, then outline, glass, capsule and label change together (no fade).
 
 **2026-09-28 (night 3):** WELCOME BACK never asked because every visit re-saved the order with a fresh time — now the time moves only when the order's content CHANGES, and nothing is saved while an order is being restored (`restoringRef`). Style menu: at most 3 artists — the others grey out (not-allowed) and a note "Choose up to 3 artists · n / 3" sits under the first row. Footer TEMP switch "no limits" = an ADMIN login in this browser (asks name/password; off logs out) — a plain switch would let any visitor bypass the guard.
