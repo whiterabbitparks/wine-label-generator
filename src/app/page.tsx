@@ -1,19 +1,20 @@
 "use client";
 
 /* NEW UI v3 — the owner's 24-point precision round (2026-09-05).
-   Principles: artboards are the visuals; chrome (header/footer/progress)
-   is a STATIC layer rebuilt 1:1 from extracted geometry USING THE REAL
-   Helvetica Neue World fonts (self-hosted, found on the owner's system);
-   pages slide only in the content band. Every coordinate below was
-   extracted from the SVGs (circles, rects, crosses, lines) — nothing is
-   guessed. White patches cover baked mock content that live data
-   replaces (E.g. texts, Select+magnifier boxes, corner crosses, dots). */
+   Principles: the owner's artboards set the geometry; chrome
+   (header/footer/progress) is a STATIC layer rebuilt 1:1 from extracted
+   geometry USING THE REAL Helvetica Neue World fonts (self-hosted, found
+   on the owner's system); pages slide only in the content band. Every
+   coordinate below was measured off the artboards — nothing is guessed.
+   2026-09-28 (owner: "clean the site of artefacts we don't use"): the
+   artboards themselves are no longer laid under the pages — every page
+   is drawn live, with no white patches over old mock content. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { randomDetails } from "./demo-fill";
 import { IDEAS } from "./ideas";
 import { GUIDE, type GuideStep } from "./guide";
-import { UI_GE, SVG_GE, translateSvg } from "./newui-i18n";
+import { UI_GE, SVG_GE } from "./newui-i18n";
 
 const W = 1440, H = 823;
 /* ROUND 106 (owner's New_Progressbar_Tutorial_Header_Footer artboards,
@@ -173,7 +174,7 @@ const CIRCLE_X = STEPS.map((s2) => s2.x);
 /* ROUND 63 (owner): the red line stops HALFWAY to the next station while
    its details are being filled in, and lands ON the station when that
    step's result exists. On checkout it runs up to the red button. */
-/* the boards whose baked title is covered and redrawn bigger (round 63) */
+/* the pages whose title is drawn big (round 63) */
 const PAGE_TITLE: Partial<Record<PageKey, string>> = {
   options: "FRONT LABEL OPTIONS", backdesign: "BACK LABEL DESIGN",
   bottle: "BOTTLE", assets: "MARKETING ASSETS", checkout: "FINAL PACK",
@@ -272,19 +273,6 @@ const sliceDefs = (p: PageKey): Slice[] => {
   return [{ y1: b1, delay: STRIP_DELAYS[0] }, { y0: b1, y1: b2, delay: STRIP_DELAYS[1] }, { y0: b2, delay: STRIP_DELAYS[2] }];
 };
 const maxSliceDelay = (p: PageKey) => Math.max(...sliceDefs(p).map((s) => s.delay));
-
-/* Illustrator exports every board with the same global class names (.st0…)
-   and ids (clippath…) whose meanings DIFFER per file — with two boards
-   inline during a slide they fought each other (white headings, wrong
-   clips mid-transition). Namespace both per page. */
-function namespaceSvg(t: string, key: string) {
-  return t
-    .replace(/\.st(\d+)/g, `.${key}-st$1`)
-    .replace(/class="([^"]*)"/g, (_, cls: string) => `class="${cls.split(/\s+/).map((c) => (/^st\d+$/.test(c) ? `${key}-${c}` : c)).join(" ")}"`)
-    .replace(/id="([^"]*)"/g, (_, id: string) => `id="${key}--${id}"`)
-    .replace(/url\(#([^)]+)\)/g, (_, id: string) => `url(#${key}--${id})`)
-    .replace(/href="#([^"]+)"/g, (_, id: string) => `href="#${key}--${id}"`);
-}
 
 /* THE IDEAS behind "Give me an idea" live in ./ideas (the admin's layout
    batch paints from them too) */
@@ -509,7 +497,7 @@ export default function NewUI() {
     const id = setTimeout(() => setIntro(false), SLIDE_MS + maxSliceDelay("welcome") + 60);
     return () => clearTimeout(id);
   }, []);
-  /* ENG/GEO (owner 2026-09-07): translates overlays AND baked board text */
+  /* ENG/GEO (owner 2026-09-07): every live text goes through t() */
   const [lang, setLang] = useState<"en" | "ge">("en");
   useEffect(() => { try { const l = localStorage.getItem("nui-lang"); if (l === "ge") setLang("ge"); } catch { } }, []);
   const pickLang = (l: "en" | "ge") => { setLang(l); try { localStorage.setItem("nui-lang", l); } catch { } };
@@ -1266,42 +1254,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
      but the bar still said Front Label Details"): the header's links, like
      the browser's Back (round 108 #21), stop the story before they go */
   const openArtists = () => { if (tutRef.current >= 0) stopTutRef.current(); if (page !== "artists" && page !== "artist") artistsFrom.current = pageNow.current; go("artists"); };
-  const [boards, setBoards] = useState<Record<string, string>>({});
-  const [boardsGe, setBoardsGe] = useState<Record<string, string>>({});
-  useEffect(() => {
-    /* inline the artboards: SVG-in-<img> cannot use page fonts (the
-       owner's Safari font complaint) — inline SVG can */
-    /* 2026-09-23 (owner: "a 404 flashes before the loader glass"): the
-       "blank" step has no artboard — its fetch came back as the site's 404
-       PAGE and that HTML was inlined as the board under the confirm popup.
-       It is not fetched, and a board that fails to load is never inlined. */
-    ORDER.filter((p) => p !== "artists" && p !== "artist" && p !== "blank" && p !== "more").forEach((p) => {
-      fetch(`/newui/${p}.svg`).then((r) => (r.ok ? r.text() : Promise.reject(new Error(`${p}.svg ${r.status}`)))).then((t) =>
-        {
-          const processed = namespaceSvg(t, p).replace(/<\?xml[^>]*\?>/, "").replace(/<svg /, '<svg preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%" ')
-            /* Mtavruli titles: HNW lacks Georgian capitals — Apple's own
-               Helvetica Neue supplies them seamlessly (round 24 #1) */
-            .replace(/'Helvetica Neue World'/g, "'Helvetica Neue World','Helvetica Neue'")
-            /* ROUND 47 (owner): the details page is titled like the back one */
-            .replace(/>FRONT LABEL</, ">FRONT LABEL DETAILS<")
-            /* ROUND 48 (owner: Wine Color column + No Capsule): the bottle
-               board's THREE baked column dividers and their six corner
-               crosses are stripped — the options zone is redrawn live as
-               FIVE columns (the content itself is white-patched) */
-            .replace(p === "bottle" ? /<line[^>]*x1="(?:582\.8[56]|822\.8[56]|1062\.8[56]|591\.1|574\.62|831\.1|814\.62|1071\.09|1054\.61)"[^>]*\/>/g : /$^/g, "")
-            /* ROUND 49 #3 (owner): "all" leaves the compliance subtitle in
-               both languages (the GEO key in SVG_GE matches this new text) */
-            .replace("incorporate all required regulatory information", "incorporate required regulatory information")
-            /* 2026-09-23 (owner's Homepage_Visual): the home page's
-               headline and subline are drawn live now, at the new size
-               and places — the board's baked copies go */
-            .replace(p === "welcome" ? /<text class="welcome-st[01]"[\s\S]*?<\/text>/g : /$^/g, "");
-          setBoards((m) => ({ ...m, [p]: processed }));
-          setBoardsGe((m) => ({ ...m, [p]: translateSvg(processed) }));
-        }
-      ).catch(() => {});
-    });
-  }, []);
   const wheelCanvas = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -2339,7 +2291,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   /* helpers */
   const px = (x: number, y: number, w?: number, h?: number): React.CSSProperties => ({ position: "absolute", left: x, top: y, width: w, height: h });
   const ghost: React.CSSProperties = { background: "transparent", border: "none", cursor: "pointer", padding: 0 };
-  const patch = (x: number, y: number, w: number, h: number, key?: string) => <div key={key} style={{ ...px(x, y, w, h), background: "#fff" }} />;
   /* round 41 #4/#5/#11: grey placeholder — clickable, takes you where the
      missing thing is created; message in the 12px subtitle size */
   const notMade = (x: number, y: number, w: number, h: number, kind: "front" | "back" = "front", key?: string, msg = true) => (
@@ -2759,7 +2710,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       case "welcome":
         /* ROUND 63: the start action is the red round button on the bar */
         return (<>
-          {(!layer || layer === "base") && patch(118, 658, 70, 54, "welarrow")}
           {homeLayers(layer)}
         </>);
 
@@ -2876,8 +2826,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       case "vision": {
         /* ROUND 63 (owner's "Your Vision@3x" mock, measured off the 3x
            artboard): YOUR VISION and FRONT LABEL DETAILS share one page,
-           split by a dashed column rule at x788. Everything is drawn live
-           — the old baked board is covered wholesale. */
+           split by a dashed column rule at x788. Everything is drawn live. */
         const BOX = { x: 136, y: 342, w: 551, h: 207 };
         /* ROUND 111 (owner): the page has ONE bottom line — the foot of the
            dashed column rule (133 + 522). The details list's last rule, the
@@ -2885,7 +2834,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         const VIS_FOOT = 655;
         const words = vision.trim() ? vision.trim().split(/\s+/).length : 0;
         return (<>
-          {patch(0, HEADER_H, W, FOOTER_Y - HEADER_H, "viswipe")}
           {/* ── left: the vision ── */}
           <span style={{ ...px(137.14, baseTop(149.08, 24), 600, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t("YOUR VISION")}</span>
           <span style={{ ...px(137.14, baseTop(183, 14), 600, 40), font: `italic 14px ${HNW}`, lineHeight: "18px", color: "#111" }}>
@@ -3048,7 +2996,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         const fill = Math.max(fillMax.current, Math.min(0.97, Math.max(0.06, genProgress + creep)));
         fillMax.current = fill;
         return (<>
-          {patch(400, 90, 640, 500, "lcover")}
           {/* glass optically centred in the window (round 7 #10) */}
           <div style={{ ...px(601, 283.5, 238, 320) }}>
             <svg viewBox="0 0 595.276 609.089" width="238" aria-label="Designing your label">
@@ -3093,12 +3040,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
            A variations press makes ONE new label of that style; switcher
            dots appear UNDER the label, centered to it — one dot per
            version (original + each variation). */
-        const covers: React.ReactNode[] = [];
-        covers.push(patch(255, 503, 930, 24, "dots"));
-        covers.push(patch(135, 546, 1172, 40, "selrow"));
-        covers.push(patch(135, 578, 1172, 44, "selbars"));
-        for (const fx0 of [137.1, 480, 548.5, 891.4, 960, 1302.9])
-          for (const fy0 of [240, 468.6]) covers.push(patch(fx0 - 11, fy0 - 11, 22, 22, `c${fx0}-${fy0}`));
         /* round 50 #1: portrait labels stop at 519 so the dot rows keep
            air above the buttons */
         const CUBE = 34.3, AREA_TOP = 290, AREA_BOT = 540;
@@ -3218,8 +3159,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           leaveFlight.current.options = d0 ? { src: d0.preview || d0.dream, x: bx.lx, y: bx.ly, w: bx.lw, h: bx.lh } : null;
         }
         return (<>
-          {covers}
-          {patch(135, 164, 1170, 26, "stynames")}
           {dreams.length === 0 && OPT_FRAMES.map((_, fi) => styleHead([], fi))}
           {setSlide && sets[setSlide.from] && setLayer(setSlide.from, "out", setSlide.dir)}
           {dreams.length > 0 && setLayer(setIdx, setSlide ? "in" : "still", setSlide?.dir || 1)}
@@ -3284,7 +3223,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4,
         });
         return (<>
-          {patch(0, HEADER_H, W, FOOTER_Y - HEADER_H, "bdwipe")}
           <span style={{ ...px(139, baseTop(149.08, 24), 600, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t("BACK LABEL DETAILS")}</span>
           {/* ── left: the wine description ── */}
           <div style={{ ...px(BOX.x, BOX.y, BOX.w, BOX.h), border: "1px solid #111", borderTopWidth: 2, borderLeftWidth: 2, boxSizing: "border-box", pointerEvents: "none" }} />
@@ -3483,10 +3421,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           </div>
         );
         return (<>
-          {/* cover baked mock + its corner crosses + Edit/magnifier row */}
-          {patch(BD_AREA.x - 12, BD_AREA.y - 12, BD_AREA.w + 24, BD_AREA.h + 24, "bdmock")}
-          {patch(BD_AREA.x - 12, 150, BD_AREA.w + 24, 480, "bdmock2")}
-          {patch(546, 546, 350, 40, "bdrow")}
+          {/* the empty page: a "not made yet" box and grey furniture */}
           {!backPng && (<>
             {notMade(BD_AREA.x, BD_AREA.y + BDY, BD_AREA.w, BD_AREA.h, "back", "nmbd")}
             {dashedBox(BD_AREA.x - 10, BD_AREA.y + BDY - 10, BD_AREA.w + 20, BD_AREA.h + 20, "bdDempty", true, "#C9C7BF")}
@@ -3570,13 +3505,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             .concat(CROWN_TYPES.includes(bottle.type) ? ["Crown Cap"] : [])
             .concat(["No Capsule"]);
         return (<>
-          {/* wipe the baked column content AND the baked frame: the board
-              draws its own dashed rules and pluses, which sat a pixel off
-              ours and doubled them (round 110). Ours are the only ones now. */}
-          {/* 2026-09-28: the board's whole old frame zone is cleared in one
-              piece (below the title) — every column, the frame and its
-              pluses are drawn live, one grid height lower */}
-          {patch(120, 152, 1210, 452, "bzone")}
+          {/* every column, the frame and its pluses are drawn live */}
           {dashGrid(137.14, 171.71 + B_DY, 1302.86 - 137.14, 583.41 - 171.71, B_COLS, "bgrid")}
           {colHead(0, "Wine Color")}
           {["Red", "White", "Amber", "Rosé"].map((c, i) => optRow(0, i, c, wineColor === c, () => setWineColor(c)))}
@@ -3824,7 +3753,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           ? Array.from({ length: 4 }, (_, k) => ({ x: 757.5, y: Y0 + k * 70.83, s: 62 }))
           : Array.from({ length: 4 }, (_, k) => ({ x: 754 + (k % 2) * 152, y: Y0 + Math.floor(k / 2) * 152, s: 122 }));
         return (<>
-          {patch(0, 160, W, 500, "aswipe")}
           {custom
             /* 2026-09-25 (owner): the REAL sizes the files come in — the
                promised 700x2500 / 2500x2500 were never delivered */
@@ -3986,7 +3914,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
            between the last dashed rule and the total */
         const bigTotal = (v: string) => (
           <span key="bigtotal">
-            {patch(LBL_X - 2, TOT_B - 20, PRICE_R - LBL_X + 4, 28, "totwipe")}
             {/* round 108 #15 (owner): the total's baseline lands on the foot
                 of the page's dashed rule (685.71) */}
             <span style={{ ...px(LBL_X, baseTop(TOT_FOOT, 30), 240, 34), font: `700 30px ${HNW}`, lineHeight: "30px" }}>{t("Total:")}</span>
@@ -3999,15 +3926,16 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             style={{ ...px(LBL_X, baseTop(baseline, 15), PRICE_R - LBL_X - 48, 18), ...ghost, textAlign: "left", textTransform: "none", font: `${lang === "ge" ? 14 : 15}px/15px ${HNW}`, color: "#111", display: "block", whiteSpace: "nowrap" }}>{text}</button>
         );
         return (<>
+          {/* the dashed rule between the order and the pack, x720 — drawn live
+              now that the board is gone (2026-09-28) */}
+          {dashRule(720, RULE_TOP, RULE_FOOT - RULE_TOP, true, "cdiv")}
           {/* ── the right-hand column: what the pack contains ───────────── */}
-          {/* ROUND 88 #1 (owner): the baked tree is wiped and REDRAWN LIVE —
+          {/* ROUND 88 #1 (owner): the tree is drawn LIVE —
               it reveals from the folder mark downward (trunk, bar, branches,
               icons, names, arrows, then the files line by line) and lists
               the REAL files of the ZIP under the wine's name (Wine_Name
               until one is typed). Unselected rows drop their branch; an
               own-label order has no tree (round 50). */}
-          {patch(COL_R - 6, 542, COL_W + 6, 82, "parawipe")}
-          {patch(760, 92, 600, 450, "notree")}
           {!customLabel && (() => {
             const base = (f.wine || "").trim().replace(/[^\w]+/g, "_").replace(/^_+|_+$/g, "") || "Wine_Name";
             const slug = (f.wine || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "wine-name";
@@ -4078,28 +4006,19 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             );
           })()}
           {/* an own-label (assets-only) order buys no labels: no tree, no caption (round 50) */}
-          {customLabel && patch(1225, 108, 120, 40, "nofpcap")}
           {/* ROUND 85 #3 (owner): no "Proceed to payment" bar, no "Download"
               bar — the red round button does both: a card until the payment
-              lands, a download tray after. Both baked bars are wiped. */}
-          {patch(COL_R - 2, BTN.y - 2, COL_W + 4, BTN.h + 4, "dlwipe")}
-          {patch(COL_L - 2, BTN.y - 2, COL_W + 4, BTN.h + 4, "paywipe")}
-          {/* 2026-09-23 (owner): no "After payment…" paragraph any more (the
-              baked one stays wiped) */}
+              lands, a download tray after. */}
+          {/* 2026-09-23 (owner): no "After payment…" paragraph any more */}
           {/* ROUND 93 #11 (owner): what is already made reads crisp, what is
               not yet made reads pale — the rows here and the tree's branches */}
-          {/* 2026-09-25 (owner): the PRICE LIST is back, as it was — only the
-              baked slide, chevrons and T&C row above it are wiped (the
-              "I agree" glass stays on the right) */}
-          {/* 2026-09-27: the baked rows go too — the three are drawn live */}
-          {patch(COL_L - 14, RULE_TOP + 8, 700 - COL_L + 14 + 10, 620 - RULE_TOP - 8, "leftwipe")}
+          {/* 2026-09-25 (owner): the PRICE LIST is back, as it was — its
+              three rows are drawn live */}
           {!customLabel && PACK.map((it, i) => (!madeRow[i] && (
             <div key={"pale" + i} style={{ ...px(COL_L, ROWB[i] - 20, COL_W, 30), background: "rgba(255,255,255,0.62)", pointerEvents: "none", zIndex: 2 }} />
           )))}
           {customLabel ? (<>
             {/* own-label order: only Marketing Assets and its price */}
-            {patch(LBL_X - 2, 486, 380, 134, "custrows")}
-            {patch(PRICE_R - 160, 486, 160, 134, "custprices")}
             {dotBtn(RING_X, ringY(ROWB[0]), !!packSel[0], () => setPackSel((ps) => ps.map((v, k) => (k === 0 ? !v : v))), "pkc", { ring: true, r: 9, cover: 24 })}
             {rowLabel(ROWB[0], t("Marketing Assets"), () => setPackSel((ps) => ps.map((v, k) => (k === 0 ? !v : v))), "clm")}
             {dashRule(COL_L, ROWB[0] + 12.1, LIST_R - COL_L, false, "cdr")}
@@ -4164,7 +4083,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               );
             })}
           </div>
-          {/* the chevrons, live now (the baked ones went with the left column) */}
+          {/* the chevrons */}
           {/* each chevron's TIP on its edge (the tip sits 3.33 inside the 12 px mark) */}
           {([["prev slide", ARR_L - 3.33, "13,3 5,11 13,19"], ["next slide", ARR_R - 12 + 3.33, "5,3 13,11 5,19"]] as const).map(([lab, x, pts]) => (
             <button key={lab} aria-label={lab} onClick={() => setCarIdx((c) => (c + (lab === "next slide" ? 1 : slides.length - 1)) % slides.length)}
@@ -4211,8 +4130,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const bandBottom = BAND_BOTTOM[page];
   /* ROUND 108 #20 (owner): NOTHING ever slides over the header, the rules
      or the bar — so every transition, the welcome page's included, moves
-     inside the content band only (it used to slide the whole 1440x823,
-     which dragged the boards' own baked chrome across ours). */
+     inside the content band only. */
   const fullSlide = false;
 
   return (
@@ -4276,11 +4194,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           footer are told apart by ONE 1px black rule each, drawn out here
           at window width so they stay exactly one device pixel at any
           page scale (the same weight as the folder mark's outline). */}
-      <div style={{ position: "absolute", left: 0, top: 0, width: "100%", height: FOOT_RULE_Y * scale, background: "#fff" }} />
       {/* the two rules run the whole width of the window. They are drawn
           in a layer carrying the PAGE'S OWN transform, so the stretch in
           the margins rasterises exactly like the stretch across the page
-          (the page redraws them over its boards, which cover this one) */}
+          (the page redraws them on top of its own layers) */}
       {(["left", "right"] as const).map((side) => (
         /* ROUND 113 #1 (owner): the gallery's veil goes over EVERYTHING,
            and these two rules run past the page into the window margins,
@@ -4307,31 +4224,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             const pageTop = fullSlide ? 0 : -BAND_TOP;
             const pageSpace = (p: PageKey, inSlide: boolean, layer?: HomeLayer) => layer && layer !== "base" ? <>{renderOverlay(p, inSlide, layer)}</> : (
               <>
-                <div style={{ position: "absolute", inset: 0, userSelect: "none" }} dangerouslySetInnerHTML={{ __html: (lang === "ge" ? boardsGe[p] : boards[p]) || boards[p] || "" }} />
-                {/* ROUND 63: the boards still carry the OLD baked progress bar
-                    (line at 685, words at 720) — wipe that strip, the new bar
-                    rides the band edge. The Final-Pack board has no bar, only
-                    a baked back arrow to hide. */}
-                {p === "checkout" ? null : patch(0, 660, W, FOOTER_Y - 660, "barwipe")}
-                {/* ROUND 106: the boards also bake the OLD black header
-                    band; on a full-page slide it would show above the
-                    content, so it is wiped the same way */}
-                {/* round 108 #20: a hair wider than the baked band, so no
-                    sliver of it survives at a slice's clipped edge */}
-                {fullSlide ? patch(-2, -2, W + 4, HEADER_H + 2, "hdrwipe") : null}
-                {/* round 108 #15: checkout also bakes the old, bigger folder
-                    mark — its edges stuck out around the live one */}
-                {p === "checkout" ? patch(1210, HEADER_H, 128, 54, "fldwipe") : null}
-                {/* round 108 #17 (owner: "the red circle is bigger above the
-                    line than below"): the board bakes its own r34 button at
-                    1268.86,719.89 — the live r27 one sat inside it, so the
-                    baked ring showed above the rule (below it the white
-                    footer hid it). Wiped. */}
-                {p === "checkout" ? patch(1262, 700, 82, FOOTER_Y - 700, "btnwipe") : null}
-                {/* ROUND 63 (owner): page titles grew with the merged pages —
-                    the baked 19px title is covered and redrawn live at 24 */}
+                {/* 2026-09-28 (owner: "why keep old things behind white? remove
+                    what we don't use"): the original artboards are no longer
+                    laid under the pages — every page is drawn live, so their
+                    copies (and the white patches that hid them) are gone */}
                 {PAGE_TITLE[p] && (<>
-                  {patch(130, 126, 620, 32, "ttl" + p)}
                   <span style={{ ...px(137.14, baseTop(149.08, 24), 620, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t(PAGE_TITLE[p]!)}</span>
                 </>)}
                 {renderOverlay(p, inSlide, layer)}
@@ -4878,11 +4775,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             <span style={{ ...px(0, 700, W, 16), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block", zIndex: 7, position: "absolute" }}>{warn}</span>
           )}
 
-          {/* STATIC footer — ROUND 63: empty; the progress bar (drawn after
-              it, so it paints on top) is the only thing down here.
-              ROUND 106: white, and it covers the boards' own baked black
-              footer; its rule is the one drawn at window width behind. */}
-          <div style={{ ...px(0, FOOT_RULE_Y, W, PAGE_H - FOOT_RULE_Y), background: "#fff" }} />
+          {/* STATIC footer — ROUND 63: empty; the progress bar is the only
+              thing down here, its rule the one drawn at window width. */}
 
           {busyMsg && <div style={{ ...px(1090, 78, 320, 20), font: `13px ${HNW}`, color: "#8a887e", textAlign: "right" }}>{busyMsg}</div>}
 

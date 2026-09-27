@@ -1,7 +1,6 @@
-/* NEW UI GEORGIAN (owner 2026-09-07): ENG/GEO switch translates BOTH the
-   HTML overlays (UI_GE) and the text baked inside the artboard SVGs
-   (SVG_GE — the boards carry live <tspan> text, so strings are swapped in
-   place; positions, sizes and weights stay exactly as designed). The
+/* NEW UI GEORGIAN (owner 2026-09-07): the ENG/GEO switch. UI_GE and SVG_GE
+   are both simply translation tables now (2026-09-28: the artboards are
+   no longer laid under the pages; SVG_GE's strings serve t() as before). The
    owner's Helvetica Neue World files include the full Mkhedruli set, so
    Georgian renders in the same real font. NOTE: Georgian script is
    unicameral — "all caps" rows simply render in Mkhedruli at the same
@@ -468,14 +467,3 @@ export const UI_GE: Record<string, string> = {
   /* placeholders */
 };
 
-/* swap baked SVG strings in place, preserving surrounding whitespace */
-export function translateSvg(svg: string): string {
-  let out = svg;
-  for (const [en, ge] of Object.entries(SVG_GE)) {
-    const escaped = en.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    /* function replacer: a "$" inside the translation (prices!) must never
-       be read as a backreference */
-    out = out.replace(new RegExp(`>(\\s*)${escaped}(\\s*)<`, "g"), (_m, a, b) => `>${a}${ge}${b}<`);
-  }
-  return out;
-}
