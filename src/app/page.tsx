@@ -4976,7 +4976,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               const r = await fetch("/api/admin/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: limUser, password: limPass }) }).catch(() => null);
               if (r?.ok) { setLimitLogin(false); setLimPass(""); refreshVis(); } else setLimErr("wrong");
             }}
-              style={{ ...px(W / 2 - 220, 250, 440, 220), background: "#fff", border: "1px solid #111", zIndex: 31, boxSizing: "border-box", margin: 0 }}>
+              style={{ ...px(W / 2 - 220, 240, 440, 250), background: "#fff", border: "1px solid #111", zIndex: 31, boxSizing: "border-box", margin: 0 }}>
               <button type="button" aria-label="close" onClick={() => setLimitLogin(false)}
                 style={{ position: "absolute", right: 6, top: 4, ...ghost, font: `15px ${HNW}`, color: "#111", width: 24, height: 24 }}>✕</button>
               <span style={{ position: "absolute", left: 28, top: 26, font: `700 18px ${HNW}`, lineHeight: "18px" }}>No limits (admin)</span>
@@ -4986,9 +4986,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               <input value={limPass} onChange={(e) => setLimPass(e.target.value)} placeholder="password" type="password" {...noFill("limpass")}
                 style={{ ...px(28, 112, 384, 24), ...inputStyle, fontSize: 14 }} />
               {rowLine(28, 137, 384, "limp")}
-              {limErr && <span style={{ position: "absolute", left: 28, top: 146, font: `12px ${HNW}`, color: "#BA141A" }}>Wrong name or password.</span>}
+              {/* the message has its OWN row (150–170), clear of the button (from 191.7) */}
+              {limErr && <span style={{ position: "absolute", left: 28, top: 152, height: 16, font: `12px/16px ${HNW}`, color: "#BA141A", whiteSpace: "nowrap" }}>Wrong name or password.</span>}
               <button type="submit"
-                style={{ ...px(28, 220 - 34.3 - 24, 384, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "1px solid #111", boxSizing: "border-box", paddingBottom: 4 }}>Switch limits off</button>
+                style={{ ...px(28, 250 - 34.3 - 24, 384, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "1px solid #111", boxSizing: "border-box", paddingBottom: 4 }}>Switch limits off</button>
             </form>
           </>)}
           {/* 2026-09-28 (owner): WELCOME BACK — continue the unfinished order
