@@ -42,7 +42,10 @@ export async function POST(req: Request) {
       : `Hello!\n\nOpen this link to confirm your e-mail and return to your labels — you can make new versions there:\n\n${link}\n\nThe link works for 48 hours. If you didn't ask for this, just delete this e-mail.\n\n8K Labels`,
   });
   if (out.sent) return NextResponse.json({ sent: true });
-  /* no e-mail service yet: the admin sees the link to test with; a visitor is told */
+  console.error(`[mail] not sent to ${email}: ${out.error}`);
+  /* not sent: the admin sees the link to test with; a visitor is told —
+     and a letter that never left does not count toward the day's three */
   if (await requestIsAuthenticated()) return NextResponse.json({ sent: false, link, note: out.error });
+  await db.collection("verifications").deleteOne({ _id: token } as never).catch(() => { });
   return NextResponse.json({ error: "mail-down" }, { status: 503 });
 }

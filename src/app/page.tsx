@@ -560,7 +560,11 @@ export default function NewUI() {
      after the customer reviews everything that shapes the result */
   const [confirmModal, setConfirmModal] = useState<"" | "labels" | "assets">("");
   /* round 93 #15/#16: the gallery — big picture, arrows, ✕, Save inside */
-  const [gallery, setGallery] = useState<{ items: string[]; index: number; save?: () => void; saved?: boolean } | null>(null);
+  /* `labels` (2026-09-28, owner: "gallery mode should have arrows to switch
+     between label versions"): opened from the labels page the gallery holds
+     EVERY label of every set; each item knows its set and column, and Save
+     saves the one on show */
+  const [gallery, setGallery] = useState<{ items: string[]; index: number; save?: () => void; saved?: boolean; labels?: { s: number; f: number }[] } | null>(null);
   /* round 93 #8: "every field is empty — really?" before moving on */
   const [emptyWarn, setEmptyWarn] = useState<"" | "front" | "back">("");
   /* round 94 #2: the page the confirm popup stands in for — it slides out
@@ -2869,7 +2873,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               {dv ? (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img src={dv.preview || dv.dream} alt={orig.style} title={t("Show this one big")}
-                  onClick={live ? () => setGallery({ items: [ds[fi], ...(si === setIdx ? styleVars[fi] || [] : [])].filter(Boolean).map((d) => (d as Dream).preview || (d as Dream).dream), index: si === setIdx ? styleView[fi] || 0 : 0, save: () => saveFront(fi), saved: on }) : undefined}
+                  onClick={live ? () => {
+                    const all = sets.flatMap((st, s2) => st.map((d, f2) => ({ d, s: s2, f: f2 }))).filter((x) => x.d);
+                    setGallery({ items: all.map((x) => x.d.preview || x.d.dream), index: Math.max(0, all.findIndex((x) => x.s === si && x.f === fi)), labels: all.map(({ s: s2, f: f2 }) => ({ s: s2, f: f2 })) });
+                  } : undefined}
                   style={{ ...px(lx, ly, lw, lh), cursor: "pointer", objectFit: "fill", pointerEvents: live ? "auto" : "none" }} />
               ) : (
                 <div style={{ ...px(lx, ly, lw, lh), display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -4575,7 +4582,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                and rides above them (z 80+ clears the bar's 45, the
                header's 44 and the walkthrough pointer's 70). */
             const GTOP = 0, GBOT = PAGE_H;
-            const res = gallery.save ? 78 : many ? 34 : 0;    /* room kept for the furniture */
+            const lab = gallery.labels?.[gallery.index];
+            const labSaved = !!lab && selected === lab.f && selSet === lab.s;
+            const res = gallery.save || gallery.labels ? 78 : many ? 34 : 0;    /* room kept for the furniture */
             /* the same air top and bottom, so the picture sits on the
                page's own middle whatever furniture is under it */
             const pad = Math.max(56, res + 20);
@@ -4607,6 +4616,18 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   <line x1="23" y1="11" x2="11" y2="23" stroke="#fff" strokeWidth="1.92" />
                 </svg>
               </button>
+              {lab && (
+                <button onClick={() => {
+                  /* save (or un-save) the label on show; the page turns to its
+                     set, and the label flies from here into the folder */
+                  const ar = (Number(f.width) || 110) / (Number(f.height) || 80);
+                  const fw = Math.min(1020, boxH * ar), fh = fw / ar;
+                  setSelected(labSaved ? -1 : lab.f); setSelSet(lab.s); if (!labSaved) setSetIdx(lab.s); setWarn("");
+                  flyToFolder([{ src, x: 210 + (1020 - fw) / 2, y: boxY + (boxH - fh) / 2, w: fw, h: fh }], labSaved);
+                }}
+                  style={{ ...px(W / 2 - 120, GBOT - 48, 240, 34.3), zIndex: 82, cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: labSaved ? "#fff" : "#111", color: labSaved ? "#111" : "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
+                  {labSaved ? t("Saved") : t("Save")}</button>
+              )}
               {gallery.save && (
                 <button onClick={() => { gallery.save?.(); setGallery((g) => g ? { ...g, saved: !g.saved } : g); }}
                   style={{ ...px(W / 2 - 120, GBOT - 48, 240, 34.3), zIndex: 82, cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: gallery.saved ? "#fff" : "#111", color: gallery.saved ? "#111" : "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
