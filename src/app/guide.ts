@@ -139,9 +139,7 @@ export const GUIDE: GuideStep[] = [
     ge: "მზადდება ბოთლის ორი ფოტო და ხუთი სარეკლამო სურათი — ყველაფერს დაახლოებით ორი წუთი დასჭირდება.",
     enPage: "Two bottle photos, five marketing images and your product's web page are being made — about two minutes in all.",
     gePage: "მზადდება ბოთლის ორი ფოტო, ხუთი სარეკლამო სურათი და პროდუქტის ვებ-გვერდი — ყველაფერს დაახლოებით ორი წუთი დასჭირდება.", done: "assetsReady", wait: true },
-  { page: "assets", at: { x: 583, y: 657.6, w: 274, h: 34.3 }, side: "right",
-    en: "Save them to your folder.",
-    ge: "შეინახე ისინი შენს საქაღალდეში.", done: "assetsSaved", press: PRESS_SAVE },
+  /* 2026-09-28 (owner): no Save note — the red button saves them */
   { page: "assets", at: RED, side: "above",
     en: "Last step — press the red button for your Final Pack.",
     ge: "ბოლო ნაბიჯი — დააჭირე წითელ ღილაკს საბოლოო პაკეტისთვის.", done: "page:checkout", press: PRESS_RED },

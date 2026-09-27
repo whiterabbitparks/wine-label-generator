@@ -366,7 +366,6 @@ const TAP = {
   bdSave: [719.3, 674.8],           /* round 94 #7: the back label's Save */
   descBox: [250, 265], barcode: [360, 468], qrBtn: [874.5, 467],
   market: [873.5, 670], eu: [873, 330], us: [873, 355],   /* the dropdown's rows are 25 apart */
-  assetsSave: [720, 674.75],        /* the assets page's Save, on the centre line */
   backFirst: [1050, 212],            /* round 73 #1: up to the details */
   /* round 86: the variation plays on the PUNK column (KORRA's yellow →
      blue re-layout); column 3's centre is 960 + 342.9/2 */
@@ -536,6 +535,11 @@ export default function NewUI() {
   };
   const [backSaved, setBackSaved] = useState(false);
   const [assetsSaved, setAssetsSaved] = useState(false);
+  /* 2026-09-28 (owner): the marketing page has no Save — pressing the red
+     button there SAVES: the images fly into the folder, and once they have
+     landed the Final Pack slides in. (The start boxes come from the page.) */
+  const assetsFlight = useRef<{ src: string; x: number; y: number; w: number; h: number }[]>([]);
+  const leavingAssets = useRef(false);
   const [treeN, setTreeN] = useState(0);        /* round 88 #1: replays the tree reveal */
   /* round 108 #19 (owner): the reveal plays when the page OPENS; a pack
      item switched on or off afterwards only fades in or out */
@@ -1734,16 +1738,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           if (!(await hold(600))) return;
           setTutLanding(true);
           setAssetsStage("");
-          /* 2026-09-23 (owner: "add the saving of those assets, and let the
-             step end with it"): the pointer presses the page's own Save,
-             so the very same flight into the folder plays */
-          if (!(await hold(1100))) return;
-          if (!(await tap(TAP.assetsSave, 320, 520, () => {
-            tutClick.current = true;
-            (document.querySelector("[data-assets-save]") as HTMLButtonElement | null)?.click();
-            tutClick.current = false;
-          }))) return;
-          if (!(await hold(1800))) return;
+          /* 2026-09-28 (owner): no Save on this page any more — the red
+             button saves the images as it leaves for the Final Pack */
           break;
         }
         default:
@@ -1883,6 +1879,18 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const unsave = selected === fi && selSet === setIdx;
     setSelected(unsave ? -1 : fi); setSelSet(setIdx); setWarn("");
     if (dv) flyToFolder([{ src: dv.preview || dv.dream, x: g.lx, y: g.ly, w: g.lw, h: g.lh }], unsave);
+  };
+  /* …and a Final Pack reached any other way (the bar) counts them saved too */
+  useEffect(() => { if (page === "checkout" && assets.front && !assetsStage) setAssetsSaved(true); }, [page, assets.front, assetsStage]);
+  const saveAssetsThen = (next: () => void) => {
+    if (leavingAssets.current) return;
+    const items = assetsFlight.current.filter((it) => it.src);
+    if (assetsStage || !assets.front || !items.length || assetsSaved) { next(); return; }
+    leavingAssets.current = true;
+    setAssetsSaved(true);
+    flyToFolder(items);
+    /* the last image lands ~760 ms after it sets off (150 ms apart) */
+    setTimeout(() => { leavingAssets.current = false; next(); }, (items.length - 1) * 150 + 820);
   };
   /* round 52 #1 (owner: "it let me download without agreeing!"):
      every pay path checks the T&C ring first */
@@ -3533,27 +3541,21 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               {slot((BOX.x + R1) / 2 - 60, Y0, 120, CH, assets.front, "front shot", "contain", false, assets.front ? () => setGallery({ items: assetItems, index: 0 }) : undefined, SHOT_ZOOM)}
               {slot((R1 + R2) / 2 - 60, Y0, 120, CH, assets.back, "back shot", "contain", false, assets.back ? () => setGallery({ items: assetItems, index: 1 }) : undefined, SHOT_ZOOM)}
             </>)}
-          {/* ROUND 88 #10 (owner): SAVE under the dashed area's left corner,
-              outside it, on its left edge — every image flies into the
-              folder in sequence */}
-          {!assetsStage && assets.front && (
-            <button data-assets-save onClick={() => {
-              const unsave = assetsSaved;
-              setAssetsSaved(!unsave);
-              const items: { src: string; x: number; y: number; w: number; h: number }[] = [];
-              /* the shots fly from their zoomed box */
-              const zw = 120 * SHOT_ZOOM, zh = CH * SHOT_ZOOM, zdx = (zw - 120) / 2, zdy = (zh - CH) / 2;
-              if (assets.front) items.push({ src: assets.front.prev, x: (custom ? (BOX.x + R2) / 2 : (BOX.x + R1) / 2) - 60 - zdx, y: Y0 - zdy, w: zw, h: zh });
-              if (!custom && assets.back) items.push({ src: assets.back.prev, x: (R1 + R2) / 2 - 60 - zdx, y: Y0 - zdy, w: zw, h: zh });
-              const hero = assets.life[lifeOrder[0]];
-              if (hero) items.push({ src: hero.prev, x: HERO.x, y: Y0, w: HERO.w, h: CH });
-              thumbs.forEach((th, k) => { const it = assets.life[lifeOrder[k + 1]]; if (it) items.push({ src: it.prev, x: th.x, y: th.y, w: th.s, h: th.s }); });
-              flyToFolder(unsave ? [...items].reverse() : items, unsave);
-            }}
-              /* round 108 #14 (owner): on the page's centre line */
-              style={{ ...px(W / 2 - 137, 657.6, 274, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: assetsSaved ? "#fff" : "#111", color: assetsSaved ? "#111" : "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, transition: `background 240ms ${EASE}, color 240ms ${EASE}` }}>
-              {assetsSaved ? t("Saved") : t("Save")}</button>
-          )}
+          {/* 2026-09-28 (owner): no Save button — the red button saves: every
+              image flies into the folder, then the Final Pack slides in.
+              The flight's start boxes are kept here for it. */}
+          {(() => {
+            const items: { src: string; x: number; y: number; w: number; h: number }[] = [];
+            /* the shots fly from their zoomed box */
+            const zw = 120 * SHOT_ZOOM, zh = CH * SHOT_ZOOM, zdx = (zw - 120) / 2, zdy = (zh - CH) / 2;
+            if (assets.front) items.push({ src: assets.front.prev, x: (custom ? (BOX.x + R2) / 2 : (BOX.x + R1) / 2) - 60 - zdx, y: Y0 - zdy, w: zw, h: zh });
+            if (!custom && assets.back) items.push({ src: assets.back.prev, x: (R1 + R2) / 2 - 60 - zdx, y: Y0 - zdy, w: zw, h: zh });
+            const hero = assets.life[lifeOrder[0]];
+            if (hero) items.push({ src: hero.prev, x: HERO.x, y: Y0, w: HERO.w, h: CH });
+            thumbs.forEach((th, k) => { const it = assets.life[lifeOrder[k + 1]]; if (it) items.push({ src: it.prev, x: th.x, y: th.y, w: th.s, h: th.s }); });
+            if (!inSlide) assetsFlight.current = items;
+            return null;
+          })()}
           {/* the hero, then its four thumbs */}
           {slot(HERO.x, Y0, HERO.w, CH, assets.life[lifeOrder[0]], `lifestyle ${lifeOrder[0] + 1}/5`, "cover", false, assets.life[lifeOrder[0]] ? () => openAssetGallery(0) : undefined)}
           {thumbs.map((th, k) => {
@@ -4294,6 +4296,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     if (tut >= tutLast) { endTutorial(); return; }
                     const nx = tut + 1;
                     setTut(nx);
+                    /* 2026-09-28: leaving the marketing page saves its images first */
+                    if (page === "assets") { const pg2: PageKey = nx === 1 ? "loader" : TUT_PAGES[nx]; if (pg2 === "checkout") { saveAssetsThen(() => go(pg2)); return; } }
                     /* round 72 #9: FRONT LABEL opens on the loader */
                     const pg: PageKey = nx === 1 ? "loader" : TUT_PAGES[nx];
                     if (pg !== page) go(pg);
@@ -4345,7 +4349,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     if (full) go("assets");
                     else { setWarn(t("Pick an option in every section to continue")); setTimeout(() => setWarn(""), 3200); }
                   }
-                  else if (page === "assets") go("checkout");
+                  else if (page === "assets") saveAssetsThen(() => go("checkout"));
                   /* round 85 #3: on the Final Pack the button is the payment,
                      then the download */
                   /* 2026-09-23 (owner): no payment step for now — the button
