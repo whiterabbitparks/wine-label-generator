@@ -344,6 +344,8 @@ const TUT_CARDS: { step: string; body: string[] }[] = [
   { step: "START", body: [] },
 ];
 const DEMO_VISION = IDEAS[0];   /* Soft Gravity — his TSINANDALI story */
+/* 2026-09-28 (owner): the same story in Georgian, typed when the site is in Georgian */
+const DEMO_VISION_GE = "რბილი მიზიდულობა — ადამიანის ფიგურა მიწიდან სულ რამდენიმე სანტიმეტრზე ლივლივებს, სრულიად მოდუნებული და ამას ვერც ამჩნევს. თმა და ტანსაცმელი ბუნებრივად ეშვება და ჩნდება მსუბუქი შეგრძნება, რომ მიზიდულობა შერბილდა.";
 const DEMO_DESC = "A vibrant, medium-bodied wine with aromas of ripe cherry, wild berries, and subtle spice. Fresh acidity and soft tannins create a balanced palate, followed by notes of dried herbs and a smooth, lingering finish.";
 const DEMO_BACK: Record<string, string> = {
   producerCompany: "POPIKA LLC", producerAddress: "#33 Chikovani St. 0171 Tbilisi, Georgia",
@@ -1609,7 +1611,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     /* anything the visitor jumped over is filled in at once, so each step
        stands on its own however they got there */
     const seed = () => {
-      if (tut > 0) { setVision(DEMO_VISION); setF((m) => ({ ...m, ...DEMO_FRONT })); }
+      if (tut > 0) { setVision(lang === "ge" ? DEMO_VISION_GE : DEMO_VISION); setF((m) => ({ ...m, ...DEMO_FRONT })); }
       if (tut > 1) {
         setDreams(["traditional", "contemporary", "punk"].map((st2, i) => ({ style: st2, dream: TUT_LABELS[i], preview: TUT_LABELS[i], artist: TUT_ARTISTS[i] })));
         setSelected(1);
@@ -1655,7 +1657,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       switch (tut) {
         case 0: {
           if (!(await tap(TAP.visionBox))) return;
-          if (!(await type(DEMO_VISION, setVision, 13))) return;
+          if (!(await type(lang === "ge" ? DEMO_VISION_GE : DEMO_VISION, setVision, 13))) return;
           if (!(await hold(520))) return;
           /* round 72 #5: the label's own size gets set before the details */
           if (!(await tap(TAP.width, 300))) return;
@@ -2491,6 +2493,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const title = (text: string, x: number, k: string, right = false) => (
       <span key={k} style={{ ...px(right ? x - 300 : x, baseTop(340.83, 13.5), 300, 16), font: `700 13.5px ${HNW}`, lineHeight: "13.5px", color: "#000", whiteSpace: "nowrap", textAlign: right ? "right" : "left" }}>{t(text)}</span>
     );
+    /* 2026-09-28 (owner): the row — Your Vision, Your Label, the bottles,
+       Your Market — ran 14 past the right margin (137.3 → 1316.8). It is
+       shrunk as ONE block, texts and all, to sit exactly from margin to
+       margin (137.14 → 1302.86); the headline and the tagline stay. */
+    const B0 = 137.3, B1 = 1316.8, BS = (1302.86 - 137.14) / (B1 - B0), BY = 454.45;
+    const block = (k: string, kids: React.ReactNode) => (
+      <span key={k} style={{ position: "absolute", left: 0, top: 0, width: W, height: H, pointerEvents: "none", transformOrigin: `${B0}px ${BY}px`, transform: `translateX(${137.14 - B0}px) scale(${BS})` }}>{kids}</span>
+    );
     const DETAILS: [string, string][] = [
       ["Producer:", "MARANI"], ["Wine Name:", "TSINANDALI"], ["Vintage:", "2023"], ["Grape Variety:", "Rkatsiteli"],
       ["Region, Country:", "Kakheti, Georgia"], ["Special mention:", "Qvevri wine"], ["Sweetness:", "Dry"], ["Colour:", "Amber"],
@@ -2508,35 +2518,40 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         ) : ["Everything you need to take your wine", "from bottle to market,", "in a few simple steps."].map((ln, i) => (
           <span key={"hl" + i} style={{ ...px(137.3, baseTop(184.59 + i * 33.41, 27.84), 700, 32), font: `700 27.84px ${HNW}`, lineHeight: "27.84px", color: "#000", whiteSpace: "nowrap" }}>{t(ln)}</span>
         ))}
+        {block("bv", (<>
         {title("YOUR VISION", 137.3, "tv")}
         <svg style={{ ...px(137, 361.4, 256, 186.2), overflow: "visible", pointerEvents: "none" }} viewBox="137 361.4 256 186.2">
           <rect x={137.3} y={361.7} width={255.1} height={185.5} fill="none" stroke="#221f1f" strokeWidth={0.475} strokeDasharray="2.376" />
         </svg>
-        <span style={{ ...px(152.6, baseTop(381.07, 8.99), 222, 50), font: `8.99px ${HNW}`, lineHeight: "10.79px", color: "#000" }}>{IDEAS[0]}</span>
+        {/* the Georgian story runs longer — set a touch smaller so it keeps the
+            same air above the details as the English */}
+        <span style={{ ...px(152.6, baseTop(381.07, lang === "ge" ? 7.9 : 8.99), 222, 58), font: `${lang === "ge" ? 7.9 : 8.99}px ${HNW}`, lineHeight: lang === "ge" ? "9.6px" : "10.79px", color: "#000" }}>{lang === "ge" ? DEMO_VISION_GE : IDEAS[0]}</span>
         {DETAILS.map(([k, v], i) => (
           <span key={"hd" + i}>
             <span style={{ ...px(152.6, baseTop(445.44 + i * 9, 6.59), 60, 9), font: `700 6.59px ${HNW}`, lineHeight: "6.59px", color: "#000", whiteSpace: "nowrap" }}>{t(k)}</span>
-            <span style={{ ...px(212.3, baseTop(445.44 + i * 9, 7.06), 110, 9), font: `italic 7.06px ${HNW}`, lineHeight: "7.06px", color: "#000", whiteSpace: "nowrap" }}>{v}</span>
-            <span style={{ ...px(212.3, 445.44 + i * 9 + 0.56, 109, 0.353), background: "#000", opacity: 0.55 }} />
+            {/* Georgian names run longer — their values step right a little */}
+            <span style={{ ...px(lang === "ge" ? 222 : 212.3, baseTop(445.44 + i * 9, 7.06), 110, 9), font: `italic 7.06px ${HNW}`, lineHeight: "7.06px", color: "#000", whiteSpace: "nowrap" }}>{v}</span>
+            <span style={{ ...px(lang === "ge" ? 222 : 212.3, 445.44 + i * 9 + 0.56, 109, 0.353), background: "#000", opacity: 0.55 }} />
           </span>
         ))}
+        </>))}
       </span>)}
-      {on("label") && (<span key="hlb">
+      {on("label") && (<span key="hlb">{block("bl", (<>
         {title("YOUR LABEL", 433.7, "tl")}
         {img("label.webp", 433.7, 361.7, 255.1, 185.5)}
         {arrow(400.4, "a1")}
-      </span>)}
-      {on("market") && (<span key="hm">
+      </>))}</span>)}
+      {on("market") && (<span key="hm">{block("bm", (<>
         {title("YOUR MARKET", 1316.8, "tm", true)}
         {img("market-1.webp", 945.9, 361.7, 185.2, 185.5)}
         {img("market-2.webp", 1131.1, 361.7, 185.7, 185.5)}
-      </span>)}
-      {on("bottles") && (<span key="hbt">
+      </>))}</span>)}
+      {on("bottles") && (<span key="hbt">{block("bb", (<>
         {arrow(697.3, "a2")}
         {img("shadow-small.webp", 690.2, 519.2, 239.1, 44.9)}
         {img("bottle-back.webp", 698.8, 231.5, 145.1, 269.4)}
         {img("bottle-front.webp", 655.9, 158.2, 465.6, 622.6)}
-      </span>)}
+      </>))}</span>)}
       {on("tagline") && (<span key="htg">
         {lang === "ge" ? (
           <span style={{ ...px(1038.5, baseTop(625.4, 16.2) - (19.44 - 16.2) / 2, 280, 90), font: `italic 16.2px ${HNW}`, lineHeight: "19.44px", color: "#000" }}>
@@ -4243,10 +4258,15 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               {/* 2026-09-28 (owner): GUIDED MODE — the walk-through's notes, on or
                   off, beside the language. The footer's switch, grey when off
                   (outline and dot); on: a black outline and our red dot */}
+              {/* the switch is placed by the LETTERS (owner, 2026-09-28: "the
+                  switch doesn't sit on the word's line"): the row aligns on
+                  the baseline, where the switch's foot lands; it is then
+                  lowered so its middle meets the capitals' middle
+                  (baseline − 0.72·13/2 = 4.68 up, the switch's middle is 6 up) */}
               <button aria-label="guided mode" onClick={toggleGuide}
-                style={{ ...ghost, display: "flex", alignItems: "center", columnGap: 7, font: `700 13px ${HNW}`, color: INK, whiteSpace: "nowrap", textTransform: "uppercase", alignSelf: "center" }}>
+                style={{ ...ghost, display: "flex", alignItems: "baseline", columnGap: 7, font: `700 13px/13px ${HNW}`, color: INK, whiteSpace: "nowrap", textTransform: "uppercase" }}>
                 {t("Guided mode")}
-                <span style={{ width: 22, height: 12, borderRadius: 7, border: `1px solid ${guideOn ? "#111" : "#bbb"}`, position: "relative", background: "#fff", boxSizing: "border-box", flex: "0 0 auto" }}>
+                <span style={{ width: 22, height: 12, borderRadius: 7, border: `1px solid ${guideOn ? "#111" : "#bbb"}`, position: "relative", top: 6 - 13 * 0.72 / 2, transform: "translateY(0.45px)" /* measured, 2026-09-28: layout rounds `top`, a transform does not */, background: "#fff", boxSizing: "border-box", flex: "0 0 auto" }}>
                   <span style={{ position: "absolute", top: 1.5, left: guideOn ? 11.5 : 1.5, width: 7, height: 7, borderRadius: 4, background: guideOn ? BAR_RED : "#bbb", transition: "left 160ms, background 160ms" }} />
                 </span>
               </button>
