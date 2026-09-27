@@ -296,6 +296,7 @@ export const UI_GE: Record<string, string> = {
   /* 2026-09-28 (owner): the Style menu on the details page */
   "Style:": "სტილი:",
   "3 randomly chosen artists": "შემთხვევითობით შერჩეული 3 არტისტი",
+  "Choose up to 3 artists": "აირჩიე მაქსიმუმ 3 არტისტი",
   /* 2026-09-28 (owner): welcome back — continue or start new */
   "WELCOME BACK": "ᲙᲔᲗᲘᲚᲘ ᲘᲧᲝᲡ ᲨᲔᲜᲘ ᲓᲐᲑᲠᲣᲜᲔᲑᲐ",
   "Continue": "გაგრძელება",

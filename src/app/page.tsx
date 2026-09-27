@@ -1467,17 +1467,36 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   useEffect(() => {
     if (tut >= 0) return;
     const hasAny = dreams.length > 0 || !!vision.trim() || Object.entries(f).some(([k, v]) => k !== "width" && k !== "height" && !!(v || "").trim());
-    if (!hasAny) return;
-    try { localStorage.setItem("nui-order", JSON.stringify(orderRecord())); } catch { }
+    if (!hasAny || restoringRef.current) return;
+    /* 2026-09-28 (owner: "it still opens filled in and never asks"): the
+       order's time moves only when the order CHANGES — merely opening the
+       page (which restores it) used to restart the hour every visit */
+    try {
+      const rec = orderRecord();
+      const old = JSON.parse(localStorage.getItem("nui-order") || "null") as { at?: number } | null;
+      const strip = (o: object) => { const { at, ...rest } = o as { at?: number }; void at; return JSON.stringify(rest); };
+      const keep = old && old.at && strip(old) === strip(rec);
+      localStorage.setItem("nui-order", JSON.stringify(keep ? { ...rec, at: old!.at } : rec));
+    } catch { }
   }, [tut, sets, setIdx, selSet, vision, f, b, gtin, qrMode, markets, bottle, wineColor, selected, frontSig, paintSig, pickArtists]);
   type OrderRec = { v?: number; vision?: string; f?: Record<string, string>; b?: Record<string, string>; gtin?: string; qrMode?: string; markets?: string[]; bottle?: Record<string, string>; wineColor?: string; selected?: number; frontSig?: string; paintSig?: string; dreams?: { style: string; id?: string; artist?: string }[]; sets?: { style: string; id?: string; artist?: string }[][]; setIdx?: number; selSet?: number };
   /* the visitor's own order, brought back from this browser (on arrival,
      and after the self-playing tutorial, which borrows the page) */
   const restoreRef = useRef<(boot: boolean, apply?: boolean) => void>(() => { });
+  /* while an order is being brought back its half-restored state is NOT
+     saved (it would overwrite the order and restart its hour) */
+  const restoringRef = useRef(false);
   /* 2026-09-28 (owner): the order is kept for a MONTH; a visitor who comes
      back after more than an hour is ASKED — continue it, or start new (a
      reload or a dropped connection inside the hour still restores quietly) */
   const [resumeAsk, setResumeAsk] = useState<{ name: string } | null>(null);
+  /* 2026-09-28 (owner): the footer's "no limits" switch — ON is an admin
+     login in this browser (the guard never stops an admin); switching it on
+     asks for the admin's name and password, off logs out */
+  const [limitLogin, setLimitLogin] = useState(false);
+  const [limUser, setLimUser] = useState("");
+  const [limPass, setLimPass] = useState("");
+  const [limErr, setLimErr] = useState("");
   const ORDER_KEEP_MS = 30 * 24 * 3600 * 1000, ORDER_ASK_MS = 3600 * 1000;
   useEffect(() => { restoreRef.current(true); }, []);
   restoreRef.current = (boot: boolean, apply = false) => {
@@ -1507,13 +1526,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         setResumeAsk({ name: String(rec.f?.wine || rec.f?.producer || "").trim() });
         return;
       }
+      restoringRef.current = true;
       setVision(rec.vision || ""); setF(rec.f || { width: "110", height: "80" }); setB(rec.b || {});
       setGtin(rec.gtin || ""); setQrMode((rec.qrMode || "") as never); setMarkets(rec.markets || []);
       if (rec.bottle) { setBottle(rec.bottle); bottleTouched.current = true; }
       setWineColor(rec.wineColor || "");
       setPickArtists(Array.isArray((rec as { pickArtists?: string[] }).pickArtists) ? (rec as { pickArtists: string[] }).pickArtists : []);
       const recSets = (rec.sets && rec.sets.length ? rec.sets : [rec.dreams || []]).map((st) => st.filter((d) => d.id)).filter((st) => st.length);
-      if (!recSets.length) { if (resume || apply) go("vision"); return; }
+      if (!recSets.length) { restoringRef.current = false; if (resume || apply) go("vision"); return; }
       const toData = async (u: string) => {
         const bl = await (await fetch(u)).blob();
         return new Promise<string>((res) => { const rd = new FileReader(); rd.onload = () => res(String(rd.result)); rd.readAsDataURL(bl); });
@@ -1529,6 +1549,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         if (resume) { setSetIdx(last); go("options"); }
         else if (apply) go("options");
       } catch { /* the labels are gone from the server — the details stay */ }
+      restoringRef.current = false;
     })();
   };
 
@@ -2901,7 +2922,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {(() => {
             const SB = { x: BOX.x, y: 582, w: BOX.w, h: 34.3 };
             const ROW_H = 30, HEAD_H = 30, PAD = 12, AV = 22;
-            const panelH = PAD + HEAD_H + 8 + painters.length * ROW_H + PAD;
+            /* 2026-09-28 (owner): at most THREE — at three, the others grey
+               out and take no click; the line under the first row says so */
+            const MAX_PICK = 3, NOTE_H = 20;
+            const full = pickArtists.length >= MAX_PICK;
+            const panelH = PAD + HEAD_H + 8 + NOTE_H + painters.length * ROW_H + PAD;
             const chosen = painters.filter((a) => pickArtists.includes(a.id));
             const ink = styleOpen ? "#fff" : "#111";
             const AW = 15.4, AH = 7.7;
@@ -2941,11 +2966,16 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   <svg style={{ display: "block", margin: "4px 14px", height: 1, width: "calc(100% - 28px)" }} preserveAspectRatio="none">
                     <line x1="0" y1="0.5" x2="100%" y2="0.5" stroke="#000" strokeWidth="1" strokeDasharray="4.12 4.12" shapeRendering="crispEdges" />
                   </svg>
+                  <div style={{ height: NOTE_H, padding: "0 14px", display: "flex", alignItems: "center", font: `italic 12px ${HNW}`, color: full ? "#111" : "#8a887e" }}>
+                    <span style={{ position: "relative", top: -0.1655 * 12 }}>{t("Choose up to 3 artists")} · {pickArtists.length} / {MAX_PICK}</span>
+                  </div>
                   {painters.map((a) => {
                     const on = pickArtists.includes(a.id);
+                    const off = !on && full;
                     return (
-                      <div key={a.id} onClick={() => setPickArtists((ps) => (on ? ps.filter((x) => x !== a.id) : [...ps, a.id]))}
-                        style={{ position: "relative", display: "flex", alignItems: "center", width: "100%", height: ROW_H, padding: "0 14px", columnGap: 10, background: on ? "#F2F1ED" : "transparent", cursor: "pointer", boxSizing: "border-box" }}>
+                      <div key={a.id} onClick={off ? undefined : () => setPickArtists((ps) => (on ? ps.filter((x) => x !== a.id) : ps.length >= MAX_PICK ? ps : [...ps, a.id]))}
+                        title={off ? t("Choose up to 3 artists") : undefined}
+                        style={{ position: "relative", display: "flex", alignItems: "center", width: "100%", height: ROW_H, padding: "0 14px", columnGap: 10, background: on ? "#F2F1ED" : "transparent", cursor: off ? "not-allowed" : "pointer", boxSizing: "border-box", opacity: off ? 0.35 : 1, transition: `opacity 200ms ${EASE}` }}>
                         {a.avatar
                           /* eslint-disable-next-line @next/next/no-img-element */
                           ? <img src={a.avatar} alt="" style={{ width: AV, height: AV, borderRadius: AV / 2, objectFit: "cover", objectPosition: a.crop, flex: "0 0 auto", display: "block" }} />
@@ -4157,7 +4187,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   };
 
   /* round 68 #1: any open modal freezes the bar (it still paints on top) */
-  const modalOpen = !!confirmModal || termsOpen || marketOpen || emailOpen || !!resumeAsk || styleOpen;
+  const modalOpen = !!confirmModal || termsOpen || marketOpen || emailOpen || !!resumeAsk || styleOpen || limitLogin;
   const barPage: PageKey = page === "blank" ? blankFrom.current : page;
   /* round 71 #4: while the walkthrough runs, the bar follows IT — the
      button rides the stop being explained and the line follows it home */
@@ -4398,6 +4428,18 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 <span style={{ position: "absolute", top: 1.5, left: fillOn ? 11.5 : 1.5, width: 7, height: 7, borderRadius: 4, background: fillOn ? "#3fd05e" : "#bbb", transition: "left 160ms" }} />
               </span>
               <span style={{ font: `300 9px ${HNW}`, color: "#aaa", whiteSpace: "nowrap" }}>fill details</span>
+            </button>
+            {/* 2026-09-28 — TEMP DEV SWITCH: no generation limits (an admin login) */}
+            <button aria-label="toggle no limits"
+              onClick={async () => {
+                if (vis?.admin) { await fetch("/api/admin/logout", { method: "POST" }).catch(() => null); refreshVis(); }
+                else { setLimErr(""); setLimitLogin(true); }
+              }}
+              style={{ ...px(18, 800, 110, 16), ...ghost, display: "flex", alignItems: "center", columnGap: 6, textTransform: "none" }}>
+              <span style={{ width: 22, height: 12, borderRadius: 7, border: "1px solid #bbb", position: "relative", background: "#fff", boxSizing: "border-box", flex: "0 0 auto" }}>
+                <span style={{ position: "absolute", top: 1.5, left: vis?.admin ? 11.5 : 1.5, width: 7, height: 7, borderRadius: 4, background: vis?.admin ? "#3fd05e" : "#bbb", transition: "left 160ms" }} />
+              </span>
+              <span style={{ font: `300 9px ${HNW}`, color: "#aaa", whiteSpace: "nowrap" }}>no limits</span>
             </button>
             {/* 2026-09-23 (owner): the name is "8K.WINE ©", white on a black
                 block — the block's foot ON the header's rule, the same air
@@ -4926,6 +4968,29 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               </div>
             </>);
           })()}
+          {limitLogin && (<>
+            <div style={{ ...px(0, 0, W, H), zIndex: 30 }} onClick={() => setLimitLogin(false)} />
+            <div style={{ ...px(0, VEIL_TOP, W, VEIL_BOT - VEIL_TOP), background: "rgba(255,255,255,0.88)", zIndex: 30, pointerEvents: "none" }} />
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              const r = await fetch("/api/admin/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username: limUser, password: limPass }) }).catch(() => null);
+              if (r?.ok) { setLimitLogin(false); setLimPass(""); refreshVis(); } else setLimErr("wrong");
+            }}
+              style={{ ...px(W / 2 - 220, 250, 440, 220), background: "#fff", border: "1px solid #111", zIndex: 31, boxSizing: "border-box", margin: 0 }}>
+              <button type="button" aria-label="close" onClick={() => setLimitLogin(false)}
+                style={{ position: "absolute", right: 6, top: 4, ...ghost, font: `15px ${HNW}`, color: "#111", width: 24, height: 24 }}>✕</button>
+              <span style={{ position: "absolute", left: 28, top: 26, font: `700 18px ${HNW}`, lineHeight: "18px" }}>No limits (admin)</span>
+              <input value={limUser} onChange={(e) => setLimUser(e.target.value)} placeholder="name" autoFocus {...noFill("limuser")}
+                style={{ ...px(28, 70, 384, 24), ...inputStyle, fontSize: 14 }} />
+              {rowLine(28, 95, 384, "limu")}
+              <input value={limPass} onChange={(e) => setLimPass(e.target.value)} placeholder="password" type="password" {...noFill("limpass")}
+                style={{ ...px(28, 112, 384, 24), ...inputStyle, fontSize: 14 }} />
+              {rowLine(28, 137, 384, "limp")}
+              {limErr && <span style={{ position: "absolute", left: 28, top: 146, font: `12px ${HNW}`, color: "#BA141A" }}>Wrong name or password.</span>}
+              <button type="submit"
+                style={{ ...px(28, 220 - 34.3 - 24, 384, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "1px solid #111", boxSizing: "border-box", paddingBottom: 4 }}>Switch limits off</button>
+            </form>
+          </>)}
           {/* 2026-09-28 (owner): WELCOME BACK — continue the unfinished order
               (it opens where the work is) or start a new one */}
           {resumeAsk && (<>
