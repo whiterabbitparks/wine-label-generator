@@ -155,7 +155,9 @@ const VEIL_TOP = HEADER_H + 1.5, VEIL_BOT = FOOT_RULE_Y - 1.5;
 const CARD_BASE = 823.61, CARD_BODY = [18.4, 32.8], CARD_FS = 15, CARD_BODY_FS = 12;
 const NEXT_R = 18.09;          /* red round button — round 109: smaller again (was 27) */
 const NEXT_X = 1302.86;        /* its centre on working pages … */
-const WELCOME_X = 168.1;       /* … and on the welcome page */
+/* … and on the welcome page — 2026-09-28 (owner): its left edge ON the
+   page's left margin (137.14), like the artists' pages' back button */
+const WELCOME_X = 137.14 + 18.09;
 const BACK_X = 155.23;         /* round 112 #4: artists' pages — a BACK button at the rule's left end */
 const STEPS: { x: number; label: string; page: PageKey; big: boolean }[] = [
   { x: 303.38, label: "Front Label Details", page: "vision", big: false },
@@ -1531,8 +1533,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   }, [tut, tutIdle]);
 
   const endTutorial = useCallback(() => {
-    if (tutAuto.current) { tutAuto.current = false; stopTutorial(); go("welcome", -1); restoreRef.current(false); return; }
     stopTutorial();
+    /* the visitor's own order comes back (the story borrowed the page) */
+    restoreRef.current(false);
     /* round 72 #2: straight into the real Your Vision page, not the home
        page — they have just watched the whole story, so they start work */
     go("vision");
@@ -1795,8 +1798,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
          (its onClick turns the page of the story). */
       if (!live()) return;
       /* the self-playing story presses the red button itself */
+      /* …until the closing card: there the red button is START and waits
+         for the visitor, who then begins on the front label details */
+      if (tutAuto.current && tut >= TUT_CARDS.length - 1) tutAuto.current = false;
       if (tutAuto.current) {
-        if (!(await hold(tut >= TUT_CARDS.length - 1 ? 2600 : 900))) return;
+        if (!(await hold(900))) return;
         const bx = tut < STEPS.length ? STEPS[tut].x : NEXT_X;
         if (!(await tap([bx, PROG_Y], 260, 640))) return;
         (document.querySelector("[data-tut-ok][aria-label='next'], [data-tut-ok][aria-label='start']") as HTMLButtonElement | null)?.click();
@@ -2538,9 +2544,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           </span>
         ) : null}
         {/* 2026-09-28 (owner): on the left, level with the tagline's first
-            line — a red underlined link that plays the tutorial by itself */}
+            line — set like the tagline (italic, black), underlined as a link;
+            it plays the tutorial by itself */}
         <button onClick={() => startTutorial(true)}
-          style={{ ...px(137.14, baseTop(625.4, 16.2), 420, 20), ...ghost, pointerEvents: "auto", textAlign: "left", textTransform: "none", font: `16.2px/16.2px ${HNW}`, color: BAR_RED, textDecoration: "underline", textUnderlineOffset: 3, whiteSpace: "nowrap", cursor: "pointer" }}>
+          style={{ ...px(137.14, baseTop(625.4, 16.2), 420, 20), ...ghost, pointerEvents: "auto", textAlign: "left", textTransform: "none", font: `italic 16.2px/16.2px ${HNW}`, color: "#000", textDecoration: "underline", textUnderlineOffset: 3, whiteSpace: "nowrap", cursor: "pointer" }}>
           {t("See how this pack was created")}</button>
         {lang === "ge" ? null : ["Create print and market-ready labels,", "marketing assets, and a product page", "in ~10 minutes."].map((ln, i) => (
           <span key={"hs" + i} style={{ ...px(1038.5, baseTop(625.4 + i * 19.44, 16.2), 320, 20), font: `italic 16.2px ${HNW}`, lineHeight: "16.2px", color: "#000", whiteSpace: "nowrap" }}>{t(ln)}</span>
@@ -4216,7 +4223,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                  came out short and left the right side tighter than the left) */
               return (
                 <button onClick={() => { if (tutRef.current >= 0) stopTutorial(); go("welcome", -1); }}
-                  style={{ position: "absolute", left: 137.14, top: TOPS - PAD, height: HEADER_H - (TOPS - PAD), ...ghost, padding: `0 ${PAD}px`, background: BAR_RED, display: "flex", alignItems: "flex-start", textTransform: "none" }}>
+                  style={{ position: "absolute", left: 137.14, top: TOPS - PAD, height: HEADER_H - (TOPS - PAD), ...ghost, padding: `0 ${PAD}px`, background: "#111", display: "flex", alignItems: "flex-start", textTransform: "none" }}>
                   <span style={{ display: "block", position: "relative", top: baseTop(BASE, 13) - (TOPS - PAD), font: `700 13px ${HNW}`, lineHeight: "13px", color: "#fff", whiteSpace: "nowrap" }}>8K.WINE ©</span>
                 </button>
               );

@@ -271,6 +271,73 @@ export async function cleanPaper(dataUrl: string, to?: string, sideIn?: Side | S
     if (y < H - 1) push(x, y + 1);
   }
 
+  /* STRAY MARKS (owner, 2026-09-28: "small ink images often have
+     artefacts close to the edges — make sure the edges are clean"). The
+     paper is grown in from the sheet's edge, so a speck, a hairline or a
+     smudge that stands alone on the paper is ringed by paper and survives
+     it. On a spot drawing (no `sides`) the ink is split into islands and
+     the drawing is where its sizeable islands are (each ≥ 2 % of all the
+     ink). What counts as paper is written at `stray` below; dots, stars,
+     birds and loose strokes that belong to the drawing stay. */
+  if (!sides && process.env.CLEAN_NO_STRAY !== "1") {   /* (the env switch is for side-by-side tests only) */
+    const lab = new Int32Array(W * H).fill(-1);
+    const comps: { n: number; x0: number; y0: number; x1: number; y1: number }[] = [];
+    let total = 0;
+    const stack = new Int32Array(W * H);
+    for (let p0 = 0; p0 < W * H; p0++) {
+      if (paper[p0] || lab[p0] >= 0) continue;
+      const id = comps.length, c = { n: 0, x0: W, y0: H, x1: -1, y1: -1 };
+      let sp = 0; stack[sp++] = p0; lab[p0] = id;
+      while (sp) {
+        const q = stack[--sp], x = q % W, y = (q / W) | 0;
+        c.n++; if (x < c.x0) c.x0 = x; if (x > c.x1) c.x1 = x; if (y < c.y0) c.y0 = y; if (y > c.y1) c.y1 = y;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx, ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+          const r2 = ny * W + nx;
+          if (!paper[r2] && lab[r2] < 0) { lab[r2] = id; stack[sp++] = r2; }
+        }
+      }
+      comps.push(c); total += c.n;
+    }
+    const bigId = new Uint8Array(comps.length);
+    comps.forEach((c, i) => { if (c.n >= total * 0.02) bigId[i] = 1; });
+    if (bigId.some((v) => v)) {
+      const g = Math.round(Math.min(W, H) * 0.04), edge = Math.round(Math.min(W, H) * 0.02);
+      /* the drawing's outer rectangle (its sizeable islands), grown by g */
+      let ax0 = W, ay0 = H, ax1 = -1, ay1 = -1;
+      comps.forEach((c, i) => { if (bigId[i]) { ax0 = Math.min(ax0, c.x0); ay0 = Math.min(ay0, c.y0); ax1 = Math.max(ax1, c.x1); ay1 = Math.max(ay1, c.y1); } });
+      ax0 -= g; ay0 -= g; ax1 += g; ay1 += g;
+      /* gentle on purpose (owner's pictures, 2026-09-28): a loose cloud
+         stroke of Giorgi's or a pale wisp of Mariam's sky is drawing, not
+         dirt — so only (a) a small island (< 0.6 % of the ink) outside the
+         rectangle, (b) one under 3 % hugging the sheet's border. (A rule
+         for tiny islands far from any ink took bits of his clouds — out.) */
+      const stray = comps.map((c) => {
+        const outside = c.x1 < ax0 || c.x0 > ax1 || c.y1 < ay0 || c.y0 > ay1;
+        const hugs = c.x0 < edge || c.y0 < edge || c.x1 >= W - edge || c.y1 >= H - edge;
+        return (outside && c.n < total * 0.006) || (hugs && c.n < total * 0.03);
+      });
+      for (let p0 = 0; p0 < W * H; p0++) if (!paper[p0] && stray[lab[p0]]) paper[p0] = 2;
+      /* the paper outside the rectangle is plain paper, faint smudges and all */
+      for (let p0 = 0; p0 < W * H; p0++) {
+        if (paper[p0] !== 1) continue;
+        const x = p0 % W, y = (p0 / W) | 0;
+        if (x < ax0 || x > ax1 || y < ay0 || y > ay1) paper[p0] = 2;
+      }
+      /* and its soft rim, six pixels round, so no pale ghost stays */
+      for (let it = 0; it < 6; it++) {
+        const grow: number[] = [];
+        for (let p0 = 0; p0 < W * H; p0++) {
+          if (paper[p0] !== 1) continue;
+          const x = p0 % W, y = (p0 / W) | 0;
+          if ((x > 0 && paper[p0 - 1] === 2) || (x < W - 1 && paper[p0 + 1] === 2) || (y > 0 && paper[p0 - W] === 2) || (y < H - 1 && paper[p0 + W] === 2)) grow.push(p0);
+        }
+        for (const p0 of grow) paper[p0] = 2;
+      }
+    }
+  }
+
   const tr = to ? parseInt(to.slice(1, 3), 16) : gr;
   const tg = to ? parseInt(to.slice(3, 5), 16) : gg;
   const tb = to ? parseInt(to.slice(5, 7), 16) : gb;
@@ -282,7 +349,7 @@ export async function cleanPaper(dataUrl: string, to?: string, sideIn?: Side | S
       rows[(p2 / W) | 0]++; cols[p2 % W]++;
       continue;
     }
-    const d = dist(i);
+    const d = paper[p2] === 2 ? 0 : dist(i);     /* a stray mark becomes plain paper */
     let a = d <= t0 ? 0 : (d - t0) / (t1 - t0);
     a = a * a * (3 - 2 * a);                       /* smoothstep, no banding */
     out[i] = Math.round(tr + (data[i] - gr) * a);
