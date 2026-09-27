@@ -293,6 +293,8 @@ download), 8K.WINE header, new home label. Live smoke label OK (Giorgi,
 t05, orphan region centred). Layout edits made on the LIVE admin live in
 the server's data/layout-edits — pull them before reading.
 
+**2026-09-28 — RESEND KEY SET** on the live server (.env.local; backup .env.local.bak-2026-09-28) and locally. Sender still onboarding@resend.dev, so mail reaches ONLY the owner's Resend sign-up address until 8k.wine is bought and verified in Resend (then MAIL_FROM="8K Labels <hello@8k.wine>"). ALERT_EMAIL not set yet (owner to name the address).
+
 **DEPLOYED 2026-09-28 (afdc91d)** — everything from 2026-09-27/28 is LIVE: product page v2 + lock, protection, new versions, Final Pack prices, marketing auto-save, Levan's no-smoking model, FLUX 0.53. Backup of the previous live: /opt/8klabels-prev-2026-09-28/. Live smoke: new visitor → 1 free run, Levan label clean (no cigarette), 2nd run refused "need-email". Port 3000 was already firewalled (ufw: 22/80/443 only) and Caddy 2.11 replaces forged X-Forwarded-For — the earlier "port 3000 open" note was wrong. No domain yet: e-mail can't be sent to visitors (Resend needs a verified domain), READ ME links show http://2.28.48.43/p/…
 
 **2026-09-28 — MARKETING PAGE HAS NO SAVE (owner):** the red button saves — every image flies into the folder (the same film as the old Save; start boxes kept in `assetsFlight` by the page), and ~0.8 s after the last lands the Final Pack slides in (`saveAssetsThen`). Pressed before the images exist, it just moves on; a Final Pack reached any way with images made counts them saved. The walk-through's "Save them to your folder" note and the demo tutorial's Save tap are gone.
