@@ -345,7 +345,7 @@ const TUT_CARDS: { step: string; body: string[] }[] = [
 ];
 const DEMO_VISION = IDEAS[0];   /* Soft Gravity — his TSINANDALI story */
 /* 2026-09-28 (owner): the same story in Georgian, typed when the site is in Georgian */
-const DEMO_VISION_GE = "რბილი მიზიდულობა — ადამიანის ფიგურა მიწიდან სულ რამდენიმე სანტიმეტრზე ლივლივებს, სრულიად მოდუნებული და ამას ვერც ამჩნევს. თმა და ტანსაცმელი ბუნებრივად ეშვება და ჩნდება მსუბუქი შეგრძნება, რომ მიზიდულობა შერბილდა.";
+const DEMO_VISION_GE = "რბილი გრავიტაცია — ადამიანის ფიგურა მიწიდან სულ რამდენიმე სანტიმეტრზე ლივლივებს, სრულიად მოდუნებული და ამას ვერც ამჩნევს. თმა და ტანსაცმელი ბუნებრივად ეშვება და ჩნდება მსუბუქი შეგრძნება, რომ გრავიტაცია შერბილდა.";
 const DEMO_DESC = "A vibrant, medium-bodied wine with aromas of ripe cherry, wild berries, and subtle spice. Fresh acidity and soft tannins create a balanced palate, followed by notes of dried herbs and a smooth, lingering finish.";
 const DEMO_BACK: Record<string, string> = {
   producerCompany: "POPIKA LLC", producerAddress: "#33 Chikovani St. 0171 Tbilisi, Georgia",
@@ -364,8 +364,8 @@ const DEMO_BOTTLE = { type: "Burgundy", color: "Olive Green", closure: "Wax Seal
 const DEMO_BOTTLE_0 = { type: "Bordeaux", color: "Transparent", closure: "Cork", finish: "Matte" };
 /* the capsule's blue: the wheel point nearest his photo's capsule
    (31,135,188), which the shade drag then deepens a touch */
-const DEMO_WHEEL = { x: 0.441, y: 0.772, rgb: [36, 167, 253] };
-const DEMO_SHADE = 0.6;
+/* 2026-09-28: on the code-drawn wheel, sky blue (hue 200°) sits here */
+const DEMO_WHEEL = { x: 0.2651, y: 0.4145, rgb: [0, 170, 255] };
 /* round 72 #8: the ghost taps — a red ring blooms where a hand would be */
 const TAP = {
   visionBox: [250, 400], width: [237, 650], height: [410, 650],   /* round 108 #1: the size row moved left */
@@ -377,14 +377,44 @@ const TAP = {
   /* round 86: the variation plays on the PUNK column (KORRA's yellow →
      blue re-layout); column 3's centre is 960 + 342.9/2 */
   varBtn: [1131.45, 582], dot0: [1120.25, 516.85], dot1: [1142.25, 516.85],
-  wheel: [1137.89 + 0.441 * 137.2, 368 + 0.772 * 137.2],
-  bottleRings: [[386.06, 283.57], [577.98, 283.57], [769.9, 283.57], [961.82, 283.57], [1153.74, 283.57]],
+  /* the bottle page moved (2026-09-28) — these follow its own numbers */
+  wheel: [904.82 + 27.35 + 0.2651 * 137.2, 368 + ((68.57 + 754.07) / 2 - (171.71 + 583.41) / 2) + 0.4145 * 137.2],
 } as const;
 /* the bottle page's option rows and the lightness knob, from its own code:
    ring cx = COLS_X[ci] + 43.2, cy = 283.57 + row * 29.8;
    knob cx = 1144.83 + shade * 121.64 on y 532.5 */
-const BRING = (ci: number, row: number) => [[342.86, 534.78, 726.7, 918.62, 1110.54][ci] + 43.2, 283.57 + row * 29.8] as [number, number];
-const SHADE_X = (v: number) => 1144.83 + v * 121.64;
+/* the wheel's colour at angle `a` (radians) and radius r (0 centre → 1 rim):
+   white at the centre, the pure hue across a wide middle ring, black at the
+   rim */
+const W_IN = 0.26, W_OUT = 0.7;
+function wheelL(r: number) { return r < W_IN ? 1 - 0.5 * (r / W_IN) : r <= W_OUT ? 0.5 : 0.5 * (1 - (r - W_OUT) / (1 - W_OUT)); }
+function hslRgb(h: number, s2: number, l: number): [number, number, number] {
+  const k = (n: number) => (n + h / 30) % 12, a = s2 * Math.min(l, 1 - l);
+  const f2 = (n: number) => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
+  return [Math.round(255 * f2(0)), Math.round(255 * f2(8)), Math.round(255 * f2(4))];
+}
+function wheelRgb(a: number, r: number) { return hslRgb(((a * 180 / Math.PI) + 360) % 360, 1, wheelL(r)); }
+/* 2026-09-28 (owner): the wine's colour picks the capsule's colour on the
+   wheel — red: a dark red; white: a dark, warm green; rosé: white; amber:
+   clay. Given as hue and lightness, placed where the wheel has them. */
+const CAP_PRESET: Record<string, { hue: number; l: number } | "white"> = {
+  Red: { hue: 356, l: 0.22 }, White: { hue: 88, l: 0.2 }, "Rosé": "white", Amber: { hue: 18, l: 0.38 },
+};
+function capPreset(wine: string): { x: number; y: number; rgb: number[] } | null {
+  const p2 = CAP_PRESET[wine];
+  if (!p2) return null;
+  if (p2 === "white") return { x: 0.5, y: 0.5, rgb: [255, 255, 255] };
+  const r = W_OUT + (1 - W_OUT) * (1 - p2.l / 0.5), a = p2.hue * Math.PI / 180;
+  const x = 0.5 + 0.5 * r * Math.cos(a), y = 0.5 + 0.5 * r * Math.sin(a);
+  return { x, y, rgb: wheelRgb(a, r) };
+}
+/* 2026-09-28 (owner): the bottle page's five choice columns come FIRST
+   and the bottle's silhouette LAST; the whole grid sits in the page's
+   middle (its centre on (68.57 + 754.07) / 2 — it used to ride 33.76 high) */
+const B_DY = (68.57 + 754.07) / 2 - (171.71 + 583.41) / 2;
+const B_COLS = [137.14, 329.06, 520.98, 712.9, 904.82];
+const B_SIL = { x0: 1096.74, x1: 1302.86 };
+const BRING = (ci: number, row: number) => [B_COLS[ci] + 43.2, 283.57 + B_DY + row * 29.8] as [number, number];
 
 /* round 52 #3: placeholder terms text — long enough to need the scroll */
 const TERMS_TEXT = Array.from({ length: 9 }, (_, i) => (
@@ -715,7 +745,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const capCanvasRef = useRef<HTMLCanvasElement | null>(null);
   /* round 7 #20: marker starts centred; result box starts WHITE */
   const [wheel, setWheel] = useState({ x: 0.5, y: 0.5, rgb: [255, 255, 255] as number[] });
-  const [shade, setShade] = useState(0.5);
+  /* the bottle's glass, painted inside its silhouette (2026-09-28) */
+  const bodyCanvasRef = useRef<HTMLCanvasElement | null>(null);
   /* round 38 #2/#3: scan the drawing once per variant; paint the cap zone
      in the wheel colour; both run only on the bottle page */
   useEffect(() => {
@@ -763,7 +794,22 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         if (r - l > 3) g.fillRect(l + 2, y, r - l - 3, 1);
       }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bottleScanKey, wheel, shade, bottle.closure, bottle.finish, page, prev]);
+  }, [bottleScanKey, wheel, bottle.closure, bottle.finish, page, prev]);
+  /* 2026-09-28 (owner): the glass itself — clear stays clear (white, so a
+     white capsule reads against the cell's grey), olive a thin warm dark
+     green, amber a thin tobacco */
+  useEffect(() => {
+    const cv = bodyCanvasRef.current; if (!cv) return;
+    const scan = bottleScans.current[bottleScanKey]; if (!scan) return;
+    const g = cv.getContext("2d"); if (!g) return;
+    g.clearRect(0, 0, 800, 1600);
+    g.fillStyle = bottle.color === "Olive Green" ? "rgb(182, 194, 158)" : bottle.color === "Amber" ? "rgb(206, 180, 140)" : "#fff";
+    for (let y = scan.top; y <= scan.bottom; y++) {
+      const [l, r] = scan.spans[y] || [0, -1];
+      if (r - l > 1) g.fillRect(l, y, r - l + 1, 1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bottleScanKey, bottle.color, page, prev]);
   /* ROUND 47 (owner): "Upload Another Label" on the bottle page — a
      customer who ALREADY has a printed label uploads it and the tail of
      the flow flips to assets-only mode (no back shot, no landing page,
@@ -776,6 +822,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
      upload clears EVERY section and the next arrow gates until each one
      has a pick. */
   const [wineColor, setWineColor] = useState("");
+  useEffect(() => { const p2 = capPreset(wineColor); if (p2) setWheel(p2); }, [wineColor]);
   useEffect(() => {
     if (page !== "bottle" || customLabel || wineColor) return;
     const src = (f.colour || DEMO_FRONT.colour).toLowerCase();
@@ -963,7 +1010,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
        about admin charter changes and replayed stale sets. The server
        cache (charter-aware since round 19) answers true duplicates
        instantly, so refetching costs nothing. */
-    const sig = JSON.stringify({ fs: frontSig, bs: backSig, bottle, wc: wineColor, rgb: wheel.rgb, shade, sel: sel.style, cl: customLabel ? customLabel.length + customLabel.slice(-64) : "" });
+    const sig = JSON.stringify({ fs: frontSig, bs: backSig, bottle, wc: wineColor, rgb: wheel.rgb, sel: sel.style, cl: customLabel ? customLabel.length + customLabel.slice(-64) : "" });
     /* ROUND 50 #9 (owner: "old bottle still in the landing thumbs!"):
        any changed input invalidates the previously published page — the
        thumb shows its loader until the fresh publish lands */
@@ -1175,7 +1222,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     });
   }, [dreams]);
   const [busyMsg, setBusyMsg] = useState("");
-  const dragRef = useRef<"" | "wheel" | "shade" | "terms">("");
+  const dragRef = useRef<"" | "wheel" | "terms">("");
   /* round 18 #5: every order gets a product code — the QR points to its
      future landing page (domain configurable when it exists) */
   const productCode = useRef(Math.random().toString(36).slice(2, 10));
@@ -1250,15 +1297,26 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     return () => window.removeEventListener("resize", fit);
   }, []);
 
-  /* colour wheel sampling canvas */
+  /* THE COLOUR WHEEL (2026-09-28, owner: "no separate lightness bar — the
+     wheel itself goes to white toward its centre and to BLACK toward its
+     rim, with room enough in between for the colour"). Drawn by code —
+     hue round the circle, lightness along the radius — once, both for the
+     page and for sampling a pick. */
+  const [wheelSrc, setWheelSrc] = useState("");
   useEffect(() => {
-    const img = new Image();
-    img.onload = () => {
-      const c = document.createElement("canvas"); c.width = 137; c.height = 137;
-      c.getContext("2d")!.drawImage(img, 0, 0, 137, 137);
-      wheelCanvas.current = c;
-    };
-    img.src = "/newui/colorwheel.png";
+    const N = 274, c = document.createElement("canvas"); c.width = N; c.height = N;
+    const g = c.getContext("2d")!, im = g.createImageData(N, N);
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+      const dx = (x + 0.5) / N * 2 - 1, dy = (y + 0.5) / N * 2 - 1, r = Math.hypot(dx, dy);
+      const i = (y * N + x) * 4;
+      if (r > 1) { im.data[i + 3] = 0; continue; }
+      const [R, G, B] = wheelRgb(Math.atan2(dy, dx), r);
+      im.data[i] = R; im.data[i + 1] = G; im.data[i + 2] = B;
+      im.data[i + 3] = r > 0.985 ? Math.round(255 * (1 - r) / 0.015) : 255;   /* a soft rim */
+    }
+    g.putImageData(im, 0, 0);
+    wheelCanvas.current = c;
+    setWheelSrc(c.toDataURL());
   }, []);
 
   /* ROUND 33 (owner: "at loader end the previous page's elements flash and
@@ -1488,6 +1546,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const guideArrived = useRef(-1);
   const [guideTick, setGuideTick] = useState(0);
   const createRect = useRef({ x: 735.5, y: 560, w: 354.5, h: 30 });
+  /* the back label page's Edit button — it moves with the label's shape */
+  const bdEditRect = useRef({ x: 548.6, y: 589, w: 341.4, h: 34.3 });
   const pageSince = useRef(Date.now());
   useEffect(() => { pageSince.current = Date.now(); }, [page]);
   const guideDoneNow = (d?: string) => {
@@ -1622,25 +1682,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       let rgb = DEMO_WHEEL.rgb as number[];
       const c = wheelCanvas.current;
       if (c) {
-        const d = c.getContext("2d")!.getImageData(Math.round(fx * 136), Math.round(fy * 136), 1, 1).data;
+        const d = c.getContext("2d")!.getImageData(Math.round(fx * 273), Math.round(fy * 273), 1, 1).data;
         if (d[3] > 40) rgb = [d[0], d[1], d[2]];
       }
       setWheel({ x: fx, y: fy, rgb });
     };
-    /* a slow drag along the lightness bar */
-    const dragShade = async (from: number, to: number) => {
-      if (!(await move([SHADE_X(from), 532.5], 560))) return false;
-      setRipple({ x: SHADE_X(from), y: 532.5, n: ++rippleN.current });
-      if (!(await hold(240))) return false;
-      const N2 = 16;
-      for (let i = 1; i <= N2; i++) {
-        const v = from + (to - from) * (i / N2);
-        setShade(v);
-        setCursor({ x: SHADE_X(v), y: 532.5, ms: 60 });
-        if (!(await hold(52))) return false;
-      }
-      return beat(420);
-    };
+
 
     /* anything the visitor jumped over is filled in at once, so each step
        stands on its own however they got there */
@@ -1664,7 +1711,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       }
       if (tut > 4) {
         bottleTouched.current = true; setBottle({ ...DEMO_BOTTLE }); setWineColor("Amber");
-        setWheel({ ...DEMO_WHEEL }); setShade(DEMO_SHADE);
+        setWheel({ ...DEMO_WHEEL });
       }
       /* round 88 #5: the assets step opens ALREADY loading — no grey
          placeholders before the glasses */
@@ -1774,7 +1821,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           /* round 73 #4: it opens already filled in — only the changes play */
           bottleTouched.current = true;
           setWineColor("Amber"); setBottle({ ...DEMO_BOTTLE_0 });
-          setWheel({ x: 0.5, y: 0.5, rgb: [255, 255, 255] }); setShade(0.5);
+          setWheel({ x: 0.5, y: 0.5, rgb: [255, 255, 255] });
           /* ROUND 73 #4 (owner's exact order): the page OPENS already set
              to White / Bordeaux / Olive Green / Wax Seal / Matte. The
              pointer then changes the bottle type, the glass colour and the
@@ -1793,7 +1840,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           /* the seal's sky blue, then a touch deeper */
           if (!(await tap(TAP.wheel, 420, 560, () => pickWheel(DEMO_WHEEL.x, DEMO_WHEEL.y)))) return;
           if (!(await beat(560))) return;
-          if (!(await dragShade(0.5, DEMO_SHADE))) return;
           break;
         }
         case 5: {
@@ -2505,17 +2551,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const fy = Math.min(1, Math.max(0, (clientY - r.top) / r.height));
     let rgb = wheel.rgb;
     if (wheelCanvas.current) {
-      const d = wheelCanvas.current.getContext("2d")!.getImageData(Math.round(fx * 136), Math.round(fy * 136), 1, 1).data;
+      const d = wheelCanvas.current.getContext("2d")!.getImageData(Math.round(fx * 273), Math.round(fy * 273), 1, 1).data;
       if (d[3] > 40) rgb = [d[0], d[1], d[2]];
     }
     setWheel({ x: fx, y: fy, rgb });
   };
-  const shadeRgb = () => {
-    const [r, g, bl] = wheel.rgb;
-    const t = shade; // 0 = white, 1 = black
-    const mix = (v: number) => t < 0.5 ? Math.round(v + (255 - v) * (1 - t * 2)) : Math.round(v * (1 - (t - 0.5) * 2));
-    return `rgb(${mix(r)}, ${mix(g)}, ${mix(bl)})`;
-  };
+  /* the capsule colour — the wheel's pick itself (the lightness bar went
+     into the wheel, 2026-09-28) */
+  const shadeRgb = () => `rgb(${wheel.rgb[0]}, ${wheel.rgb[1]}, ${wheel.rgb[2]})`;
 
   /* THE HOME PAGE (owner's Homepage_Visual, 2026-09-23) — every place,
      size and colour read out of his PDF (NEW UI/Comments/New), in page
@@ -2610,7 +2653,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         {/* 2026-09-28 (owner): on the left, level with the tagline's first
             line — set like the tagline (italic, black), underlined as a link;
             it plays the tutorial by itself */}
-        {!tourEnd && <button onClick={() => startTutorial(true)}
+        {/* not on the tutorial's own closing card, nor on the home page it hands over to */}
+        {!tourEnd && tut < 0 && <button onClick={() => startTutorial(true)}
           style={{ ...px(137.14, baseTop(625.4, 16.2), 420, 20), ...ghost, pointerEvents: "auto", textAlign: "left", textTransform: "none", font: `italic 16.2px/16.2px ${HNW}`, color: "#000", textDecoration: "underline", textUnderlineOffset: 3, whiteSpace: "nowrap", cursor: "pointer" }}>
           {t("See how this pack was created")}</button>}
         {lang === "ge" ? null : ["Create print and market-ready labels,", "marketing assets, and a product page", "in ~10 minutes."].map((ln, i) => (
@@ -2874,7 +2918,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 {styleOpen ? (
                   <span style={{ position: "absolute", left: 0, top: baseTop(SB.h / 2 + 4.5, 12), width: SB.w, textAlign: "center", font: `12px ${HNW}`, letterSpacing: 0.3, lineHeight: "12px", color: ink }}>{t("Select")}</span>
                 ) : (
-                  <span style={{ position: "absolute", left: 12, top: baseTop(base, 14), width: SB.w - 12 - 40, textAlign: "left", font: `14px/14px ${HNW}`, color: ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  /* the line box is 24 tall (not 14): the ellipsis clips at it, and
+                     a 14-tall box cut the Georgian letters' tails ("სტილი") */
+                  <span style={{ position: "absolute", left: 12, top: base - 12 - 0.5255 * 14, height: 24, width: SB.w - 12 - 40, textAlign: "left", font: `14px/24px ${HNW}`, color: ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     <b style={{ fontWeight: 700 }}>{t("Style:")}</b>{" "}{chosen.length ? chosen.map((a) => a.name).join(", ") : t("3 randomly chosen artists")}
                   </span>
                 )}
@@ -2904,12 +2950,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                           /* eslint-disable-next-line @next/next/no-img-element */
                           ? <img src={a.avatar} alt="" style={{ width: AV, height: AV, borderRadius: AV / 2, objectFit: "cover", objectPosition: a.crop, flex: "0 0 auto", display: "block" }} />
                           : <span style={{ width: AV, height: AV, borderRadius: AV / 2, background: "#E3E3E1", flex: "0 0 auto" }} />}
-                        {a.page ? (
-                          <button onClick={(e) => { e.stopPropagation(); setStyleOpen(false); artistsFrom.current = "vision"; setArtistId(a.id); setArtistView("art"); go("artist"); }}
-                            style={{ ...ghost, font: `${on ? 700 : 400} 13px ${HNW}`, color: "#111", whiteSpace: "nowrap", textTransform: "none", textDecoration: "underline", textUnderlineOffset: 2, cursor: "pointer", position: "relative", top: -0.1655 * 13 }}>{a.name}</button>
-                        ) : (
-                          <span style={{ font: `${on ? 700 : 400} 13px ${HNW}`, color: "#111", whiteSpace: "nowrap", position: "relative", top: -0.1655 * 13 }}>{a.name}</span>
-                        )}
+                        {/* 2026-09-28 (owner): the name and the avatar only pick —
+                            no link, no underline */}
+                        <span style={{ font: `${on ? 700 : 400} 13px ${HNW}`, color: "#111", whiteSpace: "nowrap", position: "relative", top: -0.1655 * 13 }}>{a.name}</span>
                         {ring(on)}
                       </div>
                     );
@@ -3380,7 +3423,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
       case "backdesign": {
         const fit = fitIn(BD_AREA.w, BD_AREA.h, backDims.w, backDims.h);
-        const lx = BD_AREA.x + fit.dx, ly = BD_AREA.y + fit.dy;
+        const lx = BD_AREA.x + fit.dx;
         /* ROUND 113 #4 (owner): "Back label page with placeholders is not
            in sync with the actual layout… if we make any change in real
            UI the placeholder pages should also adapt". So the empty page
@@ -3388,10 +3431,16 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
            frame with its corner pluses, the same size caption on the same
            midline, and BOTH buttons — Edit and Save — in their real
            places, greyed. The geometry is read from the same numbers. */
-        const BD_EDIT_Y = 589, BD_BX = 548.6, BD_BW = 341.4, BD_BH = 34.3;
+        const BD_BX = 548.6, BD_BW = 341.4, BD_BH = 34.3;
+        /* 2026-09-28 (owner): the label, its size line and Edit form ONE
+           block, centred on the page's middle — for any label's shape */
+        const BDY = (68.57 + 754.07) / 2 - ((backPng ? BD_AREA.y + fit.dy : BD_AREA.y) - 10 + 589 + BD_BH) / 2;
+        const BD_EDIT_Y = 589 + BDY;
+        if (!inSlide) bdEditRect.current = { x: BD_BX, y: BD_EDIT_Y, w: BD_BW, h: BD_BH };
         /* with nothing made yet the slot is the whole area, so the frame
            stands 10 off it exactly as it stands off a real label */
-        const capY = ((backPng ? ly + fit.h : BD_AREA.y + BD_AREA.h) + BD_EDIT_Y) / 2 - 7.5;
+        const ly = BD_AREA.y + fit.dy + BDY;
+        const capY = ((backPng ? ly + fit.h : BD_AREA.y + BDY + BD_AREA.h) + BD_EDIT_Y) / 2 - 7.5;
         const sizeCaption = (rows: readonly (readonly [string, string])[], grey: boolean) => (
           <div style={{ position: "absolute", left: BD_AREA.x, top: capY, width: BD_AREA.w, display: "flex", justifyContent: "center", alignItems: "baseline", columnGap: 24, pointerEvents: "none" }}>
             {rows.map(([cap, v]) => (
@@ -3405,10 +3454,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         return (<>
           {/* cover baked mock + its corner crosses + Edit/magnifier row */}
           {patch(BD_AREA.x - 12, BD_AREA.y - 12, BD_AREA.w + 24, BD_AREA.h + 24, "bdmock")}
+          {patch(BD_AREA.x - 12, 150, BD_AREA.w + 24, 480, "bdmock2")}
           {patch(546, 546, 350, 40, "bdrow")}
           {!backPng && (<>
-            {notMade(BD_AREA.x, BD_AREA.y, BD_AREA.w, BD_AREA.h, "back", "nmbd")}
-            {dashedBox(BD_AREA.x - 10, BD_AREA.y - 10, BD_AREA.w + 20, BD_AREA.h + 20, "bdDempty", true, "#C9C7BF")}
+            {notMade(BD_AREA.x, BD_AREA.y + BDY, BD_AREA.w, BD_AREA.h, "back", "nmbd")}
+            {dashedBox(BD_AREA.x - 10, BD_AREA.y + BDY - 10, BD_AREA.w + 20, BD_AREA.h + 20, "bdDempty", true, "#C9C7BF")}
             {/* round 53 #8: deactivated grey furniture on the empty page */}
             {sizeCaption([["Width:", "—"], ["Height:", "—"]] as const, true)}
             <div style={{ ...px(BD_BX, BD_EDIT_Y, BD_BW, BD_BH), background: "#ECECEA", color: "#B3B1A8", font: `12px ${HNW}`, letterSpacing: 0.3, display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>{t("Edit")}</div>
@@ -3448,13 +3498,16 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
            new 191.9px column rhythm with the baked proportions (header
            baseline 217.7 = col+35.2, ring cx = col+43.2, text = col+62.2,
            row pitch 29.8). */
-        const COLS_X = [342.86, 534.78, 726.7, 918.62, 1110.54];
-        const ROWY = (i: number) => 283.57 + i * 29.8;
+        /* 2026-09-28 (owner): choices first, the silhouette last, all of it
+           in the page's middle (B_COLS, B_SIL, B_DY at the top of the file) */
+        const COLS_X = B_COLS;
+        const ROWY = (i: number) => 283.57 + B_DY + i * 29.8;
+        const SIL_X = B_SIL.x0 + (B_SIL.x1 - B_SIL.x0 - 201.6) / 2, SIL_Y = 174 + B_DY;
         /* round 49 #4: no closure picked (own-label reset) ALSO freezes
            the wheel — it only lives while a real capsule is chosen */
         const wheelOff = bottle.closure === "No Capsule" || !bottle.closure;
         const colHead = (ci: number, title: string) => (
-          <span key={"bh" + ci} style={{ ...px(COLS_X[ci] + 35.2, 217.7 - 13, 160, 16), font: `700 15px ${HNW}`, lineHeight: "16px" }}>{t(title)}</span>
+          <span key={"bh" + ci} style={{ ...px(COLS_X[ci] + 35.2, 217.7 + B_DY - 13, 160, 16), font: `700 15px ${HNW}`, lineHeight: "16px" }}>{t(title)}</span>
         );
         const optRow = (ci: number, row: number, name: string, on: boolean, pick: () => void) => {
           const cx = COLS_X[ci] + 43.2, cy = ROWY(row);
@@ -3489,10 +3542,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {/* wipe the baked column content AND the baked frame: the board
               draws its own dashed rules and pluses, which sat a pixel off
               ours and doubled them (round 110). Ours are the only ones now. */}
-          {patch(341.6, 171, 959.3, 413, "bzone")}
-          {patch(126, 160, 1194, 26, "btopwipe")}
-          {patch(126, 572, 1194, 26, "bbotwipe")}
-          {dashGrid(137.14, 171.71, 1302.86 - 137.14, 583.41 - 171.71, COLS_X, "bgrid")}
+          {/* 2026-09-28: the board's whole old frame zone is cleared in one
+              piece (below the title) — every column, the frame and its
+              pluses are drawn live, one grid height lower */}
+          {patch(120, 152, 1210, 452, "bzone")}
+          {dashGrid(137.14, 171.71 + B_DY, 1302.86 - 137.14, 583.41 - 171.71, [...B_COLS.slice(1), B_SIL.x0], "bgrid")}
           {colHead(0, "Wine Color")}
           {["Red", "White", "Amber", "Rosé"].map((c, i) => optRow(0, i, c, wineColor === c, () => setWineColor(c)))}
           {colHead(1, "Bottle Type")}
@@ -3512,27 +3566,18 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               HORIZONTAL below the wheel (white left → black right), bar
               and wheel share the column's centre axis. Round 48 #3 /
               49 #4: greyed and inert without a real capsule. */}
-          <div style={{ ...px(COLS_X[4], 368, 191.9, 175), opacity: wheelOff ? 0.3 : 1, filter: wheelOff ? "grayscale(1)" : "none", pointerEvents: wheelOff ? "none" : "auto", transition: `opacity 240ms ${EASE}` }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/newui/colorwheel.png" alt="" style={{ ...px(27.35, 0, 137.2, 137.2), pointerEvents: "none" }} />
-            <div style={{ ...px(27.35, 0, 137.2, 137.2), cursor: "crosshair" }}
+          {/* 2026-09-28 (owner): no lightness bar — the wheel carries it:
+              white at its centre, black at its rim */}
+          <div style={{ ...px(COLS_X[4], 368 + B_DY, 191.9, 175), opacity: wheelOff ? 0.3 : 1, filter: wheelOff ? "grayscale(1)" : "none", pointerEvents: wheelOff ? "none" : "auto", transition: `opacity 240ms ${EASE}` }}>
+            {wheelSrc && (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img src={wheelSrc} alt="" style={{ ...px(27.35, 0, 137.2, 137.2), pointerEvents: "none" }} />
+            )}
+            <div style={{ ...px(27.35, 0, 137.2, 137.2), cursor: "crosshair", borderRadius: 69 }}
               onPointerDown={(e) => { dragRef.current = "wheel"; e.currentTarget.setPointerCapture(e.pointerId); wheelPick(e.clientX, e.clientY, e.currentTarget); }}
               onPointerMove={(e) => { if (dragRef.current === "wheel") wheelPick(e.clientX, e.clientY, e.currentTarget); }}
               onPointerUp={() => { dragRef.current = ""; }}>
-              <span style={{ position: "absolute", left: `${wheel.x * 100}%`, top: `${wheel.y * 100}%`, transform: "translate(-50%,-50%)", width: 15.2, height: 15.2, borderRadius: 8, background: "transparent", border: "1.5px solid #111", pointerEvents: "none", boxSizing: "border-box" }} />
-            </div>
-            {/* horizontal capsule: white LEFT → black RIGHT */}
-            <div style={{ ...px(27.63, 157, 136.64, 15), borderRadius: 7.5, background: "linear-gradient(90deg, #fff, #000)", pointerEvents: "none" }} />
-            <div style={{ ...px(19.6, 148.5, 152, 32), cursor: "grab" }}
-              onPointerDown={(e) => { dragRef.current = "shade"; e.currentTarget.setPointerCapture(e.pointerId); }}
-              onPointerMove={(e) => {
-                if (dragRef.current !== "shade") return;
-                const r = e.currentTarget.getBoundingClientRect();
-                const xx = (e.clientX - r.left) / r.width * 152;
-                setShade(Math.min(1, Math.max(0, (xx - 14.69) / 121.64)));
-              }}
-              onPointerUp={() => { dragRef.current = ""; }}>
-              <span style={{ position: "absolute", left: 14.69 + shade * 121.64 - 7.6, top: 8.4, width: 15.2, height: 15.2, borderRadius: 8, background: "transparent", border: "1.5px solid #111", boxSizing: "border-box" }} />
+              <span style={{ position: "absolute", left: `${wheel.x * 100}%`, top: `${wheel.y * 100}%`, transform: "translate(-50%,-50%)", width: 15.2, height: 15.2, borderRadius: 8, background: "transparent", border: `1.5px solid ${(wheel.rgb[0] + wheel.rgb[1] + wheel.rgb[2]) / 3 < 90 ? "#fff" : "#111"}`, pointerEvents: "none", boxSizing: "border-box" }} />
             </div>
           </div>
           {/* the owner's bottle-type photos (public/newui/bottles, 800×1600
@@ -3545,7 +3590,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {(() => {
             const src = bottleSrc();
             const s = 407.4 / 1600;                       // cover scale
-            const xoff = 139.2 - (800 * s - 201.6) / 2;
+            const xoff = SIL_X - (800 * s - 201.6) / 2;
             const scan = bottleScans.current[bottleScanKey === src ? src : ""];
             /* ROUND 47: an uploaded own label takes the preview slot */
             const lab = customLabel ? { style: "custom", dream: customLabel, preview: customLabel } : savedDream();
@@ -3571,7 +3616,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               Math.min(Math.max(ly0, topD0 + zone[0] * bhD0), topD0 + zone[1] * bhD0 - lh0);
             if (scan && !lab) {
               const bhD = (scan.bottom - scan.top) * s;
-              const topD = 174 + scan.top * s;
+              const topD = SIL_Y + scan.top * s;
               const pxPerCm = bhD / (bottle.type === "Alsace / Rhine" ? 35 : 30);
               const { lw, lh } = fitLabel((mmW / 10) * pxPerCm, (mmH / 10) * pxPerCm);
               const anc = LABEL_ANCHOR[bottle.type] || LABEL_ANCHOR["Bordeaux"];
@@ -3585,7 +3630,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             }
             if (scan && lab) {
               const bhD = (scan.bottom - scan.top) * s;
-              const topD = 174 + scan.top * s;
+              const topD = SIL_Y + scan.top * s;
               const pxPerCm = bhD / (bottle.type === "Alsace / Rhine" ? 35 : 30);
               const { lw, lh } = fitLabel((mmW / 10) * pxPerCm, (mmH / 10) * pxPerCm);
               const anc = LABEL_ANCHOR[bottle.type] || LABEL_ANCHOR["Bordeaux"];
@@ -3597,24 +3642,32 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               );
             }
             return (<>
+              {/* 2026-09-28 (owner): the cell on a light 10 % grey, so a white
+                  capsule shows; the glass painted inside the silhouette; the
+                  line drawing laid over both (multiply) */}
+              <div style={{ ...px(B_SIL.x0 + 0.5, 171.71 + B_DY + 0.5, B_SIL.x1 - B_SIL.x0 - 1, 583.41 - 171.71 - 1), background: "#E6E6E6", pointerEvents: "none" }} />
+              <div style={{ ...px(SIL_X, SIL_Y, 201.6, 407.4), overflow: "hidden", pointerEvents: "none" }}>
+                <canvas ref={bodyCanvasRef} width={800} height={1600}
+                  style={{ position: "absolute", left: xoff - SIL_X, top: 0, width: 800 * s, height: 407.4 }} />
+              </div>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img key={src} alt={bottle.type} src={src}
-                style={{ ...px(139.2, 174, 201.6, 407.4), objectFit: "cover", animation: inSlide ? "none" : `nuiFadeIn 240ms ${EASE}`, pointerEvents: "none" }} />
+                style={{ ...px(SIL_X, SIL_Y, 201.6, 407.4), objectFit: "cover", mixBlendMode: "multiply", animation: inSlide ? "none" : `nuiFadeIn 240ms ${EASE}`, pointerEvents: "none" }} />
               <canvas ref={capCanvasRef} width={800} height={1600}
-                style={{ position: "absolute", left: xoff, top: 174, width: 800 * s, height: 407.4, mixBlendMode: "multiply", pointerEvents: "none" }} />
+                style={{ position: "absolute", left: xoff, top: SIL_Y, width: 800 * s, height: 407.4, mixBlendMode: "multiply", pointerEvents: "none" }} />
               {labelEl}
             </>);
           })()}
           {/* round 12 #3: the frame back ON TOP of the photo — round 110:
               one element for the whole grid, so every plus sits on its
               crossing to the pixel */}
-          {dashGrid(137.14, 171.71, 1302.86 - 137.14, 583.41 - 171.71, COLS_X, "bgrid2")}
+          {dashGrid(137.14, 171.71 + B_DY, 1302.86 - 137.14, 583.41 - 171.71, [...B_COLS.slice(1), B_SIL.x0], "bgrid2")}
           {/* ROUND 47 (owner): customers who already have their labels
               upload one here and go straight to marketing assets.
               ROUND 48: the confirmation is GREEN like every other ✓, and
               a fresh upload UNSELECTS every section — the customer picks
               each one before the next arrow lets them through. */}
-          <label style={{ ...px(137.14, 551, 205.7, 18), font: `13px ${HNW}`, color: customLabel ? "#3f6d2a" : "#111", textDecoration: "underline", textTransform: "none", textAlign: "center", cursor: "pointer", display: "block", lineHeight: "18px" }}>
+          <label style={{ ...px(B_SIL.x0, 551 + B_DY, B_SIL.x1 - B_SIL.x0, 18), font: `13px ${HNW}`, color: customLabel ? "#3f6d2a" : "#111", textDecoration: "underline", textTransform: "none", textAlign: "center", cursor: "pointer", display: "block", lineHeight: "18px" }}>
             <input type="file" accept="image/png,image/jpeg,image/webp,image/*" style={{ display: "none" }} onChange={(e) => {
               const input = e.currentTarget;
               const file = input.files?.[0]; if (!file) return;
@@ -4665,7 +4718,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             const show = st.modal ? !!confirmModal : page === st.page && !confirmModal;
             if (!show) return null;
             const BW2 = 250, GAP = 14;
-            const a = st.anchor === "create" ? createRect.current : st.at, cx = a.x + a.w / 2, cy = a.y + a.h / 2;
+            const a = st.anchor === "create" ? createRect.current : st.anchor === "bdEdit" ? bdEditRect.current : st.at, cx = a.x + a.w / 2, cy = a.y + a.h / 2;
             const left = st.side === "left" ? a.x - GAP - BW2 : st.side === "right" ? a.x + a.w + GAP : Math.max(20, Math.min(W - BW2 - 20, cx - BW2 / 2));
             const top = st.side === "above" ? a.y - GAP : st.side === "below" ? a.y + a.h + GAP : cy;
             const shift = st.side === "above" ? "translateY(-100%)" : st.side === "left" || st.side === "right" ? "translateY(-50%)" : "none";

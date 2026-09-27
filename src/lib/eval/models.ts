@@ -199,14 +199,25 @@ export async function paintStory(model: EvalModel, ap: ArtworkPrompt, extra: { s
 /* an abstraction is repainted at the SAME strength (owner, 2026-09-26:
    "a few stray elements are better than weakening FLUX — we lose the
    style"); only the words ask it to stay abstract */
-export async function repaintInHand(model: EvalModel, story: string, ap: ArtworkPrompt, strength = REPAINT_STRENGTH): Promise<string> {
+/* the artist's HAND only — medium, handwriting, colour, what she never
+   does, the owner's note — without `form` and `mood`, whose lists of
+   subjects ("horses, bulls, dogs…", "open form, not detailed") FLUX read
+   as things to paint (2026-09-28: a deer came back as Dachi's horse) */
+export const handCharter = (p: ArtistProfile) => `${p.medium}; ${p.words.join(", ")}; colour: ${p.colour}; ${p.never}${p.note ? `; ${p.note}` : ""}`;
+/* 2026-09-28: HAND-ONLY is the default — tested on "Deer has vine tree
+   instead of horns": Mariam's deer survived the repaint (it had melted
+   into a tree), Levan and Giorgi unchanged; the older wording stays
+   reachable with handOnly: false */
+export async function repaintInHand(model: EvalModel, story: string, ap: ArtworkPrompt, strength = REPAINT_STRENGTH, opts: { handOnly?: boolean } = { handOnly: true }): Promise<string> {
   if (!model.lora) throw new Error(`${model.name} has no trained LoRA yet`);
   const key = process.env.FAL_KEY;
   if (!key) throw new Error("FAL_KEY is not set");
   const url = await falUpload(Buffer.from(story.slice(story.indexOf(",") + 1), "base64"), "story.png", "image/png");
   const prompt = `${model.lora.trigger} style. ${ap.abstract
     ? "Repaint this ABSTRACT picture in your own hand — the same marks, patches and shapes in the same places, your own brush, texture and colour. It stays abstract: never turn a mark into a person, face, animal, object or place (at most a leaf, a stem or a tendril), never add letters or a signature."
-    : "Repaint this picture in your own hand — same scene, same subjects in the same places, your own colours and brush:"} ${ap.abstract ? "" : ap.subject} Painted as ${artistCharter(model.artist)}. ${ap.kind === "bleed"
+    : opts.handOnly
+      ? "Repaint this picture in your own hand. KEEP WHAT IT SHOWS — every figure, animal and object stays exactly what it is and where it is (a deer stays a deer, a person stays a person); change only the hand: your own line, brush, texture and colours. It shows:"
+      : "Repaint this picture in your own hand — same scene, same subjects in the same places, your own colours and brush:"} ${ap.abstract ? "" : ap.subject} Painted as ${opts.handOnly ? handCharter(model.artist) : artistCharter(model.artist)}. ${ap.kind === "bleed"
     ? (ap.edgeSide
       ? `Keep the composition exactly: the painting runs off the other edges, and on the ${ap.edgeSide} side it ends in its own loose irregular edge with the plain, flat, empty ground beyond it — keep that ground plain and empty, never paint into it, never add a border.`
       : "Paint right to every edge — no empty paper, no margin, no border.")

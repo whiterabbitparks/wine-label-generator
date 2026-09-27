@@ -39,8 +39,9 @@ export const SVG_GE: Record<string, string> = {
   /* 2026-09-23: the new home page (Homepage_Visual) */
   "YOUR LABEL": "ᲗᲥᲕᲔᲜᲘ ᲔᲢᲘᲙᲔᲢᲘ",
   "YOUR MARKET": "ᲗᲥᲕᲔᲜᲘ ᲑᲐᲖᲐᲠᲘ",
-  "Create print and market-ready labels,": "შექმენით საბეჭდად და ბაზრისთვის მზა ეტიკეტები,",
-  "marketing assets, and a product page": "სამარკეტინგო მასალა და პროდუქტის გვერდი",
+  /* 2026-09-28 (owner's words) */
+  "Create print and market-ready labels,": "შექმენით საბეჭდად მზა ეტიკეტები,",
+  "marketing assets, and a product page": "სამარკეტინგო მასალა და პროდუქტის ვებ-გვერდი",
   "in ~10 minutes.": "~10 წუთში.",
   "Style By:": "სტილი:",
   "FRONT LABEL": "ᲬᲘᲜᲐ ᲔᲢᲘᲙᲔᲢᲘ",

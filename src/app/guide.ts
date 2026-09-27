@@ -38,7 +38,7 @@ export interface GuideStep {
   modal?: boolean;
   /* placed beside the popup's own Create button (the popup's height
      changes with what it lists) */
-  anchor?: "create";
+  anchor?: "create" | "bdEdit";
   /* 2026-09-27 (owner: "you can't tell when to press Next and when a button
      moves you on"): every note says so in the same place, at its foot —
        read       → a white "Next →" (optional ones say "optional")
@@ -120,7 +120,7 @@ export const GUIDE: GuideStep[] = [
     ge: "დააჭირე წითელ ღილაკს, რომ უკანა ეტიკეტი აიწყოს.", done: "page:backdesign", press: PRESS_RED },
   /* ── back label ── */
   /* 2026-09-28 (owner): no Save/Select here — a note to read beside Edit */
-  { page: "backdesign", at: { x: 548.6, y: 589, w: 341.4, h: 34.3 }, side: "right",
+  { page: "backdesign", at: { x: 548.6, y: 589, w: 341.4, h: 34.3 }, anchor: "bdEdit", side: "right",
     en: "Your back label is ready to print. Press Edit if you want to change something.",
     ge: "შენი უკანა ეტიკეტი ბეჭდვისთვის მზად არის. თუ გინდა რამის შეცვლა, დააჭირე რედაქტირებას." },
   { page: "backdesign", at: RED, side: "above",
