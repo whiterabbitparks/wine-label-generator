@@ -1,4 +1,5 @@
 import { buildArtworkPrompt, asKind, evalModel, generateArtwork, artistModels, BLEED } from "@/lib/eval/models";
+import { ideaInEnglish } from "./translate";
 import { composeTemplateLabel, templatesOf, pickTemplate, inkLost } from "@/lib/typeset/compose-template";
 import { templatesNow } from "@/lib/typeset/overrides";
 import type { Template } from "@/lib/typeset/templates";
@@ -93,7 +94,8 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
   const avoid = inp.avoidPairs || [];
   const widthMm = Math.min(300, Math.max(30, inp.widthMm || 110));
   const heightMm = Math.min(300, Math.max(30, inp.heightMm || 80));
-  const brief = { id: "wizard", title: "wizard", vision: inp.vision, data: inp.data, width: widthMm, height: heightMm };
+  /* 2026-09-28: a Georgian (any non-Latin) idea is painted from its English translation */
+  const brief = { id: "wizard", title: "wizard", vision: await ideaInEnglish(inp.vision), data: inp.data, width: widthMm, height: heightMm };
   /* the column's artist (admin → Artists); any artist with a LoRA if unset */
   const model = (inp.artistId ? evalModel(`artist:${inp.artistId}`) : null)
     || (inp.order ? evalModel(castPainter(inp.order, style, avoid, (id) => evalModel(id)?.artist.name || "", inp.pool)) : null)
