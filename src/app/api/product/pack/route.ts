@@ -1,9 +1,10 @@
 import { getDb } from "@/lib/db";
-import { buildPackage, dataBuf, readPack, type PackBody } from "@/lib/package";
+import { dataBuf, readPack, type PackBody } from "@/lib/package";
 
 /* THE PRODUCT PAGE'S DOWNLOADS (owner 2026-09-26):
-     ?code=X          the order's Final Pack folder as one ZIP
-     ?code=X&img=N    one gallery picture at full size — N counts the
+     ?code=X&img=N    one gallery picture at full size
+   (2026-09-27, owner: the whole Final Pack ZIP is no longer handed out
+   here — it is what the customer pays for) — N counts the
                       gallery's order: front shot, back shot, the five
                       lifestyle images
    The pack is the one kept when the order was published or last
@@ -46,11 +47,7 @@ export async function GET(req: Request) {
         headers: { "Content-Type": jpg ? "image/jpeg" : "image/png", "Content-Disposition": `attachment; filename="${names[k]}.${jpg ? "jpg" : "png"}"`, "Cache-Control": "no-store" },
       });
     }
-    const out = await buildPackage(pack);
-    if (!out) return new Response("nothing to package", { status: 404 });
-    return new Response(new Uint8Array(out.zip), {
-      headers: { "Content-Type": "application/zip", "Content-Disposition": `attachment; filename="${out.base}.zip"`, "Cache-Control": "no-store" },
-    });
+    return new Response("img required", { status: 400 });
   } catch (e) {
     return new Response(e instanceof Error ? e.message : "failed", { status: 500 });
   }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { allowLegacy } from "@/lib/guard";
 import { randomUUID } from "node:crypto";
 import type { GenerationJob } from "@/lib/image-provider/types";
 import { generateMockImage } from "@/lib/image-provider/mock";
@@ -16,6 +17,8 @@ import { getImageStorage } from "@/lib/image-storage";
 export const maxDuration = 120; // real image models can be slow
 
 export async function POST(req: Request) {
+  /* 2026-09-27: the old configurator's paid route — admin (or the mock provider) only */
+  if (!(await allowLegacy())) return NextResponse.json({ error: "not available" }, { status: 403 });
   let job: GenerationJob;
   try {
     job = await req.json();

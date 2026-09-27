@@ -71,3 +71,20 @@ export function mixedPainter(order: string, style: string): string {
   const i = COLUMNS.indexOf(style as (typeof COLUMNS)[number]);
   return seats[i < 0 ? 0 : i];
 }
+
+/* 2026-09-27 (owner: "new versions must not repeat the same artist and
+   layout"). With earlier labels of this session named (`avoid`, as
+   "Artist Name|template"), the cast favours the artists shown LEAST so
+   far — with four artists, a second run brings in the one not yet seen —
+   and the template is then chosen to keep every artist+layout pair new
+   (hybrid.ts). Without `avoid` this is exactly mixedPainter. */
+export function castPainter(order: string, style: string, avoid: string[], nameOf: (id: string) => string): string {
+  if (!avoid.length) return mixedPainter(order, style);
+  const ready = listArtists().filter((a) => a.lora).map((a) => `artist:${a.profile.id}`).sort();
+  if (!ready.length) return "";
+  const seen = (id: string) => avoid.filter((p) => p.split("|")[0] === nameOf(id)).length;
+  const cast = [...ready].sort((a, b) => seen(a) - seen(b) || hash(order + a) - hash(order + b));
+  const seats = shuffled(COLUMNS.map((_, i) => cast[i % cast.length]), hash(order + "|seats"));
+  const i = COLUMNS.indexOf(style as (typeof COLUMNS)[number]);
+  return seats[i < 0 ? 0 : i];
+}

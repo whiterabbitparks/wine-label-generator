@@ -23,8 +23,9 @@ import { readArtist, listArtists, artistRefs, nextRefSet, artistCharter, isActiv
    data/experiments/ (git-ignored); the marks in data/eval/. */
 
 /* 2026-09-25 (owner, after the 0.60 vs 0.50 test — 0.50 kept the story
-   better, 0.60 invented extras): 0.55 for now, "I'll watch how it goes" */
-export const REPAINT_STRENGTH = 0.55;
+   better, 0.60 invented extras): 0.55 for now, "I'll watch how it goes".
+   2026-09-27 (owner): 0.53 for every artist. */
+export const REPAINT_STRENGTH = 0.53;
 export const LORA_SCALE = 1.0;
 
 export interface EvalModel {
@@ -130,6 +131,18 @@ function inspiration(d: EvalBrief["data"], abstract: boolean): string {
   return ` ${abstract ? "INSPIRATION" : "SECONDARY INSPIRATION — it never changes, adds to or replaces the story above"}: ${bits.join("; ")}. NEVER write these words, or any letters, anywhere in the picture.`;
 }
 
+/* 2026-09-27 (owner: "cigarettes keep turning up in Levan's pictures —
+   unless the idea or the name asks for one, don't show it"). Four of his
+   eighteen works have someone smoking, so the hand and the references
+   both carry it; the ask now says no, unless the customer's own words
+   bring smoking in. It rides `subject`, so the FLUX repaint hears it too. */
+const SMOKE_WORDS = /smok|cigar|tobac|pipe|hookah|shisha|vape|სიგარ|თამბაქ|მოწევ|ყალიან|ჩიბუხ/i;
+function noSmoking(brief: EvalBrief): string {
+  const d = brief.data as Record<string, string | undefined>;
+  const own = [brief.vision, d.wine, d.producer, d.special].filter(Boolean).join(" ");
+  return SMOKE_WORDS.test(own) ? "" : " Nobody smokes: no cigarette, cigar or pipe anywhere, no smoke drifting from a mouth or a hand.";
+}
+
 function abstractSubject(d: EvalBrief["data"]): string {
   const mood = WINE_MOOD.find(([re]) => re.test(String((d as { wineColorName?: string }).wineColorName || "")))?.[1];
   return "ABSTRACT — NO STORY, NO SUBJECT: there is no scene to tell. Paint an ABSTRACT composition made only of this artist's own marks — patches and washes of colour, brushstrokes, lines, scribbles, dots, drips and textures — arranged into one lively, balanced composition with rhythm, contrast and a clear focal area, exactly as the artist would compose them. " +
@@ -152,7 +165,7 @@ export async function buildArtworkPrompt(brief: EvalBrief, artist: ArtistProfile
   const gaz = await regionNote(d.region);
   /* the inspiration rides the SKETCH's ask only — the FLUX repaint reads
      `subject`, and a quoted name there could come back as painted letters */
-  const subject = `${brief.vision} ${place ? `Set in ${place}.${gaz}` : ""} No buildings unless the story names them. No text, no letters, no border.`;
+  const subject = `${brief.vision} ${place ? `Set in ${place}.${gaz}` : ""} No buildings unless the story names them.${noSmoking(brief)} No text, no letters, no border.`;
   const inStyle = `Painted by ${artist.name}, whose works are the reference images: ${artistCharter(artist)}. Paint a NEW picture in exactly her manner, medium and palette (do not copy the reference subjects).`;
   return { prompt: `${inStyle} ${VIGNETTE} ${subject}${inspiration(d, false)}`, subject, aspect: aspectOf(brief), kind: "spot" };
 }

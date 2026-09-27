@@ -6,7 +6,8 @@ import { cleanPaper } from "@/lib/typeset/palette";
 import { artKindOf, bleedsOf, facesFor, layoutFromTemplate, templateFields, type ArtKind, type Band } from "@/lib/typeset/templates";
 import { faceFile, pickRoles, mix } from "@/lib/typeset/fonts";
 import type { Layout } from "@/lib/typeset/compose";
-import { painterFor, mixedPainter } from "./painters";
+import { painterFor, castPainter } from "./painters";
+import { usage, pickFresh, rememberMade, groundWord, restingGround } from "./variety";
 
 /* the wizard's three columns are the owner's three bands (2026-09-22:
    "first option can be classical… second contemporary… third more free,
@@ -44,6 +45,9 @@ export interface HybridInput {
   /* paint FOR this template (the admin's layout batch walks all twelve);
      its band then decides the column, whatever `style` says */
   template?: string;
+  /* "Artist Name|template" of the labels already shown in this session —
+     a new version never repeats one of those pairs */
+  avoidPairs?: string[];
 }
 export interface HybridOutput {
   png: string;          /* data URL — the print bitmap at 12 px/mm */
@@ -83,13 +87,14 @@ async function gen429<T>(fn: () => Promise<T>): Promise<T> {
 
 export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput & { tag: string; painter: string; artist?: string; repainted: boolean; template: string; hasPaper: boolean; refSet: string }> {
   const style = ["traditional", "contemporary", "punk"].includes(inp.style) ? inp.style : "traditional";
-  const seed = inp.seed ?? (Math.random() * 0xffffffff) >>> 0;
+  let seed = inp.seed ?? (Math.random() * 0xffffffff) >>> 0;
+  const avoid = inp.avoidPairs || [];
   const widthMm = Math.min(300, Math.max(30, inp.widthMm || 110));
   const heightMm = Math.min(300, Math.max(30, inp.heightMm || 80));
   const brief = { id: "wizard", title: "wizard", vision: inp.vision, data: inp.data, width: widthMm, height: heightMm };
   /* the column's artist (admin → Artists); any artist with a LoRA if unset */
   const model = (inp.artistId ? evalModel(`artist:${inp.artistId}`) : null)
-    || (inp.order ? evalModel(mixedPainter(inp.order, style)) : null)
+    || (inp.order ? evalModel(castPainter(inp.order, style, avoid, (id) => evalModel(id)?.artist.name || "")) : null)
     || evalModel(await painterFor(style)) || artistModels().find((m) => m.lora) || artistModels()[0];
   if (!model) throw new Error("no artist is set up yet (data/artists/<id>/profile.json + lora.json)");
   /* 2026-09-22: THE TEMPLATE IS CHOSEN BEFORE THE PAINTING, and so is
@@ -102,8 +107,21 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
   /* only the shapes this column's band actually offers — the free
      column has no wide band drawn, so it must not ask for one */
   const offered = [...new Set(templatesOf(band).map(artKindOf))];
-  const kind: ArtKind = forced ? artKindOf(forced) : offered[mix(seed, 21) % offered.length] || "spot";
-  const tpl = forced || pickTemplate(band, seed, kind);
+  let kind: ArtKind = forced ? artKindOf(forced) : offered[mix(seed, 21) % offered.length] || "spot";
+  /* 2026-09-27 (owner): the VARIETY MEMORY — within the kind, the layouts
+     used least lately are favoured; a pair of this artist and a layout
+     already shown in the session is left out (when another kind still
+     has a fresh one, the kind gives way) */
+  const fresh = (k: ArtKind) => templatesOf(band).filter((t) => artKindOf(t) === k && !avoid.includes(`${model.artist.name}|${t.id}`));
+  if (!forced && !fresh(kind).length) kind = offered.find((k) => fresh(k).length) || kind;
+  const tplPool = fresh(kind).length ? fresh(kind) : templatesOf(band).filter((t) => artKindOf(t) === kind);
+  const tpl = forced || (inp.seed !== undefined ? pickTemplate(band, seed, kind) : pickFresh(tplPool, (t) => t.id, usage("template")));
+  /* and the type's face: of a few seeds, the one whose face is used least */
+  if (inp.seed === undefined) {
+    const faceUse = usage("face");
+    const seeds = Array.from({ length: 12 }, () => (Math.random() * 0xffffffff) >>> 0);
+    seed = pickFresh(seeds, (sd) => facesFor(band, sd).hero.family, faceUse);
+  }
   const zone = tpl.art || { w: tpl.refW, h: tpl.refH };
   const zoneAspect = (zone.w / tpl.refW * widthMm) / (zone.h / tpl.refH * heightMm);
   /* no idea and no sketch → an abstraction in the artist's hand (owner, 2026-09-26) */
@@ -173,6 +191,9 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
       ap.edgeSide = edgeSides.join(" and ") as never;
     }
   }
+  /* a coloured ground that filled several of the latest paintings rests */
+  const rest = artKindOf(tpl) !== "spot" ? restingGround() : "";
+  if (rest) ap.prompt += ` GROUND COLOUR — for variety: this time the ground is NOT ${rest}; take another of the artist's own colours for it.`;
   const painted = await gen429(() => generateArtwork(model, ap, { sketch: inp.sketch || null, refSet: inp.refSet }));
   /* 2026-09-22 (owner): the artist's LoRA learned her PAPER as well as
      her hand, so the picture arrives wrinkled and unevenly lit, and its
@@ -202,6 +223,7 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
     widthMm, heightMm, seed, wineColour: inp.data.wineColorName,
   });
   if (out.warnings.length) console.warn(`[template ${out.template}] ${out.warnings.join("; ")}`);
+  rememberMade({ artist: model.artist.name, template: out.template, face: out.faces.match(/^(.*?) \d{3}\//)?.[1] || out.faces.split(" ")[0], ground: groundWord(out.layout.ground) });
   return { png: out.png, svg: out.svg, art, faces: out.faces, ink: out.ink, ground: out.layout.ground, prompt: ap.prompt, layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", painter: model.id, artist: model.artist.name, repainted: painted.repainted, template: out.template, hasPaper: cleaned.cleaned, refSet: painted.refSet };
 }
 

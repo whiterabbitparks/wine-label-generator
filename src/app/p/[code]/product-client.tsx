@@ -10,9 +10,12 @@
      page two — the gallery: a carousel as on the Final Pack, bigger and
        centred between the margin crosses; its neighbours smaller and
        blurred; the Final Pack's chevrons; "Download Image" under it.
-   DOWNLOAD ASSETS hands out the Final Pack folder (api/product/pack).
    Everything is live — no baked artboard. Wizard-style 3-band slide
-   between the two pages. */
+   between the two pages.
+   2026-09-27 (owner): DOWNLOAD ASSETS is gone from the page (the pack is
+   what the customer pays for). The page is LOCKED — seen through a white
+   veil — until its 5-digit code (in the Final Pack's READ ME) is typed
+   once; then it is open for everyone who scans the bottle. */
 
 import { useCallback, useEffect, useState } from "react";
 
@@ -57,8 +60,11 @@ const T: Record<string, [string, string]> = {
   about: ["WINE DETAILS", "ᲦᲕᲘᲜᲘᲡ ᲓᲔᲢᲐᲚᲔᲑᲘ"],
   ingredients: ["INGREDIENTS", "ᲘᲜᲒᲠᲔᲓᲘᲔᲜᲢᲔᲑᲘ"],
   gallery: ["GALLERY", "ᲒᲐᲚᲔᲠᲔᲐ"],
-  /* the longer Georgian "…the materials" ran into GEO */
-  assets: ["DOWNLOAD ASSETS", "ᲩᲐᲛᲝᲢᲕᲘᲠᲗᲕᲐ"],
+  lockTitle: ["ENTER YOUR CODE", "ᲨᲔᲘᲧᲕᲐᲜᲔ ᲙᲝᲓᲘ"],
+  lockNote: ["You'll find the 5-digit code in the READ ME file of your Final Pack.", "5-ნიშნა კოდს იპოვი შენი საბოლოო პაკეტის READ ME ფაილში."],
+  lockGo: ["Open the page", "გვერდის გახსნა"],
+  lockWrong: ["That code isn't right — check the READ ME.", "კოდი არასწორია — გადაამოწმე READ ME."],
+  lockMany: ["Too many tries today — try again tomorrow.", "დღეს ძალიან ბევრი ცდა იყო — ხვალ სცადე."],
   image: ["Download Image", "სურათის ჩამოტვირთვა"],
   front: ["Front of the bottle", "ბოთლი წინიდან"],
   back: ["Back of the bottle", "ბოთლი უკნიდან"],
@@ -81,7 +87,16 @@ const RING: Record<number, { s: number; dx: number; dy: number; blur: number }> 
   3: { s: 0.2, dx: 400, dy: -17, blur: 5 / 0.2 },
 };
 
-export default function ProductClient({ doc }: { doc: ProductDoc }) {
+export default function ProductClient({ doc, locked: lockedAtFirst = false }: { doc: ProductDoc; locked?: boolean }) {
+  const [locked, setLocked] = useState(lockedAtFirst);
+  const [pin, setPin] = useState("");
+  const [pinErr, setPinErr] = useState("");
+  const tryPin = async (p: string) => {
+    setPinErr("");
+    const r = await fetch("/api/product/unlock", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code: doc._id, pin: p }) }).catch(() => null);
+    if (r?.ok) { setLocked(false); return; }
+    setPinErr(r?.status === 429 ? "lockMany" : "lockWrong");
+  };
   const [sec, setSec] = useState<Section>("about");
   const [prev, setPrev] = useState<Section | null>(null);
   const [dir, setDir] = useState(1);
@@ -284,7 +299,6 @@ export default function ProductClient({ doc }: { doc: ProductDoc }) {
               {(name || title || "WINE").toUpperCase()}
             </span>
             {SECTIONS.map(nav)}
-            <a href={`/api/product/pack?code=${code}`} download style={{ ...line(1011.02, 58.62, 15), textDecoration: "none", cursor: "pointer" }}>{t("assets")}</a>
             <span style={line(1228.36, 58.62, 15)}>
               <button onClick={() => pickLang("ge")} style={{ ...ghost, font: "inherit", color: "inherit", fontWeight: lang === "ge" ? 700 : 400 }}>GEO</button>
               {" / "}
@@ -293,6 +307,20 @@ export default function ProductClient({ doc }: { doc: ProductDoc }) {
             <div style={{ ...px(0, HEADER_H - 0.5, W, 1), background: "#000" }} />
           </div>
 
+          {/* THE LOCK: the page under a white veil, the code box in its middle */}
+          {locked && (
+            <div style={{ position: "absolute", left: 0, top: HEADER_H, width: W, height: H - HEADER_H, background: "rgba(255,255,255,0.8)", backdropFilter: "blur(2px)", zIndex: 40, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: HNW, color: "#111" }}>
+              <div style={{ font: `700 24.27px ${HNW}`, marginBottom: 28 }}>{t("lockTitle")}</div>
+              <input value={pin} inputMode="numeric" autoFocus maxLength={5} aria-label="code"
+                onChange={(e) => { const v = e.target.value.replace(/\D/g, "").slice(0, 5); setPin(v); setPinErr(""); if (v.length === 5) tryPin(v); }}
+                onKeyDown={(e) => { if (e.key === "Enter" && pin.length === 5) tryPin(pin); }}
+                style={{ width: 220, border: "none", borderBottom: "1px solid #111", background: "transparent", outline: "none", textAlign: "center", font: `36px ${HNW}`, letterSpacing: 18, paddingLeft: 18, color: "#111" }} />
+              <div style={{ font: `italic 15px ${HNW}`, marginTop: 22, maxWidth: 420, textAlign: "center", lineHeight: "22px" }}>{t("lockNote")}</div>
+              <button onClick={() => pin.length === 5 && tryPin(pin)}
+                style={{ marginTop: 26, width: 220, height: 34.3, background: pin.length === 5 ? "#111" : "#fff", color: pin.length === 5 ? "#fff" : "#111", border: "1px solid #111", font: `12px ${HNW}`, letterSpacing: 0.3, cursor: "pointer" }}>{t("lockGo")}</button>
+              <div style={{ height: 20, marginTop: 12, font: `13px ${HNW}`, color: "#BA141A" }}>{pinErr ? t(pinErr) : ""}</div>
+            </div>
+          )}
           {/* the foot rule and its end tick */}
           <div style={{ ...px(0, FOOT_Y - 0.5, 1439.5, 1), background: "#000" }} />
           <div style={{ ...px(1439, 750.93, 1, 6.5), background: "#000" }} />

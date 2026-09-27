@@ -1,0 +1,8 @@
+{
+  "url": "https://v3b.fal.media/files/b/0aab8032/ASoFeSjrnEhwI8E_hroRu_pytorch_lora_weights.safetensors",
+  "trigger": "LVNAM",
+  "steps": 1500,
+  "works": 18,
+  "captions": true,
+  "trainedAt": "2026-09-22T22:32:34.200Z"
+}

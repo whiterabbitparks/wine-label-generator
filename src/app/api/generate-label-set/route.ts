@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { allowLegacy } from "@/lib/guard";
 import { createHash, randomUUID } from "node:crypto";
 import { loadCatalog, pickSubStyle } from "@/lib/styles/catalog";
 import { buildStyleJob, type LabelBrief } from "@/lib/styles/prompt";
@@ -168,6 +169,8 @@ function sanitizeBrief(raw: unknown): LabelBrief | { error: string } {
 }
 
 export async function POST(req: Request) {
+  /* 2026-09-27: the old configurator's paid route — admin (or the mock provider) only */
+  if (!(await allowLegacy())) return NextResponse.json({ error: "not available" }, { status: 403 });
   let raw: unknown;
   try {
     raw = await req.json();

@@ -73,6 +73,9 @@ const HNW = "'HNW', 'Helvetica Neue', Helvetica, sans-serif";
 /* ROUND 63 (owner's new mocks): Your Vision + Front Label Details are ONE
    page, and Back Label Details + Market Compliance are ONE page. */
 const ORDER = ["welcome", "vision", "loader", "options", "backdetails", "backdesign", "bottle", "assets", "checkout", "blank",
+  /* 2026-09-27 (owner): buying NEW VERSIONS — a page of its own, off the
+     labels page (no artboard; the bar stands on FRONT LABEL) */
+  "more",
   /* ROUND 112 #4 (owner's artboards): the people behind the paintings —
      an index of everyone who trained a model, and a page each. They are
      not wizard steps: no progress bar, and the red button walks back. */
@@ -188,10 +191,11 @@ const THICK: Record<PageKey, number | null> = {
   assets: CIRCLE_X[5],
   checkout: CIRCLE_X[5],                         /* round 93 #7: to the last station, not into the button */
   blank: null,                                    /* round 94 #2: takes the page it stands in for */
+  more: CIRCLE_X[1],
   artists: null, artist: null,                    /* round 112 #4: no bar on the artists' pages */
 };
 /* highest station index REACHED — that dot (and earlier ones) turn red */
-const STEP_OF: Record<PageKey, number> = { welcome: -1, vision: 0, loader: 0, options: 1, backdetails: 2, backdesign: 3, bottle: 4, assets: 5, checkout: 5, blank: 0, artists: -1, artist: -1 };
+const STEP_OF: Record<PageKey, number> = { welcome: -1, vision: 0, loader: 0, options: 1, backdetails: 2, backdesign: 3, bottle: 4, assets: 5, checkout: 5, blank: 0, more: 1, artists: -1, artist: -1 };
 
 /* ROUND 63: the bar no longer eats a white strip — every page's content
    band runs to the footer edge and the bar paints on top of it. */
@@ -204,7 +208,7 @@ const STRIP_BOUNDS: Record<PageKey, [number, number]> = {
   welcome: [360, 560], vision: [225, 460], loader: [225, 460],
   options: [225, 543], backdetails: [225, 468],
   backdesign: [165, 540], bottle: [225, 515], assets: [165, 540], checkout: [250, 500], blank: [225, 460],
-  artists: [300, 560], artist: [330, 560],
+  artists: [300, 560], artist: [330, 560], more: [225, 460],
 };
 
 /* CONTENT-AWARE PARALLAX (owner round 16 #3): these pages slice by their
@@ -470,7 +474,41 @@ export default function NewUI() {
   const [ideaN, setIdeaN] = useState(0);
   const [sketch, setSketch] = useState<string | null>(null);
   const [f, setF] = useState<Record<string, string>>({ width: "110", height: "80" });
-  const [dreams, setDreams] = useState<Dream[]>([]);
+  /* 2026-09-27 (owner): NEW VERSIONS — every run of three is a SET; the
+     arrows beside the labels walk between them. `dreams` is the set on
+     show; the saved label remembers its own set (selSet). */
+  const [sets, setSets] = useState<Dream[][]>([]);
+  const [setIdx, setSetIdx] = useState(0);
+  const [selSet, setSelSet] = useState(0);
+  const dreams: Dream[] = sets[setIdx] || [];
+  const setDreams = (d: Dream[]) => { setSets(d.length ? [d] : []); setSetIdx(0); setSelSet(0); };
+  /* the slide between two sets: the columns leave and arrive one by one */
+  const [setSlide, setSetSlide] = useState<{ from: number; dir: number; n: number } | null>(null);
+  const showSet = (k: number) => {
+    if (k < 0 || k >= sets.length || k === setIdx) return;
+    setSetSlide({ from: setIdx, dir: k > setIdx ? 1 : -1, n: Date.now() });
+    setSetIdx(k);
+    setTimeout(() => setSetSlide((sl) => (sl && Date.now() - sl.n >= SLIDE_MS + 200 ? null : sl)), SLIDE_MS + 260);
+  };
+  /* THE GUARD's word on this browser (server: src/lib/guard.ts) — how many
+     runs of three are left, whether the e-mail is confirmed */
+  const [vis, setVis] = useState<{ runsLeft: number; verified: boolean; admin: boolean; email: string; paused: boolean } | null>(null);
+  const refreshVis = async () => {
+    try {
+      const r = await fetch("/api/visitor", { cache: "no-store" });
+      if (r.ok) { const j = await r.json(); setVis(j); return j as { runsLeft: number; verified: boolean; admin: boolean }; }
+    } catch { /* offline: the server still decides */ }
+    return null;
+  };
+  useEffect(() => { refreshVis(); }, []);
+  /* the e-mail popup (first "new versions"), and what it last said */
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [mailAddr, setMailAddr] = useState("");
+  const [mailNote, setMailNote] = useState("");
+  const [mailLink, setMailLink] = useState("");
+  const [mailBusy, setMailBusy] = useState(false);
+  /* the new versions' pay page: $9 for three, $19 for nine */
+  const [morePack, setMorePack] = useState<3 | 9>(3);
   /* ROUND 60 #1 (owner): each style column is its OWN mini-carousel —
      a variations press generates ONE new label of that style, dots under
      the label switch between the original (0) and its variations. */
@@ -510,6 +548,9 @@ export default function NewUI() {
     const v = styleView[col] || 0;
     return v === 0 ? dreams[col] || null : styleVars[col]?.[v - 1] || null;
   };
+  /* the label the customer SAVED, whichever set is on show */
+  const savedDream = (): Dream | null =>
+    selected < 0 ? null : selSet === setIdx ? viewedDream(selected) : sets[selSet]?.[selected] || null;
   const varT = useRef(0);
   /* ROUND 54 #2: pre-generation confirmation popups — a run starts only
      after the customer reviews everything that shapes the result */
@@ -554,6 +595,7 @@ export default function NewUI() {
      stands on (-1 = not running) */
   const [guideOn, setGuideOn] = useState(false);
   const [clinkN, setClinkN] = useState(0);        /* 2026-09-23: the agree glasses' clink */
+  const [nudgeN, setNudgeN] = useState(0);        /* 2026-09-27: the empty clink that says "press me" */
   const [guide, setGuide] = useState(-1);
   useEffect(() => { try { if (localStorage.getItem("nui-guide") === "1") setGuideOn(true); } catch { } }, []);
   const fillDetails = (on: boolean) => {
@@ -610,6 +652,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const [ppLoaded, setPpLoaded] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [carIdx, setCarIdx] = useState(0);
+  /* 2026-09-27 (owner): the Final Pack always opens on the front label —
+     then the back label, the bottles, the marketing images, the page */
+  useEffect(() => { if (page === "checkout") setCarIdx(0); }, [page]);
   const [ppFill, setPpFill] = useState(0.14);
   useEffect(() => { setPpLoaded(false); setPpFill(0.14); }, [productUrl]);
   useEffect(() => {
@@ -784,7 +829,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const [nudge, setNudge] = useState(0);
   const [pressed, setPressed] = useState(0);   /* round 85 #4: the self-press */
 
-  const [packSel, setPackSel] = useState<boolean[]>([true, true, true, false]);
+  const [packSel, setPackSel] = useState<boolean[]>([true, true, false]);
   const [agree, setAgree] = useState(false);
   /* ROUND 75 (owner): the new Final Pack has TWO buttons — Download stays
      grey and dead until "Proceed to payment" has gone through */
@@ -793,7 +838,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
      Final Pack — arrow → card on arrival, card → download once paid —
      with the same double pulse the walkthrough's last card uses */
   useEffect(() => {
-    if (page !== "checkout") return;
+    if (page !== "checkout" && page !== "more") return;
     const id = setTimeout(() => setNudge((n) => n + 1), SLIDE_MS + 120);
     return () => clearTimeout(id);
   }, [page, paid]);
@@ -875,12 +920,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     if (page !== "assets" || assetsRunning.current) return;
     /* ROUND 47: an uploaded own label stands in for the generated front —
        otherwise a selected dream is still required */
-    if (!customLabel && (selected < 0 || !viewedDream(selected))) return;
+    if (!customLabel && (selected < 0 || !savedDream())) return;
     /* round 40 #3: a progress-bar JUMP never starts a paid generation —
        placeholders show "Not yet created"; the run starts only when the
        page is reached through the normal flow (bottle → next) */
     if (barJumped.current && !assets.front && !assets.back) return;
-    const sel = customLabel ? { style: "contemporary", dream: customLabel, preview: null } : viewedDream(selected)!;
+    const sel = customLabel ? { style: "contemporary", dream: customLabel, preview: null } : savedDream()!;
     /* round 21 #7: NO client-side "same inputs" skip — it knew nothing
        about admin charter changes and replayed stale sets. The server
        cache (charter-aware since round 19) answers true duplicates
@@ -1037,7 +1082,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const moreRunning = useRef(false);
   async function moreVariations() {
     if (assetsRunning.current || moreRunning.current || assetsStage) return;
-    const sel = customLabel ? { style: "contemporary", dream: customLabel, preview: null as string | null } : viewedDream(selected);
+    const sel = customLabel ? { style: "contemporary", dream: customLabel, preview: null as string | null } : savedDream();
     if (!sel) return;
     const base = lifeTarget;
     const batch = Math.floor(base / 5);
@@ -1130,7 +1175,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
        "blank" step has no artboard — its fetch came back as the site's 404
        PAGE and that HTML was inlined as the board under the confirm popup.
        It is not fetched, and a board that fails to load is never inlined. */
-    ORDER.filter((p) => p !== "artists" && p !== "artist" && p !== "blank").forEach((p) => {
+    ORDER.filter((p) => p !== "artists" && p !== "artist" && p !== "blank" && p !== "more").forEach((p) => {
       fetch(`/newui/${p}.svg`).then((r) => (r.ok ? r.text() : Promise.reject(new Error(`${p}.svg ${r.status}`)))).then((t) =>
         {
           const processed = namespaceSvg(t, p).replace(/<\?xml[^>]*\?>/, "").replace(/<svg /, '<svg preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%" ')
@@ -1306,30 +1351,52 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const rec = {
       v: 1, at: Date.now(), vision, f, b, gtin, qrMode, markets, bottle, wineColor, selected, frontSig, paintSig,
       dreams: dreams.filter(Boolean).filter((d) => d.id).map((d) => ({ style: d.style, id: d.id, artist: d.artist })),
+      /* 2026-09-27: every set of versions, the one on show and the saved one's */
+      sets: sets.map((st) => st.filter(Boolean).filter((d) => d.id).map((d) => ({ style: d.style, id: d.id, artist: d.artist }))).filter((st) => st.length),
+      setIdx, selSet,
     };
     try { localStorage.setItem("nui-order", JSON.stringify(rec)); } catch { }
-  }, [tut, dreams, vision, f, b, gtin, qrMode, markets, bottle, wineColor, selected, frontSig, paintSig]);
+  }, [tut, sets, setIdx, selSet, vision, f, b, gtin, qrMode, markets, bottle, wineColor, selected, frontSig, paintSig]);
+  type OrderRec = { v?: number; vision?: string; f?: Record<string, string>; b?: Record<string, string>; gtin?: string; qrMode?: string; markets?: string[]; bottle?: Record<string, string>; wineColor?: string; selected?: number; frontSig?: string; paintSig?: string; dreams?: { style: string; id?: string; artist?: string }[]; sets?: { style: string; id?: string; artist?: string }[][]; setIdx?: number; selSet?: number };
   useEffect(() => {
-    let rec: { v?: number; vision?: string; f?: Record<string, string>; b?: Record<string, string>; gtin?: string; qrMode?: string; markets?: string[]; bottle?: Record<string, string>; wineColor?: string; selected?: number; frontSig?: string; paintSig?: string; dreams?: { style: string; id?: string; artist?: string }[] } | null = null;
-    try { rec = JSON.parse(localStorage.getItem("nui-order") || "null"); } catch { }
-    if (!rec || rec.v !== 1) return;
-    setVision(rec.vision || ""); setF(rec.f || { width: "110", height: "80" }); setB(rec.b || {});
-    setGtin(rec.gtin || ""); setQrMode((rec.qrMode || "") as never); setMarkets(rec.markets || []);
-    if (rec.bottle) { setBottle(rec.bottle); bottleTouched.current = true; }
-    setWineColor(rec.wineColor || "");
-    const ds = (rec.dreams || []).filter((d) => d.id);
-    if (!ds.length) return;
-    const toData = async (u: string) => {
-      const bl = await (await fetch(u)).blob();
-      return new Promise<string>((res) => { const rd = new FileReader(); rd.onload = () => res(String(rd.result)); rd.readAsDataURL(bl); });
-    };
     (async () => {
+      /* 2026-09-27 (owner): the e-mail link brings the visitor back — on
+         this browser or another — to the SAME labels page, their versions
+         waiting and "new versions" ready; the order was kept with the link */
+      const sp = new URLSearchParams(window.location.search);
+      const resume = sp.get("resume");
+      if (sp.get("verify") === "expired") { setMailNote("expired"); setEmailOpen(true); }
+      if (resume) {
+        try {
+          const r = await fetch(`/api/visitor/resume?t=${encodeURIComponent(resume)}`, { cache: "no-store" });
+          const j = r.ok ? await r.json() : null;
+          if (j?.record) localStorage.setItem("nui-order", JSON.stringify(j.record));
+        } catch { /* this browser's own order stands */ }
+        try { window.history.replaceState({ page: "options" }, "", "?page=options"); } catch { }
+        refreshVis();
+      }
+      let rec: OrderRec | null = null;
+      try { rec = JSON.parse(localStorage.getItem("nui-order") || "null"); } catch { }
+      if (!rec || rec.v !== 1) return;
+      setVision(rec.vision || ""); setF(rec.f || { width: "110", height: "80" }); setB(rec.b || {});
+      setGtin(rec.gtin || ""); setQrMode((rec.qrMode || "") as never); setMarkets(rec.markets || []);
+      if (rec.bottle) { setBottle(rec.bottle); bottleTouched.current = true; }
+      setWineColor(rec.wineColor || "");
+      const recSets = (rec.sets && rec.sets.length ? rec.sets : [rec.dreams || []]).map((st) => st.filter((d) => d.id)).filter((st) => st.length);
+      if (!recSets.length) { if (resume) go("vision"); return; }
+      const toData = async (u: string) => {
+        const bl = await (await fetch(u)).blob();
+        return new Promise<string>((res) => { const rd = new FileReader(); rd.onload = () => res(String(rd.result)); rd.readAsDataURL(bl); });
+      };
       try {
-        const got: Dream[] = await Promise.all(ds.map(async (d) => ({
+        const got: Dream[][] = await Promise.all(recSets.map((st) => Promise.all(st.map(async (d) => ({
           style: d.style, id: d.id, artist: d.artist,
           dream: await toData(`/api/dream-label?id=${d.id}`), preview: await toData(`/api/dream-label?id=${d.id}&kind=preview`),
-        })));
-        setDreams(got); setSelected(rec!.selected ?? -1); setFrontSig(rec!.frontSig || ""); setPaintSig(rec!.paintSig || "");
+        })))));
+        const last = got.length - 1;
+        setSets(got); setSetIdx(Math.min(rec!.setIdx ?? last, last)); setSelSet(Math.min(rec!.selSet ?? 0, last));
+        setSelected(rec!.selected ?? -1); setFrontSig(rec!.frontSig || ""); setPaintSig(rec!.paintSig || "");
+        if (resume) { setSetIdx(last); go("options"); }
       } catch { /* the labels are gone from the server — the details stay */ }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1813,24 +1880,75 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     if (!dreams[fi]) return;
     const dv = viewedDream(fi);
     const g = optGeom(fi);
-    const unsave = selected === fi;
-    setSelected(unsave ? -1 : fi); setWarn("");
+    const unsave = selected === fi && selSet === setIdx;
+    setSelected(unsave ? -1 : fi); setSelSet(setIdx); setWarn("");
     if (dv) flyToFolder([{ src: dv.preview || dv.dream, x: g.lx, y: g.ly, w: g.lw, h: g.lh }], unsave);
   };
   /* round 52 #1 (owner: "it let me download without agreeing!"):
      every pay path checks the T&C ring first */
   const requireAgree = () => {
     if (agree) return true;
+    /* 2026-09-27 (owner): the glass nudges — the clink plays with both
+       glasses empty, a hint that it is the thing to press */
+    setNudgeN((n) => n + 1);
     setWarn(t("Agree to the Terms & Conditions to continue"));
     setTimeout(() => setWarn(""), 3200);
     return false;
   };
-  async function nextFromFront() {
+  /* 2026-09-27: a run of three is STARTED with the server first (the
+     guard counts it once); a refusal says what the visitor can do next */
+  async function startRunOrAsk(order: string): Promise<boolean> {
+    try {
+      const r = await fetch("/api/visitor/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ order }) });
+      if (r.ok) return true;
+      const j = await r.json().catch(() => ({})) as { code?: string };
+      if (j.code === "need-email") { setMailNote(""); setMailLink(""); setEmailOpen(true); }
+      else if (j.code === "need-pay") go("more");
+      else {
+        setWarn(t(j.code === "free-paused" ? "Today's free labels are all used — come back tomorrow, or buy new versions."
+          : j.code === "ip-busy" ? "Too many new labels from this network this hour — try again a little later."
+          : "Couldn't start — try again in a moment."));
+        setTimeout(() => setWarn(""), 6000);
+      }
+      refreshVis();
+      return false;
+    } catch { return true; /* offline check: the paint call itself is guarded */ }
+  }
+  /* NEW VERSIONS (owner, 2026-09-27): three more labels of the same wine,
+     never an artist in a layout already shown — they arrive as a new set */
+  async function moreVersions() {
+    const st = await refreshVis();
+    if (st && st.runsLeft > 0) { nextFromFront(true); return; }
+    if (st && !st.verified) { setMailNote(""); setMailLink(""); setEmailOpen(true); return; }
+    go("more");
+  }
+  async function buyVersions() {
+    try {
+      const r = await fetch("/api/visitor/pay", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pack: morePack }) });
+      if (r.ok) { await refreshVis(); go("options", -1); return; }
+    } catch { /* said below */ }
+    setWarn(t("Payments aren't connected yet — coming soon."));
+    setTimeout(() => setWarn(""), 5000);
+  }
+  async function sendVerify() {
+    const email = mailAddr.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(email)) { setMailNote("bad-email"); return; }
+    setMailBusy(true); setMailNote(""); setMailLink("");
+    let record: unknown = null;
+    try { record = JSON.parse(localStorage.getItem("nui-order") || "null"); } catch { }
+    const r = await fetch("/api/visitor/email", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, lang, record }) }).catch(() => null);
+    const j = (r ? await r.json().catch(() => ({})) : {}) as { sent?: boolean; link?: string; error?: string };
+    setMailBusy(false);
+    if (r?.ok && j.sent) setMailNote("sent");
+    else if (r?.ok && j.link) { setMailNote("test"); setMailLink(j.link); }
+    else setMailNote(j.error || "mail-down");
+  }
+  async function nextFromFront(append = false) {
     /* owner #14: regenerate ONLY when inputs changed */
-    if (dreams.length && frontSig === sigFront()) { go("options"); return; }
+    if (!append && dreams.length && frontSig === sigFront()) { go("options"); return; }
     /* only the details changed: the SAME paintings in the same templates,
        the type set again — seconds, no painter, no cost */
-    if (liveGenRef.current && dreams.length && paintSig && paintSig === sigPaint() && dreams.every((d) => d?.id)) {
+    if (!append && liveGenRef.current && dreams.length && paintSig && paintSig === sigPaint() && sets.flat().every((d) => d?.id)) {
       go("loader"); setGenProgress(0.3);
       const { data, aspectKey, width, height } = buildDreamPayload();
       const redo = async (d: Dream): Promise<Dream> => {
@@ -1845,22 +1963,27 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         return { style: d.style, dream: res.dream, preview: res.preview || null, id: res.id, artist: res.artist || d.artist };
       };
       try {
-        const next = await Promise.all(dreams.map(redo));
+        /* every set's labels take the new details (2026-09-27) */
+        const next = await Promise.all(sets.map((st) => Promise.all(st.map(redo))));
         setGenProgress(1);
-        setDreams(next); setFrontSig(sigFront()); setBackSig("");
+        setSets(next); setFrontSig(sigFront()); setBackSig("");
         go("options");
         return;
       } catch { /* fall through to a fresh painting */ }
     }
+    /* 2026-09-23: one token for the whole run — the server mixes which
+       artist paints which column from it (a retried column keeps its seat) */
+    const order = Math.random().toString(36).slice(2, 12);
+    if (liveGenRef.current && !(await startRunOrAsk(order))) return;
+    /* the labels already shown — a new version repeats none of their
+       artist + layout pairs */
+    const prev = append ? sets.flat().map((d) => d?.id).filter(Boolean) as string[] : [];
     go("loader");
     setGenProgress(0);
     const genT0 = Date.now();   /* round 46: feed the loader's REAL average */
     /* round 84: ONE payload builder — this copy still carried the demo
        fallback that round 78 removed from buildDreamPayload */
     const { data, aspectKey, width, height, artist } = buildDreamPayload();
-    /* 2026-09-23: one token for the whole run — the server mixes which
-       artist paints which column from it (a retried column keeps its seat) */
-    const order = Math.random().toString(36).slice(2, 12);
     const one = async (style: string): Promise<Dream> => {
       /* round 56 #3 (TEMP dev switch): fake the run with existing art */
       if (!liveGenRef.current) {
@@ -1875,7 +1998,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         /* 2026-09-23 (owner: "remove variations altogether, they
            complicate things — three versions and that's it"): one label
            a column, no re-layouts riding along */
-        body: JSON.stringify({ vision, style, data, sketch, aspect: aspectKey, width, height, variants: 1, artist, order }),
+        body: JSON.stringify({ vision, style, data, sketch, aspect: aspectKey, width, height, variants: 1, artist, order, prev }),
       });
       if (!r.ok || !r.body) throw new Error(`generation failed (${r.status})`);
       const reader = r.body.getReader(); const dec = new TextDecoder();
@@ -1911,6 +2034,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       }
       if (!ok.length) throw new Error("all generations failed — try again");
       ok.sort((a, b2) => styles3.indexOf(a.style) - styles3.indexOf(b2.style));
+      refreshVis();
+      if (append) {
+        /* the new set joins the others and is the one on show */
+        setSets((p) => [...p, ok]); setSetIdx(sets.length);
+        go("options");
+        return;
+      }
       setDreams(ok); setSelected(-1); setFrontSig(sigFront()); setPaintSig(sigPaint()); setBackSig("");
       setStyleVars([[], [], []]); setStyleView([0, 0, 0]); setVarBusyCol(-1);
       /* round 43 #3 (owner: "landing page thumb shows the previous bottle"):
@@ -1943,7 +2073,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     if (backPng && backSig === sigBack()) { go("backdesign"); return; }
     /* round 76 #1 (owner): no status line in the corner — the back-label
        page shows its own loader, this only added noise */
-    const sel = viewedDream(selected);
+    const sel = savedDream();
     const bg = sel ? await groundOf(sel.preview || sel.dream) : "#FFFFFF";
     const payload = {
       data: {
@@ -1979,13 +2109,16 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   }
 
   /* round 45 (mock): renamed rows, designer session $49/1h */
+  /* 2026-09-27 (owner): three rows — the labels and the marketing assets
+     are one item now */
   const PACK = [
-    { name: "Print ready Front & Back Labels", price: 199 },
-    { name: "QR Code & Published Product Page", price: 29 },
-    { name: "Marketing Assets", price: 9 },   /* round 48 #7: was $19 */
-    { name: "1 Hour session with human designer", price: 49 },
+    { name: "Print ready Labels & Marketing Assets", price: 199 },
+    { name: "Published Product Page & QR Code (1 year hosting)", price: 29 },
+    { name: "1 Hour session with a human designer", price: 49 },
   ];
-  const total = PACK.reduce((s, it, i) => s + (packSel[i] ? it.price : 0), 0);
+  /* an own-label order buys the marketing assets alone (round 47) */
+  const OWN_PRICE = 9;
+  const total = customLabel ? (packSel[0] ? OWN_PRICE : 0) : PACK.reduce((s, it, i) => s + (packSel[i] ? it.price : 0), 0);
 
   /* round 18 #4: ONE delivery ZIP named after the wine — labels + fonts,
      marketing assets, sample contract (TEMP free until payments exist) */
@@ -2000,9 +2133,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           wineName: f.wine || "Wine",
           /* ROUND 47: an own-label order ships marketing assets only —
              the customer already has their printed labels */
-          front: customLabel ? null : viewedDream(selected)?.dream || null,
+          front: customLabel ? null : savedDream()?.dream || null,
           /* round 84: the label's id fetches its SVG (live type) + fonts */
-          frontId: customLabel ? null : viewedDream(selected)?.id || null,
+          frontId: customLabel ? null : savedDream()?.id || null,
           back: customLabel ? null : backPayload,
           shots: { front: assets.front?.full, back: customLabel ? undefined : assets.back?.full },
           lifestyle: assets.life.filter(Boolean).map((l) => l.full),
@@ -2353,6 +2486,56 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     </>);
   };
 
+  /* the "By clinking this glass, I agree…" row — the Final Pack's, and
+     (2026-09-27) the new versions' pay page's; `at` places it given the
+     glass's height */
+  const agreeRow = (at: (GH: number) => React.CSSProperties) => {
+            const GH = 30, GW = GH * 150 / 305;
+            const UL_LIFT = -1.9;         /* measured: puts the glass's foot on the underline */
+            const glass = (fill: number, key: string) => (
+              <svg viewBox="225 100 150 305" width={GW} height={GH} style={{ display: "block", overflow: "visible" }}>
+                <defs>
+                  <clipPath id={"agr-" + key}>
+                    <rect x="230" y={266.6 - fill * 95} width="140" height={fill * 95 + 4} style={{ transition: "y 600ms ease, height 600ms ease" }} />
+                  </clipPath>
+                </defs>
+                <path fill="#BA141A" clipPath={`url(#agr-${key})`} d="M352.397 185.696 C353.872 199.478 353.325 211.872 350.76 222.63 C346.838 239.075 336.88 251.431 321.163 259.355 C311.285 264.336 301.979 266.038 298.571 266.527 C296.674 266.308 286.165 264.888 274.916 259.216 C259.199 251.292 249.241 238.936 245.319 222.491 C242.762 211.769 242.21 199.422 243.667 185.696 Z" />
+                <g fill="none" stroke="#231F20" strokeWidth="9">
+                  <path d="M254.813 401.491 L297.631 401.491 L297.631 276.2 C297.631 276.2 246.711 271.948 235.438 224.682 C222.211 169.219 254.078 108.466 254.078 108.466 L341.155 108.635 C341.155 108.635 373.068 169.358 359.84 224.821 C348.568 272.087 297.648 276.339 297.648 276.339" />
+                  <path d="M297.8 276.2 L297.8 401.491 L340.618 401.491" />
+                </g>
+              </svg>
+            );
+            return (
+              <div style={{ position: "absolute", ...at(GH), display: "flex", alignItems: "flex-end", columnGap: 9, padding: "10px 0 10px 16px", zIndex: 5 }}
+                onClick={() => setAgree((a) => { const v = !a; if (v) setClinkN((n) => n + 1); return v; })}>
+                {/* the glass, with the one that comes to clink it */}
+                {/* its foot on the line that underlines "Terms & Conditions" */}
+                <span style={{ position: "relative", width: GW, height: GH, flex: "0 0 auto", cursor: "pointer", marginBottom: UL_LIFT }}>
+                  {nudgeN > 0 && !agree && (
+                    <span key={"nudge" + nudgeN} style={{ position: "absolute", left: 0, bottom: 0, transformOrigin: "50% 100%", animation: `nuiClinkIn 1150ms cubic-bezier(.3,.7,.3,1) both`, pointerEvents: "none" }}>
+                      {glass(0, "n" + nudgeN)}
+                    </span>
+                  )}
+                  {clinkN > 0 && agree && (
+                    <span key={"clink" + clinkN} style={{ position: "absolute", left: 0, bottom: 0, transformOrigin: "50% 100%", animation: `nuiClinkIn 1150ms cubic-bezier(.3,.7,.3,1) both`, pointerEvents: "none" }}>
+                      {glass(0.5, "b" + clinkN)}
+                    </span>
+                  )}
+                  {/* 2026-09-23 (owner): empty until agreed — it fills as the
+                      other glass comes to clink it */}
+                  <span key={"g" + clinkN + "-" + nudgeN} style={{ position: "absolute", left: 0, bottom: 0, transformOrigin: "50% 100%", animation: clinkN > 0 || nudgeN > 0 ? `nuiClinkHit 1150ms ease both` : "none" }}>
+                    {glass(agree ? 0.55 : 0, "a")}
+                  </span>
+                </span>
+                <span style={{ font: `italic 15px ${HNW}`, lineHeight: "15px", color: "#111", whiteSpace: "nowrap", cursor: "pointer" }}>
+                  {t("By clinking this glass, I agree to the")}{" "}
+                  <span onClick={(e) => { e.stopPropagation(); setTermsOpen(true); setTermsPos(0); }} style={{ textDecoration: "underline", cursor: "pointer" }}>{t("Terms & Conditions")}</span>
+                </span>
+              </div>
+            );
+  };
+
   /* inSlide = rendered inside a moving slide layer (inert, entry
      animations suppressed — the slide itself is the entry) */
   const renderOverlay = (p: PageKey, inSlide = false, layer?: HomeLayer) => {
@@ -2644,84 +2827,143 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           else { lh = AREA_BOT - AREA_TOP; lw = lh * ar; if (lw > OPT_W - 2 * CUBE) { lw = OPT_W - 2 * CUBE; lh = lw / ar; } }
           return { lx: OPT_FRAMES[fi].x + (OPT_W - lw) / 2, ly: AREA_TOP + (ar >= 1 ? 0 : (AREA_BOT - AREA_TOP - lh) / 2), lw, lh };
         };
-        const styleHead = (fi: number) => {
+        const styleHead = (ds: Dream[], fi: number) => {
           /* the empty page still shows a full-width grey slot, so its rule
              keeps the column's full width */
-          const b = dreams.length ? labelBox(fi) : { lx: OPT_FRAMES[fi].x, lw: OPT_W };
-          const who = dreams[fi]?.artist || "";
+          const b = ds.length ? labelBox(fi) : { lx: OPT_FRAMES[fi].x, lw: OPT_W };
+          const who = ds[fi]?.artist || "";
           /* ROUND 113 #2 (owner): the artist's name at the progress bar's
              own title size (the portrait circle went 2026-09-23) */
           const AV = BAR_FS + 7;
           return (
-            <span key={"sh" + fi}>
-              {/* round 102: an artist's column carries the artist's name */}
-              <div style={{ ...px(b.lx, baseTop(221, BAR_FS) - (AV - BAR_FS) / 2, b.lw, AV), display: "flex", alignItems: "center", justifyContent: "center", columnGap: 7, pointerEvents: "none" }}>
-                {/* 2026-09-23 (owner): no portrait, and the name as it is
-                    written — "Style By: Mariam Kvashilava", not all capitals */}
-                <span style={{ font: `700 ${BAR_FS}px/${BAR_FS}px ${HNW}`, whiteSpace: "nowrap" }}>{/* 2026-09-23 (owner: "a column that never came showed FUNKY, like
-                    an error — take the old titles out altogether") */}
-                  {who ? `${t("Style By:")} ${who}` : ""}</span>
-              </div>
-              {/* round 114 (owner): the dashed rule under the artist's
-                  name is gone — the name stands on its own */}
-            </span>
+            <div key={"sh" + fi} style={{ ...px(b.lx, baseTop(221, BAR_FS) - (AV - BAR_FS) / 2, b.lw, AV), display: "flex", alignItems: "center", justifyContent: "center", columnGap: 7, pointerEvents: "none" }}>
+              {/* 2026-09-23 (owner): no portrait, and the name as it is
+                  written — "Style By: Mariam Kvashilava", not all capitals */}
+              <span style={{ font: `700 ${BAR_FS}px/${BAR_FS}px ${HNW}`, whiteSpace: "nowrap" }}>
+                {who ? `${t("Style By:")} ${who}` : ""}</span>
+            </div>
           );
         };
+        /* 2026-09-27 (owner's screenshot): Save raised under the labels, and
+           NEW VERSIONS under the middle one */
+        const SAVE_Y = 585.7;
+        const NEWV = { x: OPT_FRAMES[1].x + 0.2, y: 665.1, w: OPT_W, h: 34.3 };
+        /* ONE COLUMN of a set: the artist's name, the label with its crosses
+           or its saved frame, and Save — a column slides as one block */
+        const column = (ds: Dream[], si: number, fi: number, live: boolean) => {
+          const orig = ds[fi];
+          const on = selected === fi && selSet === si;
+          const dv = si === setIdx ? viewedDream(fi) : orig;
+          const { lx, ly, lw, lh } = labelBox(fi);
+          return (<>
+            {styleHead(ds, fi)}
+            {(orig?.preview || orig?.dream) ? (<>
+              {dv ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src={dv.preview || dv.dream} alt={orig.style} title={t("Show this one big")}
+                  onClick={live ? () => setGallery({ items: [ds[fi], ...(si === setIdx ? styleVars[fi] || [] : [])].filter(Boolean).map((d) => (d as Dream).preview || (d as Dream).dream), index: si === setIdx ? styleView[fi] || 0 : 0, save: () => saveFront(fi), saved: on }) : undefined}
+                  style={{ ...px(lx, ly, lw, lh), cursor: "pointer", objectFit: "fill", pointerEvents: live ? "auto" : "none" }} />
+              ) : (
+                <div style={{ ...px(lx, ly, lw, lh), display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  {miniGlass("var" + fi, Math.min(0.9, 0.2 + ((Date.now() - varT.current) / 6000) * 0.7 + tick * 0))}
+                </div>
+              )}
+              {/* ROUND 85 #6 (owner's board): the selection frame stands OFF
+                  the label — 10px out on every side — and the corner crosses
+                  sit on the frame's corners, not the label's */}
+              {on
+                ? dashedBox(lx - 10, ly - 10, lw + 20, lh + 20, "selD" + fi, true)
+                : (<span key={"plain" + fi}>
+                    {cross(lx - 10, ly - 10, `tl${fi}`)}{cross(lx + lw + 10, ly - 10, `tr${fi}`)}
+                    {cross(lx - 10, ly + lh + 10, `bl${fi}`)}{cross(lx + lw + 10, ly + lh + 10, `br${fi}`)}
+                  </span>)}
+            </>) : null}
+            {/* ROUND 88 #9 (owner): SAVE — marks the column and flies the
+                label into the folder */}
+            {orig && (
+              <button onClick={live ? () => saveFront(fi) : undefined}
+                style={{ ...px(OPT_FRAMES[fi].x + 0.2, SAVE_Y, OPT_W, 34.3), cursor: "pointer", pointerEvents: live ? "auto" : "none", font: `12px ${HNW}`, letterSpacing: 0.3, background: on ? "#fff" : "#111", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, transition: `background 240ms ${EASE}, color 240ms ${EASE}`, color: on ? "#111" : "#fff" }}>
+                {on ? t("Saved") : t("Save")}</button>
+            )}
+          </>);
+        };
+        /* the set on show — and, while the arrows turn, the one leaving: its
+           columns go one after another, the new set's follow (the bottle
+           page's column cascade, never cutting through a label) */
+        const cascade = (fi: number, dir: number) => (dir > 0 ? fi : 2 - fi) * 70;
+        const setLayer = (si: number, mode: "still" | "in" | "out", dir: number) => {
+          const ds = sets[si] || [];
+          return OPT_FRAMES.map((_, fi) => (
+            <div key={`set${si}-${fi}-${mode}`} style={{ position: "absolute", left: 0, top: 0, width: W, height: H, pointerEvents: "none",
+              animation: mode === "still" ? "none" : `${mode === "in" ? (dir > 0 ? "nuiSetInR" : "nuiSetInL") : (dir > 0 ? "nuiSetOutL" : "nuiSetOutR")} ${SLIDE_MS}ms ${EASE} ${cascade(fi, dir)}ms both` }}>
+              {column(ds, si, fi, mode !== "out" && !inSlide)}
+            </div>
+          ));
+        };
+        const chevron = (lab: string, x: number, pts: string, go2: number) => (
+          <button key={lab} aria-label={lab} onClick={() => showSet(go2)}
+            style={{ ...px(x - 16, (AREA_TOP + AREA_BOT) / 2 - 22, 44, 44), ...ghost, zIndex: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg viewBox="0 0 18 22" width="12" height="16"><polyline points={pts} fill="none" stroke="#111" strokeWidth="1.6" /></svg>
+          </button>
+        );
+        /* NEW VERSIONS is black while a run is waiting for the visitor
+           (after the e-mail is confirmed, or bought), white otherwise */
+        const newvReady = !!vis && vis.runsLeft > 0 && dreams.length > 0;
         return (<>
           {covers}
           {patch(135, 164, 1170, 26, "stynames")}
-          {OPT_FRAMES.map((_, fi) => styleHead(fi))}
-          {OPT_FRAMES.map((fr, fi) => {
-            const orig = dreams[fi];
-            if (!orig?.preview && !orig?.dream) return null;
-            const dv = viewedDream(fi);
-            const { lx, ly, lw, lh } = labelBox(fi);
-            return (
-              <div key={fi}>
-                {dv ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src={dv.preview || dv.dream} alt={orig.style} title={t("Show this one big")}
-                    onClick={() => setGallery({ items: [dreams[fi], ...(styleVars[fi] || [])].filter(Boolean).map((d) => (d as Dream).preview || (d as Dream).dream), index: styleView[fi] || 0, save: () => saveFront(fi), saved: selected === fi })}
-                    style={{ ...px(lx, ly, lw, lh), cursor: "pointer", objectFit: "fill" }} />
-                ) : (
-                  /* a variation is being born — label-shaped loader */
-                  <div style={{ ...px(lx, ly, lw, lh), background: "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    {/* round 86 #3: a re-layout takes seconds, not a minute */}
-                    {miniGlass("var" + fi, Math.min(0.9, 0.2 + ((Date.now() - varT.current) / 6000) * 0.7 + tick * 0))}
-                  </div>
-                )}
-                {/* ROUND 85 #6 (owner's board): the selection frame stands
-                    OFF the label — 10px out on every side — and the corner
-                    crosses sit on the frame's corners, not the label's */}
-                {selected === fi
-                  ? dashedBox(lx - 10, ly - 10, lw + 20, lh + 20, "selD" + fi, true)
-                  : (<span key={"plain" + fi}>
-                      {cross(lx - 10, ly - 10, `tl${fi}`)}{cross(lx + lw + 10, ly - 10, `tr${fi}`)}
-                      {cross(lx - 10, ly + lh + 10, `bl${fi}`)}{cross(lx + lw + 10, ly + lh + 10, `br${fi}`)}
-                    </span>)}
-                {/* 2026-09-23 (owner): no variations, so no dots */}
-              </div>
-            );
-          })}
+          {dreams.length === 0 && OPT_FRAMES.map((_, fi) => styleHead([], fi))}
+          {setSlide && sets[setSlide.from] && setLayer(setSlide.from, "out", setSlide.dir)}
+          {dreams.length > 0 && setLayer(setIdx, setSlide ? "in" : "still", setSlide?.dir || 1)}
           {dreams.length === 0 && OPT_FRAMES.map((fr, i) =>
             notMade(fr.x, OPT_TOP, OPT_W, OPT_BOT - OPT_TOP, "front", "nmopt" + i))}
           {/* ROUND 53 #8: a bar-jump before generation shows the REAL page
               furniture, deactivated and grey */}
           {dreams.length === 0 && OPT_FRAMES.map((fr, fi) => (
-            <div key={"grey" + fi} style={{ ...px(fr.x + 0.2, 637, OPT_W, 34.3), background: "#ECECEA", color: "#B3B1A8", font: `12px ${HNW}`, letterSpacing: 0.3, display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
+            <div key={"grey" + fi} style={{ ...px(fr.x + 0.2, SAVE_Y, OPT_W, 34.3), background: "#ECECEA", color: "#B3B1A8", font: `12px ${HNW}`, letterSpacing: 0.3, display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
               {t("Save")}</div>
           ))}
-          {/* ROUND 88 #9 (owner): SAVE — a black button under the variations,
-              in place of the "Select" ring; it marks the column and flies the
-              label into the folder */}
-          {dreams.length > 0 && OPT_FRAMES.map((fr, fi) => {
-            const on = selected === fi;
+          {/* the arrows between the sets, left and right of the labels */}
+          {sets.length > 1 && setIdx > 0 && chevron("previous versions", OPT_FRAMES[0].x - 40, "13,3 5,11 13,19", setIdx - 1)}
+          {sets.length > 1 && setIdx < sets.length - 1 && chevron("next versions", OPT_FRAMES[2].x + OPT_W + 40 - 12, "5,3 13,11 5,19", setIdx + 1)}
+          {dreams.length > 0 ? (
+            <button onClick={() => moreVersions()}
+              style={{ ...px(NEWV.x, NEWV.y, NEWV.w, NEWV.h), cursor: "pointer", font: `700 ${BAR_FS}px ${HNW}`, letterSpacing: 0.3, background: newvReady ? "#111" : "#fff", color: newvReady ? "#fff" : "#111", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 3, transition: `background 240ms ${EASE}, color 240ms ${EASE}` }}>
+              {t("NEW VERSIONS")}</button>
+          ) : (
+            <div style={{ ...px(NEWV.x, NEWV.y, NEWV.w, NEWV.h), background: "#ECECEA", color: "#B3B1A8", font: `700 ${BAR_FS}px ${HNW}`, letterSpacing: 0.3, display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 3 }}>
+              {t("NEW VERSIONS")}</div>
+          )}
+        </>);
+      }
+      case "more": {
+        /* 2026-09-27 (owner): NEW VERSIONS, bought — the Final Pack's price
+           list alone in the middle of an empty page: two rows (one choice),
+           the glass to clink below, and the red button turned into Pay */
+        const L = 480, R = 960, B0 = 372, STEP = 34.3;
+        const ROWS: { n: 3 | 9; price: number; label: string }[] = [
+          { n: 3, price: 9, label: "3 new versions" }, { n: 9, price: 19, label: "9 new versions" },
+        ];
+        return (<>
+          <span style={{ ...px(139, baseTop(149.08, 24), 600, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t("NEW VERSIONS")}</span>
+          <span style={{ ...px(L - 40, baseTop(B0 - 62, 15), R - L + 80, 20), font: `italic 15px ${HNW}`, lineHeight: "15px", color: "#111", textAlign: "center", display: "block" }}>
+            {t("Each set of three is painted by artists and in layouts you haven't seen yet.")}</span>
+          {ROWS.map((row, i) => {
+            const y = B0 + i * STEP;
             return (
-              <button key={"sv" + fi} onClick={() => saveFront(fi)}
-                style={{ ...px(fr.x + 0.2, 637, OPT_W, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: on ? "#fff" : "#111", color: "#111", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, transition: `background 240ms ${EASE}, color 240ms ${EASE}`, ...(on ? {} : { color: "#fff" }) }}>
-                {on ? t("Saved") : t("Save")}</button>
+              <span key={"mv" + row.n}>
+                {dotBtn(L + 9, y - 6.13, morePack === row.n, () => setMorePack(row.n), "mvr" + row.n, { ring: true, r: 9, cover: 24 })}
+                <button onClick={() => setMorePack(row.n)}
+                  style={{ ...px(L + 43.57, baseTop(y, 15), R - L - 120, 18), ...ghost, textAlign: "left", textTransform: "none", font: `15px/15px ${HNW}`, color: "#111", display: "block", whiteSpace: "nowrap" }}>{t(row.label)}</button>
+                <span style={{ ...px(R - 160, baseTop(y, 15), 160, 18), font: `15px/15px ${HNW}`, textAlign: "right", display: "block" }}>{"$" + row.price}</span>
+                {dashRule(L, y + 12.1, R - L, false, "mvd" + row.n)}
+              </span>
             );
           })}
+          {agreeRow((GH) => ({ right: W - R, top: baseTop(B0 + 2 * STEP + 44, 15) - (GH - 15) - 10 }))}
+          {warn && (
+            <span style={{ ...px(L, B0 + 2 * STEP + 70, R - L, 16), font: `13px ${HNW}`, color: "#BA141A", textAlign: "right", display: "block" }}>{warn}</span>
+          )}
         </>);
       }
       case "backdetails": {
@@ -3085,7 +3327,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             const xoff = 139.2 - (800 * s - 201.6) / 2;
             const scan = bottleScans.current[bottleScanKey === src ? src : ""];
             /* ROUND 47: an uploaded own label takes the preview slot */
-            const lab = customLabel ? { style: "custom", dream: customLabel, preview: customLabel } : viewedDream(selected);
+            const lab = customLabel ? { style: "custom", dream: customLabel, preview: customLabel } : savedDream();
             const mmW = customLabel ? customDims.w : Number(f.width) || 110;
             const mmH = customLabel ? customDims.h : Number(f.height) || 80;
             let labelEl: React.ReactNode = null;
@@ -3398,13 +3640,18 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         void RULE_MID;
         const CAR = { x: 160, y: 205.71, w: 434.28, h: 205.71 };   /* the slide's own space */
         const CAR_MID = 308.57;
-        const ARR_L = 137.14, ARR_R = 700;     /* the chevrons' outer edges */
+        /* 2026-09-27 (owner): the right chevron drawn in, and the price
+           list drawn out, until their right edges meet */
+        const LIST_R = 660;
+        const ARR_L = 137.14, ARR_R = LIST_R;     /* the chevrons' outer edges */
         const DY = RULE_FOOT - (559.8 + 3 * 18);
         const TC_B = 468.28;
         const ROWB = [502.2, 536.49, 570.64, 605.06];
         const TOT_B = 639.48, TOT_FOOT = 685.71;   /* the dashed rule's own foot */
-        const RING_X = 171.15, RING_DY = 6.13, LBL_X = 205.71;
-        const PRICE_R = 617.14;
+        /* 2026-09-27 (owner): the rings' left edge on the dashed rules' left
+           end (ring radius 9), the names and "Total:" moved with them */
+        const RING_X = COL_L + 9, RING_DY = 6.13, LBL_X = 205.71 - (171.15 - (COL_L + 9));
+        const PRICE_R = LIST_R;
         const BTN = { y: 651.43, h: 34.29 };
         type Slide = { name: string; img?: string; landing?: boolean; kind?: "front" | "back" };
         /* ROUND 47: own-label orders deliver ONLY the marketing assets */
@@ -3412,7 +3659,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           { name: "Product_Shot_Front.png", img: assets.front?.prev, kind: "front" },
           ...Array.from({ length: Math.max(5, assets.life.length) }, (_, i) => ({ name: `Marketing_Image_${i + 1}.jpg`, img: assets.life[i]?.prev, kind: "front" as const })),
         ] : [
-          { name: "Front_Label.svg", img: viewedDream(selected)?.preview || viewedDream(selected)?.dream || undefined, kind: "front" },
+          { name: "Front_Label.svg", img: savedDream()?.preview || savedDream()?.dream || undefined, kind: "front" },
           { name: "Back_Label.svg", img: backPng || undefined, kind: "back" },
           { name: "Product_Shot_Front.png", img: assets.front?.prev, kind: "front" },
           { name: "Product_Shot_Back.png", img: assets.back?.prev, kind: "front" },
@@ -3438,10 +3685,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             <span style={{ ...px(PRICE_R - 240, baseTop(TOT_FOOT, 30), 240, 34), font: `700 30px ${HNW}`, lineHeight: "30px", textAlign: "right", display: "block" }}>{v}</span>
           </span>
         );
-        const madeRow = [selected >= 0 && !!backPng, qrMode === "create", !!assets.front, true];
+        const madeRow = [selected >= 0 && !!backPng && !!assets.front, qrMode === "create", true];
         const rowLabel = (baseline: number, text: string, click: () => void, key: string) => (
           <button key={key} onClick={click}
-            style={{ ...px(LBL_X, baseline - 17, 360, 24), ...ghost, textAlign: "left", textTransform: "none", font: `15px ${HNW}`, color: "#111", display: "flex", alignItems: "center" }}>{text}</button>
+            style={{ ...px(LBL_X, baseTop(baseline, 15), PRICE_R - LBL_X - 48, 18), ...ghost, textAlign: "left", textTransform: "none", font: `${lang === "ge" ? 14 : 15}px/15px ${HNW}`, color: "#111", display: "block", whiteSpace: "nowrap" }}>{text}</button>
         );
         return (<>
           {/* ── the right-hand column: what the pack contains ───────────── */}
@@ -3462,8 +3709,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                  page was chosen"): it rode the old price row, which no longer
                  exists to switch off — the link is there only when a QR code
                  and its page were asked for */
-              { x: 856, kind: "doc", name: ["READ ME"], files: ["Instructions.pdf", "Terms&Conditions.pdf", ...(qrMode === "create" ? [`www.8klabels.com/${slug}`] : [])] },
-              ...(packSel[2] ? [{ x: 1055, kind: "folder" as const, name: ["MARKETING", "ASSETS"], files: [`${base}_Bottle_Front.png`, `${base}_Bottle_Back.png`, ...[1, 2, 3, 4, 5].map((n) => `${base}_Image0${n}.png`)] }] : []),
+              { x: 856, kind: "doc", name: ["READ ME"], files: ["Instructions.pdf", "Terms&Conditions.pdf",
+                /* 2026-09-27 (owner): the page's link is only hinted at — the
+                   whole link and its code come in the paid pack's READ ME */
+                ...(qrMode === "create" ? [`8k.wine/${slug.replace(/-/g, "").slice(0, 3).toUpperCase()}*********`] : [])] },
+              ...(packSel[0] ? [{ x: 1055, kind: "folder" as const, name: ["MARKETING", "ASSETS"], files: [`${base}_Bottle_Front.png`, `${base}_Bottle_Back.png`, ...[1, 2, 3, 4, 5].map((n) => `${base}_Image0${n}.png`)] }] : []),
               ...(packSel[0] ? [{ x: 1275, kind: "folder" as const, name: ["LABELS"], files: [`${base}_Front_Label.pdf`, `${base}_Front_Label.svg`, `Links/${base}_Front_Artwork.png`, `Fonts/`, `${base}_Back_Label.svg`] }] : []),
             ];
             /* 2026-09-23 (owner): the bar sits HALFWAY between the folder
@@ -3533,7 +3783,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {/* 2026-09-25 (owner): the PRICE LIST is back, as it was — only the
               baked slide, chevrons and T&C row above it are wiped (the
               "I agree" glass stays on the right) */}
-          {patch(COL_L - 14, RULE_TOP + 8, PRICE_R - COL_L + 28, 480 - RULE_TOP, "leftwipe")}
+          {/* 2026-09-27: the baked rows go too — the three are drawn live */}
+          {patch(COL_L - 14, RULE_TOP + 8, 700 - COL_L + 14 + 10, 620 - RULE_TOP - 8, "leftwipe")}
           {!customLabel && PACK.map((it, i) => (!madeRow[i] && (
             <div key={"pale" + i} style={{ ...px(COL_L, ROWB[i] - 20, COL_W, 30), background: "rgba(255,255,255,0.62)", pointerEvents: "none", zIndex: 2 }} />
           )))}
@@ -3541,18 +3792,18 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             {/* own-label order: only Marketing Assets and its price */}
             {patch(LBL_X - 2, 486, 380, 134, "custrows")}
             {patch(PRICE_R - 160, 486, 160, 134, "custprices")}
-            {dotBtn(RING_X, ringY(ROWB[0]), !!packSel[2], () => setPackSel((ps) => ps.map((v, k) => (k === 2 ? !v : v))), "pkc", { ring: true, r: 9, cover: 24 })}
-            {[1, 2, 3].map((i) => <span key={"nr" + i} style={{ ...px(RING_X - 13, ringY(ROWB[i]) - 13, 26, 26), background: "#fff" }} />)}
-            {rowLabel(ROWB[0], t("Marketing Assets"), () => setPackSel((ps) => ps.map((v, k) => (k === 2 ? !v : v))), "clm")}
-            {priceAt(ROWB[0], "$" + PACK[2].price)}
+            {dotBtn(RING_X, ringY(ROWB[0]), !!packSel[0], () => setPackSel((ps) => ps.map((v, k) => (k === 0 ? !v : v))), "pkc", { ring: true, r: 9, cover: 24 })}
+            {rowLabel(ROWB[0], t("Marketing Assets"), () => setPackSel((ps) => ps.map((v, k) => (k === 0 ? !v : v))), "clm")}
+            {dashRule(COL_L, ROWB[0] + 12.1, LIST_R - COL_L, false, "cdr")}
+            {priceAt(ROWB[0], "$" + OWN_PRICE)}
             {bigTotal("$" + total)}
           </>) : (<>
             {/* live dots on the baked rings + the row click zones */}
             {PACK.map((it, i) => (
               <span key={it.name}>
                 {dotBtn(RING_X, ringY(ROWB[i]), !!packSel[i], () => setPackSel((ps) => ps.map((v, k) => (k === i ? !v : v))), "pk" + i, { ring: true, r: 9, cover: 24 })}
-                <button onClick={() => setPackSel((ps) => ps.map((v, k) => (k === i ? !v : v)))}
-                  style={{ ...px(LBL_X, ROWB[i] - 17, 360, 24), ...ghost }} />
+                {rowLabel(ROWB[i], t(it.name), () => setPackSel((ps) => ps.map((v, k) => (k === i ? !v : v))), "pl" + i)}
+                {dashRule(COL_L, ROWB[i] + 12.1, LIST_R - COL_L, false, "pdr" + i)}
                 {priceAt(ROWB[i], "$" + it.price)}
               </span>
             ))}
@@ -3576,7 +3827,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               if (Math.abs(rel) > 2) return null;
               const ar = Math.abs(rel);
               const scale = ar === 0 ? 1 : ar === 1 ? 0.52 : 0.32;
-              const dx = rel === 0 ? 0 : Math.sign(rel) * (ar === 1 ? 150 : 200);
+              /* the items drawn closer as the chevrons came in (2026-09-27) */
+              const dx = rel === 0 ? 0 : Math.sign(rel) * (ar === 1 ? 150 : 200) * (ARR_R - ARR_L) / (700 - ARR_L);
               const dy = ar === 0 ? 0 : ar === 1 ? -6 : -10;
               const cx0 = (ARR_R - ARR_L) / 2, cy0 = 30;
               const inner = sd.landing
@@ -3605,7 +3857,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             })}
           </div>
           {/* the chevrons, live now (the baked ones went with the left column) */}
-          {([["prev slide", ARR_L, "13,3 5,11 13,19"], ["next slide", ARR_R - 12, "5,3 13,11 5,19"]] as const).map(([lab, x, pts]) => (
+          {/* each chevron's TIP on its edge (the tip sits 3.33 inside the 12 px mark) */}
+          {([["prev slide", ARR_L - 3.33, "13,3 5,11 13,19"], ["next slide", ARR_R - 12 + 3.33, "5,3 13,11 5,19"]] as const).map(([lab, x, pts]) => (
             <button key={lab} aria-label={lab} onClick={() => setCarIdx((c) => (c + (lab === "next slide" ? 1 : slides.length - 1)) % slides.length)}
               style={{ ...px(x - 16, CAR_MID - 22, 44, 44), ...ghost, zIndex: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
               <svg viewBox="0 0 18 22" width="12" height="16"><polyline points={pts} fill="none" stroke="#111" strokeWidth="1.6" /></svg>
@@ -3618,47 +3871,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               baseline, half full. Agreeing brings a second glass in from the
               left, tilted and a little raised; it clinks this one and fades.
               The whole row — and a margin round it — takes the click. */}
-          {(() => {
-            const GH = 30, GW = GH * 150 / 305;
-            const UL_LIFT = -1.9;         /* measured: puts the glass's foot on the underline */
-            const glass = (fill: number, key: string) => (
-              <svg viewBox="225 100 150 305" width={GW} height={GH} style={{ display: "block", overflow: "visible" }}>
-                <defs>
-                  <clipPath id={"agr-" + key}>
-                    <rect x="230" y={266.6 - fill * 95} width="140" height={fill * 95 + 4} style={{ transition: "y 600ms ease, height 600ms ease" }} />
-                  </clipPath>
-                </defs>
-                <path fill="#BA141A" clipPath={`url(#agr-${key})`} d="M352.397 185.696 C353.872 199.478 353.325 211.872 350.76 222.63 C346.838 239.075 336.88 251.431 321.163 259.355 C311.285 264.336 301.979 266.038 298.571 266.527 C296.674 266.308 286.165 264.888 274.916 259.216 C259.199 251.292 249.241 238.936 245.319 222.491 C242.762 211.769 242.21 199.422 243.667 185.696 Z" />
-                <g fill="none" stroke="#231F20" strokeWidth="9">
-                  <path d="M254.813 401.491 L297.631 401.491 L297.631 276.2 C297.631 276.2 246.711 271.948 235.438 224.682 C222.211 169.219 254.078 108.466 254.078 108.466 L341.155 108.635 C341.155 108.635 373.068 169.358 359.84 224.821 C348.568 272.087 297.648 276.339 297.648 276.339" />
-                  <path d="M297.8 276.2 L297.8 401.491 L340.618 401.491" />
-                </g>
-              </svg>
-            );
-            return (
-              <div style={{ position: "absolute", right: W - 1302.86, top: baseTop(RULE_FOOT, 15) - (GH - 15) - 10, display: "flex", alignItems: "flex-end", columnGap: 9, padding: "10px 0 10px 16px", zIndex: 5 }}
-                onClick={() => setAgree((a) => { const v = !a; if (v) setClinkN((n) => n + 1); return v; })}>
-                {/* the glass, with the one that comes to clink it */}
-                {/* its foot on the line that underlines "Terms & Conditions" */}
-                <span style={{ position: "relative", width: GW, height: GH, flex: "0 0 auto", cursor: "pointer", marginBottom: UL_LIFT }}>
-                  {clinkN > 0 && (
-                    <span key={"clink" + clinkN} style={{ position: "absolute", left: 0, bottom: 0, transformOrigin: "50% 100%", animation: `nuiClinkIn 1150ms cubic-bezier(.3,.7,.3,1) both`, pointerEvents: "none" }}>
-                      {glass(0.5, "b" + clinkN)}
-                    </span>
-                  )}
-                  {/* 2026-09-23 (owner): empty until agreed — it fills as the
-                      other glass comes to clink it */}
-                  <span key={"g" + clinkN} style={{ position: "absolute", left: 0, bottom: 0, transformOrigin: "50% 100%", animation: clinkN > 0 ? `nuiClinkHit 1150ms ease both` : "none" }}>
-                    {glass(agree ? 0.55 : 0, "a")}
-                  </span>
-                </span>
-                <span style={{ font: `italic 15px ${HNW}`, lineHeight: "15px", color: "#111", whiteSpace: "nowrap", cursor: "pointer" }}>
-                  {t("By clinking this glass, I agree to the")}{" "}
-                  <span onClick={(e) => { e.stopPropagation(); setTermsOpen(true); setTermsPos(0); }} style={{ textDecoration: "underline", cursor: "pointer" }}>{t("Terms & Conditions")}</span>
-                </span>
-              </div>
-            );
-          })()}
+          {agreeRow((GH) => ({ right: W - 1302.86, top: baseTop(RULE_FOOT, 15) - (GH - 15) - 10 }))}
           {/* round 52 #1: the agree gate message under the Pay bar */}
           {warn && (
             <span style={{ ...px(822.86, 700, 480, 16), font: `13px ${HNW}`, color: "#BA141A", textAlign: "right", display: "block" }}>{warn}</span>
@@ -3666,45 +3879,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {/* ROUND 52 #3: Terms & Conditions modal — lorem body behind the
               house-style scroll (1px track + black dot, draggable), black
               Agree / Disagree bar and a ✕ */}
-          {termsOpen && (() => {
-            const TRACK = { x: 628, y: 104, h: 240 };
-            const syncFromClientY = (clientY: number, el: HTMLElement) => {
-              const r = el.getBoundingClientRect();
-              const ratio = Math.min(1, Math.max(0, (clientY - r.top) / r.height));
-              const sc = termsRef.current;
-              if (sc) sc.scrollTop = ratio * (sc.scrollHeight - sc.clientHeight);
-            };
-            return (<>
-              <div style={{ ...px(0, 0, W, H), zIndex: 30 }} onClick={() => setTermsOpen(false)} />
-              <div style={{ ...px(0, VEIL_TOP, W, VEIL_BOT - VEIL_TOP), background: "rgba(255,255,255,0.88)", zIndex: 30, pointerEvents: "none" }} />
-              <div style={{ ...px(W / 2 - 340, 144, 680, 440), background: "#fff", border: "1px solid #111", zIndex: 31, boxSizing: "border-box" }}>
-                <button aria-label="close terms" onClick={() => setTermsOpen(false)}
-                  style={{ position: "absolute", right: 6, top: 4, ...ghost, font: `15px ${HNW}`, color: "#111", width: 24, height: 24 }}>✕</button>
-                <span style={{ position: "absolute", left: 32, top: 20, font: `700 60px ${HNW}`, lineHeight: "64px", whiteSpace: "nowrap" }}>{t("Terms & Conditions")}</span>
-                <div ref={termsRef} className="nui-noscroll"
-                  onScroll={(e) => { const el = e.currentTarget; setTermsPos(el.scrollTop / Math.max(1, el.scrollHeight - el.clientHeight)); }}
-                  style={{ position: "absolute", left: 32, top: TRACK.y, width: 576, height: TRACK.h, overflowY: "scroll" }}>
-                  {TERMS_TEXT.map((par, i) => (
-                    <p key={i} style={{ font: `13px ${HNW}`, lineHeight: "19px", color: "#111", margin: "0 0 14px" }}>{par}</p>
-                  ))}
-                </div>
-                {/* the scroll: a hairline with a black dot riding it */}
-                <div style={{ position: "absolute", left: TRACK.x + 11.5, top: TRACK.y, width: 1, height: TRACK.h, background: "#111" }} />
-                <div style={{ position: "absolute", left: TRACK.x, top: TRACK.y, width: 24, height: TRACK.h, cursor: "grab" }}
-                  onPointerDown={(e) => { dragRef.current = "terms"; e.currentTarget.setPointerCapture(e.pointerId); syncFromClientY(e.clientY, e.currentTarget); }}
-                  onPointerMove={(e) => { if (dragRef.current === "terms") syncFromClientY(e.clientY, e.currentTarget); }}
-                  onPointerUp={() => { dragRef.current = ""; }}>
-                  <span style={{ position: "absolute", left: 6.5, top: termsPos * (TRACK.h - 11), width: 11, height: 11, borderRadius: 6, background: "#111" }} />
-                </div>
-                <button onClick={() => { setAgree(true); setTermsOpen(false); }}
-                  style={{ position: "absolute", left: 32, top: 372, width: 292, height: 34.3, cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", paddingBottom: 4 }}>
-                  {t("Agree")}</button>
-                <button onClick={() => { setAgree(false); setTermsOpen(false); }}
-                  style={{ position: "absolute", left: 356, top: 372, width: 292, height: 34.3, cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#fff", color: "#111", border: "1px solid #111", boxSizing: "border-box", paddingBottom: 4 }}>
-                  {t("Disagree")}</button>
-              </div>
-            </>);
-          })()}
+
         </>);
       }
 
@@ -3714,7 +3889,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   };
 
   /* round 68 #1: any open modal freezes the bar (it still paints on top) */
-  const modalOpen = !!confirmModal || termsOpen || marketOpen;
+  const modalOpen = !!confirmModal || termsOpen || marketOpen || emailOpen;
   const barPage: PageKey = page === "blank" ? blankFrom.current : page;
   const step = tut >= 0 ? tut : STEP_OF[barPage];
   /* round 71 #4: while the walkthrough runs, the bar follows IT — the
@@ -3757,6 +3932,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         @keyframes nuiInPx { from { transform: translateX(${dir > 0 ? 1440 : -1440}px) } to { transform: translateX(0) } }
         @keyframes nuiOutPx { from { transform: translateX(0) } to { transform: translateX(${dir > 0 ? -1440 : 1440}px) } }
         @keyframes nuiTap { 0% { transform: scale(0.3); opacity: 0 } 22% { opacity: 1 } 100% { transform: scale(1.3); opacity: 0 } }
+        @keyframes nuiSetInR { from { transform: translateX(${W}px) } to { transform: none } }
+        @keyframes nuiSetInL { from { transform: translateX(-${W}px) } to { transform: none } }
+        @keyframes nuiSetOutL { from { transform: none } to { transform: translateX(-${W}px) } }
+        @keyframes nuiSetOutR { from { transform: none } to { transform: translateX(${W}px) } }
         @keyframes nuiNudge { 0%, 100% { transform: scale(1) } 22% { transform: scale(1.14) } 44% { transform: scale(1) } 66% { transform: scale(1.14) } 88% { transform: scale(1) } }
         @keyframes nuiPress { 0%, 100% { transform: scale(1) } 45% { transform: scale(1.09) } }
         @keyframes nuiGrowY { from { transform: scaleY(0) } to { transform: scaleY(1) } }
@@ -4174,7 +4353,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   /* 2026-09-25 (owner): the payment step is back — the card pays,
                      then the tray downloads (the card only marks the order
                      paid until Paddle is connected) */
+                  else if (page === "more") {
+                    /* the new versions' Pay (TEMP: only an admin's counts until Paddle) */
+                    if (requireAgree()) buyVersions();
+                  }
                   else if (page === "checkout") {
+                    /* 2026-09-27 (owner): the walk-through's last note goes
+                       once the red button is pressed */
+                    if (guide >= 0) setGuide(-1);
                     if (!paid) { if (requireAgree()) setPaid(true); }
                     else proceedToPayment();
                   }
@@ -4184,7 +4370,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   borderRadius: NEXT_R, background: BAR_RED, border: "none",
                   padding: 0, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
                   animation: arrowFly ? `btnFly ${SLIDE_MS}ms ${EASE} both`
-                    : ((tut >= 0 && (tutIdle || tut >= tutLast)) || page === "checkout") && nudge > 0 ? `nuiNudge 1200ms ${EASE} both`
+                    : ((tut >= 0 && (tutIdle || tut >= tutLast)) || page === "checkout" || page === "more") && nudge > 0 ? `nuiNudge 1200ms ${EASE} both`
                     : pressed > 0 ? `nuiPress 260ms ${EASE} both` : "none",
                 }}>
                 {/* ROUND 109: the artboard's smaller arrow — 18.25 long,
@@ -4203,7 +4389,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     <line x1="20" y1="6" x2="20" y2="24" stroke="#fff" strokeWidth="3.4" />
                     <polyline points="13,17 20,24.5 27,17" fill="none" stroke="#fff" strokeWidth="3.4" />
                   </svg>
-                ) : page === "checkout" ? (
+                ) : page === "checkout" || page === "more" ? (
                   /* the owner's card — back 2026-09-25 with the payment step */
                   <svg viewBox="0 0 44 32" width="23.5" height="17">
                     <rect x="2.5" y="2.5" width="39" height="27" rx="3.5" fill="none" stroke="#fff" strokeWidth="3.4" />
@@ -4446,6 +4632,92 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               </div>
             </>);
           })()}
+          {/* 2026-09-27 (owner): the FIRST "new versions" asks for an e-mail —
+              a link is sent that confirms it and brings the visitor back to
+              this page, their versions waiting, the button ready */}
+          {emailOpen && (() => {
+            const MSG: Record<string, string> = {
+              "bad-email": "That doesn't look like an e-mail address.",
+              disposable: "Please use your own e-mail address, not a throwaway one.",
+              "too-many": "We've sent enough links for today — check your inbox, or try tomorrow.",
+              "mail-down": "We couldn't send the e-mail just now — try again in a moment.",
+              expired: "That link has expired — send yourself a new one.",
+            };
+            const done = mailNote === "sent" || mailNote === "test";
+            return (<>
+              <div style={{ ...px(0, 0, W, H), zIndex: 30 }} onClick={() => setEmailOpen(false)} />
+              <div style={{ ...px(0, VEIL_TOP, W, VEIL_BOT - VEIL_TOP), background: "rgba(255,255,255,0.88)", zIndex: 30, pointerEvents: "none" }} />
+              <div style={{ ...px(W / 2 - 300, 200, 600, 300), background: "#fff", border: "1px solid #111", zIndex: 31, boxSizing: "border-box" }}>
+                <button aria-label="close" onClick={() => setEmailOpen(false)}
+                  style={{ position: "absolute", right: 6, top: 4, ...ghost, font: `15px ${HNW}`, color: "#111", width: 24, height: 24 }}>✕</button>
+                <span style={{ position: "absolute", left: 32, top: 30, font: `700 24px ${HNW}`, lineHeight: "24px", whiteSpace: "nowrap" }}>{t("NEW VERSIONS")}</span>
+                <span style={{ position: "absolute", left: 32, top: 74, width: 536, font: `14px ${HNW}`, lineHeight: "20px", color: "#111" }}>
+                  {done
+                    ? `${t("We've sent a link to")} ${mailAddr.trim()}. ${t("Open it — it brings you back here, with your labels, to make three new versions.")}`
+                    : t("Leave your e-mail and we'll send you a link. Open it and you'll come back to this page — your labels waiting — to make three new versions, free.")}
+                </span>
+                {!done && (<>
+                  <input value={mailAddr} type="email" autoFocus placeholder="name@example.com" {...noFill("email")}
+                    onChange={(e) => { setMailAddr(e.target.value); if (mailNote && mailNote !== "expired") setMailNote(""); }}
+                    onKeyDown={(e) => { if (e.key === "Enter" && !mailBusy) sendVerify(); }}
+                    style={{ ...px(32, 158, 536, 26), ...inputStyle, fontSize: 15 }} />
+                  {rowLine(32, 186, 536, "mailln")}
+                  <button onClick={() => !mailBusy && sendVerify()}
+                    style={{ ...px(32, 222, 536, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, opacity: mailBusy ? 0.5 : 1 }}>
+                    {t("Send the link")}</button>
+                </>)}
+                {MSG[mailNote] && (
+                  <span style={{ position: "absolute", left: 32, top: 268, width: 536, font: `13px ${HNW}`, color: "#BA141A" }}>{t(MSG[mailNote])}</span>
+                )}
+                {/* e-mail is not set up yet: the admin gets the link to test with */}
+                {mailNote === "test" && mailLink && (
+                  <a href={mailLink} style={{ position: "absolute", left: 32, top: 150, width: 536, font: `13px ${HNW}`, lineHeight: "18px", color: "#111", wordBreak: "break-all" }}>
+                    {t("(Admin test — e-mail isn't set up yet.) Open the link:")} {mailLink}</a>
+                )}
+              </div>
+            </>);
+          })()}
+          {/* the Terms & Conditions — opened from the Final Pack and from the
+              new versions' pay page (2026-09-27: moved out of the Final Pack) */}
+          {termsOpen && (() => {
+            const TRACK = { x: 628, y: 104, h: 240 };
+            const syncFromClientY = (clientY: number, el: HTMLElement) => {
+              const r = el.getBoundingClientRect();
+              const ratio = Math.min(1, Math.max(0, (clientY - r.top) / r.height));
+              const sc = termsRef.current;
+              if (sc) sc.scrollTop = ratio * (sc.scrollHeight - sc.clientHeight);
+            };
+            return (<>
+              <div style={{ ...px(0, 0, W, H), zIndex: 30 }} onClick={() => setTermsOpen(false)} />
+              <div style={{ ...px(0, VEIL_TOP, W, VEIL_BOT - VEIL_TOP), background: "rgba(255,255,255,0.88)", zIndex: 30, pointerEvents: "none" }} />
+              <div style={{ ...px(W / 2 - 340, 144, 680, 440), background: "#fff", border: "1px solid #111", zIndex: 31, boxSizing: "border-box" }}>
+                <button aria-label="close terms" onClick={() => setTermsOpen(false)}
+                  style={{ position: "absolute", right: 6, top: 4, ...ghost, font: `15px ${HNW}`, color: "#111", width: 24, height: 24 }}>✕</button>
+                <span style={{ position: "absolute", left: 32, top: 20, font: `700 60px ${HNW}`, lineHeight: "64px", whiteSpace: "nowrap" }}>{t("Terms & Conditions")}</span>
+                <div ref={termsRef} className="nui-noscroll"
+                  onScroll={(e) => { const el = e.currentTarget; setTermsPos(el.scrollTop / Math.max(1, el.scrollHeight - el.clientHeight)); }}
+                  style={{ position: "absolute", left: 32, top: TRACK.y, width: 576, height: TRACK.h, overflowY: "scroll" }}>
+                  {TERMS_TEXT.map((par, i) => (
+                    <p key={i} style={{ font: `13px ${HNW}`, lineHeight: "19px", color: "#111", margin: "0 0 14px" }}>{par}</p>
+                  ))}
+                </div>
+                {/* the scroll: a hairline with a black dot riding it */}
+                <div style={{ position: "absolute", left: TRACK.x + 11.5, top: TRACK.y, width: 1, height: TRACK.h, background: "#111" }} />
+                <div style={{ position: "absolute", left: TRACK.x, top: TRACK.y, width: 24, height: TRACK.h, cursor: "grab" }}
+                  onPointerDown={(e) => { dragRef.current = "terms"; e.currentTarget.setPointerCapture(e.pointerId); syncFromClientY(e.clientY, e.currentTarget); }}
+                  onPointerMove={(e) => { if (dragRef.current === "terms") syncFromClientY(e.clientY, e.currentTarget); }}
+                  onPointerUp={() => { dragRef.current = ""; }}>
+                  <span style={{ position: "absolute", left: 6.5, top: termsPos * (TRACK.h - 11), width: 11, height: 11, borderRadius: 6, background: "#111" }} />
+                </div>
+                <button onClick={() => { setAgree(true); setTermsOpen(false); }}
+                  style={{ position: "absolute", left: 32, top: 372, width: 292, height: 34.3, cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", paddingBottom: 4 }}>
+                  {t("Agree")}</button>
+                <button onClick={() => { setAgree(false); setTermsOpen(false); }}
+                  style={{ position: "absolute", left: 356, top: 372, width: 292, height: 34.3, cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#fff", color: "#111", border: "1px solid #111", boxSizing: "border-box", paddingBottom: 4 }}>
+                  {t("Disagree")}</button>
+              </div>
+            </>);
+          })()}
           {confirmModal && (() => {
             /* ROUND 65/66 (owner's two reference screens): one chrome —
                uppercase title, dashed rule, Edit/Create —
@@ -4483,7 +4755,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     <img src={img} alt="" style={{ position: "absolute", inset: 8, width: "calc(100% - 16px)", height: "calc(100% - 16px)", objectFit: "contain" }} />))}
               </div>
             );
-            const frontThumb = customLabel || viewedDream(selected)?.preview || viewedDream(selected)?.dream || "";
+            const frontThumb = customLabel || savedDream()?.preview || savedDream()?.dream || "";
             const backThumb = !customLabel && backPng ? backPng : "";
             const prompt = vision.trim();
             /* only what the customer actually gave us */

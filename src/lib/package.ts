@@ -29,6 +29,8 @@ export type PackBody = {
   back?: { data?: BackLabelData; markets?: string[]; heightMM?: number; bgColor?: string } | null;
   shots?: { front?: string; back?: string };
   lifestyle?: string[];
+  /* the order's product page and the code that opens it (READ ME) */
+  product?: { url: string; pin: string } | null;
 };
 
 export function dataBuf(u: string | undefined | null): Buffer | null {
@@ -36,29 +38,11 @@ export function dataBuf(u: string | undefined | null): Buffer | null {
   return m ? Buffer.from(m[2], "base64") : null;
 }
 
-/* one-page sample contract as a minimal, valid PDF (no dependencies) */
-function sampleContractPdf(wine: string): Buffer {
-  const lines = [
-    "SAMPLE SERVICE AGREEMENT",
-    "",
-    `Project: label & marketing package for "${wine}"`,
-    "Provider: 8K Labels",
-    "",
-    "1. Deliverables: print-ready front label (300dpi TIFF), editable back",
-    "   label (SVG + fonts), product photography and marketing imagery as",
-    "   included in this package.",
-    "2. License: upon full payment the customer receives the exclusive,",
-    "   worldwide, perpetual right to use the delivered artwork for the",
-    "   named product, in print and digital media.",
-    "3. Responsibility: regulatory texts are provided as a best-effort",
-    "   draft; final legal compliance for each market remains with the",
-    "   producer / importer.",
-    "4. This is a SAMPLE document - the final contract is provided at",
-    "   the payment step.",
-  ];
+/* one page of plain Helvetica text as a minimal, valid PDF (no dependencies) */
+function textPdf(lines: string[]): Buffer {
   const content =
     "BT /F1 11 Tf 56 780 Td 16 TL " +
-    lines.map((l) => `(${l.replace(/[\\()]/g, (c) => "\\" + c)}) Tj T*`).join(" ") +
+    lines.map((l) => `(${l.replace(/[^\x20-\xff]/g, "-").replace(/[\\()]/g, (c) => "\\" + c)}) Tj T*`).join(" ") +
     " ET";
   const objs = [
     "<< /Type /Catalog /Pages 2 0 R >>",
@@ -78,6 +62,56 @@ function sampleContractPdf(wine: string): Buffer {
     offsets.map((o) => `${String(o).padStart(10, "0")} 00000 n \n`).join("") +
     `trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
   return Buffer.from(pdf, "latin1");
+}
+
+/* 2026-09-27 (owner): the READ ME carries the product page's link and the
+   5-digit code that opens it — the page stays locked until it is typed */
+function readmePdf(wine: string, product: PackBody["product"]): Buffer {
+  return textPdf([
+    "READ ME",
+    "",
+    `Your Final Pack for "${wine}"`,
+    "",
+    "1. LABELS - the front label as PDF (print file) and SVG, its artwork",
+    "   and fonts; the back label as SVG with 2 mm bleed and its fonts.",
+    "2. MARKETING ASSETS - two bottle photos and five marketing images.",
+    ...(product ? [
+      "",
+      "YOUR PRODUCT PAGE",
+      `   ${product.url}`,
+      "",
+      `   Code: ${product.pin}`,
+      "",
+      "   The page is locked until this code is entered once. Open the link,",
+      "   type the code, and from then on the page is open for everyone who",
+      "   scans the QR code on your bottle.",
+    ] : []),
+    "",
+    "Questions: write to us from 8k.wine.",
+  ]);
+}
+
+/* one-page sample contract */
+function sampleContractPdf(wine: string): Buffer {
+  const lines = [
+    "SAMPLE SERVICE AGREEMENT",
+    "",
+    `Project: label & marketing package for "${wine}"`,
+    "Provider: 8K Labels",
+    "",
+    "1. Deliverables: print-ready front label (300dpi TIFF), editable back",
+    "   label (SVG + fonts), product photography and marketing imagery as",
+    "   included in this package.",
+    "2. License: upon full payment the customer receives the exclusive,",
+    "   worldwide, perpetual right to use the delivered artwork for the",
+    "   named product, in print and digital media.",
+    "3. Responsibility: regulatory texts are provided as a best-effort",
+    "   draft; final legal compliance for each market remains with the",
+    "   producer / importer.",
+    "4. This is a SAMPLE document - the final contract is provided at",
+    "   the payment step.",
+  ];
+  return textPdf(lines);
 }
 
 /* the ZIP and its name; null when there is nothing to put in it */
@@ -129,8 +163,9 @@ export async function buildPackage(body: PackBody): Promise<{ zip: Buffer; base:
     if (b) files.push({ name: `${root}2. MARKETING ASSETS/${base}_Image${String(i + 1).padStart(2, "0")}.png`, data: b });
   });
 
-  /* contract beside the folders */
+  /* contract beside the folders, and the READ ME */
   files.push({ name: `${root}Contract.pdf`, data: sampleContractPdf(wine) });
+  files.push({ name: `${root}READ ME.pdf`, data: readmePdf(wine, body.product) });
 
   if (!files.length) return null;
   return { zip: buildZip(files), base };

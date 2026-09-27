@@ -22,6 +22,7 @@ import { RegionsCard } from "./RegionsCard";
 import { ArtistsCard } from "./ArtistsCard";
 import { EvalPanel } from "./EvalPanel";
 import { LayoutEditor } from "./LayoutEditor";
+import { GuardCard } from "./GuardCard";
 
 const TABS = ["Layouts", "Artists", "Marketing", "Evaluate", "System"] as const;
 /* bookmarks made before the tidy still land */
@@ -274,6 +275,7 @@ export default function AdminPage() {
         )}
 
         {tab === "System" && (<>
+          <Section title="Protection" note="Who may paint how much — the daily free budget and the limits."><GuardCard /></Section>
           <Section title="Labels" note="What the site painted lately — template, size, artist, faces."><RecentLabelsCard /></Section>
           <Section title="Users"><UsersTab onSessionLost={() => setAuthed(false)} /></Section>
         </>)}

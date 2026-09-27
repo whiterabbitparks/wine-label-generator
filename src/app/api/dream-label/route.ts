@@ -2,6 +2,7 @@ import sharp from "sharp";
 import { paintHybridLabel, relayoutLabel } from "@/lib/label/hybrid";
 import { saveLabel, readLabel } from "@/lib/label/store";
 import { properCase, CASED_FIELDS } from "@/lib/label/casing";
+import { allowPaint, refuse } from "@/lib/guard";
 
 /* PUBLIC customer endpoint — one label, streamed as NDJSON so the page's
    loader stays honest.
@@ -9,8 +10,8 @@ import { properCase, CASED_FIELDS } from "@/lib/label/casing";
    paints the artwork only; the type is set by code from Google faces
    (src/lib/label/hybrid.ts). The result carries an `id` — the SVG with
    live type waits on disk for the delivery package.
-   TODO(security): rate-limit before any public deploy — one call is a
-   paid model invocation. */
+   2026-09-27: a fresh painting passes the GUARD (src/lib/guard.ts) — it
+   must belong to a run the visitor started; a re-layout paints nothing. */
 
 export const maxDuration = 300;
 const MAX_VISION = 2000;
@@ -36,7 +37,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  let body: { vision?: string; style?: string; data?: Record<string, string>; sketch?: string | null; width?: number; height?: number; relayout?: string; variants?: number; artist?: string; order?: string; keep?: boolean };
+  let body: { vision?: string; style?: string; data?: Record<string, string>; sketch?: string | null; width?: number; height?: number; relayout?: string; variants?: number; artist?: string; order?: string; keep?: boolean; prev?: string[] };
   try {
     body = await req.json();
   } catch {
@@ -59,17 +60,29 @@ export async function POST(req: Request) {
   /* the run's token — the three columns share it and are cast from it */
   const order = /^[a-z0-9-]{1,40}$/i.test(String(body.order || "")) ? String(body.order) : "";
 
+  /* a re-layout of a stored painting costs nothing; a new painting must
+     belong to a run this visitor started */
+  const baseLabel = body.relayout ? readLabel(String(body.relayout)) : null;
+  if (!baseLabel) {
+    const g = await allowPaint(req, order);
+    if (!g.ok) return refuse(g);
+  }
+  /* 2026-09-27 (owner): new versions never repeat an artist in a layout
+     already shown in this session — the page names its earlier labels */
+  const avoidPairs = (Array.isArray(body.prev) ? body.prev : []).slice(0, 60).map((id) => readLabel(String(id).replace(/[^a-z0-9-]/gi, "")))
+    .filter(Boolean).map((l) => `${(l!.meta as { artist?: string }).artist || ""}|${(l!.meta as { template?: string }).template || ""}`);
+
   const enc = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
       const send = (o: unknown) => controller.enqueue(enc.encode(JSON.stringify(o) + "\n"));
       try {
         /* round 86 #3: a VARIATION keeps the painting and re-sets the type */
-        const base = body.relayout ? readLabel(String(body.relayout)) : null;
+        const base = baseLabel;
         send({ type: "progress", stage: base ? "setting" : "painting" });
         const out = base
           ? await relayoutLabel(base, data, [], {}, !!body.keep)
-          : await paintHybridLabel({ vision, style, data, widthMm, heightMm, sketch, artistId: artist || undefined, order: order || undefined });
+          : await paintHybridLabel({ vision, style, data, widthMm, heightMm, sketch, artistId: artist || undefined, order: order || undefined, avoidPairs });
         const m = base ? base.meta : { style, widthMm, heightMm, fit: out.fit };
         const id = saveLabel({ style: m.style, widthMm: m.widthMm, heightMm: m.heightMm, faces: out.faces, ground: out.ground, svg: out.svg, png: out.png, art: out.art, prompt: out.prompt, layout: out.layout, fit: m.fit, template: (out as { template?: string }).template, hasPaper: (out as { hasPaper?: boolean }).hasPaper, artist: base ? (base.meta as { artist?: string }).artist : (out as { artist?: string }).artist, refSet: (out as { refSet?: string }).refSet });
         /* medium-res JPEG for the page's views — the PNG stays the print source */

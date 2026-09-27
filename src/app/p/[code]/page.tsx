@@ -22,5 +22,9 @@ export default async function ProductPage({ params }: { params: Promise<{ code: 
       </main>
     );
   }
-  return <ProductClient doc={doc} />;
+  /* the code never leaves the server; a page made before the lock (no
+     code) stays open */
+  const { pin, tries, ...shown } = doc as ProductDoc & { pin?: string; tries?: unknown; open?: boolean };
+  void tries;
+  return <ProductClient doc={shown} locked={!!pin && !shown.open} />;
 }

@@ -1,7 +1,10 @@
+import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { properCase, CASED_FIELDS } from "@/lib/label/casing";
 import { savePack, type PackBody } from "@/lib/package";
+import { visitorOf } from "@/lib/guard";
+import { requestIsAuthenticated } from "@/lib/admin/session";
 
 /* PRODUCT PAGE SNAPSHOT (owner 2026-09-08): when a QR code is requested,
    the wizard posts everything known about the wine at the moment the
@@ -21,6 +24,9 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "invalid JSON body" }, { status: 400 });
   }
+  /* 2026-09-27: only a visitor who has made labels publishes a page */
+  const v = await visitorOf(req, false).catch(() => null);
+  if (!(v && (v.runsUsed || 0) > 0) && !(await requestIsAuthenticated())) return NextResponse.json({ error: "make your labels first" }, { status: 403 });
   const code = S(body.code, 24).replace(/[^a-z0-9]/gi, "");
   if (code.length < 6) return NextResponse.json({ error: "bad code" }, { status: 400 });
   const img = (v: unknown) => (typeof v === "string" && v.startsWith("data:image/") && v.length < 2_000_000 ? v : "");
@@ -43,7 +49,11 @@ export async function POST(req: Request) {
     updatedAt: new Date().toISOString(),
   };
   const db = await getDb();
-  await db.collection("products").updateOne({ _id: code } as never, { $set: doc }, { upsert: true });
+  /* 2026-09-27 (owner): the page is LOCKED until its 5-digit code is
+     entered once — the code is printed in the READ ME of the paid Final
+     Pack, so a link seen before paying opens nothing. Made once, kept. */
+  await db.collection("products").updateOne({ _id: code } as never,
+    { $set: doc, $setOnInsert: { pin: String(crypto.randomInt(0, 100000)).padStart(5, "0"), open: false } }, { upsert: true });
   /* the Final Pack's makings, full size, for the page's DOWNLOAD ASSETS */
   if (body.pack && typeof body.pack === "object") try { savePack(code, body.pack as PackBody); } catch { /* the page still stands */ }
   return NextResponse.json({ ok: true, url: `/p/${code}` });
@@ -55,5 +65,7 @@ export async function GET(req: Request) {
   const db = await getDb();
   const doc = await db.collection("products").findOne({ _id: code } as never);
   if (!doc) return NextResponse.json({ error: "not found" }, { status: 404 });
-  return NextResponse.json(doc);
+  const { pin, tries, ...shown } = doc as Record<string, unknown>;
+  void pin; void tries;
+  return NextResponse.json(shown);
 }

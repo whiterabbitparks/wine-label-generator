@@ -2,6 +2,7 @@ import { generateMarketingAssets, loadMarketingPool, labelWords, labelPalette, t
 import { readLabel } from "@/lib/label/store";
 import { composeBackLabel, MARKETS, type BackLabelData } from "@/lib/back-label";
 import { properFields } from "@/lib/label/casing";
+import { allowMarketing, refuse } from "@/lib/guard";
 
 /* PUBLIC customer endpoint (owner 2026-09-06): the marketing-asset run in
    one streamed call — 2 studio product shots (front/back, transparent
@@ -16,6 +17,9 @@ export const maxDuration = 600;
 const cache = new Map<string, AssetEvent[]>();
 
 export async function POST(req: Request) {
+  /* 2026-09-27: the guard — a visitor who has made labels, a few runs a day */
+  const g = await allowMarketing(req);
+  if (!g.ok) return refuse(g);
   let body: {
     front?: string; back?: string | null; frontId?: string; backSpec?: unknown;
     bottle?: { type?: string; color?: string; closure?: string; finish?: string; closureColour?: string };
