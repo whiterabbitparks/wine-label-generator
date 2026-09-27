@@ -1329,6 +1329,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
      the SELF-PLAYING tutorial — the same story, but the pointer presses the
      red button itself after every step, and it ends on the home page */
   const tutAuto = useRef(false);
+  /* 2026-09-28 (owner): when the self-playing story ends, the visitor is on
+     the REAL home page — the line full, the red button saying START, the
+     "See how…" link gone — and every link and control works */
+  const [tourEnd, setTourEnd] = useState(false);
+  useEffect(() => { if (page !== "welcome") setTourEnd(false); }, [page]);
   const startTutorial = useCallback((auto = false) => {
     tutAuto.current = auto;
     tutTok.current++;
@@ -1358,8 +1363,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   useEffect(() => {
     if (tut < 0) return;
     const block = (e: Event) => {
-      if (tutClick.current) return;   /* the story's own press (assets Save) */
+      if (tutClick.current) return;   /* the story's own press */
       const el = e.target as Element | null;
+      /* 2026-09-28 (owner): while the story plays itself, its red button is
+         pressed only by the story's pointer */
+      if (tutAuto.current && el?.closest?.("[data-tut-ok][aria-label='next'], [data-tut-ok][aria-label='start']")) { e.preventDefault(); e.stopPropagation(); return; }
       if (el && el.closest && el.closest("[data-tut-ok]")) return;
       e.preventDefault(); e.stopPropagation();
     };
@@ -1528,6 +1536,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [guide, guideTick, page, vision, selected, markets, marketOpen, backSaved, assetsStage, assets.front, assetsSaved, confirmModal]);
   useEffect(() => {
+    if (!tourEnd) return;
+    setNudge((n) => n + 1);
+    const id = setInterval(() => setNudge((n) => n + 1), 3000);
+    return () => clearInterval(id);
+  }, [tourEnd]);
+  useEffect(() => {
     if (tut < 0 || !tutIdle) return;
     setNudge((n) => n + 1);
     const id = setInterval(() => setNudge((n) => n + 1), 3000);
@@ -1656,6 +1670,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       if (!(await hold(SLIDE_MS + 260))) return;
       switch (tut) {
         case 0: {
+          /* 2026-09-28 (owner): the size starts elsewhere (100 × 90) so the
+             pointer is seen CHANGING it to TSINANDALI's 110 × 80 */
+          setF((m) => ({ ...m, width: "100", height: "90" }));
           if (!(await tap(TAP.visionBox))) return;
           if (!(await type(lang === "ge" ? DEMO_VISION_GE : DEMO_VISION, setVision, 13))) return;
           if (!(await hold(520))) return;
@@ -1800,14 +1817,26 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
          (its onClick turns the page of the story). */
       if (!live()) return;
       /* the self-playing story presses the red button itself */
-      /* …until the closing card: there the red button is START and waits
-         for the visitor, who then begins on the front label details */
-      if (tutAuto.current && tut >= TUT_CARDS.length - 1) tutAuto.current = false;
+      /* …until the closing card: the home page slides in, and then the
+         story hands over to the real home page, its red button saying START
+         (the visitor's press begins on the front label details) */
+      if (tutAuto.current && tut >= TUT_CARDS.length - 1) {
+        if (!(await hold(1400))) return;
+        tutAuto.current = false;
+        stopTutRef.current();
+        restoreRef.current(false);
+        setTourEnd(true);
+        pageNow.current = "welcome"; setPage("welcome");
+        try { window.history.replaceState({ page: "welcome" }, "", "?page=welcome"); } catch { }
+        return;
+      }
       if (tutAuto.current) {
         if (!(await hold(900))) return;
         const bx = tut < STEPS.length ? STEPS[tut].x : NEXT_X;
         if (!(await tap([bx, PROG_Y], 260, 640))) return;
+        tutClick.current = true;
         (document.querySelector("[data-tut-ok][aria-label='next'], [data-tut-ok][aria-label='start']") as HTMLButtonElement | null)?.click();
+        tutClick.current = false;
         return;
       }
       setCursor(null);
@@ -2561,9 +2590,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         {/* 2026-09-28 (owner): on the left, level with the tagline's first
             line — set like the tagline (italic, black), underlined as a link;
             it plays the tutorial by itself */}
-        <button onClick={() => startTutorial(true)}
+        {!tourEnd && <button onClick={() => startTutorial(true)}
           style={{ ...px(137.14, baseTop(625.4, 16.2), 420, 20), ...ghost, pointerEvents: "auto", textAlign: "left", textTransform: "none", font: `italic 16.2px/16.2px ${HNW}`, color: "#000", textDecoration: "underline", textUnderlineOffset: 3, whiteSpace: "nowrap", cursor: "pointer" }}>
-          {t("See how this pack was created")}</button>
+          {t("See how this pack was created")}</button>}
         {lang === "ge" ? null : ["Create print and market-ready labels,", "marketing assets, and a product page", "in ~10 minutes."].map((ln, i) => (
           <span key={"hs" + i} style={{ ...px(1038.5, baseTop(625.4 + i * 19.44, 16.2), 320, 20), font: `italic 16.2px ${HNW}`, lineHeight: "16.2px", color: "#000", whiteSpace: "nowrap" }}>{t(ln)}</span>
         ))}
@@ -3988,12 +4017,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   /* round 68 #1: any open modal freezes the bar (it still paints on top) */
   const modalOpen = !!confirmModal || termsOpen || marketOpen || emailOpen;
   const barPage: PageKey = page === "blank" ? blankFrom.current : page;
-  const step = tut >= 0 ? tut : STEP_OF[barPage];
   /* round 71 #4: while the walkthrough runs, the bar follows IT — the
      button rides the stop being explained and the line follows it home */
   const tutLast = TUT_CARDS.length - 1;
-  const tutX = tut < 0 ? null : tut < STEPS.length ? STEPS[tut].x : NEXT_X;
-  const thick = tut >= 0 ? (tut < STEPS.length ? STEPS[tut].x : CIRCLE_X[CIRCLE_X.length - 1]) : THICK[barPage];
+  /* the story's end on the real home page draws the bar as its last card */
+  const vt = tourEnd && tut < 0 && page === "welcome" ? tutLast : tut;
+  const step = vt >= 0 ? vt : STEP_OF[barPage];
+  const tutX = vt < 0 ? null : vt < STEPS.length ? STEPS[vt].x : NEXT_X;
+  const thick = vt >= 0 ? (vt < STEPS.length ? STEPS[vt].x : CIRCLE_X[CIRCLE_X.length - 1]) : THICK[barPage];
   const onArtists = page === "artists" || page === "artist";
   const bandBottom = BAND_BOTTOM[page];
   /* ROUND 108 #20 (owner): NOTHING ever slides over the header, the rules
@@ -4335,7 +4366,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                        until it is REACHED. Round 109 (the owner's artboards):
                        the stop the button stands on is named — its name is
                        the card's title. Outside the walkthrough, all show. */
-                    opacity: tut >= 0 && i > tut ? 0 : 1,
+                    opacity: vt >= 0 && i > vt ? 0 : 1,
                     transition: `opacity ${SLIDE_MS}ms ${EASE}`,
                   }}>
                   {t(st.label)}</button>
@@ -4347,18 +4378,18 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 is just "STEP N" in red and two italic lines. The closing
                 card is ONE red word on the labels' own baseline, centred
                 under the button at the end of the bar. */}
-            {tut >= 0 && tutX !== null && (() => {
-              const card = TUT_CARDS[Math.min(tut, TUT_CARDS.length - 1)];
+            {vt >= 0 && tutX !== null && (() => {
+              const card = TUT_CARDS[Math.min(vt, TUT_CARDS.length - 1)];
               const solo = card.body.length === 0;          /* the closing card */
               const fs = lang === "ge" ? CARD_FS - 2 : CARD_FS;
               const bfs = lang === "ge" ? CARD_BODY_FS - 1 : CARD_BODY_FS;
-              const st = STEPS[tut];
+              const st = STEPS[vt];
               /* the label is centred on its stop; the card starts where the
                  label starts */
               const labelW = st ? textW(t(st.label), `${st.big ? 700 : 300} ${BAR_FS}px ${HNW}`) : 0;
               const L = solo ? tutX - 110 : tutX - labelW / 2;
               return (
-                <div key={"tut" + tut} style={{ position: "absolute", left: L, top: 0, width: W - L, height: PAGE_H, pointerEvents: "none", animation: `nuiFadeIn 320ms ${EASE} both`, transition: `left ${SLIDE_MS}ms ${EASE}` }}>
+                <div key={"tut" + vt} style={{ position: "absolute", left: L, top: 0, width: W - L, height: PAGE_H, pointerEvents: "none", animation: `nuiFadeIn 320ms ${EASE} both`, transition: `left ${SLIDE_MS}ms ${EASE}` }}>
                   {solo ? (
                     /* on the labels' baseline, centred under the button */
                     <span style={{ position: "absolute", left: 0, top: baseTop(LABEL_BASE + 0.22, fs), width: 220, textAlign: "center", font: `700 ${fs}px/${fs}px ${HNW}`, color: BAR_RED, whiteSpace: "nowrap" }}>{t(card.step)}</span>
@@ -4481,7 +4512,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   borderRadius: NEXT_R, background: BAR_RED, border: "none",
                   padding: 0, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
                   animation: arrowFly ? `btnFly ${SLIDE_MS}ms ${EASE} both`
-                    : ((tut >= 0 && (tutIdle || tut >= tutLast)) || page === "checkout" || page === "more") && nudge > 0 ? `nuiNudge 1200ms ${EASE} both`
+                    : ((vt >= 0 && (tutIdle || vt >= tutLast)) || page === "checkout" || page === "more") && nudge > 0 ? `nuiNudge 1200ms ${EASE} both`
                     : pressed > 0 ? `nuiPress 260ms ${EASE} both` : "none",
                 }}>
                 {/* ROUND 109: the artboard's smaller arrow — 18.25 long,
