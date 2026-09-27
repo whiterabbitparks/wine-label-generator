@@ -69,5 +69,16 @@ export async function GET() {
     } as SiteArtist & { order: number });
   }
   out.sort((x, y) => ((x as SiteArtist & { order: number }).order) - ((y as SiteArtist & { order: number }).order));
-  return NextResponse.json({ artists: out }, { headers: { "Cache-Control": "public, max-age=300" } });
+  /* 2026-09-28 (owner): the details page's Style menu lists everyone who
+     PAINTS (a trained model, switched on) — with a round avatar (the
+     portrait, else a first work, else an avatar.jpg cut from a work) and
+     whether a page exists to open */
+  const painters = listArtists().filter((a) => a.lora).map((a) => {
+    const p = a.profile as typeof a.profile & { pageOrder?: number };
+    const dir = path.join(PUB, p.id);
+    const page = out.find((x) => x.id === p.id);
+    const avatar = page?.portrait || (fs.existsSync(path.join(dir, "avatar.jpg")) ? `/newui/artists/${p.id}/avatar.jpg` : "");
+    return { id: p.id, name: p.name, avatar, crop: page?.crop || "50% 40%", page: !!page, order: p.pageOrder ?? 99 };
+  }).sort((x, y) => x.order - y.order);
+  return NextResponse.json({ artists: out, painters }, { headers: { "Cache-Control": "public, max-age=300" } });
 }

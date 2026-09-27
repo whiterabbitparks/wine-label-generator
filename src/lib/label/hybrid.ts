@@ -48,6 +48,8 @@ export interface HybridInput {
   /* "Artist Name|template" of the labels already shown in this session —
      a new version never repeats one of those pairs */
   avoidPairs?: string[];
+  /* the artists the visitor picked (ids) — the run's cast comes from them */
+  pool?: string[];
 }
 export interface HybridOutput {
   png: string;          /* data URL — the print bitmap at 12 px/mm */
@@ -94,7 +96,7 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
   const brief = { id: "wizard", title: "wizard", vision: inp.vision, data: inp.data, width: widthMm, height: heightMm };
   /* the column's artist (admin → Artists); any artist with a LoRA if unset */
   const model = (inp.artistId ? evalModel(`artist:${inp.artistId}`) : null)
-    || (inp.order ? evalModel(castPainter(inp.order, style, avoid, (id) => evalModel(id)?.artist.name || "")) : null)
+    || (inp.order ? evalModel(castPainter(inp.order, style, avoid, (id) => evalModel(id)?.artist.name || "", inp.pool)) : null)
     || evalModel(await painterFor(style)) || artistModels().find((m) => m.lora) || artistModels()[0];
   if (!model) throw new Error("no artist is set up yet (data/artists/<id>/profile.json + lora.json)");
   /* 2026-09-22: THE TEMPLATE IS CHOSEN BEFORE THE PAINTING, and so is

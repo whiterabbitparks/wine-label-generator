@@ -62,8 +62,15 @@ function shuffled<T>(xs: T[], seed: number): T[] {
   }
   return a;
 }
-export function mixedPainter(order: string, style: string): string {
-  const ready = listArtists().filter((a) => a.lora).map((a) => `artist:${a.profile.id}`).sort();
+/* 2026-09-28 (owner): the visitor may PICK the artists (the Style menu on
+   the details page) — the cast then comes from that pool only */
+const readyIn = (pool?: string[]) => {
+  const all = listArtists().filter((a) => a.lora).map((a) => a.profile.id);
+  const inPool = pool && pool.length ? all.filter((id) => pool.includes(id)) : all;
+  return (inPool.length ? inPool : all).map((id) => `artist:${id}`).sort();
+};
+export function mixedPainter(order: string, style: string, pool?: string[]): string {
+  const ready = readyIn(pool);
   if (!ready.length) return "";
   const h = hash(order);
   const cast = shuffled(ready, h);
@@ -78,9 +85,9 @@ export function mixedPainter(order: string, style: string): string {
    far — with four artists, a second run brings in the one not yet seen —
    and the template is then chosen to keep every artist+layout pair new
    (hybrid.ts). Without `avoid` this is exactly mixedPainter. */
-export function castPainter(order: string, style: string, avoid: string[], nameOf: (id: string) => string): string {
-  if (!avoid.length) return mixedPainter(order, style);
-  const ready = listArtists().filter((a) => a.lora).map((a) => `artist:${a.profile.id}`).sort();
+export function castPainter(order: string, style: string, avoid: string[], nameOf: (id: string) => string, pool?: string[]): string {
+  if (!avoid.length) return mixedPainter(order, style, pool);
+  const ready = readyIn(pool);
   if (!ready.length) return "";
   const seen = (id: string) => avoid.filter((p) => p.split("|")[0] === nameOf(id)).length;
   const cast = [...ready].sort((a, b) => seen(a) - seen(b) || hash(order + a) - hash(order + b));

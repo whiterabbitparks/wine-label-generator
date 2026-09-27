@@ -1191,9 +1191,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const artistsFrom = useRef<PageKey>("welcome");
   /* the artist a visitor chose on that page: every column then paints in
      her hand instead of the three the admin set */
-  const [chosenArtist, setChosenArtist] = useState("");
+  /* 2026-09-28 (owner): the STYLE menu on the details page — the artists
+     the visitor picks paint the run (none = three chosen at random); an
+     artist's page's "paint with…" preselects that one */
+  const [pickArtists, setPickArtists] = useState<string[]>([]);
+  const [painters, setPainters] = useState<{ id: string; name: string; avatar: string; crop: string; page: boolean }[]>([]);
+  const [styleOpen, setStyleOpen] = useState(false);
   useEffect(() => {
-    fetch("/api/artists").then((r) => r.json()).then((b) => setSiteArtists(b.artists || [])).catch(() => { });
+    fetch("/api/artists").then((r) => r.json()).then((b) => { setSiteArtists(b.artists || []); setPainters(b.painters || []); }).catch(() => { });
   }, []);
   /* 2026-09-23 (owner: "in the middle of the tutorial, 8K took me home
      but the bar still said Front Label Details"): the header's links, like
@@ -1322,6 +1327,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     setWineColor(""); bottleTouched.current = false;
     setAssets({ life: [] }); setAssetsSig(""); setAssetsStage("");
     setCarIdx(0); setAgree(false); setProductUrl("");
+    setPickArtists([]); setStyleOpen(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -1398,14 +1404,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     dreams: dreams.filter(Boolean).filter((d) => d.id).map((d) => ({ style: d.style, id: d.id, artist: d.artist })),
     /* 2026-09-27: every set of versions, the one on show and the saved one's */
     sets: sets.map((st) => st.filter(Boolean).filter((d) => d.id).map((d) => ({ style: d.style, id: d.id, artist: d.artist }))).filter((st) => st.length),
-    setIdx, selSet,
+    setIdx, selSet, pickArtists,
   });
   useEffect(() => {
     if (tut >= 0) return;
     const hasAny = dreams.length > 0 || !!vision.trim() || Object.entries(f).some(([k, v]) => k !== "width" && k !== "height" && !!(v || "").trim());
     if (!hasAny) return;
     try { localStorage.setItem("nui-order", JSON.stringify(orderRecord())); } catch { }
-  }, [tut, sets, setIdx, selSet, vision, f, b, gtin, qrMode, markets, bottle, wineColor, selected, frontSig, paintSig]);
+  }, [tut, sets, setIdx, selSet, vision, f, b, gtin, qrMode, markets, bottle, wineColor, selected, frontSig, paintSig, pickArtists]);
   type OrderRec = { v?: number; vision?: string; f?: Record<string, string>; b?: Record<string, string>; gtin?: string; qrMode?: string; markets?: string[]; bottle?: Record<string, string>; wineColor?: string; selected?: number; frontSig?: string; paintSig?: string; dreams?: { style: string; id?: string; artist?: string }[]; sets?: { style: string; id?: string; artist?: string }[][]; setIdx?: number; selSet?: number };
   /* the visitor's own order, brought back from this browser (on arrival,
      and after the self-playing tutorial, which borrows the page) */
@@ -1447,6 +1453,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       setGtin(rec.gtin || ""); setQrMode((rec.qrMode || "") as never); setMarkets(rec.markets || []);
       if (rec.bottle) { setBottle(rec.bottle); bottleTouched.current = true; }
       setWineColor(rec.wineColor || "");
+      setPickArtists(Array.isArray((rec as { pickArtists?: string[] }).pickArtists) ? (rec as { pickArtists: string[] }).pickArtists : []);
       const recSets = (rec.sets && rec.sets.length ? rec.sets : [rec.dreams || []]).map((st) => st.filter((d) => d.id)).filter((st) => st.length);
       if (!recSets.length) { if (resume || apply) go("vision"); return; }
       const toData = async (u: string) => {
@@ -1859,8 +1866,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tut]);
 
-  const sigFront = () => JSON.stringify({ vision, sketch: !!sketch, f });
-  const sigPaint = () => JSON.stringify({ vision, sketch: sketch ? sketch.length : 0, w: f.width, h: f.height });
+  const sigFront = () => JSON.stringify({ vision, sketch: !!sketch, f, a: pickArtists });
+  const sigPaint = () => JSON.stringify({ vision, sketch: sketch ? sketch.length : 0, w: f.width, h: f.height, a: pickArtists });
   /* round 60 #4: qrMode AND the viewed variation are part of the brief —
      ANY back-details change births a fresh back label */
   const sigBack = () => JSON.stringify({ b, markets, gtin: gtinValid ? gtinNorm : "", qrImg: !!qrImg, qm: qrMode, w: f.width, h: f.height, sel: selected >= 0 ? `${selected}:${styleView[selected] || 0}` : "" });
@@ -1877,9 +1884,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const fx = (k: string) => f[k]?.trim() || "";
     return {
       aspectKey,
-      /* round 112 #4: a visitor who came from an artist's page has ALL
-         three columns painted in that artist's hand */
-      artist: chosenArtist || undefined,
+      /* the artists picked in the Style menu (round 112 #4's one artist
+         from an artist's page is now a pick of one) */
+      artists: pickArtists.length ? pickArtists : undefined,
       /* round 84: the hybrid engine sets type to the label's real mm */
       width: Number(f.width) || 110, height: Number(f.height) || 80,
       data: {
@@ -1903,7 +1910,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       const d0 = pool[Math.floor(Math.random() * Math.max(1, pool.length))];
       return { style, dream: d0?.dream || FAKE_IMG, preview: d0?.preview || null };
     }
-    const { data, aspectKey, width, height, artist } = buildDreamPayload();
+    const { data, aspectKey, width, height, artists } = buildDreamPayload();
     /* round 86 #3: a variation keeps the column's painting and only
        re-sets the type (the server needs the label's id); a label without
        an id (pre-hybrid) is painted afresh */
@@ -2090,7 +2097,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const genT0 = Date.now();   /* round 46: feed the loader's REAL average */
     /* round 84: ONE payload builder — this copy still carried the demo
        fallback that round 78 removed from buildDreamPayload */
-    const { data, aspectKey, width, height, artist } = buildDreamPayload();
+    const { data, aspectKey, width, height, artists } = buildDreamPayload();
     const one = async (style: string): Promise<Dream> => {
       /* round 56 #3 (TEMP dev switch): fake the run with existing art */
       if (!liveGenRef.current) {
@@ -2105,7 +2112,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         /* 2026-09-23 (owner: "remove variations altogether, they
            complicate things — three versions and that's it"): one label
            a column, no re-layouts riding along */
-        body: JSON.stringify({ vision, style, data, sketch, aspect: aspectKey, width, height, variants: 1, artist, order, prev }),
+        body: JSON.stringify({ vision, style, data, sketch, aspect: aspectKey, width, height, variants: 1, artists, order, prev }),
       });
       if (!r.ok || !r.body) throw new Error(`generation failed (${r.status})`);
       const reader = r.body.getReader(); const dec = new TextDecoder();
@@ -2749,7 +2756,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           <img src={a2.portrait} alt={a2.name} style={{ ...px(BX, 171.43, BW, 137.14), objectFit: "cover", objectPosition: a2.crop, display: "block" }} />
           <span style={{ ...px(BX, baseTop(357.95, 19), BW + 200, 22), font: `700 19px ${HNW}`, lineHeight: "19px", color: INK, whiteSpace: "nowrap", textTransform: "uppercase" }}>{a2.name}</span>
           <span style={{ ...px(BX, baseTop(384, 15), BW, 200), font: `15px ${HNW}`, lineHeight: "18px", color: INK, textAlign: "justify" }}>{a2.bio}</span>
-          <button onClick={() => { setChosenArtist(a2.id); go("vision"); }}
+          <button onClick={() => { setPickArtists([a2.id]); go("vision"); }}
             style={{ ...px(136.96, 548.57, 343.21, 34.29), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, textTransform: "none" }}>
             {t("Create label with")} {first}{t("’s art")}</button>
           {/* ROUND 113 #6 (owner): the two captions are HYPERLINKS —
@@ -2842,6 +2849,75 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           <textarea value={vision} onChange={(e) => setVision(e.target.value)} maxLength={2200} {...noFill("vision")}
             style={{ ...px(BOX.x + 14, BOX.y + 12, BOX.w - 28, BOX.h - 40), ...inputStyle, fontStyle: "normal", fontSize: 14, textDecoration: "none", resize: "none", lineHeight: 1.5, overflow: "auto", background: "transparent", padding: 0 }} />
           <span style={{ ...px(BOX.x + BOX.w - 174, baseTop(BOX.y + BOX.h - 13, 11), 160, 14), font: `11px ${HNW}`, lineHeight: "11px", color: "#8a8a8a", textAlign: "right" }}>{words} / 300 {t("words")}</span>
+          {/* 2026-09-28 (owner's screenshot): STYLE — under the idea box, its
+              width, between it and the size row. It works like the market
+              menu: pressed, a list opens UPWARD (avatar, name — a link to
+              the artist's page — and a ring); the box reads "Select" while
+              the list is up and the picked names beside "Style:" after */}
+          {(() => {
+            const SB = { x: BOX.x, y: 582, w: BOX.w, h: 34.3 };
+            const ROW_H = 30, HEAD_H = 30, PAD = 12, AV = 22;
+            const panelH = PAD + HEAD_H + 8 + painters.length * ROW_H + PAD;
+            const chosen = painters.filter((a) => pickArtists.includes(a.id));
+            const ink = styleOpen ? "#fff" : "#111";
+            const AW = 15.4, AH = 7.7;
+            /* the text's capitals centred in the box: baseline = middle + 0.36·14 */
+            const base = SB.h / 2 + 0.36 * 14;
+            const ring = (on: boolean) => (
+              <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", width: 18, height: 18, overflow: "visible" }}>
+                {ringSvg(18, on, { stroke: 2, dot: 7.5 })}
+              </span>
+            );
+            return (<>
+              <button onClick={() => setStyleOpen((o) => !o)}
+                style={{ ...px(SB.x, SB.y, SB.w, SB.h), background: styleOpen ? "#111" : "#fff", border: "1px solid #111", cursor: "pointer", padding: 0, textTransform: "none", boxSizing: "border-box", transition: `all 240ms ${EASE}`, zIndex: styleOpen ? 14 : undefined }}>
+                {styleOpen ? (
+                  <span style={{ position: "absolute", left: 0, top: baseTop(SB.h / 2 + 4.5, 12), width: SB.w, textAlign: "center", font: `12px ${HNW}`, letterSpacing: 0.3, lineHeight: "12px", color: ink }}>{t("Select")}</span>
+                ) : (
+                  <span style={{ position: "absolute", left: 12, top: baseTop(base, 14), width: SB.w - 12 - 40, textAlign: "left", font: `14px/14px ${HNW}`, color: ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    <b style={{ fontWeight: 700 }}>{t("Style:")}</b>{" "}{chosen.length ? chosen.map((a) => a.name).join(", ") : t("3 randomly chosen artists")}
+                  </span>
+                )}
+                <svg viewBox="0 0 22 11" width={AW} height={AH} style={{ position: "absolute", right: 11, top: (SB.h - AH) / 2 }}>
+                  <polyline points={!styleOpen ? "1,10 11,1 21,10" : "1,1 11,10 21,1"} fill="none" stroke={ink} strokeWidth="2" />
+                </svg>
+              </button>
+              {styleOpen && (<>
+                <div style={{ ...px(0, 0, W, H), zIndex: 12 }} onClick={() => setStyleOpen(false)} />
+                <div style={{ ...px(SB.x, SB.y - panelH, SB.w, panelH), background: "#fff", border: "1px solid #111", boxSizing: "border-box", zIndex: 13, padding: `${PAD}px 0`, boxShadow: "0 0 0 12px #fff" }}>
+                  <button onClick={() => setPickArtists([])}
+                    style={{ position: "relative", display: "flex", alignItems: "center", width: "100%", height: HEAD_H, padding: "0 14px", background: "transparent", border: "none", cursor: "pointer", textTransform: "none" }}>
+                    {/* HNW's capitals sit 0.1655·size below a line box's middle —
+                        lifted so the words meet the rings' middle */}
+                    <span style={{ font: `700 14px ${HNW}`, color: "#111", whiteSpace: "nowrap", position: "relative", top: -0.1655 * 14 }}>{t("3 randomly chosen artists")}</span>
+                    {ring(pickArtists.length === 0)}
+                  </button>
+                  <svg style={{ display: "block", margin: "4px 14px", height: 1, width: "calc(100% - 28px)" }} preserveAspectRatio="none">
+                    <line x1="0" y1="0.5" x2="100%" y2="0.5" stroke="#000" strokeWidth="1" strokeDasharray="4.12 4.12" shapeRendering="crispEdges" />
+                  </svg>
+                  {painters.map((a) => {
+                    const on = pickArtists.includes(a.id);
+                    return (
+                      <div key={a.id} onClick={() => setPickArtists((ps) => (on ? ps.filter((x) => x !== a.id) : [...ps, a.id]))}
+                        style={{ position: "relative", display: "flex", alignItems: "center", width: "100%", height: ROW_H, padding: "0 14px", columnGap: 10, background: on ? "#F2F1ED" : "transparent", cursor: "pointer", boxSizing: "border-box" }}>
+                        {a.avatar
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          ? <img src={a.avatar} alt="" style={{ width: AV, height: AV, borderRadius: AV / 2, objectFit: "cover", objectPosition: a.crop, flex: "0 0 auto", display: "block" }} />
+                          : <span style={{ width: AV, height: AV, borderRadius: AV / 2, background: "#E3E3E1", flex: "0 0 auto" }} />}
+                        {a.page ? (
+                          <button onClick={(e) => { e.stopPropagation(); setStyleOpen(false); artistsFrom.current = "vision"; setArtistId(a.id); setArtistView("art"); go("artist"); }}
+                            style={{ ...ghost, font: `${on ? 700 : 400} 13px ${HNW}`, color: "#111", whiteSpace: "nowrap", textTransform: "none", textDecoration: "underline", textUnderlineOffset: 2, cursor: "pointer", position: "relative", top: -0.1655 * 13 }}>{a.name}</button>
+                        ) : (
+                          <span style={{ font: `${on ? 700 : 400} 13px ${HNW}`, color: "#111", whiteSpace: "nowrap", position: "relative", top: -0.1655 * 13 }}>{a.name}</span>
+                        )}
+                        {ring(on)}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>)}
+            </>);
+          })()}
           {/* round 107 #1 (owner): the size row starts at the prompt box's
               LEFT edge (it used to hang off its right edge) */}
           {/* the row is a flex that aligns on the INPUT's baseline, and an
@@ -4028,7 +4104,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   };
 
   /* round 68 #1: any open modal freezes the bar (it still paints on top) */
-  const modalOpen = !!confirmModal || termsOpen || marketOpen || emailOpen || !!resumeAsk;
+  const modalOpen = !!confirmModal || termsOpen || marketOpen || emailOpen || !!resumeAsk || styleOpen;
   const barPage: PageKey = page === "blank" ? blankFrom.current : page;
   /* round 71 #4: while the walkthrough runs, the bar follows IT — the
      button rides the stop being explained and the line follows it home */
