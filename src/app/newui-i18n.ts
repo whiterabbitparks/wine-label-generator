@@ -293,7 +293,7 @@ export const UI_GE: Record<string, string> = {
   "QR Code & Published Product Page": "QR კოდი და გამოქვეყნებული გვერდი",
   "1 Hour session with human designer": "1 საათი დიზაინერთან",
   /* 2026-09-28 (owner): the Style menu on the details page */
-  "Style:": "სტილი:",
+  "Style by artist:": "სტილი არტისტის მიხედვით:",
   "3 randomly chosen artists": "შემთხვევითობით შერჩეული 3 არტისტი",
   "Choose up to 3 artists": "აირჩიე მაქსიმუმ 3 არტისტი",
   /* 2026-09-28 (owner): welcome back — continue or start new */

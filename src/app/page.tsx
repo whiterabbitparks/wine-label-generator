@@ -2865,7 +2865,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               width, between it and the size row. It works like the market
               menu: pressed, a list opens UPWARD (avatar, name — a link to
               the artist's page — and a ring); the box reads "Select" while
-              the list is up and the picked names beside "Style:" after */}
+              the list is up and the picked names beside "Style by artist:" after */}
           {(() => {
             const SB = { x: BOX.x, y: 582, w: BOX.w, h: 34.3 };
             const ROW_H = 30, HEAD_H = 30, PAD = 12, AV = 22;
@@ -2875,6 +2875,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             const full = pickArtists.length >= MAX_PICK;
             const panelH = PAD + HEAD_H + 8 + NOTE_H + painters.length * ROW_H + PAD;
             const chosen = painters.filter((a) => pickArtists.includes(a.id));
+            /* the picked names in full when they fit the box, else by first
+               name ("Mariam, Levan, Dachi") — never cut with an ellipsis */
+            const fullNames = chosen.map((a) => a.name).join(", ");
+            const names = textW(t("Style by artist:") + " ", `700 14px ${HNW}`) + textW(fullNames, `14px ${HNW}`) <= SB.w - 12 - 40
+              ? fullNames : chosen.map((a) => a.name.split(" ")[0]).join(", ");
             const ink = styleOpen ? "#fff" : "#111";
             const AW = 15.4, AH = 7.7;
             /* the text's capitals centred in the box: baseline = middle + 0.36·14 */
@@ -2893,7 +2898,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   /* the line box is 24 tall (not 14): the ellipsis clips at it, and
                      a 14-tall box cut the Georgian letters' tails ("სტილი") */
                   <span style={{ position: "absolute", left: 12, top: base - 12 - 0.5255 * 14, height: 24, width: SB.w - 12 - 40, textAlign: "left", font: `14px/24px ${HNW}`, color: ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    <b style={{ fontWeight: 700 }}>{t("Style:")}</b>{" "}{chosen.length ? chosen.map((a) => a.name).join(", ") : t("3 randomly chosen artists")}
+                    <b style={{ fontWeight: 700 }}>{t("Style by artist:")}</b>{" "}{chosen.length ? names : t("3 randomly chosen artists")}
                   </span>
                 )}
                 <svg viewBox="0 0 22 11" width={AW} height={AH} style={{ position: "absolute", right: 11, top: (SB.h - AH) / 2 }}>
