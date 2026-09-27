@@ -378,7 +378,7 @@ const TAP = {
      blue re-layout); column 3's centre is 960 + 342.9/2 */
   varBtn: [1131.45, 582], dot0: [1120.25, 516.85], dot1: [1142.25, 516.85],
   /* the bottle page moved (2026-09-28) — these follow its own numbers */
-  wheel: [904.82 + 27.35 + 0.2651 * 137.2, 368 + ((68.57 + 754.07) / 2 - (171.71 + 583.41) / 2) + 0.4145 * 137.2],
+  wheel: [1110.54 + 27.35 + 0.2651 * 137.2, 368 + ((68.57 + 754.07) / 2 - (171.71 + 583.41) / 2) + 0.4145 * 137.2],
 } as const;
 /* the bottle page's option rows and the lightness knob, from its own code:
    ring cx = COLS_X[ci] + 43.2, cy = 283.57 + row * 29.8;
@@ -386,8 +386,10 @@ const TAP = {
 /* the wheel's colour at angle `a` (radians) and radius r (0 centre → 1 rim):
    white at the centre, the pure hue across a wide middle ring, black at the
    rim */
-const W_IN = 0.26, W_OUT = 0.7;
-function wheelL(r: number) { return r < W_IN ? 1 - 0.5 * (r / W_IN) : r <= W_OUT ? 0.5 : 0.5 * (1 - (r - W_OUT) / (1 - W_OUT)); }
+/* 2026-09-28 (owner): a small pure-WHITE core, so a pick near the centre
+   stays white instead of taking a tint at once */
+const W_CORE = 0.1, W_IN = 0.32, W_OUT = 0.72;
+function wheelL(r: number) { return r < W_CORE ? 1 : r < W_IN ? 1 - 0.5 * ((r - W_CORE) / (W_IN - W_CORE)) : r <= W_OUT ? 0.5 : 0.5 * (1 - (r - W_OUT) / (1 - W_OUT)); }
 function hslRgb(h: number, s2: number, l: number): [number, number, number] {
   const k = (n: number) => (n + h / 30) % 12, a = s2 * Math.min(l, 1 - l);
   const f2 = (n: number) => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
@@ -412,8 +414,10 @@ function capPreset(wine: string): { x: number; y: number; rgb: number[] } | null
    and the bottle's silhouette LAST; the whole grid sits in the page's
    middle (its centre on (68.57 + 754.07) / 2 — it used to ride 33.76 high) */
 const B_DY = (68.57 + 754.07) / 2 - (171.71 + 583.41) / 2;
-const B_COLS = [137.14, 329.06, 520.98, 712.9, 904.82];
-const B_SIL = { x0: 1096.74, x1: 1302.86 };
+/* (2026-09-28, later, owner: "put the bottle section back where it was")
+   — the silhouette FIRST again, the grid stays centred */
+const B_COLS = [342.86, 534.78, 726.7, 918.62, 1110.54];
+const B_SIL = { x0: 137.14, x1: 342.86 };
 const BRING = (ci: number, row: number) => [B_COLS[ci] + 43.2, 283.57 + B_DY + row * 29.8] as [number, number];
 
 /* round 52 #3: placeholder terms text — long enough to need the scroll */
@@ -729,7 +733,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const [backPayload, setBackPayload] = useState<Record<string, unknown> | null>(null);
   const [backSig, setBackSig] = useState("");
   const [backDims, setBackDims] = useState({ w: 1, h: 1 });
-  const [bottle, setBottle] = useState<Record<string, string>>({ type: "Bordeaux", color: "Olive Green", closure: "Cork", finish: "Matte" });
+  /* 2026-09-28 (owner): Transparent glass is the default */
+  const [bottle, setBottle] = useState<Record<string, string>>({ type: "Bordeaux", color: "Transparent", closure: "Cork", finish: "Matte" });
   /* round 38: which drawing variant the bottle page shows */
   const bottleSrc = () => {
     const slug = ({ "Bordeaux": "bordeaux", "Bordeaux Prestige": "bordeaux-prestige", "Burgundy": "burgundy", "Sparkling": "sparkling", "Alsace / Rhine": "alsace-rhine", "Ice Wine": "ice-wine" } as Record<string, string>)[bottle.type] || "bordeaux";
@@ -803,7 +808,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const scan = bottleScans.current[bottleScanKey]; if (!scan) return;
     const g = cv.getContext("2d"); if (!g) return;
     g.clearRect(0, 0, 800, 1600);
-    g.fillStyle = bottle.color === "Olive Green" ? "rgb(182, 194, 158)" : bottle.color === "Amber" ? "rgb(206, 180, 140)" : "#fff";
+    /* clear glass shows the cell's own grey through it (owner, 2026-09-28) */
+    g.fillStyle = bottle.color === "Olive Green" ? "rgb(182, 194, 158)" : bottle.color === "Amber" ? "rgb(206, 180, 140)" : "#E6E6E6";
     for (let y = scan.top; y <= scan.bottom; y++) {
       const [l, r] = scan.spans[y] || [0, -1];
       if (r - l > 1) g.fillRect(l, y, r - l + 1, 1);
@@ -1381,7 +1387,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     setDreams([]); setStyleVars([[], [], []]); setSelected(-1); setFrontSig("");
     setBackPng(""); setBackSig(""); setBackDims({ w: 1, h: 1 });
     setMarkets([]); setNoComp(true); setGtin(""); setQrMode(""); setIngredients("");
-    setBottle({ type: "Bordeaux", color: "Olive Green", closure: "Cork", finish: "Matte" });
+    setBottle({ type: "Bordeaux", color: "Transparent", closure: "Cork", finish: "Matte" });
     setWineColor(""); bottleTouched.current = false;
     setAssets({ life: [] }); setAssetsSig(""); setAssetsStage("");
     setCarIdx(0); setAgree(false); setProductUrl("");
@@ -2235,7 +2241,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
          mode. ROUND 48: wine colour re-derives from the new label's field
          and any custom-cleared bottle sections get their defaults back. */
       setCustomLabel(null); setWineColor("");
-      setBottle((m) => ({ type: m.type || "Bordeaux", color: m.color || "Olive Green", closure: m.closure || "Cork", finish: m.finish || "Matte" }));
+      setBottle((m) => ({ type: m.type || "Bordeaux", color: m.color || "Transparent", closure: m.closure || "Cork", finish: m.finish || "Matte" }));
       /* round 46 (owner: "calculate real average"): remember how long the
          full set really took — the loader note averages the last 10 runs */
       try {
@@ -3578,7 +3584,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               piece (below the title) — every column, the frame and its
               pluses are drawn live, one grid height lower */}
           {patch(120, 152, 1210, 452, "bzone")}
-          {dashGrid(137.14, 171.71 + B_DY, 1302.86 - 137.14, 583.41 - 171.71, [...B_COLS.slice(1), B_SIL.x0], "bgrid")}
+          {dashGrid(137.14, 171.71 + B_DY, 1302.86 - 137.14, 583.41 - 171.71, B_COLS, "bgrid")}
           {colHead(0, "Wine Color")}
           {["Red", "White", "Amber", "Rosé"].map((c, i) => optRow(0, i, c, wineColor === c, () => setWineColor(c)))}
           {colHead(1, "Bottle Type")}
@@ -3620,10 +3626,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               through) and the SELECTED LABEL at its true position and
               scale (round 38 #2, owner's positioning charts, flat). */}
           {(() => {
-            const src = bottleSrc();
+            /* 2026-09-28 (owner: "changing the bottle, the colour shows first,
+               then the outline, then the label — it jumps"): the preview
+               keeps showing the LAST measured bottle until the new drawing is
+               loaded and measured, then everything changes together */
+            const src = bottleScanKey && bottleScans.current[bottleScanKey] ? bottleScanKey : bottleSrc();
             const s = 407.4 / 1600;                       // cover scale
             const xoff = SIL_X - (800 * s - 201.6) / 2;
-            const scan = bottleScans.current[bottleScanKey === src ? src : ""];
+            const scan = bottleScans.current[src];
             /* ROUND 47: an uploaded own label takes the preview slot */
             const lab = customLabel ? { style: "custom", dream: customLabel, preview: customLabel } : savedDream();
             const mmW = customLabel ? customDims.w : Number(f.width) || 110;
@@ -3682,18 +3692,23 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 <canvas ref={bodyCanvasRef} width={800} height={1600}
                   style={{ position: "absolute", left: xoff - SIL_X, top: 0, width: 800 * s, height: 407.4 }} />
               </div>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img key={src} alt={bottle.type} src={src}
-                style={{ ...px(SIL_X, SIL_Y, 201.6, 407.4), objectFit: "cover", mixBlendMode: "multiply", animation: inSlide ? "none" : `nuiFadeIn 240ms ${EASE}`, pointerEvents: "none" }} />
+              {/* the capsule is PAINTED over the glass (not multiplied into it),
+                  so white reads white; the line drawing lies over both */}
               <canvas ref={capCanvasRef} width={800} height={1600}
-                style={{ position: "absolute", left: xoff, top: SIL_Y, width: 800 * s, height: 407.4, mixBlendMode: "multiply", pointerEvents: "none" }} />
+                style={{ position: "absolute", left: xoff, top: SIL_Y, width: 800 * s, height: 407.4, pointerEvents: "none" }} />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img alt={bottle.type} src={src}
+                style={{ ...px(SIL_X, SIL_Y, 201.6, 407.4), objectFit: "cover", mixBlendMode: "multiply", pointerEvents: "none" }} />
               {labelEl}
             </>);
           })()}
           {/* round 12 #3: the frame back ON TOP of the photo — round 110:
               one element for the whole grid, so every plus sits on its
               crossing to the pixel */}
-          {dashGrid(137.14, 171.71 + B_DY, 1302.86 - 137.14, 583.41 - 171.71, [...B_COLS.slice(1), B_SIL.x0], "bgrid2")}
+          {/* 2026-09-28 (owner): the dashed lines lie ON TOP of everything */}
+          <div style={{ position: "absolute", left: 0, top: 0, width: W, height: H, zIndex: 3, pointerEvents: "none" }}>
+            {dashGrid(137.14, 171.71 + B_DY, 1302.86 - 137.14, 583.41 - 171.71, B_COLS, "bgrid2", true)}
+          </div>
           {/* ROUND 47 (owner): customers who already have their labels
               upload one here and go straight to marketing assets.
               ROUND 48: the confirmation is GREEN like every other ✓, and
