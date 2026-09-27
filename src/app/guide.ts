@@ -91,7 +91,8 @@ export const GUIDE: GuideStep[] = [
   { page: "options", at: { x: 137, y: 200, w: 1166, h: 340 }, side: "above",
     en: "Three designs, each in a different artist's style. Click a label to see it big, and if you like one, select it.",
     ge: "სამი დიზაინი, თითო სხვადასხვა არტისტის სტილში. დააჭირე ეტიკეტს, რომ დიდად ნახო და თუ რომელიმე მოგეწონა, აირჩიე." },
-  { page: "options", at: { x: 137, y: 637, w: 1166, h: 34 }, side: "below",
+  /* the Select row sits on the upper third between labels and bar (611.39) */
+  { page: "options", at: { x: 137, y: 611.39 - 17, w: 1166, h: 34 }, side: "below",
     en: "Select the one you like best.",
     ge: "აირჩიე ის, რომელიც ყველაზე მეტად მოგწონს.", done: "selected", press: PRESS_SELECT },
   { page: "options", at: RED, side: "above",

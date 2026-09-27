@@ -370,7 +370,7 @@ const DEMO_WHEEL = { x: 0.2651, y: 0.4145, rgb: [0, 170, 255] };
 const TAP = {
   visionBox: [250, 400], width: [237, 650], height: [410, 650],   /* round 108 #1: the size row moved left */
   firstField: [1060, 279],          /* round 76 #3: on "GRAND VIN" itself */
-  optSelect: [692.3, 654.15],       /* 2026-09-28: ON the Select ring, column 2 */
+  optSelect: [692.3, 540 + (754.18 - 540) / 3],   /* 2026-09-28: ON the Select ring, column 2 (the row's upper-third place) */
   descBox: [250, 265], barcode: [360, 468], qrBtn: [874.5, 467],
   market: [873.5, 670], eu: [873, 330], us: [873, 355],   /* the dropdown's rows are 25 apart */
   backFirst: [1050, 212],            /* round 73 #1: up to the details */
@@ -3151,7 +3151,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         };
         /* 2026-09-28 (owner): no Save and no NEW VERSIONS — "○ Select" where
            Save stood before it was raised (637–671) */
-        const SEL_CY = 637 + 34.3 / 2;
+        /* 2026-09-28 (owner): on the UPPER third of the way from the labels'
+           foot (540) to the progress line (PROG_Y) */
+        const SEL_CY = 540 + (PROG_Y - 540) / 3;
         /* ONE COLUMN of a set: the artist's name, the label with its crosses
            or its saved frame, and Save — a column slides as one block */
         const column = (ds: Dream[], si: number, fi: number, live: boolean) => {
