@@ -1409,9 +1409,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   type OrderRec = { v?: number; vision?: string; f?: Record<string, string>; b?: Record<string, string>; gtin?: string; qrMode?: string; markets?: string[]; bottle?: Record<string, string>; wineColor?: string; selected?: number; frontSig?: string; paintSig?: string; dreams?: { style: string; id?: string; artist?: string }[]; sets?: { style: string; id?: string; artist?: string }[][]; setIdx?: number; selSet?: number };
   /* the visitor's own order, brought back from this browser (on arrival,
      and after the self-playing tutorial, which borrows the page) */
-  const restoreRef = useRef<(boot: boolean) => void>(() => { });
+  const restoreRef = useRef<(boot: boolean, apply?: boolean) => void>(() => { });
+  /* 2026-09-28 (owner): the order is kept for a MONTH; a visitor who comes
+     back after more than an hour is ASKED — continue it, or start new (a
+     reload or a dropped connection inside the hour still restores quietly) */
+  const [resumeAsk, setResumeAsk] = useState<{ name: string } | null>(null);
+  const ORDER_KEEP_MS = 30 * 24 * 3600 * 1000, ORDER_ASK_MS = 3600 * 1000;
   useEffect(() => { restoreRef.current(true); }, []);
-  restoreRef.current = (boot: boolean) => {
+  restoreRef.current = (boot: boolean, apply = false) => {
     (async () => {
       /* 2026-09-27 (owner): the e-mail link brings the visitor back — on
          this browser or another — to the SAME labels page, their versions
@@ -1431,12 +1436,19 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       let rec: OrderRec | null = null;
       try { rec = JSON.parse(localStorage.getItem("nui-order") || "null"); } catch { }
       if (!rec || rec.v !== 1) return;
+      const age = Date.now() - ((rec as { at?: number }).at || 0);
+      if (age > ORDER_KEEP_MS) { try { localStorage.removeItem("nui-order"); localStorage.removeItem("nui-product-code"); } catch { } return; }
+      const hasWork = !!(rec.vision || "").trim() || Object.entries(rec.f || {}).some(([k, v]) => k !== "width" && k !== "height" && !!String(v || "").trim()) || !!(rec.sets || rec.dreams || []).flat().length;
+      if (boot && !resume && hasWork && age > ORDER_ASK_MS) {
+        setResumeAsk({ name: String(rec.f?.wine || rec.f?.producer || "").trim() });
+        return;
+      }
       setVision(rec.vision || ""); setF(rec.f || { width: "110", height: "80" }); setB(rec.b || {});
       setGtin(rec.gtin || ""); setQrMode((rec.qrMode || "") as never); setMarkets(rec.markets || []);
       if (rec.bottle) { setBottle(rec.bottle); bottleTouched.current = true; }
       setWineColor(rec.wineColor || "");
       const recSets = (rec.sets && rec.sets.length ? rec.sets : [rec.dreams || []]).map((st) => st.filter((d) => d.id)).filter((st) => st.length);
-      if (!recSets.length) { if (resume) go("vision"); return; }
+      if (!recSets.length) { if (resume || apply) go("vision"); return; }
       const toData = async (u: string) => {
         const bl = await (await fetch(u)).blob();
         return new Promise<string>((res) => { const rd = new FileReader(); rd.onload = () => res(String(rd.result)); rd.readAsDataURL(bl); });
@@ -1450,6 +1462,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         setSets(got); setSetIdx(Math.min(rec!.setIdx ?? last, last)); setSelSet(Math.min(rec!.selSet ?? 0, last));
         setSelected(rec!.selected ?? -1); setFrontSig(rec!.frontSig || ""); setPaintSig(rec!.paintSig || "");
         if (resume) { setSetIdx(last); go("options"); }
+        else if (apply) go("options");
       } catch { /* the labels are gone from the server — the details stay */ }
     })();
   };
@@ -4015,7 +4028,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   };
 
   /* round 68 #1: any open modal freezes the bar (it still paints on top) */
-  const modalOpen = !!confirmModal || termsOpen || marketOpen || emailOpen;
+  const modalOpen = !!confirmModal || termsOpen || marketOpen || emailOpen || !!resumeAsk;
   const barPage: PageKey = page === "blank" ? blankFrom.current : page;
   /* round 71 #4: while the walkthrough runs, the bar follows IT — the
      button rides the stop being explained and the line follows it home */
@@ -4784,6 +4797,28 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               </div>
             </>);
           })()}
+          {/* 2026-09-28 (owner): WELCOME BACK — continue the unfinished order
+              (it opens where the work is) or start a new one */}
+          {resumeAsk && (<>
+            <div style={{ ...px(0, 0, W, H), zIndex: 30 }} />
+            <div style={{ ...px(0, VEIL_TOP, W, VEIL_BOT - VEIL_TOP), background: "rgba(255,255,255,0.88)", zIndex: 30, pointerEvents: "none" }} />
+            <div style={{ ...px(W / 2 - 300, 230, 600, 230), background: "#fff", border: "1px solid #111", zIndex: 31, boxSizing: "border-box" }}>
+              <span style={{ position: "absolute", left: 32, top: 30, font: `700 24px ${HNW}`, lineHeight: "24px", whiteSpace: "nowrap" }}>{t("WELCOME BACK")}</span>
+              <span style={{ position: "absolute", left: 32, top: 76, width: 536, font: `14px ${HNW}`, lineHeight: "20px", color: "#111" }}>
+                {resumeAsk.name
+                  ? (lang === "ge" ? `შენი ეტიკეტი „${resumeAsk.name}“ დაუმთავრებელია.` : `You have an unfinished label — “${resumeAsk.name}”.`)
+                  : t("You have an unfinished label.")}{" "}{t("Continue where you left off, or start a new one?")}
+              </span>
+              <button onClick={() => {
+                try { localStorage.removeItem("nui-order"); localStorage.removeItem("nui-product-code"); } catch { }
+                setProductUrl(""); productCode.current = Math.random().toString(36).slice(2, 10);
+                setResumeAsk(null);
+              }}
+                style={{ ...px(32, 230 - 34.3 - 32, 260, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#fff", color: "#111", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>{t("Start new")}</button>
+              <button onClick={() => { setResumeAsk(null); restoreRef.current(false, true); }}
+                style={{ ...px(600 - 32 - 260, 230 - 34.3 - 32, 260, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>{t("Continue")}</button>
+            </div>
+          </>)}
           {/* 2026-09-27 (owner): the FIRST "new versions" asks for an e-mail —
               a link is sent that confirms it and brings the visitor back to
               this page, their versions waiting, the button ready */}
