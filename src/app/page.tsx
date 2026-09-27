@@ -366,8 +366,7 @@ const DEMO_SHADE = 0.6;
 const TAP = {
   visionBox: [250, 400], width: [237, 650], height: [410, 650],   /* round 108 #1: the size row moved left */
   firstField: [1060, 279],          /* round 76 #3: on "GRAND VIN" itself */
-  optSelect: [720, 654],            /* round 94 #1: ON the Save button, column 2 */
-  bdSave: [719.3, 674.8],           /* round 94 #7: the back label's Save */
+  optSelect: [692.3, 654.15],       /* 2026-09-28: ON the Select ring, column 2 */
   descBox: [250, 265], barcode: [360, 468], qrBtn: [874.5, 467],
   market: [873.5, 670], eu: [873, 330], us: [873, 355],   /* the dropdown's rows are 25 apart */
   backFirst: [1050, 212],            /* round 73 #1: up to the details */
@@ -543,6 +542,9 @@ export default function NewUI() {
      button there SAVES: the images fly into the folder, and once they have
      landed the Final Pack slides in. (The start boxes come from the page.) */
   const assetsFlight = useRef<{ src: string; x: number; y: number; w: number; h: number }[]>([]);
+  /* the chosen front / back label's box on its page — flown on leaving */
+  type Fly = { src: string; x: number; y: number; w: number; h: number };
+  const leaveFlight = useRef<{ options: Fly | null; backdesign: Fly | null }>({ options: null, backdesign: null });
   const leavingAssets = useRef(false);
   const [treeN, setTreeN] = useState(0);        /* round 88 #1: replays the tree reveal */
   /* round 108 #19 (owner): the reveal plays when the page OPENS; a pack
@@ -609,7 +611,22 @@ export default function NewUI() {
   const [clinkN, setClinkN] = useState(0);        /* 2026-09-23: the agree glasses' clink */
   const [nudgeN, setNudgeN] = useState(0);        /* 2026-09-27: the empty clink that says "press me" */
   const [guide, setGuide] = useState(-1);
-  useEffect(() => { try { if (localStorage.getItem("nui-guide") === "1") setGuideOn(true); } catch { } }, []);
+  /* the header's switch: off ends the notes at once; on starts them at the
+     page the visitor is on (on the home page, with the red button) */
+  const toggleGuide = () => {
+    const v = !guideOn; setGuideOn(v);
+    try { localStorage.setItem("nui-guide", v ? "1" : "0"); } catch { }
+    if (!v) { setGuide(-1); return; }
+    if (pageNow.current !== "welcome") { const k = GUIDE.findIndex((g) => g.page === pageNow.current && !g.modal); if (k >= 0) setGuide(k); }
+  };
+  /* 2026-09-28 (owner): GUIDED MODE is the header's switch — on by default
+     for a first visit, then as the visitor left it */
+  useEffect(() => {
+    try {
+      const g = localStorage.getItem("nui-guide");
+      setGuideOn(g === null ? !localStorage.getItem("nui-walked") : g === "1");
+    } catch { setGuideOn(true); }
+  }, []);
   const fillDetails = (on: boolean) => {
     if (on) { const r = randomDetails(); setF((m) => ({ width: m.width || "110", height: m.height || "80", ...r.front })); setB(r.back); setGtin(r.gtin); }
     else { setF((m) => ({ width: m.width || "110", height: m.height || "80" })); setB({}); setGtin(""); }
@@ -1304,7 +1321,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const startTutorial = useCallback(() => {
+  /* 2026-09-28 (owner: "See how this pack was created" on the home page):
+     the SELF-PLAYING tutorial — the same story, but the pointer presses the
+     red button itself after every step, and it ends on the home page */
+  const tutAuto = useRef(false);
+  const startTutorial = useCallback((auto = false) => {
+    tutAuto.current = auto;
     tutTok.current++;
     tutReset();
     tutRef.current = 0; setTut(0);
@@ -1373,12 +1395,16 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     try { localStorage.setItem("nui-order", JSON.stringify(orderRecord())); } catch { }
   }, [tut, sets, setIdx, selSet, vision, f, b, gtin, qrMode, markets, bottle, wineColor, selected, frontSig, paintSig]);
   type OrderRec = { v?: number; vision?: string; f?: Record<string, string>; b?: Record<string, string>; gtin?: string; qrMode?: string; markets?: string[]; bottle?: Record<string, string>; wineColor?: string; selected?: number; frontSig?: string; paintSig?: string; dreams?: { style: string; id?: string; artist?: string }[]; sets?: { style: string; id?: string; artist?: string }[][]; setIdx?: number; selSet?: number };
-  useEffect(() => {
+  /* the visitor's own order, brought back from this browser (on arrival,
+     and after the self-playing tutorial, which borrows the page) */
+  const restoreRef = useRef<(boot: boolean) => void>(() => { });
+  useEffect(() => { restoreRef.current(true); }, []);
+  restoreRef.current = (boot: boolean) => {
     (async () => {
       /* 2026-09-27 (owner): the e-mail link brings the visitor back — on
          this browser or another — to the SAME labels page, their versions
          waiting and "new versions" ready; the order was kept with the link */
-      const sp = new URLSearchParams(BOOT_SEARCH);
+      const sp = new URLSearchParams(boot ? BOOT_SEARCH : "");
       const resume = sp.get("resume");
       if (sp.get("verify") === "expired") { setMailNote("expired"); setEmailOpen(true); }
       if (resume) {
@@ -1414,8 +1440,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         if (resume) { setSetIdx(last); go("options"); }
       } catch { /* the labels are gone from the server — the details stay */ }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  };
 
   /* THE GUIDED TOUR moves on by itself when the visitor has done what its
      note asked (guide.ts `done`); a note to read waits for Next. It follows
@@ -1506,6 +1531,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   }, [tut, tutIdle]);
 
   const endTutorial = useCallback(() => {
+    if (tutAuto.current) { tutAuto.current = false; stopTutorial(); go("welcome", -1); restoreRef.current(false); return; }
     stopTutorial();
     /* round 72 #2: straight into the real Your Vision page, not the home
        page — they have just watched the whole story, so they start work */
@@ -1662,7 +1688,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           /* not saveFront(): this closure was made before the demo labels
              existed, so its `dreams` is empty — set and fly directly (the
              sample labels are 110 × 80 mm → 342.9×249.4 in column 2) */
-          if (!(await tap(TAP.optSelect, 200, 520, () => { setSelected(1); flyToFolder([{ src: TUT_LABELS[1], x: 548.5, y: 290, w: 342.9, h: 249.4 }]); }))) return;
+          if (!(await tap(TAP.optSelect, 200, 520, () => { setSelected(1); setSelSet(0); }))) return;
           if (!(await hold(900))) return;
           break;
         }
@@ -1698,7 +1724,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
              (the demo back label is square, 984 × 984) */
           if (!(await beat(900))) return;
           const fit3 = fitIn(BD_AREA.w, BD_AREA.h, 984, 984);
-          if (!(await tap(TAP.bdSave, 200, 520, () => { setBackSaved(true); flyToFolder([{ src: TUT_BACK, x: BD_AREA.x + fit3.dx, y: BD_AREA.y + fit3.dy, w: fit3.w, h: fit3.h }]); }))) return;
+          /* 2026-09-28: nothing to choose — the red button files it */
           if (!(await hold(700))) return;
           break;
         }
@@ -1768,6 +1794,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
          leaves, and the red button pulses until the visitor presses it
          (its onClick turns the page of the story). */
       if (!live()) return;
+      /* the self-playing story presses the red button itself */
+      if (tutAuto.current) {
+        if (!(await hold(tut >= TUT_CARDS.length - 1 ? 2600 : 900))) return;
+        const bx = tut < STEPS.length ? STEPS[tut].x : NEXT_X;
+        if (!(await tap([bx, PROG_Y], 260, 640))) return;
+        (document.querySelector("[data-tut-ok][aria-label='next'], [data-tut-ok][aria-label='start']") as HTMLButtonElement | null)?.click();
+        return;
+      }
       setCursor(null);
       setTutIdle(true);
     })();
@@ -1887,12 +1921,25 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     if (!dreams[fi]) return;
     const dv = viewedDream(fi);
     const g = optGeom(fi);
-    const unsave = selected === fi && selSet === setIdx;
-    setSelected(unsave ? -1 : fi); setSelSet(setIdx); setWarn("");
-    if (dv) flyToFolder([{ src: dv.preview || dv.dream, x: g.lx, y: g.ly, w: g.lw, h: g.lh }], unsave);
+    /* 2026-09-28 (owner): SELECT only marks it — the flight into the folder
+       plays when the red button is pressed */
+    void dv; void g;
+    setSelected(fi); setSelSet(setIdx); setWarn("");
   };
   /* …and a Final Pack reached any other way (the bar) counts them saved too */
-  useEffect(() => { if (page === "checkout" && assets.front && !assetsStage) setAssetsSaved(true); }, [page, assets.front, assetsStage]);
+  useEffect(() => {
+    if (page !== "checkout") return;
+    if (assets.front && !assetsStage) setAssetsSaved(true);
+    if (backPng) setBackSaved(true);
+  }, [page, assets.front, assetsStage, backPng]);
+  /* 2026-09-28 (owner): the chosen label flies into the folder as the red
+     button leaves its page, then the next page slides in */
+  const flyThen = (item: Fly | null, next: () => void) => {
+    if (leavingAssets.current || !item?.src) { next(); return; }
+    leavingAssets.current = true;
+    flyToFolder([item]);
+    setTimeout(() => { leavingAssets.current = false; next(); }, 820);
+  };
   const saveAssetsThen = (next: () => void) => {
     if (leavingAssets.current) return;
     const items = assetsFlight.current.filter((it) => it.src);
@@ -1921,10 +1968,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       const r = await fetch("/api/visitor/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ order }) });
       if (r.ok) return true;
       const j = await r.json().catch(() => ({})) as { code?: string };
-      if (j.code === "need-email") { setMailNote(""); setMailLink(""); setEmailOpen(true); }
-      else if (j.code === "need-pay") go("more");
-      else {
-        setWarn(t(j.code === "free-paused" ? "Today's free labels are all used — come back tomorrow, or buy new versions."
+      /* 2026-09-28 (owner): the e-mail step is gone for now */
+      {
+        setWarn(t(j.code === "need-email" || j.code === "need-pay" ? "You've used your free labels for now."
+          : j.code === "free-paused" ? "Today's free labels are all used — come back tomorrow, or buy new versions."
           : j.code === "ip-busy" ? "Too many new labels from this network this hour — try again a little later."
           : "Couldn't start — try again in a moment."));
         setTimeout(() => setWarn(""), 6000);
@@ -1932,14 +1979,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       refreshVis();
       return false;
     } catch { return true; /* offline check: the paint call itself is guarded */ }
-  }
-  /* NEW VERSIONS (owner, 2026-09-27): three more labels of the same wine,
-     never an artist in a layout already shown — they arrive as a new set */
-  async function moreVersions() {
-    const st = await refreshVis();
-    if (st && st.runsLeft > 0) { nextFromFront(true); return; }
-    if (st && !st.verified) { setMailNote(""); setMailLink(""); setEmailOpen(true); return; }
-    go("more");
   }
   async function buyVersions() {
     try {
@@ -2497,11 +2536,35 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           <span style={{ ...px(1038.5, baseTop(625.4, 16.2) - (19.44 - 16.2) / 2, 280, 90), font: `italic 16.2px ${HNW}`, lineHeight: "19.44px", color: "#000" }}>
             {["Create print and market-ready labels,", "marketing assets, and a product page", "in ~10 minutes."].map((ln) => t(ln)).join(" ")}
           </span>
-        ) : ["Create print and market-ready labels,", "marketing assets, and a product page", "in ~10 minutes."].map((ln, i) => (
+        ) : null}
+        {/* 2026-09-28 (owner): on the left, level with the tagline's first
+            line — a red underlined link that plays the tutorial by itself */}
+        <button onClick={() => startTutorial(true)}
+          style={{ ...px(137.14, baseTop(625.4, 16.2), 420, 20), ...ghost, pointerEvents: "auto", textAlign: "left", textTransform: "none", font: `16.2px/16.2px ${HNW}`, color: BAR_RED, textDecoration: "underline", textUnderlineOffset: 3, whiteSpace: "nowrap", cursor: "pointer" }}>
+          {t("See how this pack was created")}</button>
+        {lang === "ge" ? null : ["Create print and market-ready labels,", "marketing assets, and a product page", "in ~10 minutes."].map((ln, i) => (
           <span key={"hs" + i} style={{ ...px(1038.5, baseTop(625.4 + i * 19.44, 16.2), 320, 20), font: `italic 16.2px ${HNW}`, lineHeight: "16.2px", color: "#000", whiteSpace: "nowrap" }}>{t(ln)}</span>
         ))}
       </span>)}
     </>);
+  };
+
+  /* 2026-09-28 (owner): SELECT replaces every Save — a ring and the word,
+     centred on `cx`; the choice flies into the folder when the red button
+     is pressed (flyOnLeave) */
+  const selectCtl = (cx: number, cy: number, on: boolean, click: (() => void) | null, key: string) => {
+    const word = t("Select");
+    const tw = word.length * 7.4, gw = 18 + 10 + tw, x0 = cx - gw / 2;
+    const grey = !click;
+    return (
+      <span key={key}>
+        {click
+          ? dotBtn(x0 + 9, cy, on, click, key + "r", { ring: true, r: 9, cover: 24 })
+          : <span style={{ ...px(x0, cy - 9, 18, 18), borderRadius: 9, border: "2px solid #C9C7BF", boxSizing: "border-box" }} />}
+        <button onClick={click || undefined} disabled={grey}
+          style={{ ...px(x0 + 28, baseTop(cy + 5.2, 15), tw + 20, 18), ...ghost, textAlign: "left", textTransform: "none", font: `15px/15px ${HNW}`, color: grey ? "#B3B1A8" : "#111", display: "block", whiteSpace: "nowrap", cursor: grey ? "default" : "pointer" }}>{word}</button>
+      </span>
+    );
   };
 
   /* the "By clinking this glass, I agree…" row — the Final Pack's, and
@@ -2857,15 +2920,25 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             <div key={"sh" + fi} style={{ ...px(b.lx, baseTop(221, BAR_FS) - (AV - BAR_FS) / 2, b.lw, AV), display: "flex", alignItems: "center", justifyContent: "center", columnGap: 7, pointerEvents: "none" }}>
               {/* 2026-09-23 (owner): no portrait, and the name as it is
                   written — "Style By: Mariam Kvashilava", not all capitals */}
-              <span style={{ font: `700 ${BAR_FS}px/${BAR_FS}px ${HNW}`, whiteSpace: "nowrap" }}>
-                {who ? `${t("Style By:")} ${who}` : ""}</span>
+              {/* 2026-09-28 (owner): the name opens the artist's page (an
+                  artist without a page yet stays plain text) */}
+              {(() => {
+                const a2 = who ? siteArtists.find((x) => x.name === who) : undefined;
+                return a2 ? (
+                  <button onClick={() => { artistsFrom.current = "options"; setArtistId(a2.id); setArtistView("art"); go("artist"); }}
+                    style={{ ...ghost, pointerEvents: "auto", cursor: "pointer", font: `700 ${BAR_FS}px/${BAR_FS}px ${HNW}`, color: INK, whiteSpace: "nowrap", textTransform: "none" }}>
+                    {t("Style By:")} <span style={{ textDecoration: "underline", textUnderlineOffset: 2 }}>{who}</span></button>
+                ) : (
+                  <span style={{ font: `700 ${BAR_FS}px/${BAR_FS}px ${HNW}`, whiteSpace: "nowrap" }}>
+                    {who ? `${t("Style By:")} ${who}` : ""}</span>
+                );
+              })()}
             </div>
           );
         };
-        /* 2026-09-27 (owner's screenshot): Save raised under the labels, and
-           NEW VERSIONS under the middle one */
-        const SAVE_Y = 585.7;
-        const NEWV = { x: OPT_FRAMES[1].x + 0.2, y: 665.1, w: OPT_W, h: 34.3 };
+        /* 2026-09-28 (owner): no Save and no NEW VERSIONS — "○ Select" where
+           Save stood before it was raised (637–671) */
+        const SEL_CY = 637 + 34.3 / 2;
         /* ONE COLUMN of a set: the artist's name, the label with its crosses
            or its saved frame, and Save — a column slides as one block */
         const column = (ds: Dream[], si: number, fi: number, live: boolean) => {
@@ -2899,12 +2972,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     {cross(lx - 10, ly + lh + 10, `bl${fi}`)}{cross(lx + lw + 10, ly + lh + 10, `br${fi}`)}
                   </span>)}
             </>) : null}
-            {/* ROUND 88 #9 (owner): SAVE — marks the column and flies the
-                label into the folder */}
             {orig && (
-              <button onClick={live ? () => saveFront(fi) : undefined}
-                style={{ ...px(OPT_FRAMES[fi].x + 0.2, SAVE_Y, OPT_W, 34.3), cursor: "pointer", pointerEvents: live ? "auto" : "none", font: `12px ${HNW}`, letterSpacing: 0.3, background: on ? "#fff" : "#111", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, transition: `background 240ms ${EASE}, color 240ms ${EASE}`, color: on ? "#111" : "#fff" }}>
-                {on ? t("Saved") : t("Save")}</button>
+              <span style={{ pointerEvents: live ? "auto" : "none" }}>
+                {selectCtl(OPT_FRAMES[fi].x + OPT_W / 2, SEL_CY, on, live ? () => saveFront(fi) : () => { }, "sel" + si + "-" + fi)}
+              </span>
             )}
           </>);
         };
@@ -2927,9 +2998,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             <svg viewBox="0 0 18 22" width="12" height="16"><polyline points={pts} fill="none" stroke="#111" strokeWidth="1.6" /></svg>
           </button>
         );
-        /* NEW VERSIONS is black while a run is waiting for the visitor
-           (after the e-mail is confirmed, or bought), white otherwise */
-        const newvReady = !!vis && vis.runsLeft > 0 && dreams.length > 0;
+        /* the saved label's own box — the red button flies it from here */
+        if (!inSlide && selected >= 0 && selSet === setIdx && dreams[selected]) {
+          const bx = labelBox(selected), d0 = viewedDream(selected);
+          leaveFlight.current.options = d0 ? { src: d0.preview || d0.dream, x: bx.lx, y: bx.ly, w: bx.lw, h: bx.lh } : null;
+        }
         return (<>
           {covers}
           {patch(135, 164, 1170, 26, "stynames")}
@@ -2940,21 +3013,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             notMade(fr.x, OPT_TOP, OPT_W, OPT_BOT - OPT_TOP, "front", "nmopt" + i))}
           {/* ROUND 53 #8: a bar-jump before generation shows the REAL page
               furniture, deactivated and grey */}
-          {dreams.length === 0 && OPT_FRAMES.map((fr, fi) => (
-            <div key={"grey" + fi} style={{ ...px(fr.x + 0.2, SAVE_Y, OPT_W, 34.3), background: "#ECECEA", color: "#B3B1A8", font: `12px ${HNW}`, letterSpacing: 0.3, display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
-              {t("Save")}</div>
-          ))}
+          {dreams.length === 0 && OPT_FRAMES.map((fr, fi) => selectCtl(fr.x + OPT_W / 2, SEL_CY, false, null, "grey" + fi))}
           {/* the arrows between the sets, left and right of the labels */}
           {sets.length > 1 && setIdx > 0 && chevron("previous versions", OPT_FRAMES[0].x - 40, "13,3 5,11 13,19", setIdx - 1)}
           {sets.length > 1 && setIdx < sets.length - 1 && chevron("next versions", OPT_FRAMES[2].x + OPT_W + 40 - 12, "5,3 13,11 5,19", setIdx + 1)}
-          {dreams.length > 0 ? (
-            <button onClick={() => moreVersions()}
-              style={{ ...px(NEWV.x, NEWV.y, NEWV.w, NEWV.h), cursor: "pointer", font: `700 ${BAR_FS}px ${HNW}`, letterSpacing: 0.3, background: newvReady ? "#111" : "#fff", color: newvReady ? "#fff" : "#111", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 3, transition: `background 240ms ${EASE}, color 240ms ${EASE}` }}>
-              {t("NEW VERSIONS")}</button>
-          ) : (
-            <div style={{ ...px(NEWV.x, NEWV.y, NEWV.w, NEWV.h), background: "#ECECEA", color: "#B3B1A8", font: `700 ${BAR_FS}px ${HNW}`, letterSpacing: 0.3, display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 3 }}>
-              {t("NEW VERSIONS")}</div>
-          )}
+
         </>);
       }
       case "more": {
@@ -2967,8 +3030,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         ];
         return (<>
           <span style={{ ...px(139, baseTop(149.08, 24), 600, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t("NEW VERSIONS")}</span>
-          <span style={{ ...px(L - 40, baseTop(B0 - 62, 15), R - L + 80, 20), font: `italic 15px ${HNW}`, lineHeight: "15px", color: "#111", textAlign: "center", display: "block" }}>
-            {t("Each set of three is painted by artists and in layouts you haven't seen yet.")}</span>
           {ROWS.map((row, i) => {
             const y = B0 + i * STEP;
             return (
@@ -3187,7 +3248,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
            frame with its corner pluses, the same size caption on the same
            midline, and BOTH buttons — Edit and Save — in their real
            places, greyed. The geometry is read from the same numbers. */
-        const BD_EDIT_Y = 589, BD_SAVE_Y = 657.6, BD_BX = 548.6, BD_BW = 341.4, BD_BH = 34.3;
+        const BD_EDIT_Y = 589, BD_BX = 548.6, BD_BW = 341.4, BD_BH = 34.3;
         /* with nothing made yet the slot is the whole area, so the frame
            stands 10 off it exactly as it stands off a real label */
         const capY = ((backPng ? ly + fit.h : BD_AREA.y + BD_AREA.h) + BD_EDIT_Y) / 2 - 7.5;
@@ -3210,22 +3271,21 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             {dashedBox(BD_AREA.x - 10, BD_AREA.y - 10, BD_AREA.w + 20, BD_AREA.h + 20, "bdDempty", true, "#C9C7BF")}
             {/* round 53 #8: deactivated grey furniture on the empty page */}
             {sizeCaption([["Width:", "—"], ["Height:", "—"]] as const, true)}
-            {([["Edit", BD_EDIT_Y], ["Save", BD_SAVE_Y]] as const).map(([cap, y]) => (
-              <div key={cap} style={{ ...px(BD_BX, y, BD_BW, BD_BH), background: "#ECECEA", color: "#B3B1A8", font: `12px ${HNW}`, letterSpacing: 0.3, display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>{t(cap)}</div>
-            ))}
+            <div style={{ ...px(BD_BX, BD_EDIT_Y, BD_BW, BD_BH), background: "#ECECEA", color: "#B3B1A8", font: `12px ${HNW}`, letterSpacing: 0.3, display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>{t("Edit")}</div>
+
           </>)}
           {backPng && (<>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={backPng} alt="back label" title={t("Show this one big")}
-              onClick={() => setGallery({ items: [backPng], index: 0, save: () => { setBackSaved((v) => { flyToFolder([{ src: backPng, x: lx, y: ly, w: fit.w, h: fit.h }], v); return !v; }); }, saved: backSaved })}
+              onClick={() => setGallery({ items: [backPng], index: 0 })}
               style={{ ...px(lx, ly, fit.w, fit.h), objectFit: "fill", cursor: "pointer" }} />
             {/* round 88 #8: the frame stands 10px off the label, crosses on its corners */}
             {dashedBox(lx - 10, ly - 10, fit.w + 20, fit.h + 20, "bdD", true)}
             <button onClick={() => go("backdetails", -1)}
               style={{ ...px(BD_BX, BD_EDIT_Y, BD_BW, BD_BH), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>{t("Edit")}</button>
-            {/* round 88 #7 (owner): SAVE under Edit — flies the back label into the folder */}
-            <button onClick={() => { setBackSaved(!backSaved); flyToFolder([{ src: backPng, x: lx, y: ly, w: fit.w, h: fit.h }], backSaved); }}
-              style={{ ...px(BD_BX, BD_SAVE_Y, BD_BW, BD_BH), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: backSaved ? "#fff" : "#111", color: backSaved ? "#111" : "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, transition: `background 240ms ${EASE}, color 240ms ${EASE}` }}>{backSaved ? t("Saved") : t("Save")}</button>
+            {/* 2026-09-28 (owner): no Save and no Select — the back label is
+                the order's own; the red button flies it into the folder */}
+            {!inSlide && (() => { leaveFlight.current.backdesign = { src: backPng, x: lx, y: ly, w: fit.w, h: fit.h }; return null; })()}
             {/* ROUND 51 #7/#8 (owner): informational size caption — same
                 type as the front page's Width/Height, no input, no
                 underline, centered between the label and Edit. The width
@@ -4144,15 +4204,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               </span>
               <span style={{ font: `300 9px ${HNW}`, color: "#aaa", whiteSpace: "nowrap" }}>fill details</span>
             </button>
-            {/* 2026-09-23 — DEV SWITCH: the guided tour instead of the demo walkthrough */}
-            <button aria-label="toggle guided tour"
-              onClick={() => { const v = !guideOn; setGuideOn(v); if (!v) setGuide(-1); try { localStorage.setItem("nui-guide", v ? "1" : "0"); } catch { } }}
-              style={{ ...px(18, 800, 110, 16), ...ghost, display: "flex", alignItems: "center", columnGap: 6, textTransform: "none" }}>
-              <span style={{ width: 22, height: 12, borderRadius: 7, border: "1px solid #bbb", position: "relative", background: "#fff", boxSizing: "border-box", flex: "0 0 auto" }}>
-                <span style={{ position: "absolute", top: 1.5, left: guideOn ? 11.5 : 1.5, width: 7, height: 7, borderRadius: 4, background: guideOn ? "#3fd05e" : "#bbb", transition: "left 160ms" }} />
-              </span>
-              <span style={{ font: `300 9px ${HNW}`, color: "#aaa", whiteSpace: "nowrap" }}>guided tour</span>
-            </button>
             {/* 2026-09-23 (owner): the name is "8K.WINE ©", white on a black
                 block — the block's foot ON the header's rule, the same air
                 above and at the sides, its left edge on the page margin; the
@@ -4165,7 +4216,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                  came out short and left the right side tighter than the left) */
               return (
                 <button onClick={() => { if (tutRef.current >= 0) stopTutorial(); go("welcome", -1); }}
-                  style={{ position: "absolute", left: 137.14, top: TOPS - PAD, height: HEADER_H - (TOPS - PAD), ...ghost, padding: `0 ${PAD}px`, background: "#111", display: "flex", alignItems: "flex-start", textTransform: "none" }}>
+                  style={{ position: "absolute", left: 137.14, top: TOPS - PAD, height: HEADER_H - (TOPS - PAD), ...ghost, padding: `0 ${PAD}px`, background: BAR_RED, display: "flex", alignItems: "flex-start", textTransform: "none" }}>
                   <span style={{ display: "block", position: "relative", top: baseTop(BASE, 13) - (TOPS - PAD), font: `700 13px ${HNW}`, lineHeight: "13px", color: "#fff", whiteSpace: "nowrap" }}>8K.WINE ©</span>
                 </button>
               );
@@ -4182,6 +4233,16 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               <button onClick={openArtists}
                 style={{ ...ghost, font: `700 13px ${HNW}`, color: page === "artists" || page === "artist" ? BAR_RED : INK, whiteSpace: "nowrap", textTransform: "uppercase" }}>{t("About artists")}</button>
               <span style={{ font: `700 13px ${HNW}`, color: INK, whiteSpace: "nowrap", textTransform: "uppercase" }}>{t("Contact")}</span>
+              {/* 2026-09-28 (owner): GUIDED MODE — the walk-through's notes, on or
+                  off, beside the language. The footer's switch, grey when off
+                  (outline and dot); on: a black outline and our red dot */}
+              <button aria-label="guided mode" onClick={toggleGuide}
+                style={{ ...ghost, display: "flex", alignItems: "center", columnGap: 7, font: `700 13px ${HNW}`, color: INK, whiteSpace: "nowrap", textTransform: "uppercase", alignSelf: "center" }}>
+                {t("Guided mode")}
+                <span style={{ width: 22, height: 12, borderRadius: 7, border: `1px solid ${guideOn ? "#111" : "#bbb"}`, position: "relative", background: "#fff", boxSizing: "border-box", flex: "0 0 auto" }}>
+                  <span style={{ position: "absolute", top: 1.5, left: guideOn ? 11.5 : 1.5, width: 7, height: 7, borderRadius: 4, background: guideOn ? BAR_RED : "#bbb", transition: "left 160ms, background 160ms" }} />
+                </span>
+              </button>
               <span style={{ display: "flex", alignItems: "baseline", columnGap: 5, whiteSpace: "nowrap" }}>
                 <button onClick={() => pickLang("en")} style={{ ...ghost, font: `${lang === "en" ? 700 : 300} 13px ${HNW}`, color: lang === "en" ? INK : "#8a8a8a" }}>ENG</button>
                 <span style={{ font: `300 13px ${HNW}`, color: "#8a8a8a" }}>/</span>
@@ -4311,6 +4372,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     setTut(nx);
                     /* 2026-09-28: leaving the marketing page saves its images first */
                     if (page === "assets") { const pg2: PageKey = nx === 1 ? "loader" : TUT_PAGES[nx]; if (pg2 === "checkout") { saveAssetsThen(() => go(pg2)); return; } }
+                    if (page === "options" || page === "backdesign") { const pg2: PageKey = TUT_PAGES[nx]; if (pg2 !== page) { if (page === "backdesign") setBackSaved(true); flyThen(leaveFlight.current[page], () => go(pg2)); return; } }
                     /* round 72 #9: FRONT LABEL opens on the loader */
                     const pg: PageKey = nx === 1 ? "loader" : TUT_PAGES[nx];
                     if (pg !== page) go(pg);
@@ -4334,7 +4396,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                        one); the dev switch forces it on for testing. */
                     let firstVisit = true;
                     try { firstVisit = !localStorage.getItem("nui-walked"); localStorage.setItem("nui-walked", "1"); } catch { /* private mode: show it */ }
-                    if (guideOn || firstVisit) { setGuide(0); go("vision"); return; }
+                    void firstVisit;
+                    if (guideOn) { setGuide(0); go("vision"); return; }
                     go("vision"); return;
                   }
                   else if (page === "vision") {
@@ -4346,15 +4409,19 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   }
                   else if (page === "options") {
                     /* round 7 #12: warn instead of silently ignoring */
-                    if (selected >= 0) go("backdetails");
-                    else { setWarn(t("Save a label design to continue")); setTimeout(() => setWarn(""), 3200); }
+                    if (selected >= 0) flyThen(leaveFlight.current.options, () => go("backdetails"));
+                    else { setWarn(t("Select a label design to continue")); setTimeout(() => setWarn(""), 3200); }
                   }
                   else if (page === "backdetails") {
                     if (!(markets.length || noComp)) { setWarn(t("Select at least one market to continue")); setTimeout(() => setWarn(""), 3200); }
                     else if (!BACK_ROWS.some((k2) => (b[k2] || "").trim()) && !(b.description || "").trim() && !gtin.trim()) setEmptyWarn("back");
                     else nextFromCompliance();
                   }
-                  else if (page === "backdesign") go("bottle");
+                  else if (page === "backdesign") {
+                    /* the back label needs no choosing — it goes into the folder as the page is left */
+                    if (backPng) { setBackSaved(true); flyThen(leaveFlight.current.backdesign, () => go("bottle")); }
+                    else go("bottle");
+                  }
                   else if (page === "bottle") {
                     /* round 48 #5: every section needs a pick (finish is
                        moot under No Capsule — the wheel is deactivated) */
@@ -4624,20 +4691,16 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               </button>
               {lab && (
                 <button onClick={() => {
-                  /* save (or un-save) the label on show; the page turns to its
-                     set, and the label flies from here into the folder */
-                  const ar = (Number(f.width) || 110) / (Number(f.height) || 80);
-                  const fw = Math.min(1020, boxH * ar), fh = fw / ar;
-                  setSelected(labSaved ? -1 : lab.f); setSelSet(lab.s); if (!labSaved) setSetIdx(lab.s); setWarn("");
-                  flyToFolder([{ src, x: 210 + (1020 - fw) / 2, y: boxY + (boxH - fh) / 2, w: fw, h: fh }], labSaved);
+                  /* select the label on show; the page turns to its set */
+                  setSelected(lab.f); setSelSet(lab.s); setSetIdx(lab.s); setWarn("");
                 }}
                   style={{ ...px(W / 2 - 120, GBOT - 48, 240, 34.3), zIndex: 82, cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: labSaved ? "#fff" : "#111", color: labSaved ? "#111" : "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
-                  {labSaved ? t("Saved") : t("Save")}</button>
+                  {labSaved ? t("Selected") : t("Select")}</button>
               )}
               {gallery.save && (
-                <button onClick={() => { gallery.save?.(); setGallery((g) => g ? { ...g, saved: !g.saved } : g); }}
+                <button onClick={() => { gallery.save?.(); setGallery((g) => g ? { ...g, saved: true } : g); }}
                   style={{ ...px(W / 2 - 120, GBOT - 48, 240, 34.3), zIndex: 82, cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: gallery.saved ? "#fff" : "#111", color: gallery.saved ? "#111" : "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>
-                  {gallery.saved ? t("Saved") : t("Save")}</button>
+                  {gallery.saved ? t("Selected") : t("Select")}</button>
               )}
             </>);
           })()}

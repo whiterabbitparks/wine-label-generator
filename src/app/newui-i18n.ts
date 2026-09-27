@@ -292,6 +292,11 @@ export const UI_GE: Record<string, string> = {
   "Print ready Front & Back Labels": "საბეჭდად მზა წინა და უკანა ეტიკეტები",
   "QR Code & Published Product Page": "QR კოდი და გამოქვეყნებული გვერდი",
   "1 Hour session with human designer": "1 საათი დიზაინერთან",
+  /* 2026-09-28 (owner): Select instead of Save, the header's guided mode,
+     the home page's self-playing tutorial */
+  "You've used your free labels for now.": "უფასო ეტიკეტები ამ ეტაპზე ამოიწურა.",
+  "Guided mode": "გზამკვლევი",
+  "See how this pack was created": "ნახე როგორ შეიქმნა ეს პროექტი",
   /* 2026-09-27 (owner): NEW VERSIONS — the button, the e-mail popup, the pay page */
   "NEW VERSIONS": "ᲐᲮᲐᲚᲘ ᲕᲔᲠᲡᲘᲔᲑᲘ",
   "3 new versions": "3 ახალი ვერსია",

@@ -58,7 +58,8 @@ export interface GuideStep {
 
 const RED = { x: 1284.8, y: 735.8, w: 36.1, h: 36.2 };   /* the red round button */
 const PRESS_RED = { en: "the red button", ge: "წითელი ღილაკი" };
-const PRESS_SAVE = { en: "“Save”", ge: "„შენახვა“" };
+/* 2026-09-28 (owner): Select replaced Save on the label pages */
+const PRESS_SELECT = { en: "“Select”", ge: "„აირჩიე“" };
 
 export const GUIDE: GuideStep[] = [
   /* ── front label details ── */
@@ -88,11 +89,11 @@ export const GUIDE: GuideStep[] = [
     ge: "სამი არტისტი ახლა ხატავს. დაახლოებით ერთი წუთი დასჭირდება.", done: "page:options", wait: true },
   /* ── front label ── */
   { page: "options", at: { x: 137, y: 200, w: 1166, h: 340 }, side: "above",
-    en: "Three designs, each in a different artist's style. Click a label to see it big, and if you like one, save it.",
-    ge: "სამი დიზაინი, თითო სხვადასხვა არტისტის სტილში. დააჭირე ეტიკეტს, რომ დიდად ნახო და თუ რომელიმე მოგეწონა, შეინახე." },
+    en: "Three designs, each in a different artist's style. Click a label to see it big, and if you like one, select it.",
+    ge: "სამი დიზაინი, თითო სხვადასხვა არტისტის სტილში. დააჭირე ეტიკეტს, რომ დიდად ნახო და თუ რომელიმე მოგეწონა, აირჩიე." },
   { page: "options", at: { x: 137, y: 637, w: 1166, h: 34 }, side: "below",
-    en: "Save the one you like best.",
-    ge: "შეინახე ის, რომელიც ყველაზე მეტად მოგწონს.", done: "selected", press: PRESS_SAVE },
+    en: "Select the one you like best.",
+    ge: "აირჩიე ის, რომელიც ყველაზე მეტად მოგწონს.", done: "selected", press: PRESS_SELECT },
   { page: "options", at: RED, side: "above",
     en: "Press the red button to go on.",
     ge: "გასაგრძელებლად დააჭირე წითელ ღილაკს.", done: "page:backdetails", press: PRESS_RED },
@@ -118,10 +119,10 @@ export const GUIDE: GuideStep[] = [
     en: "Press the red button to build your back label.",
     ge: "დააჭირე წითელ ღილაკს, რომ უკანა ეტიკეტი აიწყოს.", done: "page:backdesign", press: PRESS_RED },
   /* ── back label ── */
-  /* 2026-09-26 (owner): beside the Save button, not the label */
-  { page: "backdesign", at: { x: 548.6, y: 657.6, w: 341.4, h: 34.3 }, side: "right",
-    en: "Your back label is ready to print. Save it — or press Edit if you want to change something.",
-    ge: "შენი უკანა ეტიკეტი ბეჭდვისთვის მზად არის. შეინახე — ან დააჭირე რედაქტირებას, თუ გინდა რამის შეცვლა.", done: "backSaved", press: PRESS_SAVE },
+  /* 2026-09-28 (owner): no Save/Select here — a note to read beside Edit */
+  { page: "backdesign", at: { x: 548.6, y: 589, w: 341.4, h: 34.3 }, side: "right",
+    en: "Your back label is ready to print. Press Edit if you want to change something.",
+    ge: "შენი უკანა ეტიკეტი ბეჭდვისთვის მზად არის. თუ გინდა რამის შეცვლა, დააჭირე რედაქტირებას." },
   { page: "backdesign", at: RED, side: "above",
     en: "On to the bottle.",
     ge: "ახლა ბოთლი.", done: "page:bottle", press: PRESS_RED },
