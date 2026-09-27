@@ -1356,18 +1356,21 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
      (by their ids — the images come back from the server) and which one
      was saved. Not while the demo walkthrough plays, and never an empty
      page over a real order. */
+  /* the order as the page holds it NOW — kept in this browser, and sent
+     with the e-mail link (2026-09-28: the link used to carry the browser's
+     saved copy, which could be missing — the visitor came back to nothing) */
+  const orderRecord = () => ({
+    v: 1, at: Date.now(), vision, f, b, gtin, qrMode, markets, bottle, wineColor, selected, frontSig, paintSig,
+    dreams: dreams.filter(Boolean).filter((d) => d.id).map((d) => ({ style: d.style, id: d.id, artist: d.artist })),
+    /* 2026-09-27: every set of versions, the one on show and the saved one's */
+    sets: sets.map((st) => st.filter(Boolean).filter((d) => d.id).map((d) => ({ style: d.style, id: d.id, artist: d.artist }))).filter((st) => st.length),
+    setIdx, selSet,
+  });
   useEffect(() => {
     if (tut >= 0) return;
     const hasAny = dreams.length > 0 || !!vision.trim() || Object.entries(f).some(([k, v]) => k !== "width" && k !== "height" && !!(v || "").trim());
     if (!hasAny) return;
-    const rec = {
-      v: 1, at: Date.now(), vision, f, b, gtin, qrMode, markets, bottle, wineColor, selected, frontSig, paintSig,
-      dreams: dreams.filter(Boolean).filter((d) => d.id).map((d) => ({ style: d.style, id: d.id, artist: d.artist })),
-      /* 2026-09-27: every set of versions, the one on show and the saved one's */
-      sets: sets.map((st) => st.filter(Boolean).filter((d) => d.id).map((d) => ({ style: d.style, id: d.id, artist: d.artist }))).filter((st) => st.length),
-      setIdx, selSet,
-    };
-    try { localStorage.setItem("nui-order", JSON.stringify(rec)); } catch { }
+    try { localStorage.setItem("nui-order", JSON.stringify(orderRecord())); } catch { }
   }, [tut, sets, setIdx, selSet, vision, f, b, gtin, qrMode, markets, bottle, wineColor, selected, frontSig, paintSig]);
   type OrderRec = { v?: number; vision?: string; f?: Record<string, string>; b?: Record<string, string>; gtin?: string; qrMode?: string; markets?: string[]; bottle?: Record<string, string>; wineColor?: string; selected?: number; frontSig?: string; paintSig?: string; dreams?: { style: string; id?: string; artist?: string }[]; sets?: { style: string; id?: string; artist?: string }[][]; setIdx?: number; selSet?: number };
   useEffect(() => {
@@ -1950,8 +1953,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const email = mailAddr.trim();
     if (!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(email)) { setMailNote("bad-email"); return; }
     setMailBusy(true); setMailNote(""); setMailLink("");
-    let record: unknown = null;
-    try { record = JSON.parse(localStorage.getItem("nui-order") || "null"); } catch { }
+    const record = orderRecord();
     const r = await fetch("/api/visitor/email", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, lang, record }) }).catch(() => null);
     const j = (r ? await r.json().catch(() => ({})) : {}) as { sent?: boolean; link?: string; error?: string };
     setMailBusy(false);
