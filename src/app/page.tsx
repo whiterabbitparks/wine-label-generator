@@ -2228,9 +2228,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       /* round 94 #6: two contrasting re-layouts of the same painting ride along */
       return { style, dream: res.dream || "", preview: res.preview || null, id: res.id, artist: res.artist, variants: (res.variants || []).map((v) => ({ style, dream: v.dream, preview: v.preview, id: v.id })) };
     };
+    const errs: string[] = [];
     try {
       const styles3 = ["traditional", "contemporary", "punk"];
       const settled = await Promise.allSettled(styles3.map(one));
+      settled.forEach((x) => { if (x.status === "rejected") errs.push(String(x.reason?.message || x.reason)); });
       const ok = settled.filter((x): x is PromiseFulfilledResult<Dream> => x.status === "fulfilled").map((x) => x.value);
       /* round 19: a parallel burst can rate-limit a style out of the set
          (owner saw a 1-label session) — retry the failed styles once,
@@ -2240,7 +2242,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           try { ok.push(await one(styles3[i])); } catch { /* that style stays out */ }
         }
       }
-      if (!ok.length) throw new Error("all generations failed — try again");
+      if (!ok.length) throw new Error("nothing-painted");
       ok.sort((a, b2) => styles3.indexOf(a.style) - styles3.indexOf(b2.style));
       refreshVis();
       if (append) {
@@ -2272,8 +2274,20 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       } catch { }
       go("options");
     } catch (e) {
-      alert(e instanceof Error ? e.message : String(e));
-      go("vision", -1);
+      /* 2026-09-28 (owner saw "all generations failed" twice — the image
+         service had run out of credit): the try is given back when nothing
+         was painted, and the visitor is told so in plain words, in the
+         page's own message place (no browser alert) */
+      const why = [...errs, e instanceof Error ? e.message : String(e)].join(" ");
+      if (liveGenRef.current) {
+        try { await fetch("/api/visitor/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ order, refund: true }) }); } catch { }
+        refreshVis();
+      }
+      setWarn(t(/credit|quota|billing|insufficient|429/i.test(why)
+        ? "Painting is paused on our side for a moment — your try wasn't used. Please try again later."
+        : "The labels couldn't be painted — your try wasn't used. Please try again."));
+      setTimeout(() => setWarn(""), 9000);
+      go(append ? "options" : "vision", -1);
     }
   }
 
@@ -3253,7 +3267,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             const NT = { x: OPT_FRAMES[1].x + 0.2, y: SEL_CY + 36, w: OPT_W, h: 34.3 };
             const left = vis?.admin ? Infinity : (vis?.runsLeft ?? 1);
             const ready = dreams.length > 0 && left > 0;
-            const note = !dreams.length ? "" : vis?.admin ? t("Unlimited tries (admin)")
+            /* a message (a refused or failed try) takes this line's place —
+               its own reserved spot, red */
+            const note = warn ? warn : !dreams.length ? "" : vis?.admin ? t("Unlimited tries (admin)")
               : left > 0 ? `${t("Tries left:")} ${left}` : t("No tries left — 3 tries for $9");
             return (<>
               {dreams.length > 0 ? (
@@ -3265,7 +3281,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   {t("NEW TRY")}</div>
               )}
               {note && (
-                <span style={{ ...px(NT.x, baseTop(NT.y + NT.h + 17, 12), NT.w, 14), font: `12px ${HNW}`, lineHeight: "12px", color: "#6b6a60", textAlign: "center", display: "block", whiteSpace: "nowrap" }}>{note}</span>
+                <span style={{ ...px(NT.x - 200, baseTop(NT.y + NT.h + 17, 12), NT.w + 400, 14), font: `12px ${HNW}`, lineHeight: "12px", color: warn ? "#BA141A" : "#6b6a60", textAlign: "center", display: "block", whiteSpace: "nowrap" }}>{note}</span>
               )}
             </>);
           })()}
@@ -4914,7 +4930,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               sit truly midway between the selection row and the bar line */}
           {/* round 76 #2: checkout prints its own gate message under the
               payment button — this one would be the second copy */}
-          {warn && thick !== null && page !== "checkout" && page !== "more" && (
+          {warn && thick !== null && page !== "checkout" && page !== "more" && page !== "options" && (
             <span style={{ ...px(0, 700, W, 16), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block", zIndex: 7, position: "absolute" }}>{warn}</span>
           )}
 

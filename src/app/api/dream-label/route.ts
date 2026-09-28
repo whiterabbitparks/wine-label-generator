@@ -2,7 +2,20 @@ import sharp from "sharp";
 import { paintHybridLabel, relayoutLabel } from "@/lib/label/hybrid";
 import { saveLabel, readLabel } from "@/lib/label/store";
 import { properCase, CASED_FIELDS } from "@/lib/label/casing";
-import { allowPaint, refuse } from "@/lib/guard";
+import { allowPaint, refuse, markPainted, type Visitor } from "@/lib/guard";
+import { sendMail } from "@/lib/mail";
+
+/* 2026-09-28 (the OpenAI credit ran out and every label failed without a
+   trace): a failed painting is LOGGED, and a painter that is out of credit
+   e-mails ALERT_EMAIL — at most once an hour */
+let lastQuotaMail = 0;
+function reportPaintError(style: string, msg: string) {
+  console.error(`[dream-label] ${style}: ${msg.slice(0, 300)}`);
+  if (/credit|quota|billing|insufficient/i.test(msg) && process.env.ALERT_EMAIL && Date.now() - lastQuotaMail > 3600_000) {
+    lastQuotaMail = Date.now();
+    sendMail({ to: process.env.ALERT_EMAIL, subject: "8K Labels — painting stopped: an image service is out of credit", text: `Labels can't be painted until the account is topped up.\n\n${msg.slice(0, 600)}` }).catch(() => { });
+  }
+}
 
 /* PUBLIC customer endpoint — one label, streamed as NDJSON so the page's
    loader stays honest.
@@ -65,9 +78,11 @@ export async function POST(req: Request) {
   /* a re-layout of a stored painting costs nothing; a new painting must
      belong to a run this visitor started */
   const baseLabel = body.relayout ? readLabel(String(body.relayout)) : null;
+  let payer: Visitor | null = null;
   if (!baseLabel) {
     const g = await allowPaint(req, order);
     if (!g.ok) return refuse(g);
+    payer = g.visitor;
   }
   /* 2026-09-27 (owner): new versions never repeat an artist in a layout
      already shown in this session — the page names its earlier labels */
@@ -112,9 +127,12 @@ export async function POST(req: Request) {
           }
         }
         /* round 102: the artist's name rides along so the wizard can head the column with it */
+        if (!base) await markPainted(payer, order);
         send({ type: "result", dream: out.png, preview, id, variants, artist: base ? (base.meta as { artist?: string }).artist : (out as { artist?: string }).artist });
       } catch (e) {
-        send({ type: "error", error: e instanceof Error ? e.message : String(e) });
+        const msg = e instanceof Error ? e.message : String(e);
+        reportPaintError(style, msg);
+        send({ type: "error", error: msg });
       }
       controller.close();
     },

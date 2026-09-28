@@ -45,6 +45,8 @@ export type Visitor = {
   emailRun?: number;          /* 1 once a confirmed e-mail granted its run */
   paidRuns?: number;
   fakeRuns?: number;          /* TEMP (2026-09-28): tries "bought" with the footer's fake-payment switch */
+  okPaints?: Record<string, number>;   /* labels a run actually delivered */
+  refunds?: Record<string, boolean>;   /* runs given back because nothing was delivered */
   runsUsed?: number;
   orders?: Record<string, number>;
   marketing?: { day: string; n: number };
@@ -194,6 +196,26 @@ export async function allowPaint(req: Request, order: string): Promise<Verdict> 
   const db = await getDb();
   await db.collection("visitors").updateOne({ _id: v._id } as never, { $inc: { [`orders.${order}`]: 1 } } as never);
   return { ok: true, visitor: v, admin };
+}
+
+/* A RUN THAT DELIVERED NOTHING is given back (2026-09-28: the image
+   service ran out of credit and every column failed — the visitor must not
+   lose a paid try for it). Only a run this visitor started, only if not
+   one label of it was delivered, and only once. */
+export async function markPainted(v: Visitor | null, order: string) {
+  if (!v || !order) return;
+  try { const db = await getDb(); await db.collection("visitors").updateOne({ _id: v._id } as never, { $inc: { [`okPaints.${order}`]: 1 } } as never); } catch { /* bookkeeping only */ }
+}
+export async function refundRun(req: Request, order: string): Promise<boolean> {
+  let v: Visitor | null;
+  try { v = await visitorOf(req, false); } catch { return false; }
+  if (!v || !/^[a-z0-9-]{6,40}$/i.test(order) || v.orders?.[order] === undefined) return false;
+  if ((v.okPaints?.[order] || 0) > 0 || v.refunds?.[order]) return false;
+  const db = await getDb();
+  const r = await db.collection("visitors").updateOne(
+    { _id: v._id, [`refunds.${order}`]: { $exists: false }, [`okPaints.${order}`]: { $exists: false } } as never,
+    { $inc: { runsUsed: -1 }, $set: { [`refunds.${order}`]: true } } as never);
+  return r.modifiedCount > 0;
 }
 
 /* A MARKETING RUN: only for a visitor who has made labels, a few a day */
