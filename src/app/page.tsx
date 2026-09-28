@@ -670,6 +670,12 @@ export default function NewUI() {
   const [liveGen, setLiveGen] = useState(true);
   const liveGenRef = useRef(true);
   useEffect(() => { try { if (localStorage.getItem("nui-live-gen") === "0") { setLiveGen(false); liveGenRef.current = false; } } catch { } }, []);
+  /* 2026-09-28 (owner's idea): wake the painter while the visitor reads and
+     types — the details page and the labels page (for a new try); the
+     server paints one tiny image at most every 4 minutes */
+  useEffect(() => {
+    if ((page === "vision" || page === "options") && liveGenRef.current) fetch("/api/warm", { method: "POST" }).catch(() => { });
+  }, [page]);
   /* 2026-09-23 — TEMP DEV SWITCH (remove before launch, with live gen):
      "fill details". On: the front and back label details are filled with
      one random, coherent wine, its optional fields left out at random

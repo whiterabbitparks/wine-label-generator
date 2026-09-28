@@ -33,6 +33,41 @@ import { readArtist, listArtists, artistRefs, nextRefSet, artistCharter, isActiv
 export const REPAINT_STRENGTH = 0.7;
 export const UNLOCKED_STRENGTH = 0.53;
 const LOCK = { scale: 0.6, end: 0.5 };
+const LOCK_WAIT_MS = 60000;
+const LOCK_ENDPOINT = "fal-ai/flux-general/image-to-image";
+const LOCK_NET = "InstantX/FLUX.1-dev-Controlnet-Union";
+
+/* THE WARM-UP (owner's idea, 2026-09-28: "if the painter isn't warmed up,
+   paint a tiny image first"). The two-minute wait is fal loading the locked
+   painter onto a GPU, whatever the size — so a TINY image (a white
+   256-pixel square, four steps, ≈ $0.005) is sent the moment a visitor
+   opens the details or the labels page, while they read and type; by
+   "Create" the painter is warm. At most one warm-up every 4 minutes for the
+   whole site, whoever asks. */
+let lastWarm = 0;
+let blankUrl = "";
+export async function warmLockedPainter(): Promise<boolean> {
+  if (!process.env.FAL_KEY || Date.now() - lastWarm < 4 * 60_000) return false;
+  lastWarm = Date.now();
+  const model = artistModels().find((m) => m.lora && isActive(m.artist));
+  if (!model?.lora) return false;
+  try {
+    if (!blankUrl) {
+      const sharp = (await import("sharp")).default;
+      const png = await sharp({ create: { width: 256, height: 256, channels: 3, background: "#ffffff" } }).png().toBuffer();
+      blankUrl = await falUpload(png, "warm.png", "image/png");
+    }
+    await falPost(LOCK_ENDPOINT, {
+      prompt: `${model.lora.trigger} style. A small plain sketch.`, image_url: blankUrl, strength: 0.7, num_inference_steps: 4, guidance_scale: 3.5, output_format: "jpeg",
+      loras: [{ path: model.lora.url, scale: LORA_SCALE }],
+      controlnet_unions: [{ path: LOCK_NET, controls: [{ control_image_url: blankUrl, control_mode: "depth", conditioning_scale: LOCK.scale, end_percentage: LOCK.end }] }],
+    }, 180000);
+    return true;
+  } catch (e) {
+    console.warn(`[warm] ${e instanceof Error ? e.message : e}`);
+    return false;
+  }
+}
 export const LORA_SCALE = 1.0;
 
 export interface EvalModel {
@@ -277,13 +312,14 @@ export async function repaintInHand(model: EvalModel, story: string, ap: Artwork
   let out: Record<string, unknown> | null = null;
   if (locked && depthUrl) {
     try {
-      /* a cold painter can take two minutes to wake — 2.5 is the limit, so a
-         slow sketch + the fallback still fit the route's five minutes */
-      out = await falPost("fal-ai/flux-general/image-to-image", {
+      /* a cold painter can take two minutes to wake. 2026-09-28 (owner): after
+         60 s the label is finished by the fast unlocked painter instead —
+         nobody waits two minutes (the warm-up below makes this rare) */
+      out = await falPost(LOCK_ENDPOINT, {
         prompt, image_url: url, strength, num_inference_steps: 28, guidance_scale: 3.5, output_format: "png",
         loras: [{ path: model.lora.url, scale: LORA_SCALE }],
-        controlnet_unions: [{ path: "InstantX/FLUX.1-dev-Controlnet-Union", controls: [{ control_image_url: depthUrl, control_mode: "depth", conditioning_scale: LOCK.scale, end_percentage: LOCK.end }] }],
-      }, 150000);
+        controlnet_unions: [{ path: LOCK_NET, controls: [{ control_image_url: depthUrl, control_mode: "depth", conditioning_scale: LOCK.scale, end_percentage: LOCK.end }] }],
+      }, LOCK_WAIT_MS);
     } catch (e) {
       console.warn(`[painter] ${model.id}: locked repaint failed (${e instanceof Error ? e.message : e}) — unlocked ${UNLOCKED_STRENGTH}`);
     }
