@@ -4409,7 +4409,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               );
             })()}
             {/* 2026-09-28 (owner): the menu CENTRED on the page's middle,
-               one baseline, even gaps; ENG/GEO moved right of the folder */}
+               one baseline, even gaps; ENG/GEO stays by the folder */}
             {/* measured: the menu's letters stood 6 below the folder's top */}
             <div style={{ position: "absolute", left: 0, width: W, top: baseTop(FOLDER_TOP + 13 * 0.72, 13) - 6, lineHeight: "13px", display: "flex", justifyContent: "center", alignItems: "baseline", columnGap: 44, pointerEvents: "none" }}>
               {/* 2026-09-23 (owner): the menu in capitals, both languages
@@ -4436,8 +4436,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 </span>
               </button>
             </div>
-            {/* ENG / GEO just right of the folder mark, on the menu's baseline */}
-            <div style={{ position: "absolute", left: FOLDER_X + ICON_W + 22, top: baseTop(FOLDER_TOP + 13 * 0.72, 13) - 6, lineHeight: "13px", display: "flex", alignItems: "baseline" }}>
+            {/* ENG / GEO left of the folder mark, where it always stood (its
+                right edge on x1200 — owner, 2026-09-28: back from the folder's
+                right), on the menu's baseline */}
+            <div style={{ position: "absolute", right: W - 1200, top: baseTop(FOLDER_TOP + 13 * 0.72, 13) - 6, lineHeight: "13px", display: "flex", alignItems: "baseline" }}>
               <span style={{ display: "flex", alignItems: "baseline", columnGap: 5, whiteSpace: "nowrap" }}>
                 <button onClick={() => pickLang("en")} style={{ ...ghost, font: `${lang === "en" ? 700 : 300} 13px ${HNW}`, color: lang === "en" ? INK : "#8a8a8a" }}>ENG</button>
                 <span style={{ font: `300 13px ${HNW}`, color: "#8a8a8a" }}>/</span>
