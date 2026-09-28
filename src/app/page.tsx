@@ -671,10 +671,26 @@ export default function NewUI() {
   const liveGenRef = useRef(true);
   useEffect(() => { try { if (localStorage.getItem("nui-live-gen") === "0") { setLiveGen(false); liveGenRef.current = false; } } catch { } }, []);
   /* 2026-09-28 (owner's idea): wake the painter while the visitor reads and
-     types — the details page and the labels page (for a new try); the
-     server paints one tiny image at most every 4 minutes */
+     types — the details page and the labels page (for a new try). fal lets
+     it go cold after ~1–2 idle minutes, so the tiny image is repeated every
+     50 s while the visitor is ACTIVE here (a key, a click or a move in the
+     last 3 minutes, the tab in view); the server lets one through per 45 s */
+  const lastActive = useRef(Date.now());
   useEffect(() => {
-    if ((page === "vision" || page === "options") && liveGenRef.current) fetch("/api/warm", { method: "POST" }).catch(() => { });
+    const mark = () => { lastActive.current = Date.now(); };
+    window.addEventListener("pointerdown", mark); window.addEventListener("keydown", mark); window.addEventListener("pointermove", mark);
+    return () => { window.removeEventListener("pointerdown", mark); window.removeEventListener("keydown", mark); window.removeEventListener("pointermove", mark); };
+  }, []);
+  useEffect(() => {
+    /* the loader too: the sketch takes 20–40 s before the repaint asks */
+    if (page !== "vision" && page !== "options" && page !== "loader") return;
+    const warm = () => {
+      if (!liveGenRef.current || document.hidden || Date.now() - lastActive.current > 180_000) return;
+      fetch("/api/warm", { method: "POST" }).catch(() => { });
+    };
+    warm();
+    const id = setInterval(warm, 50_000);
+    return () => clearInterval(id);
   }, [page]);
   /* 2026-09-23 — TEMP DEV SWITCH (remove before launch, with live gen):
      "fill details". On: the front and back label details are filled with

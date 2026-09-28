@@ -42,12 +42,15 @@ const LOCK_NET = "InstantX/FLUX.1-dev-Controlnet-Union";
    painter onto a GPU, whatever the size — so a TINY image (a white
    256-pixel square, four steps, ≈ $0.005) is sent the moment a visitor
    opens the details or the labels page, while they read and type; by
-   "Create" the painter is warm. At most one warm-up every 4 minutes for the
-   whole site, whoever asks. */
+   "Create" the painter is warm. MEASURED on live (2026-09-28): fal keeps it
+   warm only ~1–2 minutes after the last use (idle 60 s → 2.6 s; idle
+   120 s → 134 s), so the page repeats the tiny image every 50 s while the
+   visitor is ACTIVE there; the server lets through at most one every 45 s
+   for the whole site, whoever asks. */
 let lastWarm = 0;
 let blankUrl = "";
 export async function warmLockedPainter(): Promise<boolean> {
-  if (!process.env.FAL_KEY || Date.now() - lastWarm < 4 * 60_000) return false;
+  if (!process.env.FAL_KEY || Date.now() - lastWarm < 45_000) return false;
   lastWarm = Date.now();
   const model = artistModels().find((m) => m.lora && isActive(m.artist));
   if (!model?.lora) return false;
