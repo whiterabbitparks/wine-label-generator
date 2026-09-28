@@ -3,6 +3,9 @@ import { readLabel } from "@/lib/label/store";
 import { composeBackLabel, MARKETS, type BackLabelData } from "@/lib/back-label";
 import { properFields } from "@/lib/label/casing";
 import { allowMarketing, refuse } from "@/lib/guard";
+import fs from "node:fs";
+import path from "node:path";
+import crypto from "node:crypto";
 
 /* PUBLIC customer endpoint (owner 2026-09-06): the marketing-asset run in
    one streamed call — 2 studio product shots (front/back, transparent
@@ -15,11 +18,30 @@ export const maxDuration = 600;
 
 /* complete sets cached in-memory by brief signature — revisits are free */
 const cache = new Map<string, AssetEvent[]>();
+/* 2026-09-28 (owner: "Continue" must bring the visitor back to the
+   marketing page with their images): every finished set is also SAVED on
+   disk under a private key (a hash of its signature) — it survives server
+   restarts, a revisit replays it for free (no guard, no cost), and the
+   page keeps the key in the visitor's saved order to load it back */
+const SETS = path.join(process.cwd(), "data", "marketing-sets");
+const keyOf = (sig: string) => crypto.createHash("sha1").update(sig).digest("hex").slice(0, 24);
+function readSet(key: string): AssetEvent[] | null {
+  if (!/^[a-f0-9]{24}$/.test(key)) return null;
+  try { return JSON.parse(fs.readFileSync(path.join(SETS, `${key}.json`), "utf8")) as AssetEvent[]; } catch { return null; }
+}
+function writeSet(key: string, events: AssetEvent[]) {
+  try { fs.mkdirSync(SETS, { recursive: true }); fs.writeFileSync(path.join(SETS, `${key}.json`), JSON.stringify(events)); } catch { /* the memory copy still serves */ }
+}
+
+/* a saved set, read back by its key */
+export async function GET(req: Request) {
+  const key = new URL(req.url).searchParams.get("key") || "";
+  const events = readSet(key);
+  if (!events) return new Response(JSON.stringify({ error: "not found" }), { status: 404, headers: { "Content-Type": "application/json" } });
+  return new Response(JSON.stringify({ events }), { headers: { "Content-Type": "application/json", "Cache-Control": "private, max-age=3600" } });
+}
 
 export async function POST(req: Request) {
-  /* 2026-09-27: the guard — a visitor who has made labels, a few runs a day */
-  const g = await allowMarketing(req);
-  if (!g.ok) return refuse(g);
   let body: {
     front?: string; back?: string | null; frontId?: string; backSpec?: unknown;
     bottle?: { type?: string; color?: string; closure?: string; finish?: string; closureColour?: string };
@@ -96,12 +118,21 @@ export async function POST(req: Request) {
   }
 
   const enc = new TextEncoder();
+  const key = keyOf(sig);
+  const known = cache.get(sig) || readSet(key);
+  /* 2026-09-27: the guard — a visitor who has made labels, a few runs a
+     day. A set already made replays free, so only a NEW run is guarded. */
+  if (!known) {
+    const g = await allowMarketing(req);
+    if (!g.ok) return refuse(g);
+  }
   const stream = new ReadableStream({
     async start(controller) {
       const send = (o: AssetEvent) => controller.enqueue(enc.encode(JSON.stringify(o) + "\n"));
-      const cached = cache.get(sig);
-      if (cached) {
-        for (const e of cached) send(e);
+      if (known) {
+        cache.set(sig, known);
+        for (const e of known) send(e);
+        send({ type: "saved", key } as never);
         controller.close();
         return;
       }
@@ -112,7 +143,11 @@ export async function POST(req: Request) {
           send(e);
         }, charters, { lifeOnly, batch, frontShot: typeof body.frontShot === "string" && body.frontShot.startsWith("data:image/") && body.frontShot.length < 12_000_000 ? body.frontShot : null });
         /* cache only if at least one image succeeded */
-        if (events.some((e) => e.type === "shot" || e.type === "life")) cache.set(sig, events);
+        if (events.some((e) => e.type === "shot" || e.type === "life")) {
+          cache.set(sig, events);
+          writeSet(key, events);
+          send({ type: "saved", key } as never);
+        }
       } catch (e) {
         send({ type: "error", error: e instanceof Error ? e.message : String(e) });
       }

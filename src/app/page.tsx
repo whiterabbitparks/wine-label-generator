@@ -943,7 +943,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
      upload clears EVERY section and the next arrow gates until each one
      has a pick. */
   const [wineColor, setWineColor] = useState("");
-  useEffect(() => { const p2 = capPreset(wineColor); if (p2) { setWheel(p2.wheel); setShade(p2.shade); } }, [wineColor]);
+  /* (a restore brings its own capsule colour — the preset keeps out of it) */
+  useEffect(() => { if (restoringRef.current) return; const p2 = capPreset(wineColor); if (p2) { setWheel(p2.wheel); setShade(p2.shade); } }, [wineColor]);   // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (page !== "bottle" || customLabel || wineColor) return;
     const src = (f.colour || DEMO_FRONT.colour).toLowerCase();
@@ -953,6 +954,24 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   /* marketing assets (round 13): 2 product shots + 5 lifestyle images */
   const [assets, setAssets] = useState<{ front?: { full: string; prev: string }; back?: { full: string; prev: string }; life: { full: string; prev: string }[] }>({ life: [] });
   const [assetsSig, setAssetsSig] = useState("");
+  /* 2026-09-28 (owner: Continue returns to the furthest step): the saved
+     marketing set's key (server: data/marketing-sets), and the signature
+     of a set brought back by Continue — its page must not ask for it again */
+  const [assetsKey, setAssetsKey] = useState("");
+  const restoredAssetsSig = useRef("");
+  const [resumeTo, setResumeTo] = useState<"" | "vision" | "options" | "backdesign" | "assets">("");
+  /* Continue's last step, once the restored order has rendered: the back
+     label is set again (free, from its details) when the order got that
+     far, then the furthest page opens */
+  useEffect(() => {
+    if (!resumeTo) return;
+    const to = resumeTo;
+    setResumeTo("");
+    (async () => {
+      if ((to === "backdesign" || to === "assets") && savedDream()) await nextFromCompliance(true);
+      go(to === "backdesign" || to === "assets" ? (savedDream() ? to : "options") : to);
+    })();
+  }, [resumeTo]);   // eslint-disable-line react-hooks/exhaustive-deps
   const [assetsStage, setAssetsStage] = useState("");
   const assetsRunning = useRef(false);
   /* living loaders (round 17 #1): a slow tick keeps every glass rising */
@@ -1145,6 +1164,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
        cache (charter-aware since round 19) answers true duplicates
        instantly, so refetching costs nothing. */
     const sig = JSON.stringify({ fs: frontSig, bs: backSig, bottle, wc: wineColor, rgb: wheel.rgb, shade, sel: sel.style, cl: customLabel ? customLabel.length + customLabel.slice(-64) : "" });
+    /* a set brought back by Continue is shown as it is (2026-09-28) */
+    if (restoredAssetsSig.current && restoredAssetsSig.current === sig && assets.front) return;
     /* ROUND 50 #9 (owner: "old bottle still in the landing thumbs!"):
        any changed input invalidates the previously published page — the
        thumb shows its loader until the fresh publish lands */
@@ -1229,6 +1250,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             if (m.type === "progress") { assetT.current.stage = Date.now(); setAssetsStage(m.stage || ""); }
             else if (m.type === "shot") { if (m.side === "front") got.front = m.preview || m.image; else got.back = m.preview || m.image; gotFull[m.side as "front" | "back"] = m.image; setAssets((a) => ({ ...a, [m.side]: { full: m.image, prev: m.preview || m.image } })); }
             else if (m.type === "life") { got.life[m.i] = m.preview || m.image; gotFull.life[m.i] = m.image; setAssets((a) => { const life = [...a.life]; life[m.i] = { full: m.image, prev: m.preview || m.image }; return { ...a, life }; }); }
+            else if (m.type === "saved" && m.key) setAssetsKey(String(m.key));
           }
         }
         setAssetsSig(sig);
@@ -1560,6 +1582,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     /* 2026-09-27: every set of versions, the one on show and the saved one's */
     sets: sets.map((st) => st.filter(Boolean).filter((d) => d.id).map((d) => ({ style: d.style, id: d.id, artist: d.artist }))).filter((st) => st.length),
     setIdx, selSet, pickArtists,
+    /* 2026-09-28: how far the order went — a back label made, a marketing
+       set made (its key and signature), and the capsule's colour */
+    backMade: !!backPng, assetsKey, assetsSig: assetsKey ? assetsSig : "", wheel, shade,
   });
   useEffect(() => {
     if (tut >= 0) return;
@@ -1575,8 +1600,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       const keep = old && old.at && strip(old) === strip(rec);
       localStorage.setItem("nui-order", JSON.stringify(keep ? { ...rec, at: old!.at } : rec));
     } catch { }
-  }, [tut, sets, setIdx, selSet, vision, f, b, gtin, qrMode, markets, bottle, wineColor, selected, frontSig, paintSig, pickArtists]);
-  type OrderRec = { v?: number; vision?: string; f?: Record<string, string>; b?: Record<string, string>; gtin?: string; qrMode?: string; markets?: string[]; bottle?: Record<string, string>; wineColor?: string; selected?: number; frontSig?: string; paintSig?: string; dreams?: { style: string; id?: string; artist?: string }[]; sets?: { style: string; id?: string; artist?: string }[][]; setIdx?: number; selSet?: number };
+  }, [tut, sets, setIdx, selSet, vision, f, b, gtin, qrMode, markets, bottle, wineColor, selected, frontSig, paintSig, pickArtists, backPng, assetsKey, assetsSig, wheel, shade]);
+  type OrderRec = { backMade?: boolean; assetsKey?: string; assetsSig?: string; wheel?: { x: number; y: number; rgb: number[] }; shade?: number; v?: number; vision?: string; f?: Record<string, string>; b?: Record<string, string>; gtin?: string; qrMode?: string; markets?: string[]; bottle?: Record<string, string>; wineColor?: string; selected?: number; frontSig?: string; paintSig?: string; dreams?: { style: string; id?: string; artist?: string }[]; sets?: { style: string; id?: string; artist?: string }[][]; setIdx?: number; selSet?: number };
   /* the visitor's own order, brought back from this browser (on arrival,
      and after the self-playing tutorial, which borrows the page) */
   const restoreRef = useRef<(boot: boolean, apply?: boolean) => void>(() => { });
@@ -1629,8 +1654,27 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       if (rec.bottle) { setBottle(rec.bottle); bottleTouched.current = true; }
       setWineColor(rec.wineColor || "");
       setPickArtists(Array.isArray((rec as { pickArtists?: string[] }).pickArtists) ? (rec as { pickArtists: string[] }).pickArtists : []);
+      if (rec.wheel) setWheel(rec.wheel);
+      if (typeof rec.shade === "number") setShade(rec.shade);
       const recSets = (rec.sets && rec.sets.length ? rec.sets : [rec.dreams || []]).map((st) => st.filter((d) => d.id)).filter((st) => st.length);
       if (!recSets.length) { restoringRef.current = false; if (resume || apply) go("vision"); return; }
+      /* 2026-09-28: the marketing set the order had made comes back from
+         the server by its key — free, and its page won't ask again */
+      if (rec.assetsKey && rec.assetsSig) {
+        try {
+          const ra = await fetch(`/api/marketing-assets?key=${rec.assetsKey}`);
+          const ja = ra.ok ? await ra.json() as { events?: { type: string; side?: string; i?: number; image?: string; preview?: string }[] } : null;
+          if (ja?.events?.length) {
+            const next: typeof assets = { life: [] };
+            for (const m of ja.events) {
+              if (m.type === "shot" && m.image) next[m.side === "back" ? "back" : "front"] = { full: m.image, prev: m.preview || m.image };
+              else if (m.type === "life" && m.image && typeof m.i === "number") next.life[m.i] = { full: m.image, prev: m.preview || m.image };
+            }
+            setAssets(next); setLifeTarget(next.life.length || 5); setLifeOrder(next.life.map((_, k) => k));
+            setAssetsSig(rec.assetsSig); setAssetsKey(rec.assetsKey); restoredAssetsSig.current = rec.assetsSig;
+          }
+        } catch { /* the set is gone — the page will make it again when asked */ }
+      }
       const toData = async (u: string) => {
         const bl = await (await fetch(u)).blob();
         return new Promise<string>((res) => { const rd = new FileReader(); rd.onload = () => res(String(rd.result)); rd.readAsDataURL(bl); });
@@ -1644,7 +1688,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         setSets(got); setSetIdx(Math.min(rec!.setIdx ?? last, last)); setSelSet(Math.min(rec!.selSet ?? 0, last));
         setSelected(rec!.selected ?? -1); setFrontSig(rec!.frontSig || ""); setPaintSig(rec!.paintSig || "");
         if (resume) { setSetIdx(last); go("options"); }
-        else if (apply) go("options");
+        /* 2026-09-28 (owner): Continue opens the FURTHEST step reached —
+           marketing made → the marketing page; the back label made → its
+           page; otherwise the labels (the back label is set again first,
+           from its details — free; see the resumeTo effect) */
+        else if (apply) setResumeTo(rec!.assetsKey && rec!.assetsSig ? "assets" : rec!.backMade ? "backdesign" : "options");
       } catch { /* the labels are gone from the server — the details stay */ }
       restoringRef.current = false;
     })();
@@ -2390,8 +2438,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     }
   }
 
-  async function nextFromCompliance() {
-    if (backPng && backSig === sigBack()) { go("backdesign"); return; }
+  async function nextFromCompliance(stay = false) {
+    if (backPng && backSig === sigBack()) { if (!stay) go("backdesign"); return; }
     /* round 76 #1 (owner): no status line in the corner — the back-label
        page shows its own loader, this only added noise */
     const sel = savedDream();
@@ -2424,7 +2472,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       probe.onload = () => setBackDims({ w: probe.width, h: probe.height });
       probe.src = url;
       setBackPng(url); setBackPayload(payload); setBackSig(sigBack());
-      go("backdesign");
+      if (!stay) go("backdesign");
     } catch (e) { alert(e instanceof Error ? e.message : String(e)); }
     setBusyMsg("");
   }
@@ -5219,6 +5267,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 try { localStorage.removeItem("nui-order"); localStorage.removeItem("nui-product-code"); } catch { }
                 setProductUrl(""); productCode.current = Math.random().toString(36).slice(2, 10);
                 setResumeAsk(null);
+                /* 2026-09-28 (owner): a new label starts at its details */
+                go("vision");
               }}
                 style={{ ...px(32, 230 - 34.3 - 32, 260, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#fff", color: "#111", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>{t("Start new")}</button>
               <button onClick={() => { setResumeAsk(null); restoreRef.current(false, true); }}
