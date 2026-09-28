@@ -24,8 +24,15 @@ import { readArtist, listArtists, artistRefs, nextRefSet, artistCharter, isActiv
 
 /* 2026-09-25 (owner, after the 0.60 vs 0.50 test — 0.50 kept the story
    better, 0.60 invented extras): 0.55 for now, "I'll watch how it goes".
-   2026-09-27 (owner): 0.53 for every artist. */
-export const REPAINT_STRENGTH = 0.53;
+   2026-09-27 (owner): 0.53 for every artist.
+   2026-09-28 (owner, after the story-lock test — "C for all"): the repaint
+   is LOCKED to the sketch's depth (ControlNet Union, depth mode, 0.6, held
+   for the first half of the steps) and runs at 0.7 — more of the artist's
+   hand, and the story holds better than it did at 0.53. The unlocked 0.53
+   stays as the fallback when the locked painter fails. */
+export const REPAINT_STRENGTH = 0.7;
+export const UNLOCKED_STRENGTH = 0.53;
+const LOCK = { scale: 0.6, end: 0.5 };
 export const LORA_SCALE = 1.0;
 
 export interface EvalModel {
@@ -208,27 +215,86 @@ export const handCharter = (p: ArtistProfile) => `${p.medium}; ${p.words.join(",
    instead of horns": Mariam's deer survived the repaint (it had melted
    into a tree), Levan and Giorgi unchanged; the older wording stays
    reachable with handOnly: false */
-export async function repaintInHand(model: EvalModel, story: string, ap: ArtworkPrompt, strength = REPAINT_STRENGTH, opts: { handOnly?: boolean } = { handOnly: true }): Promise<string> {
+/* what the sketch ACTUALLY shows, literally — the repaint is told this
+   instead of the customer's idea, so its words and the picture it is
+   given agree (gpt-image adds its own churches, jars and vines, and the
+   words never mentioned them). A failure falls back to the idea. */
+async function captionOf(story: string): Promise<string> {
+  const key = process.env.OPENAI_API_KEY;
+  if (!key) return "";
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      signal: AbortSignal.timeout(30000),
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: "Describe what this illustration shows, literally, for a painter who must repaint it keeping every subject. Name each figure, animal and object, what it is doing, any unusual detail that makes the picture's idea (e.g. antlers made of vines), and where it is (left, centre, right, foreground, background). No style, colour or medium words. One paragraph, at most 70 words." },
+          { role: "user", content: [{ type: "image_url", image_url: { url: story, detail: "low" } }] },
+        ],
+      }),
+    });
+    if (!res.ok) return "";
+    const j = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+    return (j.choices?.[0]?.message?.content || "").trim();
+  } catch { return ""; }
+}
+
+async function falPost(endpoint: string, body: unknown, ms: number): Promise<Record<string, unknown>> {
+  const res = await fetch(`https://fal.run/${endpoint}`, {
+    method: "POST", headers: { Authorization: `Key ${process.env.FAL_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body), signal: AbortSignal.timeout(ms),
+  });
+  const out = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+  if (!res.ok) throw new Error(`${endpoint} failed (${res.status}): ${JSON.stringify(out.detail || out.error || out).slice(0, 240)}`);
+  return out;
+}
+const firstUrl = (j: Record<string, unknown>) => String((j.image as { url?: string } | undefined)?.url || (j.images as { url?: string }[] | undefined)?.[0]?.url || "");
+
+export async function repaintInHand(model: EvalModel, story: string, ap: ArtworkPrompt, strength = REPAINT_STRENGTH, opts: { handOnly?: boolean; unlocked?: boolean } = { handOnly: true }): Promise<string> {
   if (!model.lora) throw new Error(`${model.name} has no trained LoRA yet`);
-  const key = process.env.FAL_KEY;
-  if (!key) throw new Error("FAL_KEY is not set");
+  if (!process.env.FAL_KEY) throw new Error("FAL_KEY is not set");
+  const handOnly = opts.handOnly !== false;
   const url = await falUpload(Buffer.from(story.slice(story.indexOf(",") + 1), "base64"), "story.png", "image/png");
+  const locked = !opts.unlocked;
+  /* the locked repaint reads the sketch's own description (an abstraction
+     keeps its abstract wording); the depth map is made alongside */
+  const [what, depthUrl] = locked
+    ? await Promise.all([
+      ap.abstract ? Promise.resolve("") : captionOf(story),
+      falPost("fal-ai/image-preprocessors/depth-anything/v2", { image_url: url }, 60000).then(firstUrl).catch(() => ""),
+    ])
+    : ["", ""];
   const prompt = `${model.lora.trigger} style. ${ap.abstract
     ? "Repaint this ABSTRACT picture in your own hand — the same marks, patches and shapes in the same places, your own brush, texture and colour. It stays abstract: never turn a mark into a person, face, animal, object or place (at most a leaf, a stem or a tendril), never add letters or a signature."
-    : opts.handOnly
+    : handOnly
       ? "Repaint this picture in your own hand. KEEP WHAT IT SHOWS — every figure, animal and object stays exactly what it is and where it is (a deer stays a deer, a person stays a person); change only the hand: your own line, brush, texture and colours. It shows:"
-      : "Repaint this picture in your own hand — same scene, same subjects in the same places, your own colours and brush:"} ${ap.abstract ? "" : ap.subject} Painted as ${opts.handOnly ? handCharter(model.artist) : artistCharter(model.artist)}. ${ap.kind === "bleed"
+      : "Repaint this picture in your own hand — same scene, same subjects in the same places, your own colours and brush:"} ${ap.abstract ? "" : (what || ap.subject)} Painted as ${handOnly ? handCharter(model.artist) : artistCharter(model.artist)}. ${ap.kind === "bleed"
     ? (ap.edgeSide
       ? `Keep the composition exactly: the painting runs off the other edges, and on the ${ap.edgeSide} side it ends in its own loose irregular edge with the plain, flat, empty ground beyond it — keep that ground plain and empty, never paint into it, never add a border.`
       : "Paint right to every edge — no empty paper, no margin, no border.")
-    : "Keep the plain, empty paper around the drawing."}`.slice(0, 1900);
-  const res = await fetch("https://fal.run/fal-ai/flux-lora/image-to-image", {
-    method: "POST", headers: { Authorization: `Key ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt, image_url: url, strength, num_inference_steps: 28, guidance_scale: 3.5, num_images: 1, output_format: "png", loras: [{ path: model.lora.url, scale: LORA_SCALE }] }),
-  });
-  const out = (await res.json().catch(() => ({}))) as { images?: { url?: string; content_type?: string }[]; detail?: unknown; error?: string };
-  if (!res.ok || !out.images?.[0]?.url) throw new Error(`FLUX + LoRA failed (${res.status}): ${JSON.stringify(out.detail || out.error || out).slice(0, 240)}`);
-  const img = await fetch(out.images[0].url);
+    : "Keep the plain, empty paper around the drawing."}${what ? " No text, no letters, no border." : ""}`.slice(0, 1900);
+  let out: Record<string, unknown> | null = null;
+  if (locked && depthUrl) {
+    try {
+      /* a cold painter can take two minutes to wake — 2.5 is the limit, so a
+         slow sketch + the fallback still fit the route's five minutes */
+      out = await falPost("fal-ai/flux-general/image-to-image", {
+        prompt, image_url: url, strength, num_inference_steps: 28, guidance_scale: 3.5, output_format: "png",
+        loras: [{ path: model.lora.url, scale: LORA_SCALE }],
+        controlnet_unions: [{ path: "InstantX/FLUX.1-dev-Controlnet-Union", controls: [{ control_image_url: depthUrl, control_mode: "depth", conditioning_scale: LOCK.scale, end_percentage: LOCK.end }] }],
+      }, 150000);
+    } catch (e) {
+      console.warn(`[painter] ${model.id}: locked repaint failed (${e instanceof Error ? e.message : e}) — unlocked ${UNLOCKED_STRENGTH}`);
+    }
+  }
+  if (!out || !firstUrl(out)) {
+    out = await falPost("fal-ai/flux-lora/image-to-image", {
+      prompt, image_url: url, strength: locked ? UNLOCKED_STRENGTH : strength, num_inference_steps: 28, guidance_scale: 3.5, num_images: 1, output_format: "png",
+      loras: [{ path: model.lora.url, scale: LORA_SCALE }],
+    }, 180000);
+  }
+  const img = await fetch(firstUrl(out));
   if (!img.ok) throw new Error(`FLUX + LoRA image download failed (${img.status})`);
   return `data:${img.headers.get("content-type") || "image/png"};base64,${Buffer.from(await img.arrayBuffer()).toString("base64")}`;
 }
