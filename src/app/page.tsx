@@ -1085,6 +1085,19 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     textWCache.current.set(k, w);
     return w;
   };
+  /* 2026-09-28 (owner, iPad): the width measures are taken again once the
+     page's own fonts have arrived (a measure taken on the fallback face
+     would be kept forever), and FIT shrinks a text a half-step at a time
+     until it fits its room — for the captions that sit against a field */
+  const [, setFontsTick] = useState(0);
+  useEffect(() => {
+    try { document.fonts?.ready.then(() => { textWCache.current.clear(); setFontsTick((n2) => n2 + 1); }); } catch { }
+  }, []);
+  const fitPx = (text: string, weight: number | string, size: number, maxW: number, min = 9) => {
+    let s2 = size;
+    while (s2 > min && textW(text, `${weight} ${s2}px ${HNW}`) > maxW) s2 -= 0.5;
+    return s2;
+  };
   /* live font metrics of 'italic 15px HNW' (per-browser; Safari ≠ Chrome) */
   const [fm, setFm] = useState({ a: 14.28, d: 3.19 });
   useEffect(() => {
@@ -1677,7 +1690,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       : n === "bottle" ? bottleTouched.current || !!wineColor
       : true;
   useEffect(() => {
-    if (guide < 0) return;
+    /* the walk-through holds still while the animated tutorial plays — its
+       clicks must not tick the visitor's own steps off */
+    if (guide < 0 || tut >= 0) return;
     const st = GUIDE[guide];
     if (!st) { setGuide(-1); return; }
     /* 2026-09-27 (owner): a step the visitor has ALREADY done by
@@ -1719,7 +1734,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       setTimeout(() => { setGuideOk(-1); setGuide((g) => (g === guide ? g + 1 : g)); }, 700);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [guide, guideTick, page, vision, selected, markets, marketOpen, backSaved, assetsStage, assets.front, assetsSaved, confirmModal]);
+  }, [guide, guideTick, tut, page, vision, selected, markets, marketOpen, backSaved, assetsStage, assets.front, assetsSaved, confirmModal]);
   useEffect(() => {
     if (!tourEnd) return;
     setNudge((n) => n + 1);
@@ -3019,7 +3034,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             {/* round 95 #1: one flowing paragraph — the second sentence follows on the same line */}
             {t("If you have a specific idea for the front label, describe it in simple words")} {t("or upload a sketch or photo reference. Or, let us suggest ideas for you.")}
           </span>
-          <label style={{ ...px(138, 275, 240, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, textTransform: "none" }}>
+          <label style={{ ...px(138, 275, 240, 34.3), cursor: "pointer", font: `${fitPx(t("Upload a sketch or a reference photo"), 400, 12, 240 - 16)}px ${HNW}`, whiteSpace: "nowrap", letterSpacing: 0.3, background: "#111", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, textTransform: "none" }}>
             <input type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => {
               const input = e.currentTarget;
               const file = input.files?.[0]; if (!file) { setSketch(null); return; }
@@ -3156,7 +3171,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             const base = VIS_FOOT - 3.5 - (FRONT_ROWS.length - 1 - i) * 30;
             return (
               <span key={k2}>
-                <span style={{ ...px(891.8, baseTop(base, 14), 130, 14), font: `700 ${lang === "ge" ? 13 : 14}px/14px ${HNW}`, color: "#111", whiteSpace: "nowrap" }}>{t(FRONT_LABELS[i])}</span>
+                <span style={{ ...px(891.8, baseTop(base, 14), 130, 14), font: `700 ${fitPx(t(FRONT_LABELS[i]), 700, lang === "ge" ? 13 : 14, 1012 - 891.8 - 6)}px/14px ${HNW}`, color: "#111", whiteSpace: "nowrap" }}>{t(FRONT_LABELS[i])}</span>
                 <input value={f[k2] || ""} placeholder={t(FRONT_PH[i])} {...noFill(k2)}
                   onChange={(e) => setF((m) => ({ ...m, [k2]: e.target.value }))}
                   /* round 87 (owner): typed text sat ON its rule line — 2px up */
@@ -3461,7 +3476,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             const base = 215.6 + i * 32;
             return (
               <span key={k}>
-                <span style={{ ...px(755.5, baseTop(base, 14), 230, 14), font: `700 ${lang === "ge" ? 13 : 14}px/14px ${HNW}`, color: "#111", whiteSpace: "nowrap" }}>{t(BACK_LABELS[i])}</span>
+                <span style={{ ...px(755.5, baseTop(base, 14), 230, 14), font: `700 ${fitPx(t(BACK_LABELS[i]), 700, lang === "ge" ? 13 : 14, 989 - 755.5 - 8)}px/14px ${HNW}`, color: "#111", whiteSpace: "nowrap" }}>{t(BACK_LABELS[i])}</span>
                 <input value={b[k] || ""} placeholder={t(BACK_PH[i])} {...noFill(k)}
                   onChange={(e) => setB((m) => ({ ...m, [k]: e.target.value }))}
                   style={{ ...px(989, base - IN_BASE * (14 / 15) - 2, 311, 20), ...inputStyle, fontSize: 14 }} />
@@ -3519,7 +3534,18 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               the Select Market button's top edge (653) — cap ascents measured
               live: 17.54 at 700 24px, 10.23 at 14px (+2px of the 18px line
               box, which baseTop does not know about) */}
-          <span style={{ ...px(139, baseTop(670.54, 24), 500, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t("MARKET COMPLIANCE")}</span>
+          {/* 2026-09-28 (owner, iPad): if the title would run into the
+              paragraph beside it (English) or the button (Georgian), it
+              takes two lines — the second keeps the baseline */}
+          {(() => {
+            const title = t("MARKET COMPLIANCE");
+            const room = (lang === "ge" ? 754 : 446.2) - 139 - 14;
+            const words = title.split(" ");
+            const lines = textW(title, `700 24px ${HNW}`) > room && words.length > 1 ? [words[0], words.slice(1).join(" ")] : [title];
+            return lines.map((ln, k) => (
+              <span key={"mc" + k} style={{ ...px(139, baseTop(670.54 - (lines.length - 1 - k) * 27, 24), 600, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{ln}</span>
+            ));
+          })()}
           {/* round 108 #9 (owner): the same size as the GTIN note opposite */}
           <span style={{ ...px(lang === "ge" ? 139 : 446.2, baseTop(lang === "ge" ? 700.34 : 661.23, 13), lang === "ge" ? 560 : 270, 60), font: `13px ${HNW}`, lineHeight: "18px", color: "#111" }}>
             {t("Select the market(s) where your wine will be sold, and we’ll incorporate required regulatory information.")}</span>
@@ -4941,7 +4967,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               not done what it asks, the first Next only asks "are you sure?"
               and the second lets them through (owner #10). A "press the red
               button" note has no Next: the red button IS its next. */}
-          {guide >= 0 && GUIDE[guide] && !prev && (() => {
+          {/* 2026-09-28 (owner): never over the animated tutorial, even with
+              Guided mode on */}
+          {guide >= 0 && GUIDE[guide] && !prev && tut < 0 && (() => {
             const st: GuideStep = GUIDE[guide];
             const show = st.modal ? !!confirmModal : page === st.page && !confirmModal;
             if (!show) return null;

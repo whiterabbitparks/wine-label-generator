@@ -89,8 +89,8 @@ export async function POST(req: Request) {
   /* diagnostic dry run (owner 2026-09-07): returns the exact lifestyle
      prompt WITHOUT generating — proves whether charters+scenes reach the model */
   if ((body as { dryRun?: boolean }).dryRun) {
-    const { buildLifestylePrompt, dealScenarios } = await import("@/lib/marketing/engine");
-    const sc = dealScenarios(brief.seed, charters.scenes, 5, !brief.grape)[0];
+    const { buildLifestylePrompt, dealScenarios, grapeFamily } = await import("@/lib/marketing/engine");
+    const sc = dealScenarios(brief.seed, charters.scenes, 5, !grapeFamily(brief.wineColour))[0];
     const prompt = buildLifestylePrompt(brief, sc.text, sc.charter, true, sc.fromBoard);
     return new Response(JSON.stringify({ charters: { shots: charters.shots.length, scenes: charters.scenes.length, fromBoard: sc.fromBoard }, promptStart: prompt.slice(0, 900) }), { headers: { "Content-Type": "application/json" } });
   }

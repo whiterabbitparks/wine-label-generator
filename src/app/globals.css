@@ -1,3 +1,9 @@
 /* Global styles.
    The configurator UI styles will be transplanted VERBATIM from the original
    dist/configurator.html in the UI phase — do not re-author them in Tailwind. */
+
+/* 2026-09-28 (owner's iPad screenshots: text overlapping everywhere): iOS /
+   iPadOS Safari "text autosizing" enlarged SOME of the page's small type on
+   its own — the page is scaled to fit the screen, and Safari inflated the
+   text it judged too small. Text keeps exactly the size it is given. */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }

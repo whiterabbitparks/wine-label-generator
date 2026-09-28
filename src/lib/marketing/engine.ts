@@ -96,9 +96,54 @@ function glassWineShade(wineColour: string) {
 /* 2026-09-25 (owner, after several reports of red wine among white grapes:
    "if it can't be controlled, take that prompt out and never show grapes
    at all"): NO grapes in any image, whatever the wine or its variety. */
-export function grapeLine(_wineColour?: string, _grape?: string) {
-  void _wineColour; void _grape;
-  return "GRAPES — NON-NEGOTIABLE: NO grapes anywhere in the scene — no grape clusters, no bunches, no loose berries, no grapes on the table or in a bowl, no fruiting vines in focus. ";
+/* 2026-09-28 (owner: "ideal if grapes came back and worked — but rather no
+   grapes than a red wine among white grapes"): grapes are allowed again,
+   in the wine's own colour family — AND every finished scene is CHECKED by
+   a vision model (checkScene); a scene whose grapes or glass contradict the
+   wine is painted again from a grape-free scene (generateMarketingAssets).
+   An unknown wine colour still means no grapes at all. */
+export type GrapeFamily = "white" | "red" | "";
+export function grapeFamily(wineColour?: string): GrapeFamily {
+  const c = String(wineColour || "").toLowerCase();
+  return /white|amber|orange|თეთრ|ქარვ/.test(c) ? "white" : /red|ros|წითელ|ვარდ/.test(c) ? "red" : "";
+}
+export const NO_GRAPES = "GRAPES — NON-NEGOTIABLE: NO grapes anywhere in the scene — no grape clusters, no bunches, no loose berries, no grapes on the table or in a bowl, no fruiting vines in focus. ";
+export function grapeLine(wineColour?: string, _grape?: string) {
+  void _grape;
+  const fam = grapeFamily(wineColour);
+  if (fam === "white") return "GRAPES — NON-NEGOTIABLE: this wine is made from WHITE grapes. If any grapes appear anywhere in the frame they are WHITE-wine grapes ONLY — pale green to golden-yellow berries. NEVER a red, purple, blue or black grape anywhere, not one berry. ";
+  if (fam === "red") return "GRAPES — NON-NEGOTIABLE: this wine is made from RED grapes. If any grapes appear anywhere in the frame they are RED-wine grapes ONLY — deep purple-black to dark blue-purple berries. NEVER a green, yellow or golden grape anywhere, not one berry. ";
+  return NO_GRAPES;
+}
+
+/* THE CHECK (2026-09-28): a vision model reads the finished scene — the
+   grapes' colour and the wine in any glass — and says whether it fits the
+   wine. A failed check never ships the image (see the loop below). */
+export async function checkScene(img: string, wineColour: string): Promise<{ ok: boolean; why: string }> {
+  const key = process.env.OPENAI_API_KEY;
+  const fam = grapeFamily(wineColour);
+  if (!key || !img.startsWith("data:image/")) return { ok: true, why: "unchecked" };
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      signal: AbortSignal.timeout(40000),
+      body: JSON.stringify({
+        model: "gpt-4o", response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: 'Look at this wine photograph. Reply as JSON {"grapes":"none"|"green"|"dark"|"mixed","glass":"none"|"red"|"rose"|"white"|"amber"}. grapes = the colour of ANY grape berries visible anywhere (green = green/golden/yellow white-wine grapes; dark = red/purple/black/blue grapes; mixed = both kinds; none = no grapes). glass = the colour of the wine visible in any glass or being poured (none if no wine is visible outside the bottle).' },
+          { role: "user", content: [{ type: "image_url", image_url: { url: img, detail: "low" } }] },
+        ],
+      }),
+    });
+    if (!res.ok) return { ok: true, why: `check unavailable (${res.status})` };
+    const j = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+    const v = JSON.parse(j.choices?.[0]?.message?.content || "{}") as { grapes?: string; glass?: string };
+    const g = String(v.grapes || "none"), w = String(v.glass || "none");
+    const grapesBad = g !== "none" && (fam === "" || g === "mixed" || (fam === "white" && g === "dark") || (fam === "red" && g === "green"));
+    const c = String(wineColour || "").toLowerCase();
+    const glassBad = w !== "none" && ((/red/.test(c) && !/ros/.test(c) && (w === "white" || w === "amber")) || (/white/.test(c) && (w === "red" || w === "rose")) || (/amber|orange/.test(c) && (w === "red" || w === "rose")));
+    return { ok: !grapesBad && !glassBad, why: `grapes ${g}, glass ${w}` };
+  } catch { return { ok: true, why: "check failed" }; }
 }
 
 /* ---- closure ------------------------------------------------------- */
@@ -371,6 +416,10 @@ const SCENARIOS: [string, string][] = [
   ["crate", "the bottle leans against a wooden harvest crate, label to camera, a few grapes scattered around"],
 ];
 
+/* the generic scenes with no grapes and no vineyard in them — where a
+   rejected grape scene is painted again */
+const GRAPE_FREE = SCENARIOS.filter(([k]) => !["grapes", "crate", "terrace"].includes(k));
+
 export function buildLifestylePrompt(b: MarketingBrief, scenario: string, charter: string, hasShape: boolean, fromBoard = false, rules?: string[], others?: string[], hasBottlePhoto = false) {
   /* 2026-09-23 (owner: "labels look generated again — proportions and
      layout change; the bottle's shape drifts"): with the finished FRONT
@@ -482,9 +531,9 @@ export function dealScenarios(seed: number, pool: { text: string; charter: strin
   };
   /* round 93 #2: no known variety → no grape scene is ever dealt (board
      scenes included now — a grape scene with "no grapes" is nonsense) */
-  /* no grape scenes at all since 2026-09-25 (see grapeLine) */
-  void noGrapes;
-  const ok = (t: string) => !/grape|harvest|vendange|cluster/i.test(t);
+  /* no grape scenes at all since 2026-09-25 (see grapeLine) — and again
+     from 2026-09-28 only when the wine's colour is unknown */
+  const ok = (t: string) => !noGrapes || !/grape|harvest|vendange|cluster/i.test(t);
   const all: DealtScene[] = [
     ...shuffle(pool.filter((p) => ok(p.text))).map((p) => ({ text: p.text, fromBoard: true, charter: p.charter })),
     /* the old generic list (cellar, crate, sommelier…) read traditional —
@@ -666,15 +715,29 @@ export async function generateMarketingAssets(
   }
 
   /* round 71 #3 (owner went back to FIVE): five lifestyle images per set/batch */
-  const scenarios = dealScenarios(b.seed, scenes, 5 * (batch + 1), !b.grape).slice(batch * 5);
+  const scenarios = dealScenarios(b.seed, scenes, 5 * (batch + 1), !grapeFamily(b.wineColour)).slice(batch * 5);
   for (let i = 0; i < scenarios.length; i++) {
     send({ type: "progress", stage: `lifestyle ${i + 1}/${scenarios.length}` });
     try {
-      const img = await generateImageRawWithRetry({
-        prompt: buildLifestylePrompt(b, scenarios[i].text, scenarios[i].charter, !!shape, scenarios[i].fromBoard, rules,
-          scenarios.filter((_, j) => j !== i).map((x) => x.text), !!bottlePhoto),
-        references: (b.labelFirst && bottlePhoto ? [frontLabel, bottlePhoto] : [...(bottlePhoto ? [bottlePhoto] : []), frontLabel]).concat(shape ? [shape] : []), size: { w: 1024, h: 1024 },
-      });
+      const refs = (b.labelFirst && bottlePhoto ? [frontLabel, bottlePhoto] : [...(bottlePhoto ? [bottlePhoto] : []), frontLabel]).concat(shape ? [shape] : []);
+      const others = scenarios.filter((_, j) => j !== i).map((x) => x.text);
+      /* 2026-09-28: painted, CHECKED (grapes and glass against the wine) —
+         a failed check paints the image again from a grape-free scene with
+         the no-grapes rule; an image that still fails is never shipped */
+      let img = "";
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const grapeFree = attempt > 0;
+        const sc = grapeFree && /grape|harvest|vendange|cluster|vine/i.test(scenarios[i].text)
+          ? { text: GRAPE_FREE[(i + attempt) % GRAPE_FREE.length][1], charter: scenarios[i].charter, fromBoard: false }
+          : scenarios[i];
+        let prompt = buildLifestylePrompt(b, sc.text, sc.charter, !!shape, sc.fromBoard, rules, others, !!bottlePhoto);
+        if (grapeFree) prompt = prompt.replace(grapeLine(b.wineColour, b.grape), NO_GRAPES);
+        const cand = await generateImageRawWithRetry({ prompt, references: refs, size: { w: 1024, h: 1024 } });
+        const chk = await checkScene(cand, b.wineColour);
+        console.log(`[marketing] lifestyle ${i + 1} try ${attempt + 1}: ${chk.why}${chk.ok ? "" : " — REJECTED"}`);
+        if (chk.ok) { img = cand; break; }
+      }
+      if (!img) throw new Error("the scene kept contradicting the wine's colour");
       send({ type: "life", i, image: await sizeLifestyle(img, final), preview: await previewOf(img) });
     } catch (e) {
       /* one failed lifestyle image must not sink the set */
