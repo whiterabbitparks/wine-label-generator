@@ -513,6 +513,23 @@ export default function NewUI() {
   const tStage = (s: string) => (lang === "ge" ? s.replace("front shot", "წინა ფოტო").replace("back shot", "უკანა ფოტო").replace("lifestyle", "სურათი").replace("preparing", "მზადდება").replace("publishing", "ქვეყნდება") : s);
   const [dir, setDir] = useState(1);
   const [scale, setScale] = useState(1);
+  /* 2026-09-28 (owner: "the line changes thickness where the page meets the
+     margin" — Safari, a window wider than the page): the header and footer
+     rules are drawn in two pieces (the page's and the margins'), and at a
+     fractional page scale each piece fell between screen pixels and was
+     blurred on its own. Both pieces now sit on the SAME whole screen
+     pixels: one position and one thickness, rounded to device pixels. */
+  const [dpr, setDpr] = useState(1);
+  /* …and inside the page they could not: a page SHRUNK by a transform is
+     painted at its own size and then resampled, so no line in it can land
+     on whole pixels. The page is scaled with CSS `zoom` instead wherever
+     the browser has it (every current one) — laid out at its real size,
+     so the rules, the type and every line in it are drawn crisp. A browser
+     without zoom keeps the old transform. */
+  const [zoomOK, setZoomOK] = useState(false);
+  useEffect(() => { try { setZoomOK(CSS.supports("zoom", "1")); } catch { /* the transform stays */ } }, []);
+  const ruleH = Math.max(1, Math.round(scale * dpr)) / dpr;                  /* CSS px */
+  const ruleTop = (y: number) => Math.round((y * scale - ruleH / 2) * dpr) / dpr;   /* CSS px */
   const [arrowFly, setArrowFly] = useState(false);
 
   const [vision, setVision] = useState("");
@@ -1268,7 +1285,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   useEffect(() => {
     /* round 40 (owner): the whole active area at 80% — a single uniform
        transform, so internal alignment cannot shift */
-    const fit = () => setScale(Math.max(1, window.innerWidth / W) * 0.8);
+    const fit = () => { setScale(Math.max(1, window.innerWidth / W) * 0.8); setDpr(window.devicePixelRatio || 1); };
     fit(); window.addEventListener("resize", fit);
     return () => window.removeEventListener("resize", fit);
   }, []);
@@ -4240,27 +4257,27 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           footer are told apart by ONE 1px black rule each, drawn out here
           at window width so they stay exactly one device pixel at any
           page scale (the same weight as the folder mark's outline). */}
-      {/* the two rules run the whole width of the window. They are drawn
-          in a layer carrying the PAGE'S OWN transform, so the stretch in
-          the margins rasterises exactly like the stretch across the page
-          (the page redraws them on top of its own layers) */}
+      {/* the two rules run the whole width of the window: out here in plain
+          CSS px, inside the page on the very same device pixels (ruleTop /
+          ruleH), and the page redraws them on top of its own layers */}
       {(["left", "right"] as const).map((side) => (
         /* ROUND 113 #1 (owner): the gallery's veil goes over EVERYTHING,
            and these two rules run past the page into the window margins,
            where no veil inside the page box can reach them. They fade to
            the same 6 % the veil leaves of any black — so the rule reads
            identically inside the page and out in the margins. */
-        <div key={side} style={{ position: "absolute", [side]: 0, top: 0, width: `calc(50% - ${(W * scale) / 2}px)`, height: FOOT_RULE_Y * scale + 2, overflow: "hidden", pointerEvents: "none", opacity: gallery ? 0.06 : 1 }}>
-          <div style={{ position: "absolute", left: 0, top: 0, width: 4000, height: PAGE_H, transform: `scale(${scale})`, transformOrigin: "top left" }}>
-            <div style={{ position: "absolute", left: 0, top: HEADER_H - 0.5, width: 4000, height: 1, background: HAIRLINE }} />
-            <div style={{ position: "absolute", left: 0, top: FOOT_RULE_Y - 0.5, width: 4000, height: 1, background: HAIRLINE }} />
-          </div>
+        /* they reach 2 px under the page's edge (the page, drawn later,
+           covers them there with its own piece on the same pixels), so no
+           seam can open at a fractional edge */
+        <div key={side} style={{ position: "absolute", [side]: 0, top: 0, width: `calc(50% - ${(W * scale) / 2}px + 2px)`, height: FOOT_RULE_Y * scale + 4, overflow: "hidden", pointerEvents: "none", opacity: gallery ? 0.06 : 1 }}>
+          <div style={{ position: "absolute", left: 0, right: 0, top: ruleTop(HEADER_H), height: ruleH, background: HAIRLINE }} />
+          <div style={{ position: "absolute", left: 0, right: 0, top: ruleTop(FOOT_RULE_Y), height: ruleH, background: HAIRLINE }} />
         </div>
       ))}
       <div style={{ width: W * scale, height: PAGE_H * scale, position: "relative", margin: "0 auto" }}>
         {/* the page box paints no ground of its own: the bands above are
             the white, so the two hairlines are never covered */}
-        <div style={{ width: W, height: PAGE_H, transform: `scale(${scale})`, transformOrigin: "top left", position: "absolute", overflow: "hidden" }}>
+        <div style={{ width: W, height: PAGE_H, ...(zoomOK ? { zoom: scale } : { transform: `scale(${scale})`, transformOrigin: "top left" }), position: "absolute", overflow: "hidden" }}>
 
           {/* sliding zone: every layer carries its board AND its live
               content, so nothing pops in after the slide; slides move as
@@ -4332,8 +4349,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {/* ROUND 106: the header and footer rules again, over the pages
               (the boards paint their own ground over the ones behind the
               box) — one page unit, the folder mark passes in front */}
-          <div style={{ ...px(0, HEADER_H - 0.5, W, 1), background: HAIRLINE, zIndex: 13 }} />
-          <div style={{ ...px(0, FOOT_RULE_Y - 0.5, W, 1), background: HAIRLINE, zIndex: 13 }} />
+          <div style={{ ...px(0, ruleTop(HEADER_H) / scale, W, ruleH / scale), background: HAIRLINE, zIndex: 13 }} />
+          <div style={{ ...px(0, ruleTop(FOOT_RULE_Y) / scale, W, ruleH / scale), background: HAIRLINE, zIndex: 13 }} />
 
           {/* ROUND 71 #2 (owner): the folder mark, traced verbatim out of the
               artboard (two st4 paths: white fill, 0.75 black stroke) and
