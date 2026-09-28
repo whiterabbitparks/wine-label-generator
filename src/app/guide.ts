@@ -95,6 +95,12 @@ export const GUIDE: GuideStep[] = [
   { page: "options", at: { x: 137, y: 611.39 - 17, w: 1166, h: 34 }, side: "below",
     en: "Select the one you like best.",
     ge: "აირჩიე ის, რომელიც ყველაზე მეტად მოგწონს.", done: "selected", press: PRESS_SELECT },
+  /* 2026-09-28 (owner, his words): NEW TRY, under the middle label — the
+     note points at the button AND its "tries left" line, so it sits low
+     enough to clear the Select row and still ends above the bar */
+  { page: "options", at: { x: 548.7, y: 611.39 + 36, w: 342.9, h: 72 }, side: "right", optional: true,
+    en: "Each try paints 3 new versions of your label. Your earlier versions stay — use the arrows beside the labels to go back to them.",
+    ge: "ყოველი ცდა თქვენი ეტიკეტის 3 ახალ ვერსიას ხატავს. წინა ვერსიები რჩება — გვერდით ისრებით შეგიძლიათ გადახვიდეთ წინა ვერსიებზე." },
   { page: "options", at: RED, side: "above",
     en: "Press the red button to go on.",
     ge: "გასაგრძელებლად დააჭირე წითელ ღილაკს.", done: "page:backdetails", press: PRESS_RED },

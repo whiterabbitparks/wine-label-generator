@@ -84,3 +84,7 @@ John/Doe), MongoDB Atlas db `8k-labels`.
   remove with live gen. The "guided tour" switch under it chooses the
   game-style tour (src/app/guide.ts) instead of the demo walkthrough — a
   dev switch until the owner decides which tutorial ships.
+- The footer "fake payment" switch (2026-09-28) makes the site behave as if
+  paid (tries via /api/visitor/pay {fake:true} → visitor.fakeRuns, counted
+  as FREE under the daily budget; the Final Pack) — TEMPORARY until Paddle;
+  remove it (and FAKE_PAY handling) before launch.

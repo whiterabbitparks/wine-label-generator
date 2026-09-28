@@ -44,6 +44,7 @@ export type Visitor = {
   email?: string; verifiedAt?: string;
   emailRun?: number;          /* 1 once a confirmed e-mail granted its run */
   paidRuns?: number;
+  fakeRuns?: number;          /* TEMP (2026-09-28): tries "bought" with the footer's fake-payment switch */
   runsUsed?: number;
   orders?: Record<string, number>;
   marketing?: { day: string; n: number };
@@ -109,7 +110,7 @@ export async function setVisitorCookie(id: string) {
   jar.set(VISITOR_COOKIE, sign(id), { httpOnly: true, sameSite: "lax", path: "/", maxAge: 400 * 24 * 3600 });
 }
 
-export const runsAllowed = (v: Visitor, s: GuardSettings = GUARD_DEFAULTS) => s.freeRuns + (v.emailRun || 0) + (v.paidRuns || 0);
+export const runsAllowed = (v: Visitor, s: GuardSettings = GUARD_DEFAULTS) => s.freeRuns + (v.emailRun || 0) + (v.fakeRuns || 0) + (v.paidRuns || 0);
 export const runsLeft = (v: Visitor, s: GuardSettings = GUARD_DEFAULTS) => Math.max(0, runsAllowed(v, s) - (v.runsUsed || 0));
 
 /* the day's free spending, and the owner's e-mail at half of it */
@@ -154,7 +155,10 @@ export async function startRun(req: Request, order: string): Promise<Verdict> {
   if (!/^[a-z0-9-]{6,40}$/i.test(order)) return { ok: false, status: 400, code: "no-order", message: "missing run token" };
   if (v.orders?.[order] !== undefined) return { ok: true, visitor: v, admin };
   const db = await getDb();
-  const free = (v.runsUsed || 0) < s.freeRuns + (v.emailRun || 0);
+  /* fake-paid tries (the TEMP test switch) are spent like free ones —
+     under the daily free budget and the IP limit — so a stranger who finds
+     the switch costs no more than a free visitor */
+  const free = (v.runsUsed || 0) < s.freeRuns + (v.emailRun || 0) + (v.fakeRuns || 0);
   if (!admin) {
     if (runsLeft(v, s) <= 0) return v.verifiedAt
       ? { ok: false, status: 402, code: "need-pay", message: "every free run is used" }

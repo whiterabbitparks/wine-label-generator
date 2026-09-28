@@ -676,6 +676,12 @@ export default function NewUI() {
      (demo-fill.ts). Off: both forms are emptied. Remembered per browser;
      a page opened with it on arrives filled. */
   const [fillOn, setFillOn] = useState(false);
+  /* 2026-09-28 — TEMP DEV SWITCH (remove with Paddle): "fake payment". On:
+     the site behaves as if every payment went through (tries, the Final
+     Pack); off: as it will without a payment service — "coming soon".
+     An admin's payment always counts. Remembered per browser. */
+  const [fakePay, setFakePay] = useState(false);
+  useEffect(() => { try { setFakePay(localStorage.getItem("nui-fake-pay") === "1"); } catch { } }, []);
   /* 2026-09-23 — the GUIDED TOUR (guide.ts): its switch, and the step it
      stands on (-1 = not running) */
   const [guideOn, setGuideOn] = useState(false);
@@ -2126,7 +2132,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   }
   async function buyVersions() {
     try {
-      const r = await fetch("/api/visitor/pay", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pack: morePack }) });
+      const r = await fetch("/api/visitor/pay", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pack: morePack, fake: fakePay }) });
       /* bought → straight on to the try they came for */
       if (r.ok) { await refreshVis(); nextFromFront(dreams.length > 0); return; }
     } catch { /* said below */ }
@@ -3277,7 +3283,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         return (<>
           <span style={{ ...px(139, baseTop(149.08, 24), 600, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t("MORE TRIES")}</span>
           <span style={{ ...px(137.14, baseTop(183, 14), 640, 40), font: `italic 14px ${HNW}`, lineHeight: "18px", color: "#111", whiteSpace: "pre-line" }}>
-            {t("Each try paints 3 new versions of your label, one by each artist.\nYour earlier versions stay — the arrows beside the labels bring them back.")}
+            {t("Each try paints 3 new versions of your label.\nYour earlier versions stay — use the arrows beside the labels to go back to them.")}
           </span>
           {ROWS.map((row, i) => {
             const y = B0 + i * STEP;
@@ -4465,6 +4471,15 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               </span>
               <span style={{ font: `300 9px ${HNW}`, color: "#aaa", whiteSpace: "nowrap" }}>no limits</span>
             </button>
+            {/* 2026-09-28 — TEMP DEV SWITCH: behave as if paid (until Paddle) */}
+            <button aria-label="toggle fake payment"
+              onClick={() => { const v = !fakePay; setFakePay(v); try { localStorage.setItem("nui-fake-pay", v ? "1" : "0"); } catch { } }}
+              style={{ ...px(18, 816, 110, 16), ...ghost, display: "flex", alignItems: "center", columnGap: 6, textTransform: "none" }}>
+              <span style={{ width: 22, height: 12, borderRadius: 7, border: "1px solid #bbb", position: "relative", background: "#fff", boxSizing: "border-box", flex: "0 0 auto" }}>
+                <span style={{ position: "absolute", top: 1.5, left: fakePay ? 11.5 : 1.5, width: 7, height: 7, borderRadius: 4, background: fakePay ? "#3fd05e" : "#bbb", transition: "left 160ms" }} />
+              </span>
+              <span style={{ font: `300 9px ${HNW}`, color: "#aaa", whiteSpace: "nowrap" }}>fake payment</span>
+            </button>
             {/* 2026-09-23 (owner): the name is "8K.WINE ©", white on a black
                 block — the block's foot ON the header's rule, the same air
                 above and at the sides, its left edge on the page margin; the
@@ -4716,7 +4731,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     /* 2026-09-27 (owner): the walk-through's last note goes
                        once the red button is pressed */
                     if (guide >= 0) setGuide(-1);
-                    if (!paid) { if (requireAgree()) setPaid(true); }
+                    if (!paid) {
+                      if (requireAgree()) {
+                        /* TEMP: paid only with the fake-payment switch (or an admin) */
+                        if (fakePay || vis?.admin) setPaid(true);
+                        else { setWarn(t("Payments aren't connected yet — coming soon.")); setTimeout(() => setWarn(""), 5000); }
+                      }
+                    }
                     else proceedToPayment();
                   }
                 }}

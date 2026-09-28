@@ -319,7 +319,8 @@ export const UI_GE: Record<string, string> = {
   "Unlimited tries (admin)": "ცდები შეუზღუდავია (ადმინი)",
   "3 tries · 9 new versions": "3 ცდა · 9 ახალი ვერსია",
   "10 tries · 30 new versions": "10 ცდა · 30 ახალი ვერსია",
-  "Each try paints 3 new versions of your label, one by each artist.\nYour earlier versions stay — the arrows beside the labels bring them back.": "ყოველი ცდა თქვენი ეტიკეტის 3 ახალ ვერსიას ხატავს, თითოს — თითო არტისტი.\nწინა ვერსიები რჩება — ეტიკეტების გვერდით ისრებით დაუბრუნდებით.",
+  /* the owner's own words (2026-09-28) */
+  "Each try paints 3 new versions of your label.\nYour earlier versions stay — use the arrows beside the labels to go back to them.": "ყოველი ცდა თქვენი ეტიკეტის 3 ახალ ვერსიას ხატავს.\nწინა ვერსიები რჩება — გვერდით ისრებით შეგიძლიათ გადახვიდეთ წინა ვერსიებზე.",
   "Today's free tries are all used — come back tomorrow, or buy tries.": "დღევანდელი უფასო ცდები ამოიწურა — ხვალ დაბრუნდით, ან შეიძინეთ ცდები.",
   "3 new versions": "3 ახალი ვერსია",
   "9 new versions": "9 ახალი ვერსია",
