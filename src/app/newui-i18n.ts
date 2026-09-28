@@ -311,6 +311,16 @@ export const UI_GE: Record<string, string> = {
   "See how this pack was created": "ნახე როგორ შეიქმნა ეს პროექტი",
   /* 2026-09-27 (owner): NEW VERSIONS — the button, the e-mail popup, the pay page */
   "NEW VERSIONS": "ᲐᲮᲐᲚᲘ ᲕᲔᲠᲡᲘᲔᲑᲘ",
+  /* 2026-09-28 (owner): TRIES — ცდა */
+  "NEW TRY": "ᲐᲮᲐᲚᲘ ᲪᲓᲐ",
+  "MORE TRIES": "ᲓᲐᲛᲐᲢᲔᲑᲘᲗᲘ ᲪᲓᲔᲑᲘ",
+  "Tries left:": "დარჩენილი ცდები:",
+  "No tries left — 3 tries for $9": "ცდები ამოიწურა — 3 ცდა $9-ად",
+  "Unlimited tries (admin)": "ცდები შეუზღუდავია (ადმინი)",
+  "3 tries · 9 new versions": "3 ცდა · 9 ახალი ვერსია",
+  "10 tries · 30 new versions": "10 ცდა · 30 ახალი ვერსია",
+  "Each try paints 3 new versions of your label, one by each artist.\nYour earlier versions stay — the arrows beside the labels bring them back.": "ყოველი ცდა თქვენი ეტიკეტის 3 ახალ ვერსიას ხატავს, თითოს — თითო არტისტი.\nწინა ვერსიები რჩება — ეტიკეტების გვერდით ისრებით დაუბრუნდებით.",
+  "Today's free tries are all used — come back tomorrow, or buy tries.": "დღევანდელი უფასო ცდები ამოიწურა — ხვალ დაბრუნდით, ან შეიძინეთ ცდები.",
   "3 new versions": "3 ახალი ვერსია",
   "9 new versions": "9 ახალი ვერსია",
   "Each set of three is painted by artists and in layouts you haven't seen yet.": "ყოველ სამეულს ხატავენ არტისტები იმ განლაგებებით, რომლებიც ჯერ არ გინახავს.",

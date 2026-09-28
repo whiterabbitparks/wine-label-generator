@@ -579,7 +579,9 @@ export default function NewUI() {
   const [mailLink, setMailLink] = useState("");
   const [mailBusy, setMailBusy] = useState(false);
   /* the new versions' pay page: $9 for three, $19 for nine */
-  const [morePack, setMorePack] = useState<3 | 9>(3);
+  /* 2026-09-28 (owner): TRIES — one try = three new versions, one by each
+     artist; packs of 3 ($9) and 10 ($19), nothing deducted from the pack */
+  const [morePack, setMorePack] = useState<3 | 10>(3);
   /* ROUND 60 #1 (owner): each style column is its OWN mini-carousel —
      a variations press generates ONE new label of that style, dots under
      the label switch between the original (0) and its variations. */
@@ -2101,10 +2103,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       const r = await fetch("/api/visitor/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ order }) });
       if (r.ok) return true;
       const j = await r.json().catch(() => ({})) as { code?: string };
-      /* 2026-09-28 (owner): the e-mail step is gone for now */
+      /* 2026-09-28 (owner): the e-mail step is gone for now; no tries left
+         → the page that sells them */
+      if (j.code === "need-email" || j.code === "need-pay") { refreshVis(); go("more"); return false; }
       {
-        setWarn(t(j.code === "need-email" || j.code === "need-pay" ? "You've used your free labels for now."
-          : j.code === "free-paused" ? "Today's free labels are all used — come back tomorrow, or buy new versions."
+        setWarn(t(j.code === "free-paused" ? "Today's free tries are all used — come back tomorrow, or buy tries."
           : j.code === "ip-busy" ? "Too many new labels from this network this hour — try again a little later."
           : "Couldn't start — try again in a moment."));
         setTimeout(() => setWarn(""), 6000);
@@ -2113,10 +2116,19 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       return false;
     } catch { return true; /* offline check: the paint call itself is guarded */ }
   }
+  /* NEW TRY (owner, 2026-09-28): three more labels of the same wine, never
+     an artist in a layout already shown — they arrive as a new set; with no
+     try left, the page that sells them */
+  async function newTry() {
+    const st = await refreshVis();
+    if (st && !st.admin && st.runsLeft <= 0) { go("more"); return; }
+    nextFromFront(true);
+  }
   async function buyVersions() {
     try {
       const r = await fetch("/api/visitor/pay", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pack: morePack }) });
-      if (r.ok) { await refreshVis(); go("options", -1); return; }
+      /* bought → straight on to the try they came for */
+      if (r.ok) { await refreshVis(); nextFromFront(dreams.length > 0); return; }
     } catch { /* said below */ }
     setWarn(t("Payments aren't connected yet — coming soon."));
     setTimeout(() => setWarn(""), 5000);
@@ -3228,19 +3240,45 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {/* the arrows between the sets, left and right of the labels */}
           {sets.length > 1 && setIdx > 0 && chevron("previous versions", OPT_FRAMES[0].x - 40, "13,3 5,11 13,19", setIdx - 1)}
           {sets.length > 1 && setIdx < sets.length - 1 && chevron("next versions", OPT_FRAMES[2].x + OPT_W + 40 - 12, "5,3 13,11 5,19", setIdx + 1)}
-
+          {/* 2026-09-28 (owner): NEW TRY under the middle label, where NEW
+              VERSIONS stood — black while a try is waiting, white when the
+              next one must be bought; the line under it says which */}
+          {(() => {
+            const NT = { x: OPT_FRAMES[1].x + 0.2, y: SEL_CY + 36, w: OPT_W, h: 34.3 };
+            const left = vis?.admin ? Infinity : (vis?.runsLeft ?? 1);
+            const ready = dreams.length > 0 && left > 0;
+            const note = !dreams.length ? "" : vis?.admin ? t("Unlimited tries (admin)")
+              : left > 0 ? `${t("Tries left:")} ${left}` : t("No tries left — 3 tries for $9");
+            return (<>
+              {dreams.length > 0 ? (
+                <button onClick={() => newTry()}
+                  style={{ ...px(NT.x, NT.y, NT.w, NT.h), cursor: "pointer", font: `700 ${BAR_FS}px ${HNW}`, letterSpacing: 0.3, background: ready ? "#111" : "#fff", color: ready ? "#fff" : "#111", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 3, transition: `background 240ms ${EASE}, color 240ms ${EASE}` }}>
+                  {t("NEW TRY")}</button>
+              ) : (
+                <div style={{ ...px(NT.x, NT.y, NT.w, NT.h), background: "#ECECEA", color: "#B3B1A8", font: `700 ${BAR_FS}px ${HNW}`, letterSpacing: 0.3, display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 3 }}>
+                  {t("NEW TRY")}</div>
+              )}
+              {note && (
+                <span style={{ ...px(NT.x, baseTop(NT.y + NT.h + 17, 12), NT.w, 14), font: `12px ${HNW}`, lineHeight: "12px", color: "#6b6a60", textAlign: "center", display: "block", whiteSpace: "nowrap" }}>{note}</span>
+              )}
+            </>);
+          })()}
         </>);
       }
       case "more": {
         /* 2026-09-27 (owner): NEW VERSIONS, bought — the Final Pack's price
            list alone in the middle of an empty page: two rows (one choice),
-           the glass to clink below, and the red button turned into Pay */
+           the glass to clink below, and the red button turned into Pay.
+           2026-09-28 (owner): sold as TRIES — 3 for $9, 10 for $19 */
         const L = 480, R = 960, B0 = 372, STEP = 34.3;
-        const ROWS: { n: 3 | 9; price: number; label: string }[] = [
-          { n: 3, price: 9, label: "3 new versions" }, { n: 9, price: 19, label: "9 new versions" },
+        const ROWS: { n: 3 | 10; price: number; label: string }[] = [
+          { n: 3, price: 9, label: "3 tries · 9 new versions" }, { n: 10, price: 19, label: "10 tries · 30 new versions" },
         ];
         return (<>
-          <span style={{ ...px(139, baseTop(149.08, 24), 600, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t("NEW VERSIONS")}</span>
+          <span style={{ ...px(139, baseTop(149.08, 24), 600, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t("MORE TRIES")}</span>
+          <span style={{ ...px(137.14, baseTop(183, 14), 640, 40), font: `italic 14px ${HNW}`, lineHeight: "18px", color: "#111", whiteSpace: "pre-line" }}>
+            {t("Each try paints 3 new versions of your label, one by each artist.\nYour earlier versions stay — the arrows beside the labels bring them back.")}
+          </span>
           {ROWS.map((row, i) => {
             const y = B0 + i * STEP;
             return (
@@ -4855,7 +4893,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               sit truly midway between the selection row and the bar line */}
           {/* round 76 #2: checkout prints its own gate message under the
               payment button — this one would be the second copy */}
-          {warn && thick !== null && page !== "checkout" && (
+          {warn && thick !== null && page !== "checkout" && page !== "more" && (
             <span style={{ ...px(0, 700, W, 16), font: `13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block", zIndex: 7, position: "absolute" }}>{warn}</span>
           )}
 

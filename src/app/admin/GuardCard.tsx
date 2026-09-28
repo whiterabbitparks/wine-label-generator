@@ -17,7 +17,7 @@ const LABELS: Record<string, string> = {
   ipRunsPerHour: "New free runs one network may start in an hour",
   marketingPerDay: "Marketing runs one visitor may start a day",
   paintsPerRun: "Paintings one run may make (3 columns + retries)",
-  freeRuns: "Free runs of three every visitor starts with (1 at launch — raise it while people test)",
+  freeRuns: "Free TRIES every visitor starts with — one try = 3 new versions (1 at launch — raise it while people test)",
 };
 const small = { fontSize: 11.5, color: "#6b6a60" } as React.CSSProperties;
 
