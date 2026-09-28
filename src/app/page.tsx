@@ -3558,13 +3558,16 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               49 #4: greyed and inert without a real capsule. */}
           {/* 2026-09-28 (owner, later): the bar is BACK, as it was — the
               wheel runs white → pure colour, the bar lightens/darkens it */}
-          <div style={{ ...px(COLS_X[4], 368 + B_DY, 191.9, 175), opacity: wheelOff ? 0.3 : 1, filter: wheelOff ? "grayscale(1)" : "none", pointerEvents: wheelOff ? "none" : "auto", transition: `opacity 240ms ${EASE}` }}>
+          {/* 2026-09-28 (owner: a drag that left the wheel painted it with
+              the browser's blue SELECTION): nothing here can be selected or
+              dragged as an image — the pointer only picks */}
+          <div style={{ ...px(COLS_X[4], 368 + B_DY, 191.9, 175), userSelect: "none", WebkitUserSelect: "none", opacity: wheelOff ? 0.3 : 1, filter: wheelOff ? "grayscale(1)" : "none", pointerEvents: wheelOff ? "none" : "auto", transition: `opacity 240ms ${EASE}` }}>
             {wheelSrc && (
               /* eslint-disable-next-line @next/next/no-img-element */
-              <img src={wheelSrc} alt="" style={{ ...px(27.35, 0, 137.2, 137.2), pointerEvents: "none" }} />
+              <img src={wheelSrc} alt="" draggable={false} style={{ ...px(27.35, 0, 137.2, 137.2), pointerEvents: "none" }} />
             )}
             <div style={{ ...px(27.35, 0, 137.2, 137.2), cursor: "crosshair", borderRadius: 69 }}
-              onPointerDown={(e) => { dragRef.current = "wheel"; e.currentTarget.setPointerCapture(e.pointerId); wheelPick(e.clientX, e.clientY, e.currentTarget); }}
+              onPointerDown={(e) => { e.preventDefault(); dragRef.current = "wheel"; e.currentTarget.setPointerCapture(e.pointerId); wheelPick(e.clientX, e.clientY, e.currentTarget); }}
               onPointerMove={(e) => { if (dragRef.current === "wheel") wheelPick(e.clientX, e.clientY, e.currentTarget); }}
               onPointerUp={() => { dragRef.current = ""; }}>
               <span style={{ position: "absolute", left: `${wheel.x * 100}%`, top: `${wheel.y * 100}%`, transform: "translate(-50%,-50%)", width: 15.2, height: 15.2, borderRadius: 8, background: "transparent", border: `1.5px solid ${(wheel.rgb[0] + wheel.rgb[1] + wheel.rgb[2]) / 3 < 90 ? "#fff" : "#111"}`, pointerEvents: "none", boxSizing: "border-box" }} />
@@ -3572,7 +3575,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             {/* horizontal capsule: white LEFT → black RIGHT */}
             <div style={{ ...px(27.63, 157, 136.64, 15), borderRadius: 7.5, background: "linear-gradient(90deg, #fff, #000)", pointerEvents: "none" }} />
             <div style={{ ...px(19.6, 148.5, 152, 32), cursor: "grab" }}
-              onPointerDown={(e) => { dragRef.current = "shade"; e.currentTarget.setPointerCapture(e.pointerId); }}
+              onPointerDown={(e) => { e.preventDefault(); dragRef.current = "shade"; e.currentTarget.setPointerCapture(e.pointerId); }}
               onPointerMove={(e) => {
                 if (dragRef.current !== "shade") return;
                 const r = e.currentTarget.getBoundingClientRect();
