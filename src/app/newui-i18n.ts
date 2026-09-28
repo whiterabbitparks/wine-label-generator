@@ -101,6 +101,8 @@ export const SVG_GE: Record<string, string> = {
   "BACK LABEL DESIGN": "ᲣᲙᲐᲜᲐ ᲔᲢᲘᲙᲔᲢᲘᲡ ᲓᲘᲖᲐᲘᲜᲘ",
   /* bottle */
   "BOTTLE": "ᲑᲝᲗᲚᲘ",
+  "BOTTLE DETAILS": "ᲑᲝᲗᲚᲘᲡ ᲓᲔᲢᲐᲚᲔᲑᲘ",
+  "Choose your bottle’s shape, glass and closure,\nand we’ll show your label on it as it will look in real life.": "აირჩიეთ ბოთლის ფორმა, მინა და თავსახური — და გაჩვენებთ, როგორ გამოჩნდება თქვენი ეტიკეტი ბოთლზე რეალურად.",
   "Bottle Type": "ბოთლის ტიპი",
   "Bottle Color": "ბოთლის ფერი",
   "Closure Type": "საცობის ტიპი",

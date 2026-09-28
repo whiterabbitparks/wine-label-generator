@@ -177,7 +177,7 @@ const CIRCLE_X = STEPS.map((s2) => s2.x);
 /* the pages whose title is drawn big (round 63) */
 const PAGE_TITLE: Partial<Record<PageKey, string>> = {
   options: "FRONT LABEL OPTIONS", backdesign: "BACK LABEL DESIGN",
-  bottle: "BOTTLE", assets: "MARKETING ASSETS", checkout: "FINAL PACK",
+  bottle: "BOTTLE DETAILS", assets: "MARKETING ASSETS", checkout: "FINAL PACK",
 };
 /* 2026-09-23 (owner): where the red SKIP beside the title leads */
 const SKIP_TO: Partial<Record<PageKey, PageKey>> = {
@@ -253,14 +253,18 @@ const PAGE_SLICES: Partial<Record<PageKey, Slice[]>> = {
     { y1: 586, delay: 0 },
     { y0: 586, delay: 70 },
   ],
-  /* round 48: FIVE option columns — cuts ride the new dividers */
+  /* round 48: FIVE option columns — cuts ride the new dividers.
+     2026-09-28: the title and its line slide as ONE strip above them (the
+     line crosses three columns and would come in cut to pieces); the grid
+     starts at 243.3 (B_DY), the strip ends 18 above it */
   bottle: [
-    { x1: 342.9, delay: 0 },
-    { x0: 342.9, x1: 534.8, delay: 60 },
-    { x0: 534.8, x1: 726.7, delay: 120 },
-    { x0: 726.7, x1: 918.6, delay: 180 },
-    { x0: 918.6, x1: 1110.5, delay: 240 },
-    { x0: 1110.5, delay: 300 },
+    { y1: 225, delay: 0 },
+    { y0: 225, x1: 342.9, delay: 0 },
+    { y0: 225, x0: 342.9, x1: 534.8, delay: 60 },
+    { y0: 225, x0: 534.8, x1: 726.7, delay: 120 },
+    { y0: 225, x0: 726.7, x1: 918.6, delay: 180 },
+    { y0: 225, x0: 918.6, x1: 1110.5, delay: 240 },
+    { y0: 225, x0: 1110.5, delay: 300 },
   ],
 };
 /* ROUND 94 #2 (owner missed the parallax): the slice cascade is BACK. The
@@ -368,7 +372,7 @@ const TAP = {
      blue re-layout); column 3's centre is 960 + 342.9/2 */
   varBtn: [1131.45, 582], dot0: [1120.25, 516.85], dot1: [1142.25, 516.85],
   /* the bottle page moved (2026-09-28) — these follow its own numbers */
-  wheel: [1110.54 + 27.35 + 0.05365 * 137.2, 368 + ((68.57 + 754.07) / 2 - (171.71 + 583.41) / 2) + 0.33754 * 137.2],
+  wheel: [1110.54 + 27.35 + 0.05365 * 137.2, 368 + (655 - 583.41) + 0.33754 * 137.2],
 } as const;
 /* the wheel's colour at angle `a` (radians) and radius r (0 centre → 1 rim).
    2026-09-28 (owner, last): no black rim — a small pure-WHITE core, then
@@ -410,7 +414,7 @@ function capPreset(wine: string): { wheel: { x: number; y: number; rgb: number[]
    0 = white, 0.5 = the wheel's pick itself, 1 = black. Its knob, in page
    units: */
 const SHADE_X = (v: number) => 1110.54 + 19.6 + 14.69 + v * 121.64;
-const SHADE_Y = 368 + ((68.57 + 754.07) / 2 - (171.71 + 583.41) / 2) + 148.5 + 16;
+const SHADE_Y = 368 + (655 - 583.41) + 148.5 + 16;
 function shadeMix(rgb: number[], t: number) {
   const m = (v: number) => t < 0.5 ? Math.round(v + (255 - v) * (1 - t * 2)) : Math.round(v * (1 - (t - 0.5) * 2));
   return rgb.map(m);
@@ -418,11 +422,16 @@ function shadeMix(rgb: number[], t: number) {
 /* 2026-09-28 (owner): the bottle page's five choice columns come FIRST
    and the bottle's silhouette LAST; the whole grid sits in the page's
    middle (its centre on (68.57 + 754.07) / 2 — it used to ride 33.76 high) */
-const B_DY = (68.57 + 754.07) / 2 - (171.71 + 583.41) / 2;
+/* 2026-09-28 (owner, later: "BOTTLE DETAILS", a line under the title, the
+   sections lower — not too close to the bar): the grid's foot on y655,
+   the SAME bottom line as the front label details page (VIS_FOOT) */
+const B_DY = 655 - 583.41;
 /* (2026-09-28, later, owner: "put the bottle section back where it was")
    — the silhouette FIRST again, the grid stays centred */
 const B_COLS = [342.86, 534.78, 726.7, 918.62, 1110.54];
 const B_SIL = { x0: 137.14, x1: 342.86 };
+/* the silhouette cell's grey (2026-09-28: lighter, was #E6E6E6) */
+const B_CELL = "#F2F2F2";
 const BRING = (ci: number, row: number) => [B_COLS[ci] + 43.2, 283.57 + B_DY + row * 29.8] as [number, number];
 
 /* round 52 #3: placeholder terms text — long enough to need the scroll */
@@ -832,7 +841,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const g = cv.getContext("2d"); if (!g) return;
     g.clearRect(0, 0, 800, 1600);
     /* clear glass shows the cell's own grey through it (owner, 2026-09-28) */
-    g.fillStyle = bottle.color === "Olive Green" ? "rgb(182, 194, 158)" : bottle.color === "Amber" ? "rgb(206, 180, 140)" : "#E6E6E6";
+    /* 2026-09-28 (owner, later): the tinted glass at HALF its old strength,
+       over the cell's lighter grey; clear glass = the cell itself */
+    g.fillStyle = bottle.color === "Olive Green" ? "rgba(182, 194, 158, 0.5)" : bottle.color === "Amber" ? "rgba(206, 180, 140, 0.5)" : B_CELL;
     for (let y = scan.top; y <= scan.bottom; y++) {
       const [l, r] = scan.spans[y] || [0, -1];
       if (r - l > 1) g.fillRect(l, y, r - l + 1, 1);
@@ -3553,6 +3564,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             .concat(["No Capsule"]);
         return (<>
           {/* every column, the frame and its pluses are drawn live */}
+          {/* 2026-09-28 (owner): the line under the title, as the other
+              detail pages have it */}
+          <span style={{ ...px(137.14, baseTop(183, 14), 600, 40), font: `italic 14px ${HNW}`, lineHeight: "18px", color: "#111", whiteSpace: "pre-line" }}>
+            {t("Choose your bottle’s shape, glass and closure,\nand we’ll show your label on it as it will look in real life.")}
+          </span>
           {dashGrid(137.14, 171.71 + B_DY, 1302.86 - 137.14, 583.41 - 171.71, B_COLS, "bgrid")}
           {colHead(0, "Wine Color")}
           {["Red", "White", "Amber", "Rosé"].map((c, i) => optRow(0, i, c, wineColor === c, () => setWineColor(c)))}
@@ -3672,7 +3688,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               {/* 2026-09-28 (owner): the cell on a light 10 % grey, so a white
                   capsule shows; the glass painted inside the silhouette; the
                   line drawing laid over both (multiply) */}
-              <div style={{ ...px(B_SIL.x0 + 0.5, 171.71 + B_DY + 0.5, B_SIL.x1 - B_SIL.x0 - 1, 583.41 - 171.71 - 1), background: "#E6E6E6", pointerEvents: "none" }} />
+              <div style={{ ...px(B_SIL.x0 + 0.5, 171.71 + B_DY + 0.5, B_SIL.x1 - B_SIL.x0 - 1, 583.41 - 171.71 - 1), background: B_CELL, pointerEvents: "none" }} />
               <div style={{ ...px(SIL_X, SIL_Y, 201.6, 407.4), overflow: "hidden", pointerEvents: "none" }}>
                 <canvas ref={bodyCanvasRef} width={800} height={1600}
                   style={{ position: "absolute", left: xoff - SIL_X, top: 0, width: 800 * s, height: 407.4 }} />
