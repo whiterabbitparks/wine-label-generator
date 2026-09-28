@@ -85,6 +85,19 @@ const ORDER = ["welcome", "vision", "loader", "options", "backdetails", "backdes
      an index of everyone who trained a model, and a page each. They are
      not wizard steps: no progress bar, and the red button walks back. */
   "artists", "artist"] as const;
+/* 2026-09-28 (owner #7): NEW TRY names the selected label's artist —
+   "M. Kvashilava" / „მ. კვაშილავა" (Georgian in Mtavruli on the button) */
+const ARTIST_GE: Record<string, string> = {
+  "Mariam Kvashilava": "მარიამ კვაშილავა", "Levan Amashukeli": "ლევან ამაშუკელი",
+  "Giorgi Akhuashvili": "გიორგი ახუაშვილი", "Dachi Mindadze": "დაჩი მინდაძე",
+};
+const mtavruli = (s: string) => s.replace(/[\u10D0-\u10FA]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0x1C90 - 0x10D0));
+function artistShort(name: string, lang: "en" | "ge") {
+  const full = lang === "ge" ? ARTIST_GE[name] || name : name;
+  const [first, ...rest] = full.split(" ");
+  const short = rest.length ? `${first[0]}. ${rest.join(" ")}` : full;
+  return lang === "ge" ? mtavruli(short) : short.toUpperCase();
+}
 /* round 38 #1: crown caps exist only on these bottles */
 const CROWN_TYPES = ["Burgundy", "Sparkling", "Alsace / Rhine"];
 /* round 38 #2: label anchors from the owner's positioning charts (same
@@ -364,7 +377,7 @@ const DEMO_SHADE = 0.6;
 const TAP = {
   visionBox: [250, 400], width: [237, 650], height: [410, 650],   /* round 108 #1: the size row moved left */
   firstField: [1060, 279],          /* round 76 #3: on "GRAND VIN" itself */
-  optSelect: [692.3, 540 + (754.18 - 540) / 3],   /* 2026-09-28: ON the Select ring, column 2 (the row's upper-third place) */
+  optSelect: [692.3, (539.4 + 647.39) / 2],   /* 2026-09-28: ON the Select ring, column 2 (halfway between a 110×80 label's foot and NEW TRY) */
   descBox: [250, 265], barcode: [360, 468], qrBtn: [874.5, 467],
   market: [873.5, 670], eu: [873, 330], us: [873, 355],   /* the dropdown's rows are 25 apart */
   backFirst: [1050, 212],            /* round 73 #1: up to the details */
@@ -430,6 +443,8 @@ const B_DY = 655 - 583.41;
    — the silhouette FIRST again, the grid stays centred */
 const B_COLS = [342.86, 534.78, 726.7, 918.62, 1110.54];
 const B_SIL = { x0: 137.14, x1: 342.86 };
+/* 2026-09-28 (owner): the bottle page's "Upload Another Label" is off */
+const OWN_LABEL_UPLOAD = false;
 /* the silhouette cell's grey (2026-09-28: lighter, was #E6E6E6) */
 const B_CELL = "#F2F2F2";
 const BRING = (ci: number, row: number) => [B_COLS[ci] + 43.2, 283.57 + B_DY + row * 29.8] as [number, number];
@@ -519,7 +534,9 @@ export default function NewUI() {
   useEffect(() => { try { const l = localStorage.getItem("nui-lang"); if (l === "ge") setLang("ge"); } catch { } }, []);
   const pickLang = (l: "en" | "ge") => { setLang(l); try { localStorage.setItem("nui-lang", l); } catch { } };
   const t = (s: string) => (lang === "ge" ? UI_GE[s] || SVG_GE[s] || s : s);
-  const tStage = (s: string) => (lang === "ge" ? s.replace("front shot", "წინა ფოტო").replace("back shot", "უკანა ფოტო").replace("lifestyle", "სურათი").replace("preparing", "მზადდება").replace("publishing", "ქვეყნდება") : s);
+  /* 2026-09-28 (owner #10): the progress line says "front view" / "back
+     view", not "shot" (the stage keys themselves are unchanged) */
+  const tStage = (s: string) => (lang === "ge" ? s.replace("front shot", "წინა ხედი").replace("back shot", "უკანა ხედი").replace("lifestyle", "სურათი").replace("preparing", "მზადდება").replace("publishing", "ქვეყნდება") : s.replace("front shot", "front view").replace("back shot", "back view"));
   const [dir, setDir] = useState(1);
   const [scale, setScale] = useState(1);
   /* 2026-09-28 (owner: "the line changes thickness where the page meets the
@@ -563,7 +580,7 @@ export default function NewUI() {
   };
   /* THE GUARD's word on this browser (server: src/lib/guard.ts) — how many
      runs of three are left, whether the e-mail is confirmed */
-  const [vis, setVis] = useState<{ runsLeft: number; verified: boolean; admin: boolean; email: string; paused: boolean } | null>(null);
+  const [vis, setVis] = useState<{ runsLeft: number; runsUsed?: number; verified: boolean; admin: boolean; email: string; paused: boolean } | null>(null);
   const refreshVis = async () => {
     try {
       const r = await fetch("/api/visitor", { cache: "no-store" });
@@ -636,6 +653,18 @@ export default function NewUI() {
   /* ROUND 54 #2: pre-generation confirmation popups — a run starts only
      after the customer reviews everything that shapes the result */
   const [confirmModal, setConfirmModal] = useState<"" | "labels" | "assets">("");
+  /* the popup's try line reads the tries fresh (2026-09-28) */
+  useEffect(() => { if (confirmModal === "labels") refreshVis(); }, [confirmModal]);   // eslint-disable-line react-hooks/exhaustive-deps
+  /* 2026-09-28 (owner #9: "I click in one place and the wheel marks another"
+     — Safari): inside the zoomed page, Safari reports an element's box in
+     UNZOOMED numbers, so a pick measured against it landed elsewhere. A
+     pointer is now turned into PAGE units against the page's outer box,
+     which lies outside the zoom and is right in every browser. */
+  const pageWrapRef = useRef<HTMLDivElement | null>(null);
+  const toPage = (clientX: number, clientY: number) => {
+    const r = pageWrapRef.current?.getBoundingClientRect();
+    return r ? { x: (clientX - r.left) / scale, y: (clientY - r.top) / scale } : { x: 0, y: 0 };
+  };
   /* round 93 #15/#16: the gallery — big picture, arrows, ✕, Save inside */
   /* `labels` (2026-09-28, owner: "gallery mode should have arrows to switch
      between label versions"): opened from the labels page the gallery holds
@@ -718,13 +747,35 @@ export default function NewUI() {
     if (!v) { setGuide(-1); return; }
     if (pageNow.current !== "welcome") { const k = GUIDE.findIndex((g) => g.page === pageNow.current && !g.modal); if (k >= 0) setGuide(k); }
   };
-  /* 2026-09-28 (owner): GUIDED MODE is the header's switch — on by default
-     for a first visit, then as the visitor left it */
+  /* 2026-09-28 (owner): GUIDED MODE is the header's switch, as the visitor
+     left it. (later, owner #13): on a FIRST visit, once the page has fully
+     loaded, the switch turns itself on and a note under it says what it is
+     for; four seconds later the note goes and the switch turns off again —
+     unless the visitor started the walk-through meanwhile */
+  const [guideHint, setGuideHint] = useState(false);
+  const guideNow = useRef(-1);
+  useEffect(() => { guideNow.current = guide; }, [guide]);
   useEffect(() => {
+    let first = false;
     try {
       const g = localStorage.getItem("nui-guide");
-      setGuideOn(g === null ? !localStorage.getItem("nui-walked") : g === "1");
-    } catch { setGuideOn(true); }
+      first = g === null;
+      setGuideOn(g === "1");
+    } catch { }
+    if (!first) return;
+    let t1 = 0, t2 = 0;
+    const start = () => {
+      t1 = window.setTimeout(() => {
+        setGuideOn(true); setGuideHint(true);
+        t2 = window.setTimeout(() => {
+          setGuideHint(false);
+          if (guideNow.current < 0) { setGuideOn(false); try { localStorage.setItem("nui-guide", "0"); } catch { } }
+          else { try { localStorage.setItem("nui-guide", "1"); } catch { } }
+        }, 4000);
+      }, 700);
+    };
+    if (document.readyState === "complete") start(); else window.addEventListener("load", start, { once: true });
+    return () => { window.clearTimeout(t1); window.clearTimeout(t2); window.removeEventListener("load", start); };
   }, []);
   const fillDetails = (on: boolean) => {
     if (on) { const r = randomDetails(); setF((m) => ({ width: m.width || "110", height: m.height || "80", ...r.front })); setB(r.back); setGtin(r.gtin); }
@@ -1500,7 +1551,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   useEffect(() => {
     if (tut >= 0) return;
     const hasAny = dreams.length > 0 || !!vision.trim() || Object.entries(f).some(([k, v]) => k !== "width" && k !== "height" && !!(v || "").trim());
-    if (!hasAny || restoringRef.current) return;
+    if (!hasAny || restoringRef.current || packDoneRef.current) return;
     /* 2026-09-28 (owner: "it still opens filled in and never asks"): the
        order's time moves only when the order CHANGES — merely opening the
        page (which restores it) used to restart the hour every visit */
@@ -2087,6 +2138,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     /* 2026-09-28 (owner): SELECT only marks it — the flight into the folder
        plays when the red button is pressed */
     void dv; void g;
+    /* 2026-09-28 (owner #5): pressed again, the choice is undone */
+    if (selected === fi && selSet === setIdx) { setSelected(-1); return; }
     setSelected(fi); setSelSet(setIdx); setWarn("");
   };
   /* …and a Final Pack reached any other way (the bar) counts them saved too */
@@ -2147,10 +2200,18 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   /* NEW TRY (owner, 2026-09-28): three more labels of the same wine, never
      an artist in a layout already shown — they arrive as a new set; with no
      try left, the page that sells them */
+  /* 2026-09-28 (owner #7): with a label SELECTED, the new try paints three
+     new versions all by THAT label's artist */
+  const selectedArtist = (): { id: string; name: string } | null => {
+    const d = selected >= 0 ? sets[selSet]?.[selected] : undefined;
+    const p2 = d?.artist ? painters.find((a) => a.name === d.artist) : undefined;
+    return p2 ? { id: p2.id, name: p2.name } : null;
+  };
   async function newTry() {
     const st = await refreshVis();
     if (st && !st.admin && st.runsLeft <= 0) { go("more"); return; }
-    nextFromFront(true);
+    const who = selectedArtist();
+    nextFromFront(true, who ? [who.id] : undefined);
   }
   async function buyVersions() {
     try {
@@ -2173,7 +2234,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     else if (r?.ok && j.link) { setMailNote("test"); setMailLink(j.link); }
     else setMailNote(j.error || "mail-down");
   }
-  async function nextFromFront(append = false) {
+  async function nextFromFront(append = false, onlyArtists?: string[]) {
     /* owner #14: regenerate ONLY when inputs changed */
     if (!append && dreams.length && frontSig === sigFront()) { go("options"); return; }
     /* only the details changed: the SAME paintings in the same templates,
@@ -2213,7 +2274,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const genT0 = Date.now();   /* round 46: feed the loader's REAL average */
     /* round 84: ONE payload builder — this copy still carried the demo
        fallback that round 78 removed from buildDreamPayload */
-    const { data, aspectKey, width, height, artists } = buildDreamPayload();
+    const { data, aspectKey, width, height, artists: picked } = buildDreamPayload();
+    const artists = onlyArtists || picked;
     const one = async (style: string): Promise<Dream> => {
       /* round 56 #3 (TEMP dev switch): fake the run with existing art */
       if (!liveGenRef.current) {
@@ -2366,6 +2428,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
   /* round 18 #4: ONE delivery ZIP named after the wine — labels + fonts,
      marketing assets, sample contract (TEMP free until payments exist) */
+  /* 2026-09-28 (owner #12): once the Final Pack is downloaded the order is
+     DONE — nothing of it is kept in the browser, and the site starts afresh
+     (a moment after the download, so the browser has saved the file) */
+  const packDoneRef = useRef(false);
   async function proceedToPayment() {
     /* round 85 #5: no "Packing…" line — it flashed behind the folder mark */
     try {
@@ -2389,7 +2455,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       const u = URL.createObjectURL(await r.blob());
       const a = document.createElement("a");
       a.href = u; a.download = `${(f.wine || "Wine").replace(/[^\w]+/g, "_")}.zip`; a.click();
-      setTimeout(() => URL.revokeObjectURL(u), 1500);
+      packDoneRef.current = true;
+      try { localStorage.removeItem("nui-order"); localStorage.removeItem("nui-product-code"); } catch { }
+      setTimeout(() => { URL.revokeObjectURL(u); window.location.replace("/"); }, 2500);
     } catch { alert("download failed — try again"); }
   }
 
@@ -2628,8 +2696,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const OPT_TOP = 290, OPT_BOT = 540, OPT_W = 342.9;   /* round 98 #1: where the labels sit */
   const BD_AREA = { x: 548.6, y: 171.5, w: 342.9, h: 342.9 };
 
-  const wheelPick = (clientX: number, clientY: number, el: HTMLElement) => {
-    const r = el.getBoundingClientRect();
+  const wheelPick = (clientX: number, clientY: number, _el: HTMLElement) => {
+    void _el;
+    /* the wheel's square in page units (the bottle page's last column) */
+    const q = toPage(clientX, clientY), WX = 1110.54 + 27.35, WY = 368 + B_DY;
+    const r = { left: WX, top: WY, width: 137.2, height: 137.2 };
+    clientX = q.x; clientY = q.y;
     setWheel(wheelAt((clientX - r.left) / r.width, (clientY - r.top) / r.height));
   };
   /* the capsule colour — the wheel's pick, lightened or darkened by the bar */
@@ -3121,17 +3193,19 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           </div>
           {/* round 24 #4: phrase centred on the glass axis, dots on their own
               row below, note one more row down */}
-          <span style={{ ...px(0, 466, W, 20), font: `15px ${HNW}`, textAlign: "center", display: "block" }}>
+          {/* 2026-09-28 (owner #3): the two lines on fixed baselines (481,
+              535) and the three dots — drawn, a little bigger — centred
+              between the first line's descenders (481 + 0.2·15) and the
+              second line's capitals (535 − 0.72·13) */}
+          <span style={{ ...px(0, baseTop(481, 15), W, 15), font: `15px ${HNW}`, lineHeight: "15px", textAlign: "center", display: "block" }}>
             {t("Designing your label")}
           </span>
-          <span style={{ ...px(0, 494, W, 18), font: `16.5px ${HNW}`, letterSpacing: 2.2, textAlign: "center", display: "block", lineHeight: "12px" }}>
-            {[0, 1, 2].map((d) => (
-              <span key={d} style={{ animation: `nuiDot 1.2s ${d * 0.2}s infinite` }}>.</span>
-            ))}
-          </span>
+          {[0, 1, 2].map((d) => (
+            <span key={"ld" + d} style={{ ...px(W / 2 + (d - 1) * 11 - 2.4, (481 + 0.2 * 15 + 535 - 0.72 * 13) / 2 - 2.4, 4.8, 4.8), borderRadius: 2.4, background: "#111", animation: `nuiDot 1.2s ${d * 0.2}s infinite` }} />
+          ))}
           {/* round 72 #9: the walkthrough's loader is over in seconds — the
               real wait note would be a lie there */}
-          <span style={{ ...px(0, 522, W, 18), font: `italic 13px ${HNW}`, color: "#555", textAlign: "center", display: "block", opacity: tut >= 0 ? 0 : 1 }}>
+          <span style={{ ...px(0, baseTop(535, 13), W, 13), font: `italic 13px ${HNW}`, lineHeight: "13px", color: "#555", textAlign: "center", display: "block", opacity: tut >= 0 ? 0 : 1 }}>
             {(() => {
               /* round 46 (owner: "calculate real average"): once real runs
                  exist, the estimate is their measured average */
@@ -3205,7 +3279,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
            Save stood before it was raised (637–671) */
         /* 2026-09-28 (owner): on the UPPER third of the way from the labels'
            foot (540) to the progress line (PROG_Y) */
-        const SEL_CY = 540 + (PROG_Y - 540) / 3;
+        /* 2026-09-28 (owner #1, later): Select sits HALFWAY between the
+           labels' foot and NEW TRY's top (the button stays at NT_Y) */
+        const NT_Y = 647.39;
+        const labFoot = Math.max(...OPT_FRAMES.map((_, fi) => { const bx = labelBox(fi); return bx.ly + bx.lh; }));
+        const SEL_CY = (labFoot + NT_Y) / 2;
         /* ONE COLUMN of a set: the artist's name, the label with its crosses
            or its saved frame, and Save — a column slides as one block */
         const column = (ds: Dream[], si: number, fi: number, live: boolean) => {
@@ -3259,10 +3337,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             </div>
           ));
         };
+        /* 2026-09-28 (owner #6): the arrows three times bigger — size and
+           stroke together (the stroke scales with the viewBox) */
         const chevron = (lab: string, x: number, pts: string, go2: number) => (
           <button key={lab} aria-label={lab} onClick={() => showSet(go2)}
-            style={{ ...px(x - 16, (AREA_TOP + AREA_BOT) / 2 - 22, 44, 44), ...ghost, zIndex: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <svg viewBox="0 0 18 22" width="12" height="16"><polyline points={pts} fill="none" stroke="#111" strokeWidth="1.6" /></svg>
+            style={{ ...px(x - 30 + 6, (AREA_TOP + AREA_BOT) / 2 - 36, 60, 72), ...ghost, zIndex: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg viewBox="0 0 18 22" width="36" height="48" style={{ overflow: "visible" }}><polyline points={pts} fill="none" stroke="#111" strokeWidth="1.6" /></svg>
           </button>
         );
         /* the saved label's own box — the red button flies it from here */
@@ -3286,24 +3366,27 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               VERSIONS stood — black while a try is waiting, white when the
               next one must be bought; the line under it says which */}
           {(() => {
-            const NT = { x: OPT_FRAMES[1].x + 0.2, y: SEL_CY + 36, w: OPT_W, h: 34.3 };
+            const NT = { x: OPT_FRAMES[1].x + 0.2, y: NT_Y, w: OPT_W, h: 34.3 };
             const left = vis?.admin ? Infinity : (vis?.runsLeft ?? 1);
             const ready = dreams.length > 0 && left > 0;
-            /* a message (a refused or failed try) takes this line's place —
-               its own reserved spot, red */
-            const note = warn ? warn : !dreams.length ? "" : vis?.admin ? t("Unlimited tries (admin)")
-              : left > 0 ? `${t("Tries left:")} ${left}` : t("No tries left — 3 tries for $9");
+            const who = selectedArtist();
+            /* 2026-09-28 (owner #2): "1 try = 3 new labels. Tries left: N", the
+               number red, a little further from the button. A message (a
+               refused or failed try) takes this line's place, all red. */
+            const note = warn ? warn : !dreams.length ? "" : (<>
+              {t("1 try = 3 new labels.")} {t("Tries left:")} <span style={{ color: BAR_RED, fontWeight: 700 }}>{vis?.admin ? "∞" : left}</span>
+            </>);
             return (<>
               {dreams.length > 0 ? (
                 <button onClick={() => newTry()}
                   style={{ ...px(NT.x, NT.y, NT.w, NT.h), cursor: "pointer", font: `700 ${BAR_FS}px ${HNW}`, letterSpacing: 0.3, background: ready ? "#111" : "#fff", color: ready ? "#fff" : "#111", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 3, transition: `background 240ms ${EASE}, color 240ms ${EASE}` }}>
-                  {t("NEW TRY")}</button>
+                  {t("NEW TRY")}{who ? ` (${artistShort(who.name, lang)})` : ""}</button>
               ) : (
                 <div style={{ ...px(NT.x, NT.y, NT.w, NT.h), background: "#ECECEA", color: "#B3B1A8", font: `700 ${BAR_FS}px ${HNW}`, letterSpacing: 0.3, display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 3 }}>
                   {t("NEW TRY")}</div>
               )}
               {note && (
-                <span style={{ ...px(NT.x - 200, baseTop(NT.y + NT.h + 17, 12), NT.w + 400, 14), font: `12px ${HNW}`, lineHeight: "12px", color: warn ? "#BA141A" : "#6b6a60", textAlign: "center", display: "block", whiteSpace: "nowrap" }}>{note}</span>
+                <span style={{ ...px(NT.x - 200, baseTop(NT.y + NT.h + 24, 12), NT.w + 400, 14), font: `12px ${HNW}`, lineHeight: "12px", color: warn ? "#BA141A" : "#6b6a60", textAlign: "center", display: "block", whiteSpace: "nowrap" }}>{note}</span>
               )}
             </>);
           })()}
@@ -3693,8 +3776,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               onPointerDown={(e) => { e.preventDefault(); dragRef.current = "shade"; e.currentTarget.setPointerCapture(e.pointerId); }}
               onPointerMove={(e) => {
                 if (dragRef.current !== "shade") return;
-                const r = e.currentTarget.getBoundingClientRect();
-                const xx = (e.clientX - r.left) / r.width * 152;
+                /* page units, not the element's box (Safari + zoom) */
+                const xx = toPage(e.clientX, e.clientY).x - (1110.54 + 19.6);
                 setShade(Math.min(1, Math.max(0, (xx - 14.69) / 121.64)));
               }}
               onPointerUp={() => { dragRef.current = ""; }}>
@@ -3797,6 +3880,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               ROUND 48: the confirmation is GREEN like every other ✓, and
               a fresh upload UNSELECTS every section — the customer picks
               each one before the next arrow lets them through. */}
+          {/* 2026-09-28 (owner #15): "Upload Another Label" removed from the
+              page — the code stays (OWN_LABEL_UPLOAD) should it come back */}
+          {OWN_LABEL_UPLOAD && (
           <label style={{ ...px(B_SIL.x0, 551 + B_DY, B_SIL.x1 - B_SIL.x0, 18), font: `13px ${HNW}`, color: customLabel ? "#3f6d2a" : "#111", textDecoration: "underline", textTransform: "none", textAlign: "center", cursor: "pointer", display: "block", lineHeight: "18px" }}>
             <input type="file" accept="image/png,image/jpeg,image/webp,image/*" style={{ display: "none" }} onChange={(e) => {
               const input = e.currentTarget;
@@ -3840,6 +3926,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             }} />
             {customLabel ? t("Your label ✓ — upload another") : t("Upload Another Label")}
           </label>
+          )}
         </>);
       }
       case "assets": {
@@ -4143,7 +4230,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                         the folder mark; ROUND 107 #5: both a fifth smaller,
                         like the mark in the header, on the same centre */}
                     <div style={{ ...px(b2.x - ICON_W / 2, 255 + DY + (70 - ICON_H) / 2, ICON_W, ICON_H), ...A(880 + i * 120, "nuiPop", 360) }}>
-                      <svg viewBox={b2.kind === "folder" ? "1232.5 33.9 85.1 70" : "0 0 85 70"} width={ICON_W} height={ICON_H} style={{ display: "block" }}>
+                      {/* 2026-09-28 (owner #11: the icons' foot looked cut): the
+                          stroke's outer half reached past the viewBox and was
+                          clipped once the page drew crisp — overflow visible */}
+                      <svg viewBox={b2.kind === "folder" ? "1232.5 33.9 85.1 70" : "0 0 85 70"} width={ICON_W} height={ICON_H} style={{ display: "block", overflow: "visible" }}>
                         {b2.kind === "folder" ? FOLDER_MARK : README_MARK}
                       </svg>
                     </div>
@@ -4372,7 +4462,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           <div style={{ position: "absolute", left: 0, right: 0, top: ruleTop(FOOT_RULE_Y), height: ruleH, background: HAIRLINE }} />
         </div>
       ))}
-      <div style={{ width: W * scale, height: PAGE_H * scale, position: "relative", margin: "0 auto" }}>
+      <div ref={pageWrapRef} style={{ width: W * scale, height: PAGE_H * scale, position: "relative", margin: "0 auto" }}>
         {/* the page box paints no ground of its own: the bands above are
             the white, so the two hairlines are never covered */}
         <div style={{ width: W, height: PAGE_H, ...(zoomOK ? { zoom: scale } : { transform: `scale(${scale})`, transformOrigin: "top left" }), position: "absolute", overflow: "hidden" }}>
@@ -4472,7 +4562,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               is 1px like the rules, and it is a fifth smaller. */}
           <div key={"fm" + folderBump} aria-hidden
             style={{ ...px(FOLDER_X, FOLDER_TOP, ICON_W, ICON_H), zIndex: 55, pointerEvents: "none", transformOrigin: "50% 62%", animation: folderBump > 0 ? `nuiFolderBump 560ms ${EASE} both` : "none", overflow: "visible" }}>
-            <svg viewBox="1232.5 33.9 85.1 70" style={{ position: "absolute", left: 0, top: 0, width: ICON_W, height: ICON_H }}>{FOLDER_MARK}</svg>
+            <svg viewBox="1232.5 33.9 85.1 70" style={{ position: "absolute", left: 0, top: 0, width: ICON_W, height: ICON_H, overflow: "visible" }}>{FOLDER_MARK}</svg>
           </div>
           {/* STATIC header (real fonts, extracted geometry). ROUND 106: no
               ground of its own — the white band behind it carries the rule */}
@@ -4555,9 +4645,17 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   the baseline, where the switch's foot lands; it is then
                   lowered so its middle meets the capitals' middle
                   (baseline − 0.72·13/2 = 4.68 up, the switch's middle is 6 up) */}
-              <button aria-label="guided mode" onClick={toggleGuide}
-                style={{ ...ghost, display: "flex", alignItems: "baseline", columnGap: 7, font: `700 13px/13px ${HNW}`, color: INK, whiteSpace: "nowrap", textTransform: "uppercase", pointerEvents: "auto" }}>
+              <button aria-label="guided mode" onClick={() => { setGuideHint(false); toggleGuide(); }}
+                style={{ ...ghost, position: "relative", display: "flex", alignItems: "baseline", columnGap: 7, font: `700 13px/13px ${HNW}`, color: INK, whiteSpace: "nowrap", textTransform: "uppercase", pointerEvents: "auto" }}>
                 {t("Guided mode")}
+                {/* the first-visit hint (owner #13) — the walk-through's own
+                    red note, its caret on the switch */}
+                {guideHint && (
+                  <span style={{ position: "absolute", right: -(125 - 11), top: "calc(100% + 16px)", width: 250, background: BAR_RED, color: "#fff", padding: "11px 13px 10px", boxSizing: "border-box", font: `${lang === "ge" ? 12 : 13}px/${lang === "ge" ? "15px" : "17px"} ${HNW}`, textTransform: "none", whiteSpace: "normal", textAlign: "left", pointerEvents: "none", animation: `nuiFadeIn 360ms ${EASE} both`, zIndex: 80 }}>
+                    <span style={{ position: "absolute", left: 125 - 5, top: -5, width: 10, height: 10, background: BAR_RED, transform: "rotate(45deg)" }} />
+                    <span style={{ position: "relative" }}>{t("Turn on guided mode and I'll give you tips at every step.")}</span>
+                  </span>
+                )}
                 <span style={{ width: 22, height: 12, borderRadius: 7, border: `1px solid ${guideOn ? "#111" : "#bbb"}`, position: "relative", top: 6 - 13 * 0.72 / 2, transform: "translateY(0.45px)" /* measured, 2026-09-28: layout rounds `top`, a transform does not */, background: "#fff", boxSizing: "border-box", flex: "0 0 auto" }}>
                   <span style={{ position: "absolute", top: 1.5, left: guideOn ? 11.5 : 1.5, width: 7, height: 7, borderRadius: 4, background: guideOn ? BAR_RED : "#bbb", transition: "left 160ms, background 160ms" }} />
                 </span>
@@ -5149,8 +5247,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {termsOpen && (() => {
             const TRACK = { x: 628, y: 104, h: 240 };
             const syncFromClientY = (clientY: number, el: HTMLElement) => {
-              const r = el.getBoundingClientRect();
-              const ratio = Math.min(1, Math.max(0, (clientY - r.top) / r.height));
+              void el;
+              /* the track in page units: the popup's top (144) + TRACK.y */
+              const ratio = Math.min(1, Math.max(0, (toPage(0, clientY).y - (144 + TRACK.y)) / TRACK.h));
               const sc = termsRef.current;
               if (sc) sc.scrollTop = ratio * (sc.scrollHeight - sc.clientHeight);
             };
@@ -5343,6 +5442,16 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   style={{ position: "absolute", right: 24, top: 28, ...ghost, width: 26, height: 26 }}>
                   <svg viewBox="0 0 20 20" width="20" height="20"><line x1="2" y1="2" x2="18" y2="18" stroke="#111" strokeWidth="2" /><line x1="18" y1="2" x2="2" y2="18" stroke="#111" strokeWidth="2" /></svg>
                 </button>
+                {/* 2026-09-28 (owner #8): which try this is, what a try is, how
+                    many are left — or that no try is spent (only the text
+                    changes: the same paintings are set again) */}
+                {isL && (
+                  <span style={{ position: "absolute", left: 32, top: baseTop(88, 14), font: `14px ${HNW}`, lineHeight: "14px", whiteSpace: "nowrap", color: "#111" }}>
+                    {dreams.length && paintSig === sigPaint()
+                      ? t("No try is spent — only the text is set again.")
+                      : (<>{t("Try")} #{(vis?.runsUsed ?? 0) + 1} / {t("One try = three new labels")} / {t("Tries left:")} <span style={{ color: BAR_RED, fontWeight: 700 }}>{vis?.admin ? "∞" : (vis?.runsLeft ?? 1)}</span></>)}
+                  </span>
+                )}
                 {dashRule(32, 120, B.w - 64, false, "cfrule")}
                 {left}
                 {rows.length > 0 && colTitle(detX, t(isL ? "Label Details" : "Product Details"))}

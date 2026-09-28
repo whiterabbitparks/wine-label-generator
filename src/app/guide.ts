@@ -91,14 +91,15 @@ export const GUIDE: GuideStep[] = [
   { page: "options", at: { x: 137, y: 200, w: 1166, h: 340 }, side: "above",
     en: "Three designs, each in a different artist's style. Click a label to see it big, and if you like one, select it.",
     ge: "სამი დიზაინი, თითო სხვადასხვა არტისტის სტილში. დააჭირე ეტიკეტს, რომ დიდად ნახო და თუ რომელიმე მოგეწონა, აირჩიე." },
-  /* the Select row sits on the upper third between labels and bar (611.39) */
-  { page: "options", at: { x: 137, y: 611.39 - 17, w: 1166, h: 34 }, side: "below",
+  /* the Select row sits halfway between a 110×80 label's foot (539.4) and
+     NEW TRY (647.39) — 593.4 (2026-09-28) */
+  { page: "options", at: { x: 137, y: 593.4 - 17, w: 1166, h: 34 }, side: "below",
     en: "Select the one you like best.",
     ge: "აირჩიე ის, რომელიც ყველაზე მეტად მოგწონს.", done: "selected", press: PRESS_SELECT },
   /* 2026-09-28 (owner, his words): NEW TRY, under the middle label — the
      note points at the button AND its "tries left" line, so it sits low
      enough to clear the Select row and still ends above the bar */
-  { page: "options", at: { x: 548.7, y: 611.39 + 36, w: 342.9, h: 72 }, side: "right", optional: true,
+  { page: "options", at: { x: 548.7, y: 647.39, w: 342.9, h: 79 }, side: "right", optional: true,
     en: "Each try paints 3 new versions of your label. Your earlier versions stay — use the arrows beside the labels to go back to them.",
     ge: "ყოველი ცდა თქვენი ეტიკეტის 3 ახალ ვერსიას ხატავს. წინა ვერსიები რჩება — გვერდით ისრებით შეგიძლიათ გადახვიდეთ წინა ვერსიებზე." },
   { page: "options", at: RED, side: "above",
@@ -134,10 +135,15 @@ export const GUIDE: GuideStep[] = [
     en: "On to the bottle.",
     ge: "ახლა ბოთლი.", done: "page:bottle", press: PRESS_RED },
   /* ── bottle ── */
-  /* 2026-09-27 (owner): the bottle's two notes in one, at the red button */
+  /* 2026-09-28 (owner #14): back in the page's middle, its caret on the
+     dashed grid's top edge (x850 — just right of the title's line, which it
+     would cover at 720); Next moves on to the red button */
+  { page: "bottle", at: { x: 849, y: 243.3, w: 2, h: 0 }, side: "above",
+    en: "To prepare your marketing materials, tell me what your bottle and closure look like. When you're ready, press the red button.",
+    ge: "სამარკეტინგო მასალა რომ მოგიმზადო, მითხარი ბოთლი და თავსახური როგორი გაქვს? როცა მზად იქნები, წითელ ღილაკს დააჭირე." },
   { page: "bottle", at: RED, side: "above",
-    en: "To prepare your marketing materials, tell us what your bottle and closure look like — whatever you pick shows exactly so. When you're ready, press the red button.",
-    ge: "სამარკეტინგო მასალა რომ მოგიმზადო, მითხარი ბოთლი და თავსახური როგორი გაქვს? რასაც აირჩევ ზუსტად ისე გამოჩნდება. როცა მზად იქნები წითელ ღილაკს დააჭირე.", done: "confirm", press: PRESS_RED },
+    en: "If you've entered every detail, press the red button.",
+    ge: "თუ ყველა დეტალი შეიყვანე, დააჭირე წითელ ღილაკს.", done: "confirm", press: PRESS_RED },
   { page: "bottle", at: { x: 350, y: 150, w: 740, h: 520 }, side: "right", modal: true, anchor: "create", press: { en: "“Create”", ge: "„შექმნა“" },
     en: "Check your details. If all is right, press Create — or Edit Details if you want to change something.",
     ge: "გადაამოწმე დეტალები. თუ ყველაფერი სწორია, დააჭირე შექმნას — ან რედაქტირებას, თუ რამის შეცვლა გინდა.", done: "page:assets" },

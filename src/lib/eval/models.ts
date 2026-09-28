@@ -115,7 +115,7 @@ export async function regionNote(region: string): Promise<string> {
   return key && map[key]?.trim() ? ` ${region.trim()} looks like this: ${map[key].trim()} ` : "";
 }
 
-export interface ArtworkPrompt { prompt: string; subject: string; aspect: "landscape" | "portrait" | "square"; kind?: "spot" | "bleed";
+export interface ArtworkPrompt { grapes?: string; prompt: string; subject: string; aspect: "landscape" | "portrait" | "square"; kind?: "spot" | "bleed";
   /* 2026-09-23: a band/panel picture ends in the painter's own edge on
      this side (the side facing the type) — see hybrid.ts */
   edgeSide?: string;
@@ -199,6 +199,18 @@ function abstractSubject(d: EvalBrief["data"]): string {
     inspiration(d, true) + " No signature, no border.";
 }
 
+/* 2026-09-28 (owner: "a white wine, and the label showed red grapes — I
+   wrote grapes in the idea but not their colour"): any grapes painted take
+   the WINE's colour family. Amber/orange wine is made from white grapes,
+   rosé from red ones. Nothing is said when the colour is unknown. */
+export function grapeColourLine(wineColour?: string): string {
+  const c = String(wineColour || "").toLowerCase();
+  if (/white|amber|orange|თეთრ|ქარვ/.test(c)) return "Any grapes in the picture are WHITE-wine grapes — pale green to golden yellow berries — never red, purple or black grapes.";
+  if (/ros|ვარდ/.test(c)) return "Any grapes in the picture are red-skinned grapes, as rosé is made from red grapes — purple-red berries — never green grapes.";
+  if (/red|წითელ/.test(c)) return "Any grapes in the picture are RED-wine grapes — deep purple-black to dark red berries — never green or golden grapes.";
+  return "";
+}
+
 export async function buildArtworkPrompt(brief: EvalBrief, artist: ArtistProfile, abstract = false): Promise<ArtworkPrompt> {
   const d = brief.data;
   if (abstract) {
@@ -210,9 +222,10 @@ export async function buildArtworkPrompt(brief: EvalBrief, artist: ArtistProfile
   const gaz = await regionNote(d.region);
   /* the inspiration rides the SKETCH's ask only — the FLUX repaint reads
      `subject`, and a quoted name there could come back as painted letters */
-  const subject = `${brief.vision} ${place ? `Set in ${place}.${gaz}` : ""} No buildings unless the story names them.${noSmoking(brief)} No text, no letters, no border.`;
+  const grapes = grapeColourLine((d as { wineColorName?: string }).wineColorName);
+  const subject = `${brief.vision} ${place ? `Set in ${place}.${gaz}` : ""} No buildings unless the story names them.${noSmoking(brief)}${grapes ? ` ${grapes}` : ""} No text, no letters, no border.`;
   const inStyle = `Painted by ${artist.name}, whose works are the reference images: ${artistCharter(artist)}. Paint a NEW picture in exactly her manner, medium and palette (do not copy the reference subjects).`;
-  return { prompt: `${inStyle} ${VIGNETTE} ${subject}${inspiration(d, false)}`, subject, aspect: aspectOf(brief), kind: "spot" };
+  return { prompt: `${inStyle} ${VIGNETTE} ${subject}${inspiration(d, false)}`, subject, grapes, aspect: aspectOf(brief), kind: "spot" };
 }
 
 const GPT_SIZE = { landscape: { w: 1536, h: 1024 }, portrait: { w: 1024, h: 1536 }, square: { w: 1024, h: 1024 } } as const;
@@ -307,7 +320,7 @@ export async function repaintInHand(model: EvalModel, story: string, ap: Artwork
     ? "Repaint this ABSTRACT picture in your own hand — the same marks, patches and shapes in the same places, your own brush, texture and colour. It stays abstract: never turn a mark into a person, face, animal, object or place (at most a leaf, a stem or a tendril), never add letters or a signature."
     : handOnly
       ? "Repaint this picture in your own hand. KEEP WHAT IT SHOWS — every figure, animal and object stays exactly what it is and where it is (a deer stays a deer, a person stays a person); change only the hand: your own line, brush, texture and colours. It shows:"
-      : "Repaint this picture in your own hand — same scene, same subjects in the same places, your own colours and brush:"} ${ap.abstract ? "" : (what || ap.subject)} Painted as ${handOnly ? handCharter(model.artist) : artistCharter(model.artist)}. ${ap.kind === "bleed"
+      : "Repaint this picture in your own hand — same scene, same subjects in the same places, your own colours and brush:"} ${ap.abstract ? "" : (what ? `${what}${ap.grapes ? ` ${ap.grapes}` : ""}` : ap.subject)} Painted as ${handOnly ? handCharter(model.artist) : artistCharter(model.artist)}. ${ap.kind === "bleed"
     ? (ap.edgeSide
       ? `Keep the composition exactly: the painting runs off the other edges, and on the ${ap.edgeSide} side it ends in its own loose irregular edge with the plain, flat, empty ground beyond it — keep that ground plain and empty, never paint into it, never add a border.`
       : "Paint right to every edge — no empty paper, no margin, no border.")
