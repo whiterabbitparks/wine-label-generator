@@ -237,7 +237,7 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
   const panel = (inp.panel ?? process.env.PANEL_METHOD === "1") && artKindOf(tpl) !== "spot" && edgeSides.length <= 1;
   if (panel) {
     const shape = zoneAspect >= 1 ? `about ${zoneAspect.toFixed(1)} times wider than tall` : `about ${(1 / zoneAspect).toFixed(1)} times taller than wide`;
-    const panelText = `THE PICTURE IS ONE PANEL: paint the whole scene as a single panel ${shape}, as large as the canvas allows, centred, with plain, flat, empty paper of one tone around it. The panel is filled edge to edge with the scene; its outline is the painter's own loose, irregular edge — never a frame, never a straight ruled line, never an oval. Every figure whole, every face and every animal, the whole story, well inside the panel; its outermost rim may be trimmed away, so nothing important sits near the panel's edges.`;
+    const panelText = `THE PICTURE IS ONE PANEL: paint the whole scene as a single panel ${shape}, large and centred, with a clear margin of plain, flat, empty paper of one tone on ALL FOUR sides — about a tenth of the canvas on each side, nothing painted there, the panel never touching the canvas edge. The panel is filled edge to edge with the scene; its outline is the painter's own loose, irregular edge — never a frame, never a straight ruled line, never an oval. Every figure whole, every face and every animal, the whole story, well inside the panel; its outermost rim may be trimmed away, so nothing important sits near the panel's edges.`;
     ap.kind = "spot";
     ap.edgeSide = undefined;
     ap.prompt = ap.prompt.includes(BLEED) ? ap.prompt.replace(BLEED, panelText) : `${ap.prompt} ${panelText}`;
@@ -262,7 +262,16 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
   const rest0 = artKindOf(tpl) !== "spot" ? restingGround() : "";
   const rest = rest0 && rest0 === (model.artist as { keepGround?: string }).keepGround ? "" : rest0;
   if (rest) ap.prompt += ` GROUND COLOUR — for variety: this time the ground is NOT ${rest}; take another of the artist's own colours for it.`;
-  const painted = await gen429(() => generateArtwork(model, ap, { sketch: inp.sketch || null, refSet: inp.refSet, small: inp.small }));
+  /* a spot or a panel floats on its paper: its sketch must show paper all
+     round (see generateArtwork `accept`) — the ink box clear of the sheet's
+     edge on every side */
+  const floats = panel || artKindOf(tpl) === "spot";
+  const onPaper = async (s: string) => {
+    const c = await cleanPaper(s);
+    return c.cleaned && c.ink.x > 0.015 && c.ink.y > 0.015 && c.ink.x + c.ink.w < 0.985 && c.ink.y + c.ink.h < 0.985;
+  };
+  const retry = `IMPORTANT — THE LAST TRY FILLED THE WHOLE CANVAS: this time leave a wide empty margin of plain, flat paper on ALL FOUR sides, about a tenth of the canvas each side; the picture must not touch any edge of the canvas.`;
+  const painted = await gen429(() => generateArtwork(model, ap, { sketch: inp.sketch || null, refSet: inp.refSet, small: inp.small, ...(floats ? { accept: onPaper, retry } : {}) }));
   /* 2026-09-22 (owner): the artist's LoRA learned her PAPER as well as
      her hand, so the picture arrives wrinkled and unevenly lit, and its
      rectangle then shows against the label's one flat colour. The clean
@@ -275,7 +284,22 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
      drawing nothing is touched — a flat ground Levan painted is his. */
   /* a band/panel picture has plain ground only on its type-facing side —
      the paper is looked for there and nowhere else */
-  const cleaned = await cleanPaper(painted.art, undefined, !panel && edgeSides.length ? edgeSides : undefined);
+  let cleaned = await cleanPaper(painted.art, undefined, !panel && edgeSides.length ? edgeSides : undefined);
+  /* the repaint can hide the sketch's paper under its grain (Kakabadze's
+     watercolour sheet, 2026-09-29) — the paper is then looked for more
+     leniently, and failing that the drawing's box is taken from the
+     sketch (the repaint is locked to the sketch's shapes), so a floating
+     picture is still laid in whole, never cut */
+  let floatOk = cleaned.cleaned;
+  if (floats && !cleaned.cleaned) {
+    const lenient = await cleanPaper(painted.art, undefined, undefined, { lenient: true });
+    if (lenient.cleaned) { cleaned = lenient; floatOk = true; }
+    else {
+      const sk = await cleanPaper(painted.story);
+      if (sk.cleaned) { cleaned = { ...cleaned, ink: sk.ink }; floatOk = true; }
+    }
+    console.warn(`[painter] ${model.id}: paper not found on the repaint — ${cleaned.cleaned ? "found leniently" : floatOk ? "the sketch's box is used" : "none anywhere"}`);
+  }
   const art = cleaned.art;
 
   /* 2026-09-23 (owner: "we no longer generate variations — the rules
@@ -288,12 +312,12 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
   const out = await composeTemplateLabel({
     artwork: art, band, template: chosen.id, data: inp.data, ink: cleaned.ink, paper: cleaned.ground,
     edge: !panel && cleaned.cleaned && edgeSides.length ? edgeSides : undefined,
-    panel: panel && cleaned.cleaned,
+    panel: panel && floatOk,
     widthMm, heightMm, seed, wineColour: inp.data.wineColorName,
   });
   if (out.warnings.length) console.warn(`[template ${out.template}] ${out.warnings.join("; ")}`);
   rememberMade({ artist: model.artist.name, template: out.template, face: out.faces.match(/^(.*?) \d{3}\//)?.[1] || out.faces.split(" ")[0], ground: groundWord(out.layout.ground) });
-  return { png: out.png, svg: out.svg, art, faces: out.faces, ink: out.ink, ground: out.layout.ground, prompt: ap.prompt, layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", painter: model.id, artist: model.artist.name, repainted: painted.repainted, template: out.template, hasPaper: cleaned.cleaned, refSet: painted.refSet, panel: panel && cleaned.cleaned };
+  return { png: out.png, svg: out.svg, art, faces: out.faces, ink: out.ink, ground: out.layout.ground, prompt: ap.prompt, layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", painter: model.id, artist: model.artist.name, repainted: painted.repainted, template: out.template, hasPaper: cleaned.cleaned, refSet: painted.refSet, panel: panel && floatOk };
 }
 
 /* ROUND 86 #3 (owner: "keep the image, just change the layout — tons of

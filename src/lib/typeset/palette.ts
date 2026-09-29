@@ -204,7 +204,10 @@ export async function vignetteOf(dataUrl: string): Promise<{ ground: string; box
    touching the other sides is never taken for paper (it was: Mariam's
    navy evening, man and all, came back flattened to one tone). */
 type Side = "top" | "bottom" | "left" | "right";
-export async function cleanPaper(dataUrl: string, to?: string, sideIn?: Side | Side[]): Promise<{ art: string; ground: string; cleaned: boolean; ink: { x: number; y: number; w: number; h: number } }> {
+/* `lenient` (2026-09-29): a grainy sheet (Kakabadze's watercolour paper
+   strays ~25 levels) — the paper may stray further before it is refused;
+   only asked for when the strict pass found none on a floating picture */
+export async function cleanPaper(dataUrl: string, to?: string, sideIn?: Side | Side[], opts: { lenient?: boolean } = {}): Promise<{ art: string; ground: string; cleaned: boolean; ink: { x: number; y: number; w: number; h: number } }> {
   const buf = Buffer.from(dataUrl.slice(dataUrl.indexOf(",") + 1), "base64");
   const { data, info } = await sharp(buf).flatten({ background: "#ffffff" }).raw().toBuffer({ resolveWithObject: true });
   const W = info.width, H = info.height, C = info.channels;
@@ -238,11 +241,11 @@ export async function cleanPaper(dataUrl: string, to?: string, sideIn?: Side | S
   }
   let acc = 0, p90 = 0;
   for (let d = 0; d < 256; d++) { acc += hist[d]; if (acc >= ringN * 0.9) { p90 = d; break; } }
-  const t0 = Math.max(14, Math.min(28, p90 * 1.5 + 4));
+  const t0 = Math.max(14, Math.min(opts.lenient ? 40 : 28, p90 * 1.5 + 4));
   const t1 = t0 + 24;
   let near = 0;
   for (let d = 0; d <= Math.round(t0); d++) near += hist[d];
-  if (near < ringN * 0.6) return { art: dataUrl, ground, cleaned: false, ink: whole };
+  if (near < ringN * (opts.lenient ? 0.5 : 0.6)) return { art: dataUrl, ground, cleaned: false, ink: whole };
 
   /* THE PAPER IS ONLY WHAT THE BORDER REACHES (owner, 2026-09-22, twice:
      "inside the image, inside the ink, leave the background alone — the

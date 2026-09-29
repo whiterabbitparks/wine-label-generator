@@ -365,7 +365,7 @@ export async function repaintInHand(model: EvalModel, story: string, ap: Artwork
 
 /* both steps; `story` is kept so a failed repaint still yields a picture.
    `refSet` is the letter of the owner's set the story was shown (A–D). */
-export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt, extra: { sketch?: string | null; quality?: "low" | "medium" | "high"; refSet?: number; small?: boolean } = {}): Promise<{ art: string; story: string; repainted: boolean; error?: string; refSet: string }> {
+export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt, extra: { sketch?: string | null; quality?: "low" | "medium" | "high"; refSet?: number; small?: boolean; accept?: (story: string) => Promise<boolean>; retry?: string } = {}): Promise<{ art: string; story: string; repainted: boolean; error?: string; refSet: string }> {
   let { set: refSet, files: refFiles } = nextRefSet(model.artist.id, extra.refSet, !!ap.abstract);
   /* 2026-09-23 (owner: "sometimes one of the three labels never comes —
      its place stays empty"): OpenAI's filter refuses some asks at random
@@ -385,6 +385,16 @@ export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt, extra
       if (attempt === 0) ({ set: refSet, files: refFiles } = nextRefSet(model.artist.id, undefined, !!ap.abstract));
       else refSet = refSet ? `${refSet} (no refs)` : "no refs";
     }
+  }
+  /* 2026-09-29 (owner: "nowhere on a label should a cut illustration
+     show"). A picture that must float on its paper (a spot, a panel) is
+     checked on the cheap SKETCH, before the costly repaint: no plain paper
+     all round → the sketch is drawn again with the ask made firmer, at
+     most twice. A refusal on a retry keeps the sketch there is. */
+  for (let k = 0; extra.accept && k < 2 && !(await extra.accept(story).catch(() => true)); k++) {
+    console.warn(`[painter] ${model.id}: the sketch has no paper all round — drawn again (${k + 1}/2)`);
+    try { story = await paintStory(model, { ...ap, prompt: `${ap.prompt} ${extra.retry || ""}` }, { ...extra, refFiles }); }
+    catch (e) { console.warn(`[painter] retry failed: ${e instanceof Error ? e.message : e}`); break; }
   }
   /* dev aid: PAINT_DEBUG_DIR keeps the sketch and the ask */
   const dbg = process.env.PAINT_DEBUG_DIR, tag = `${model.artist.id}-${Date.now()}`;

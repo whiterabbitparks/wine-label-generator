@@ -94,6 +94,11 @@ export function LayoutEditor() {
      every line when none is selected; picker, pipette, engine's. The
      pipette knows which it is filling. */
   const [pipette, setPipette] = useState<"" | "ground" | "type">("");
+  /* TRIAL (2026-09-29, owner: "try it; if it doesn't work, back to how it
+     is, nothing mixed up"): the painting's paper taken out (ink on clear
+     film), so a new ground shows no paper rectangle or rim. Only the
+     editor's picture changes; labels are made as before. */
+  const [clearPaper, setClearPaper] = useState(true);
   const artCanvas = useRef<HTMLCanvasElement | null>(null);
   const loadArt = async () => {
     if (artCanvas.current) return;
@@ -263,7 +268,7 @@ export function LayoutEditor() {
     if (outcome === "fixed") {
       const r = await fetch("/api/admin/layout-edits", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ labelId: id, note, pictureBad, before: { lines: keyed(layout.lines), art: layout.art, picture: wholeOf(layout, artSize), imageSize: artSize, ground: layout.ground }, after: { lines: st.lines, art: shownOf(st.art, layout, meta?.widthMm || 110), picture: st.art, imageSize: artSize, ground: st.ground || layout.ground }, method: meta?.panel ? "panel" : "edge" }),
+        body: JSON.stringify({ labelId: id, note, pictureBad, before: { lines: keyed(layout.lines), art: layout.art, picture: wholeOf(layout, artSize), imageSize: artSize, ground: layout.ground }, after: { lines: st.lines, art: shownOf(st.art, layout, meta?.widthMm || 110), picture: st.art, imageSize: artSize, ground: st.ground || layout.ground }, method: meta?.panel ? "panel" : "edge", clearPaper }),
       });
       if (!r.ok) { const b = await r.json().catch(() => ({})); setMsg("Could not save: " + (b.error || r.status)); return; }
     }
@@ -342,7 +347,7 @@ export function LayoutEditor() {
               {/* the whole painting, shown as far as the label + its 2 mm bleed */}
               {(() => { const v = shownOf(st.art, layout, meta?.widthMm || 110); return (<>
                 <clipPath id="le-shown"><rect x={v.x} y={v.y} width={v.w} height={v.h} /></clipPath>
-                <image href={`/api/admin/labels?id=${id}&part=art`} x={st.art.x} y={st.art.y} width={st.art.w} height={st.art.h} preserveAspectRatio="none" clipPath="url(#le-shown)" />
+                <image href={`/api/admin/labels?id=${id}&part=${clearPaper ? "art-alpha" : "art"}`} x={st.art.x} y={st.art.y} width={st.art.w} height={st.art.h} preserveAspectRatio="none" clipPath="url(#le-shown)" />
                 <rect x={v.x} y={v.y} width={v.w} height={v.h} fill="transparent" style={{ cursor: "move" }} onPointerDown={onDown("art")} />
               </>); })()}
               {/* the type */}
@@ -404,6 +409,9 @@ export function LayoutEditor() {
               {st.ground && st.ground !== layout.ground && <button style={ui.btn} onClick={() => push({ ...st, ground: layout.ground })}>engine's</button>}
               <span style={ui.small}>{(st.ground || layout.ground).toUpperCase()}</span>
             </div>
+            <label style={{ ...ui.small, cursor: "pointer", marginTop: -4 }}>
+              <input type="checkbox" checked={clearPaper} onChange={(e) => setClearPaper(e.target.checked)} /> transparent paper (trial) — the painting's paper taken out, so a new ground shows no paper edge
+            </label>
             {/* THE TYPE'S COLOUR (2026-09-29) */}
             <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
               <span style={{ fontWeight: 700 }}>Type</span>

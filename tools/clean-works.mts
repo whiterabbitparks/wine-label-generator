@@ -7,7 +7,9 @@
    CROPPED away, a mark inside the picture is ERASED (fal Bria eraser, the
    background painted back), a frame is cropped off. Each cleaned work is
    read again; what still shows is reported. The originals are kept in
-   works-raw/.     npx tsx tools/clean-works.mts <artist-id> [work-24.jpg …]  */
+   works-raw/.     npx tsx tools/clean-works.mts <artist-id> [work-24.jpg …]
+   CURRENT=1 (2026-09-29, a second sweep): start from the already cleaned
+   works, and leave a work untouched when nothing is found on it. */
 import fs from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
@@ -50,7 +52,8 @@ async function erase(buf: Buffer, boxes: [number, number, number, number][]): Pr
 async function cleanOne(f: string) {
   const src = path.join(raw, f);
   if (!fs.existsSync(src)) fs.copyFileSync(path.join(dir, f), src);
-  let buf = fs.readFileSync(src);
+  const current = process.env.CURRENT === "1";
+  let buf = fs.readFileSync(current ? path.join(dir, f) : src);
   const note: string[] = [];
   for (let pass = 0; pass < 3; pass++) {
     const found = await read(buf);
@@ -76,6 +79,7 @@ async function cleanOne(f: string) {
     }
     if (pass === 2) { const again = await read(buf); if (again.marks.length) note.push(`STILL ${again.marks.map((x) => x.kind).join(",")}`); }
   }
+  if (current && note[0] === "nothing found") { console.log(`${id} ${f}: nothing found (untouched)`); return; }
   await sharp(buf).flatten({ background: "#fff" }).jpeg({ quality: 92 }).toFile(path.join(dir, f));
   console.log(`${id} ${f}: ${note.join(" → ")}`);
 }

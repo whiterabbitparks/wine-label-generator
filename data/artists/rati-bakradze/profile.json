@@ -50,5 +50,11 @@
       "work-28.jpg",
       "work-33.jpg"
     ]
-  ]
+  ],
+  "trainExclude": [
+    "work-10.jpg",
+    "work-15.jpg",
+    "work-32.jpg"
+  ],
+  "trainExcludeWhy": "2026-09-29: letters/numbers/Instagram marks painted in (10 'Fall', 15 shirt numbers + carousel dots, 32 tag icon) — kept for the page, never trained on (a signature-like 'ACKN' leaked into a label)"
 }
