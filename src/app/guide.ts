@@ -64,7 +64,7 @@ const PRESS_SELECT = { en: "“Select”", ge: "„აირჩიე“" };
 
 export const GUIDE: GuideStep[] = [
   /* ── the taste page (2026-09-28) ── */
-  { page: "taste", at: { x: 137.14, y: 132, w: 620, h: 22 }, side: "right",
+  { page: "taste", at: { x: 420, y: 132, w: 600, h: 22 }, side: "right",
     en: "Pick the three horses you like most — don't overthink it. The artists who painted them will paint your labels.",
     ge: "აირჩიე სამი ცხენი, რომელიც ყველაზე მეტად მოგწონს — ბევრს ნუ იფიქრებ. ვინც ისინი დახატა, ის არტისტები დახატავენ შენს ეტიკეტებს.", done: "taste", press: { en: "“Select”", ge: "„აირჩიე“" } },
   { page: "taste", at: RED, side: "above",

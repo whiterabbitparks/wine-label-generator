@@ -1432,7 +1432,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   /* ROUND 112 #4 (owner's artboards): the ARTISTS pages — an index of
      everyone who trained a model, and a page each. Read from the public
      /api/artists (name, biography, link and the pictures on disk). */
-  interface SiteArtist { id: string; name: string; bio: string; bioGe?: string; link: string; linkKind: "instagram" | "site" | ""; instagram: string; website: string; portrait: string; crop: string; works: string[]; labels: string[] }
+  interface SiteArtist { names?: string[]; ids?: string[]; id: string; name: string; bio: string; bioGe?: string; link: string; linkKind: "instagram" | "site" | ""; instagram: string; website: string; portrait: string; crop: string; works: string[]; labels: string[] }
   const [siteArtists, setSiteArtists] = useState<SiteArtist[]>([]);
   const [artistId, setArtistId] = useState("");
   /* round 113 #6: her page shows two sets — her own paintings, or the
@@ -3146,7 +3146,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {Array.from({ length: slots }, (_, i) => {
             const cx = CX0 + (i % 6) * DX, cy = CY0 + Math.floor(i / 6) * DY;
             const a2 = siteArtists[i];
-            if (!a2) return <span key={"slot" + i} style={{ ...px(cx - R, cy - R, R * 2, R * 2), borderRadius: R, background: "#e6e6e6" }} />;
+            /* 2026-09-29 (owner): no empty grey discs any more */
+            if (!a2) return null;
             /* first name / surname, and a series ("· Imereti") on a third line */
             const [nm, series] = a2.name.split(" · ");
             const parts = [...nm.split(" "), ...(series ? [series] : [])];
@@ -3228,7 +3229,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           </button>
         );
         return (<>
-          <span style={{ ...px(137.14, baseTop(149.08, 19), 900, 22), font: `700 19px ${HNW}`, lineHeight: "19px", color: INK, whiteSpace: "nowrap" }}>{t("BEFORE WE START, SELECT 3 HORSES YOU LIKE.")}</span>
+          {/* centred across the page (owner, 2026-09-29) */}
+          <span style={{ ...px(0, baseTop(149.08, 19), W, 22), font: `700 19px ${HNW}`, lineHeight: "19px", color: INK, whiteSpace: "nowrap", textAlign: "center", display: "block" }}>{t("BEFORE WE START, SELECT 3 HORSES YOU LIKE.")}</span>
           {tasteSlide && tasteSlide.from !== pg && pageLayer(tasteSlide.from, "out", tasteSlide.dir)}
           {pageLayer(pg, tasteSlide ? "in" : "still", tasteSlide?.dir || 1)}
           {pages > 1 && pg > 0 && arrow("previous horses", 137.14 - 48, "13,3 5,11 13,19", pg - 1)}
@@ -3271,7 +3273,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             while (sz > 11 && linesAt(sz) * sz * 1.2 > room) sz -= 0.5;
             return <span style={{ ...px(BX, baseTop(384, sz), BW, room + 20), font: `${sz}px ${HNW}`, lineHeight: `${sz * 1.2}px`, color: INK, textAlign: "justify" }}>{bio}</span>;
           })()}
-          <button onClick={() => { setPickArtists([a2.id]); go("vision"); }}
+          <button onClick={() => { setPickArtists(a2.ids || [a2.id]); go("vision"); }}
             style={{ ...px(136.96, 548.57, 343.21, 34.29), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, textTransform: "none" }}>
             {t("Create label with")} {first}{t("’s art")}</button>
           {/* ROUND 113 #6 (owner): the two captions are HYPERLINKS —
@@ -3584,7 +3586,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               {/* 2026-09-28 (owner): the name opens the artist's page (an
                   artist without a page yet stays plain text) */}
               {(() => {
-                const a2 = who ? siteArtists.find((x) => x.name === who) : undefined;
+                const a2 = who ? siteArtists.find((x) => x.name === who || (x.names || []).includes(who)) : undefined;
                 return a2 ? (
                   <button onClick={() => { artistsFrom.current = "options"; setArtistId(a2.id); setArtistView("art"); go("artist"); }}
                     style={{ ...ghost, pointerEvents: "auto", cursor: "pointer", font: `700 ${BAR_FS}px/${BAR_FS}px ${HNW}`, color: INK, whiteSpace: "nowrap", textTransform: "none" }}>

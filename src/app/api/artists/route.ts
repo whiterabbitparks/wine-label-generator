@@ -28,6 +28,11 @@ export interface SiteArtist {
   /* round 113 #6: labels already painted in this artist's hand — the
      second view on her page ("Labels from …") */
   labels: string[];
+  /* 2026-09-29 (owner): one PAGE may stand for several models of one
+     painter (Kakabadze's Imereti oils + Brittany watercolours) — their
+     names (labels read "Style By: <model name>") and ids (to paint with) */
+  names?: string[];
+  ids?: string[];
 }
 
 const PUB = path.join(process.cwd(), "public", "newui", "artists");
@@ -35,7 +40,7 @@ const PUB = path.join(process.cwd(), "public", "newui", "artists");
 export async function GET() {
   const out: SiteArtist[] = [];
   for (const a of listArtists()) {
-    const p = a.profile as typeof a.profile & { bioGe?: string; bio?: string; page?: boolean; pageOrder?: number; crop?: string; instagram?: string; website?: string };
+    const p = a.profile as typeof a.profile & { bioGe?: string; bio?: string; page?: boolean; pageOrder?: number; crop?: string; instagram?: string; website?: string; pageName?: string; pageMerge?: string[] };
     const dir = path.join(PUB, p.id);
     /* 2026-09-22 (owner, adding Levan): an artist may arrive with her
        paintings and nothing else. What she MUST have to get a page is
@@ -43,19 +48,27 @@ export async function GET() {
     const portrait = fs.existsSync(path.join(dir, "portrait.jpg"));
     if (p.page === false || !fs.existsSync(path.join(dir, "work1.jpg"))) continue;
     const works: string[] = [], labels: string[] = [];
-    for (let i = 1; i <= 12; i++) {
-      const f = path.join(dir, `work${i}.jpg`);
-      if (fs.existsSync(f)) works.push(`/newui/artists/${p.id}/work${i}.jpg`);
-      const l = path.join(dir, `label${i}.jpg`);
-      if (fs.existsSync(l)) labels.push(`/newui/artists/${p.id}/label${i}.jpg`);
-    }
+    /* a merged page takes its models' pictures in turn (oil, watercolour, …) */
+    const members = [p.id, ...(p.pageMerge || [])];
+    const each = members.map((id) => {
+      const w: string[] = [], l: string[] = [];
+      for (let i = 1; i <= 12; i++) {
+        if (fs.existsSync(path.join(PUB, id, `work${i}.jpg`))) w.push(`/newui/artists/${id}/work${i}.jpg`);
+        if (fs.existsSync(path.join(PUB, id, `label${i}.jpg`))) l.push(`/newui/artists/${id}/label${i}.jpg`);
+      }
+      return { w, l };
+    });
+    for (let i = 0; i < 12; i++) for (const e of each) { if (e.w[i]) works.push(e.w[i]); if (e.l[i]) labels.push(e.l[i]); }
+    const memberNames = members.map((id) => listArtists().find((x) => x.profile.id === id)?.profile.name || "").filter(Boolean);
     const link = (p.portfolio || "").trim();
     const isIg = /instagram\./i.test(link);
     out.push({
       instagram: (p.instagram || (isIg ? link : "")).trim(),
       website: (p.website || (isIg ? "" : link)).trim(),
       id: p.id,
-      name: p.name,
+      name: p.pageName || p.name,
+      names: memberNames,
+      ids: members,
       bio: (p.bio || "").trim(),
       bioGe: (p.bioGe || "").trim(),
       link,
@@ -78,7 +91,7 @@ export async function GET() {
   const painters = listArtists().filter((a) => a.lora).map((a) => {
     const p = a.profile as typeof a.profile & { pageOrder?: number };
     const dir = path.join(PUB, p.id);
-    const page = out.find((x) => x.id === p.id);
+    const page = out.find((x) => (x.ids || [x.id]).includes(p.id));
     const avatar = page?.portrait || (fs.existsSync(path.join(dir, "avatar.jpg")) ? `/newui/artists/${p.id}/avatar.jpg` : "");
     /* 2026-09-28 (owner): the taste page's horse — every painter paints one
        (tools/make-horse.mts), shown in the owner's order (horseOrder) */
