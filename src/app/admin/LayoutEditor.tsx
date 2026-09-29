@@ -90,11 +90,21 @@ export function LayoutEditor() {
      picker, or a pipette that takes a colour from the painting itself.
      Every change is saved with the edit (the engine's ground → his), so
      his corrections can be read for a rule later. */
-  const [pipette, setPipette] = useState(false);
+  /* 2026-09-29 (owner): and the TYPE's colour — the selected lines, or
+     every line when none is selected; picker, pipette, engine's. The
+     pipette knows which it is filling. */
+  const [pipette, setPipette] = useState<"" | "ground" | "type">("");
   const artCanvas = useRef<HTMLCanvasElement | null>(null);
+  const loadArt = async () => {
+    if (artCanvas.current) return;
+    const im = new Image(); im.src = `/api/admin/labels?id=${id}&part=art`;
+    await im.decode().catch(() => null);
+    const c = document.createElement("canvas"); c.width = im.naturalWidth || 1; c.height = im.naturalHeight || 1;
+    c.getContext("2d")!.drawImage(im, 0, 0); artCanvas.current = c;
+  };
   useEffect(() => {
     if (!pipette) return;
-    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setPipette(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setPipette(""); };
     window.addEventListener("keydown", esc);
     return () => window.removeEventListener("keydown", esc);
   }, [pipette]);
@@ -127,7 +137,7 @@ export function LayoutEditor() {
     if (!b.layout) { setMsg("This label has no layout on disk."); return; }
     setMeta(b.meta); setLayout(b.layout); setArtSize(b.art); setFaces(b.faces || {});
     setSt({ lines: keyed(b.layout.lines), art: wholeOf(b.layout, b.art), ground: b.layout.ground });
-    setPipette(false); artCanvas.current = null;
+    setPipette(""); artCanvas.current = null;
   }, []);
   /* nothing open → the first label waiting in the queue */
   useEffect(() => { if (!id && batch.open.length) open(batch.open[0].id); }, [id, batch.open, open]);
@@ -233,6 +243,16 @@ export function LayoutEditor() {
     const edge = (an: Line["anchor"]) => (an === "start" ? b.x : an === "middle" ? b.x + b.w / 2 : b.x + b.w);
     mapSel((l) => ({ ...l, anchor: a, x: edge(a) }));
   };
+  /* the type's colour: the selected lines, or all of them */
+  const typeKeys = st ? (selKeys.length ? st.lines.filter((l) => selKeys.includes(l.key || "")) : st.lines).map((l) => l.key || "") : [];
+  const typeNow = st ? (st.lines.find((l) => l.key === typeKeys[0])?.colour || "#111111") : "#111111";
+  const paintType = (hex: string) => st && push({ ...st, lines: st.lines.map((l) => (typeKeys.includes(l.key || "") ? { ...l, colour: hex } : l)) });
+  const engineType = () => {
+    if (!st || !layout) return;
+    const orig = new Map(keyed(layout.lines).map((l) => [l.key, l.colour]));
+    push({ ...st, lines: st.lines.map((l) => (typeKeys.includes(l.key || "") ? { ...l, colour: orig.get(l.key) || l.colour } : l)) });
+  };
+  const typeChanged = !!(st && layout && (() => { const orig = new Map(keyed(layout.lines).map((l) => [l.key, l.colour])); return st.lines.some((l) => typeKeys.includes(l.key || "") && orig.get(l.key) !== l.colour); })());
   const hide = () => { const h = !selLine?.hidden; mapSel((l) => ({ ...l, hidden: h })); };
   const scaleArt = (k: number) => st && push({ ...st, art: { x: st.art.x + (st.art.w * (1 - k)) / 2, y: st.art.y + (st.art.h * (1 - k)) / 2, w: st.art.w * k, h: st.art.h * k } });
 
@@ -314,7 +334,8 @@ export function LayoutEditor() {
                 if (fx < 0 || fy < 0 || fx >= c.width || fy >= c.height) { setMsg("Click on the painting itself."); return; }
                 const d = c.getContext("2d")!.getImageData(Math.floor(fx), Math.floor(fy), 1, 1).data;
                 const hex = "#" + [d[0], d[1], d[2]].map((v) => v.toString(16).padStart(2, "0")).join("").toUpperCase();
-                push({ ...st, ground: hex }); setPipette(false); setMsg("");
+                if (pipette === "type") paintType(hex); else push({ ...st, ground: hex });
+                setPipette(""); setMsg("");
               }}
               onPointerDown={(e) => { if (!e.shiftKey) setSel([]); }}>
               <rect width={layout.W} height={layout.H} fill={st.ground || layout.ground} />
@@ -377,17 +398,22 @@ export function LayoutEditor() {
               <span style={{ fontWeight: 700 }}>Ground</span>
               <input type="color" value={(st.ground || layout.ground).slice(0, 7)} onChange={(e) => push({ ...st, ground: e.target.value.toUpperCase() })}
                 style={{ width: 34, height: 24, border: "1px solid #111", padding: 0, background: "none", cursor: "pointer" }} title="pick any colour" />
-              <button style={pipette ? { ...ui.btn, background: "#111", color: "#fff" } : ui.btn} onClick={async () => {
-                if (!artCanvas.current) {
-                  const im = new Image(); im.src = `/api/admin/labels?id=${id}&part=art`;
-                  await im.decode().catch(() => null);
-                  const c = document.createElement("canvas"); c.width = im.naturalWidth || 1; c.height = im.naturalHeight || 1;
-                  c.getContext("2d")!.drawImage(im, 0, 0); artCanvas.current = c;
-                }
-                setPipette((v) => !v);
+              <button style={pipette === "ground" ? { ...ui.btn, background: "#111", color: "#fff" } : ui.btn} onClick={async () => {
+                await loadArt(); setPipette((v) => (v === "ground" ? "" : "ground"));
               }}>pipette</button>
               {st.ground && st.ground !== layout.ground && <button style={ui.btn} onClick={() => push({ ...st, ground: layout.ground })}>engine's</button>}
               <span style={ui.small}>{(st.ground || layout.ground).toUpperCase()}</span>
+            </div>
+            {/* THE TYPE'S COLOUR (2026-09-29) */}
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <span style={{ fontWeight: 700 }}>Type</span>
+              <input type="color" value={typeNow.slice(0, 7)} onChange={(e) => paintType(e.target.value.toUpperCase())}
+                style={{ width: 34, height: 24, border: "1px solid #111", padding: 0, background: "none", cursor: "pointer" }} title="pick any colour" />
+              <button style={pipette === "type" ? { ...ui.btn, background: "#111", color: "#fff" } : ui.btn} onClick={async () => {
+                await loadArt(); setPipette((v) => (v === "type" ? "" : "type"));
+              }}>pipette</button>
+              {typeChanged && <button style={ui.btn} onClick={engineType}>engine's</button>}
+              <span style={ui.small}>{typeNow.toUpperCase()} · {selKeys.length ? `${typeKeys.length} selected line${typeKeys.length === 1 ? "" : "s"}` : "all lines"}</span>
             </div>
             {sel.includes("art") && (
               <div style={{ display: "flex", gap: 6 }}>

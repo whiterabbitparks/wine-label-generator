@@ -241,7 +241,7 @@ export default function AdminPage() {
         </nav>
 
         {tab === "Layouts" && (
-          <Section title="Layouts" note="Press “Make 8 new labels”: eight fresh labels are painted as the wizard makes them (at a smaller size, to save money) (all twelve templates in turn, mixed sizes, the artists taking turns). Correct each by hand, then “Save my fix” or “The layout is fine” — either way it leaves the queue. Claude reads your fixes and proposes rules for you to approve; nothing changes the engine by itself.">
+          <Section title="Layouts" note="Press “Make 8 new labels”: eight fresh labels are painted as the wizard makes them, at a smaller size to save money (all twelve templates in turn, mixed sizes, the artists taking turns). Correct each by hand, then “Save my fix” or “The layout is fine” — either way it leaves the queue. Claude reads your fixes and proposes rules for you to approve; nothing changes the engine by itself.">
             <LayoutEditor />
           </Section>
         )}
