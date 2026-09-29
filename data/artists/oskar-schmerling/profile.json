@@ -1,0 +1,55 @@
+{
+  "id": "oskar-schmerling",
+  "name": "Oskar Schmerling",
+  "country": "Georgia",
+  "portfolio": "https://en.wikipedia.org/wiki/Oskar_Schmerling",
+  "medium": "Pen-and-ink illustration with flat lithographic colour, as on old Tiflis postcards",
+  "words": [
+    "humorous",
+    "caricature",
+    "illustrative"
+  ],
+  "colour": "flat printed colours — ochre, olive green, brick red, turquoise, cobalt blue and warm yellow — on a buff or tan paper, crisp dark ink outlines",
+  "form": "lively everyday scenes of old Tiflis — vendors, musicians, carters, porters, merchants and feasting men — plump expressive figures in traditional dress, drawn with good-humoured caricature, bazaars, carts and balconies",
+  "never": "never photographic, never soft painterly gradients, never smoking, never printed text, captions, letters or signatures",
+  "mood": "warm, witty and bustling",
+  "consent": "PUBLIC DOMAIN — the artist died in 1938 (more than 70 years ago); the works are reproductions of his postcards and illustrations, cleaned of signatures and captions. Portrait: a 1911 photograph by Eduard Klar (1861–1922), public domain (Wikimedia Commons).",
+  "status": "pilot",
+  "active": true,
+  "bio": "Oskar Schmerling (1863–1938) was a Georgian illustrator and caricaturist of German descent. Born in Stavropol and raised in Tiflis, he studied graphic art at the Imperial Academy of Arts in St Petersburg, then returned to Tiflis, where he drew for satirical magazines such as Molla Nasreddin and created the famous postcards of old Tbilisi — its bazaars, musicians, carters and kintos, sketched with warmth and humour.",
+  "bioGe": "ოსკარ შმერლინგი (1863–1938) — გერმანული წარმოშობის ქართველი ილუსტრატორი და კარიკატურისტი. დაიბადა სტავროპოლში, გაიზარდა თბილისში, გრაფიკა პეტერბურგის სამხატვრო აკადემიაში შეისწავლა და თბილისში დაბრუნდა. ხატავდა სატირული ჟურნალებისთვის, მათ შორის „მოლა ნასრედინისთვის“, და შექმნა ძველი თბილისის ცნობილი ღია ბარათები — ბაზრები, მუსიკოსები, მეურმეები და ყარაჩოღელები, სითბოთი და იუმორით დახატული.",
+  "page": true,
+  "pageOrder": 10,
+  "crop": "45% 25%",
+  "website": "https://en.wikipedia.org/wiki/Oskar_Schmerling",
+  "horseOrder": 9,
+  "charterBy": "Claude's draft from the 13 works (public domain), 2026-09-29",
+  "refs": [
+    "work-06.jpg",
+    "work-08.jpg",
+    "work-10.jpg",
+    "work-01.jpg"
+  ],
+  "refSets": [
+    [
+      "work-06.jpg",
+      "work-04.jpg",
+      "work-12.jpg"
+    ],
+    [
+      "work-08.jpg",
+      "work-02.jpg",
+      "work-14.jpg"
+    ],
+    [
+      "work-10.jpg",
+      "work-13.jpg",
+      "work-03.jpg"
+    ],
+    [
+      "work-01.jpg",
+      "work-09.jpg",
+      "work-07.jpg"
+    ]
+  ]
+}

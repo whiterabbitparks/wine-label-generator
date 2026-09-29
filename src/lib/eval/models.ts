@@ -361,7 +361,7 @@ export async function repaintInHand(model: EvalModel, story: string, ap: Artwork
 /* both steps; `story` is kept so a failed repaint still yields a picture.
    `refSet` is the letter of the owner's set the story was shown (A–D). */
 export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt, extra: { sketch?: string | null; quality?: "low" | "medium" | "high"; refSet?: number } = {}): Promise<{ art: string; story: string; repainted: boolean; error?: string; refSet: string }> {
-  let { set: refSet, files: refFiles } = nextRefSet(model.artist.id, extra.refSet);
+  let { set: refSet, files: refFiles } = nextRefSet(model.artist.id, extra.refSet, !!ap.abstract);
   /* 2026-09-23 (owner: "sometimes one of the three labels never comes —
      its place stays empty"): OpenAI's filter refuses some asks at random
      ("moderation_blocked / other"), and the refusal usually rides on a
@@ -377,7 +377,7 @@ export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt, extra
       const msg = e instanceof Error ? e.message : String(e);
       if (!/moderation|safety system/i.test(msg) || attempt >= 2) throw e;
       console.warn(`[painter] ${model.id}: refused on set ${refSet || "-"} — ${attempt === 0 ? "next trio" : "no reference works"}`);
-      if (attempt === 0) ({ set: refSet, files: refFiles } = nextRefSet(model.artist.id));
+      if (attempt === 0) ({ set: refSet, files: refFiles } = nextRefSet(model.artist.id, undefined, !!ap.abstract));
       else refSet = refSet ? `${refSet} (no refs)` : "no refs";
     }
   }

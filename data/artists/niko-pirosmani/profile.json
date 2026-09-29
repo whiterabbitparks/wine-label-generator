@@ -19,7 +19,7 @@
   "bio": "Niko Pirosmani (1862–1918) was a self-taught Georgian painter, one of the great naive artists of the twentieth century. Born in Kakheti, he painted signboards and pictures for the taverns of Tbilisi, often on black oilcloth, trading them for food and wine. His feasts, animals and everyday people — still, solemn and glowing against dark grounds — were discovered by the Georgian avant-garde in 1912; today he is Georgia's most beloved painter.",
   "bioGe": "ნიკო ფიროსმანი (1862–1918) — თვითნასწავლი ქართველი მხატვარი, მეოცე საუკუნის ერთ-ერთი დიდი პრიმიტივისტი. დაიბადა კახეთში, თბილისის დუქნებისთვის ხატავდა აბრებსა და სურათებს, ხშირად შავ მუშამბაზე, და მათ საჭმელსა და ღვინოში ცვლიდა. მისი ქეიფები, ცხოველები და უბრალო ადამიანები — მშვიდი, დიდებული და შავ ფონზე მოკაშკაშე — 1912 წელს ქართულმა ავანგარდმა აღმოაჩინა; დღეს ის საქართველოს ყველაზე საყვარელი მხატვარია.",
   "page": true,
-  "pageOrder": 8,
+  "pageOrder": 9,
   "crop": "50% 25%",
   "website": "https://en.wikipedia.org/wiki/Niko_Pirosmani",
   "charterBy": "Claude's draft from the 23 works (public domain), 2026-09-29",
@@ -51,5 +51,7 @@
       "work-19.jpg"
     ]
   ],
-  "horseOrder": 7
+  "horseOrder": 8,
+  "note": "the ground is BLACK, like his black oilcloth, in most pictures — another ground colour only when the scene truly needs it (a bright daytime sky, snow)",
+  "keepGround": "black"
 }

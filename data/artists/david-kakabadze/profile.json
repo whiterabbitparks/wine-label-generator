@@ -1,18 +1,18 @@
 {
   "id": "david-kakabadze",
-  "name": "David Kakabadze",
+  "name": "David Kakabadze · Imereti",
   "country": "Georgia",
   "portfolio": "https://en.wikipedia.org/wiki/David_Kakabadze",
-  "medium": "Oil and tempera on canvas, watercolour and gouache on paper, sometimes charcoal",
+  "medium": "Oil on canvas — landscapes built of small flat patches of colour, like a mosaic",
   "words": [
     "patchwork",
-    "rhythmic",
-    "modernist"
+    "luminous",
+    "rhythmic"
   ],
-  "colour": "saturated patchworks of greens, ochres, reds and yellows in the landscapes; soft blue-violet and rose watercolour washes inside dark soft outlines on light paper; bold flat red, violet and black in the abstractions",
-  "form": "Imeretian hills built from small faceted field-patches like a mosaic, rows of poplars and cypresses, old towers and houses; Breton boats, mills and cottages drawn with thick soft dark contours; biomorphic abstract shapes and wave rhythms",
-  "never": "never photographic, never soft blended airbrush gradients, never an academic crowd scene, never printed text or letters",
-  "mood": "calm, luminous and structured",
+  "colour": "saturated patchworks of greens, ochres, reds, oranges and yellows, deep blue-green shadows",
+  "form": "Imeretian hills and valleys built from small faceted field-patches, rows of poplars and cypresses, old stone towers and houses, figures quiet and simple",
+  "never": "never photographic, never soft blended gradients, never watercolour washes or dark outlines, never printed text or letters",
+  "mood": "calm, sunlit and structured",
   "consent": "PUBLIC DOMAIN — the artist died in 1952 (more than 70 years ago); the works are reproductions of his paintings. Portrait: his own self-portrait (public domain).",
   "status": "pilot",
   "active": true,
@@ -21,33 +21,33 @@
   "pageOrder": 6,
   "crop": "50% 35%",
   "website": "https://en.wikipedia.org/wiki/David_Kakabadze",
-  "charterBy": "Claude's draft from the 23 works (public domain), 2026-09-29",
+  "charterBy": "Claude's draft from the 11 oils (public domain), 2026-09-29 — split from his watercolours at the owner's word",
   "refs": [
-    "work-18.jpg",
-    "work-22.jpg",
-    "work-13.jpg",
-    "work-05.jpg"
+    "work-05.jpg",
+    "work-09.jpg",
+    "work-11.jpg",
+    "work-03.jpg"
   ],
   "refSets": [
     [
-      "work-18.jpg",
-      "work-15.jpg",
-      "work-23.jpg"
-    ],
-    [
-      "work-01.jpg",
-      "work-13.jpg",
+      "work-05.jpg",
+      "work-03.jpg",
       "work-10.jpg"
     ],
     [
-      "work-22.jpg",
-      "work-16.jpg",
-      "work-21.jpg"
+      "work-09.jpg",
+      "work-04.jpg",
+      "work-08.jpg"
     ],
     [
-      "work-05.jpg",
-      "work-04.jpg",
-      "work-20.jpg"
+      "work-06.jpg",
+      "work-07.jpg",
+      "work-11.jpg"
+    ],
+    [
+      "work-01.jpg",
+      "work-02.jpg",
+      "work-09.jpg"
     ]
   ],
   "bioGe": "დავით კაკაბაძე (1889–1952) — ქართული ავანგარდის ერთ-ერთი წამყვანი მხატვარი, გრაფიკოსი და თეატრის მხატვარი. დაიბადა იმერეთში, სწავლობდა პეტერბურგში, 1920-იანი წლების დიდი ნაწილი კი პარიზში გაატარა, სადაც აბსტრაქციით, კოლაჟითა და კინოთი ექსპერიმენტირებდა. მისი იმერეთის პეიზაჟები — ბორცვები, პატარა მოკაშკაშე ყანებისგან აწყობილი, როგორც ნაჭრების მოზაიკა — ევროპულ მოდერნიზმს ქართულ ტრადიციას უკავშირებს და ქართული ხელოვნების სიმბოლოებად რჩება.",

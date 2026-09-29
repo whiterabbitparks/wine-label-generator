@@ -15,7 +15,7 @@ import { AdminStyles as S } from "../legacy/LegacyAdmin";
 
 type A = {
   id: string; name: string; active: boolean; page: boolean; consent: string; status: string; note: string;
-  works: string[]; refSets: string[][]; lora: { trigger: string; trainedAt: string; works: number } | null; painted: number;
+  works: string[]; refSets: string[][]; abstractSet?: number; lora: { trigger: string; trainedAt: string; works: number } | null; painted: number;
 };
 
 const small = { fontSize: 11.5, color: "#6b6a60" } as React.CSSProperties;
@@ -61,7 +61,7 @@ function SetsEditor({ a, thumb }: { a: A; thumb: (f: string) => string }) {
     <div style={{ marginTop: 10 }}>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-start" }}>
         {sets.map((st, i) => zone(i, st.map((f) => tile(f, i, () => change(sets.map((x, k) => (k === i ? x.filter((y) => y !== f) : x))))),
-          `Set ${String.fromCharCode(65 + i)}${st.length >= 4 ? " (full)" : ""}`))}
+          `Set ${String.fromCharCode(65 + i)}${a.abstractSet === i ? " — abstractions only" : ""}${st.length >= 4 ? " (full)" : ""}`))}
         {sets.length < 8 && <button onClick={() => change([...sets, []])} style={{ ...small, border: "1px solid #111", background: "#fff", padding: "4px 8px", cursor: "pointer", alignSelf: "center" }}>+ set</button>}
       </div>
       <div style={{ marginTop: 8 }}>

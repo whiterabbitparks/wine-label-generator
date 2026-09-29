@@ -38,7 +38,7 @@ export async function GET(req: Request) {
     const works = fs.existsSync(wd) ? fs.readdirSync(wd).filter((f) => /\.jpe?g$|\.png$/i.test(f)).sort() : [];
     return {
       id: p.id, name: p.name, active: isActive(p), page: !!p.page, consent: p.consent || "", status: p.status || "",
-      note: p.note || "", works, refSets: p.refSets || [], lora: a!.lora ? { trigger: a!.lora.trigger, trainedAt: a!.lora.trainedAt, works: a!.lora.works } : null,
+      note: p.note || "", works, refSets: p.refSets || [], abstractSet: (p as { abstractSet?: number }).abstractSet, lora: a!.lora ? { trigger: a!.lora.trigger, trainedAt: a!.lora.trainedAt, works: a!.lora.works } : null,
       painted: painted.get(p.name) || 0,
     };
   }).sort((x, y) => Number(y.active) - Number(x.active) || x.name.localeCompare(y.name)) : [];

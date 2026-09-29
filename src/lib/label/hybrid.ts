@@ -237,7 +237,9 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
     }
   }
   /* a coloured ground that filled several of the latest paintings rests */
-  const rest = artKindOf(tpl) !== "spot" ? restingGround() : "";
+  /* an artist whose own ground is one colour keeps it (Pirosmani's black) */
+  const rest0 = artKindOf(tpl) !== "spot" ? restingGround() : "";
+  const rest = rest0 && rest0 === (model.artist as { keepGround?: string }).keepGround ? "" : rest0;
   if (rest) ap.prompt += ` GROUND COLOUR — for variety: this time the ground is NOT ${rest}; take another of the artist's own colours for it.`;
   const painted = await gen429(() => generateArtwork(model, ap, { sketch: inp.sketch || null, refSet: inp.refSet }));
   /* 2026-09-22 (owner): the artist's LoRA learned her PAPER as well as

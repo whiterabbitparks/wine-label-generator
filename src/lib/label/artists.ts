@@ -23,6 +23,13 @@ export interface ArtistProfile {
      label the next set, so the three columns of one order stand on three
      different sets. When present they replace `refs`. */
   refSets?: string[][];
+  /* 2026-09-29 (owner): the set kept for ABSTRACTIONS (0-based) — used
+     only when a label has no idea, and never in the ordinary turn */
+  abstractSet?: number;
+  /* a ground colour this artist keeps however often it recurs (Pirosmani's black) */
+  keepGround?: string;
+  /* works shown to the sketch painter but left out of a LoRA training */
+  trainExclude?: string[];
   /* 2026-09-23: the ART DIRECTOR's note on a painter's hand, kept apart
      from the artist's own answers above (never edited into them) — it
      rides at the end of the charter */
@@ -81,8 +88,22 @@ export function artistRefs(id: string, count = 4, files?: string[]): string[] {
    set's letter (A, B, …) for the label's record, "" when the artist has
    no sets. */
 const turn = new Map<string, number>();
-export function nextRefSet(id: string, want?: number): { set: string; files?: string[] } {
-  const sets = (readArtist(id)?.profile.refSets || []).filter((s) => s.length);
+export function nextRefSet(id: string, want?: number, abstract = false): { set: string; files?: string[] } {
+  const prof = readArtist(id)?.profile;
+  const all = prof?.refSets || [];
+  const ab = prof?.abstractSet;
+  if (ab !== undefined && all[ab]?.length) {
+    if (abstract) return { set: String.fromCharCode(65 + ab), files: all[ab] };
+    /* the ordinary turn runs over the other sets only */
+    const rest = all.map((s, i) => ({ s, i })).filter((x) => x.i !== ab && x.s.length);
+    if (rest.length) {
+      let k = want ?? turn.get(id) ?? Math.floor(Math.random() * rest.length);
+      if (want === undefined) turn.set(id, k + 1);
+      k = ((k % rest.length) + rest.length) % rest.length;
+      return { set: String.fromCharCode(65 + rest[k].i), files: rest[k].s };
+    }
+  }
+  const sets = all.filter((s) => s.length);
   if (!sets.length) return { set: "" };
   let k = want ?? turn.get(id) ?? Math.floor(Math.random() * sets.length);
   if (want === undefined) turn.set(id, k + 1);

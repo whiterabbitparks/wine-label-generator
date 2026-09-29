@@ -95,6 +95,8 @@ const ARTIST_GE: Record<string, string> = {
   "Giorgi Akhuashvili": "გიორგი ახუაშვილი", "Dachi Mindadze": "დაჩი მინდაძე",
   "David Kakabadze": "დავით კაკაბაძე", "Petre Otskheli": "პეტრე ოცხელი",
   "Niko Pirosmani": "ნიკო ფიროსმანი",
+  "David Kakabadze · Imereti": "დავით კაკაბაძე · იმერეთი", "David Kakabadze · Brittany": "დავით კაკაბაძე · ბრეტანი",
+  "Oskar Schmerling": "ოსკარ შმერლინგი",
 };
 const mtavruli = (s: string) => s.replace(/[\u10D0-\u10FA]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0x1C90 - 0x10D0));
 function artistShort(name: string, lang: "en" | "ge") {
@@ -3134,7 +3136,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             const cx = CX0 + (i % 6) * DX, cy = CY0 + Math.floor(i / 6) * DY;
             const a2 = siteArtists[i];
             if (!a2) return <span key={"slot" + i} style={{ ...px(cx - R, cy - R, R * 2, R * 2), borderRadius: R, background: "#e6e6e6" }} />;
-            const parts = a2.name.split(" ");
+            /* first name / surname, and a series ("· Imereti") on a third line */
+            const [nm, series] = a2.name.split(" · ");
+            const parts = [...nm.split(" "), ...(series ? [series] : [])];
             return (
               <button key={a2.id} onClick={() => { setArtistId(a2.id); setArtistView("art"); go("artist"); }}
                 style={{ ...px(cx - 110, cy - R, 220, R * 2 + 90), ...ghost, cursor: "pointer", textTransform: "none" }}>
