@@ -314,6 +314,12 @@ export const UI_GE: Record<string, string> = {
   /* 2026-09-28 (owner): TRIES — ცდა */
   "NEW TRY": "ᲐᲮᲐᲚᲘ ᲪᲓᲐ",
   "1 try = 3 new labels.": "1 ცდა = 3 ახალი ეტიკეტი.",
+  /* 2026-09-28 (owner): the taste page */
+  "BEFORE WE START, SELECT 3 HORSES YOU LIKE.": "ᲡᲐᲜᲐᲛ ᲓᲐᲕᲘᲬᲧᲔᲑᲗ, ᲐᲘᲠᲩᲘᲔ 3 ᲪᲮᲔᲜᲘ, ᲠᲝᲛᲔᲚᲘᲪ ᲛᲝᲒᲬᲝᲜᲡ.",
+  "Do not overthink, just select the ones": "ბევრს ნუ იფიქრებ, უბრალოდ აირჩიე ისინი,",
+  "that catch your attention.": "რომლებიც თვალში მოგხვდება.",
+  "Select 3 horses to continue.": "გასაგრძელებლად აირჩიე 3 ცხენი.",
+  "Select a horse to continue.": "გასაგრძელებლად აირჩიე ცხენი.",
   "Turn on guided mode and I'll give you tips at every step.": "ჩართე გზამკვლევი და ყველა ნაბიჯზე მოგცემ მინიშნებებს.",
   "Try": "ცდა",
   "One try = three new labels": "ერთი ცდა = სამი ახალი ეტიკეტი",
@@ -324,8 +330,10 @@ export const UI_GE: Record<string, string> = {
   "Tries left:": "დარჩენილი ცდები:",
   "No tries left — 3 tries for $9": "ცდები ამოიწურა — 3 ცდა $9-ად",
   "Unlimited tries (admin)": "ცდები შეუზღუდავია (ადმინი)",
-  "3 tries · 9 new versions": "3 ცდა · 9 ახალი ვერსია",
-  "10 tries · 30 new versions": "10 ცდა · 30 ახალი ვერსია",
+  "1 try / 3 new versions": "1 ცდა / 3 ახალი ვერსია",
+  "3 tries / 9 new versions": "3 ცდა / 9 ახალი ვერსია",
+  "10 tries / 30 new versions": "10 ცდა / 30 ახალი ვერსია",
+  "Each try paints 3 new versions of your label.\nYour earlier versions stay.": "ყოველი ცდა თქვენი ეტიკეტის 3 ახალ ვერსიას ხატავს.\nწინა ვერსიები რჩება.",
   /* the owner's own words (2026-09-28) */
   "Each try paints 3 new versions of your label.\nYour earlier versions stay — use the arrows beside the labels to go back to them.": "ყოველი ცდა თქვენი ეტიკეტის 3 ახალ ვერსიას ხატავს.\nწინა ვერსიები რჩება — გვერდით ისრებით შეგიძლიათ გადახვიდეთ წინა ვერსიებზე.",
   "Today's free tries are all used — come back tomorrow, or buy tries.": "დღევანდელი უფასო ცდები ამოიწურა — ხვალ დაბრუნდით, ან შეიძინეთ ცდები.",

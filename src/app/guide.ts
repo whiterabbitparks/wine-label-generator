@@ -11,7 +11,7 @@
    `done` says what moves it on by itself; a step without `done` is a note
    to read, with a Next button. */
 
-export type GuidePage = "vision" | "loader" | "options" | "backdetails" | "backdesign" | "bottle" | "assets" | "checkout";
+export type GuidePage = "taste" | "vision" | "loader" | "options" | "backdetails" | "backdesign" | "bottle" | "assets" | "checkout";
 export type GuideDone =
   | "vision"          /* three words in the idea box */
   | "selected"        /* a front label saved */
@@ -21,6 +21,7 @@ export type GuideDone =
   | "assetsSaved"     /* the images saved to the folder */
   | "confirm"         /* a check-your-details popup is open */
   | "marketClosed"    /* a market picked and the picker closed again */
+  | "taste"           /* the three horses picked */
   | `page:${GuidePage}`;
 /* what a note to READ still expects the visitor to have done — skipping it
    with nothing done asks "are you sure?" first (owner, 2026-09-23 #10) */
@@ -62,6 +63,13 @@ const PRESS_RED = { en: "the red button", ge: "წითელი ღილა�
 const PRESS_SELECT = { en: "“Select”", ge: "„აირჩიე“" };
 
 export const GUIDE: GuideStep[] = [
+  /* ── the taste page (2026-09-28) ── */
+  { page: "taste", at: { x: 137.14, y: 330.76, w: 1165.72, h: 160 }, side: "above",
+    en: "Pick the three horses you like most — don't overthink it. The artists who painted them will paint your labels.",
+    ge: "აირჩიე სამი ცხენი, რომელიც ყველაზე მეტად მოგწონს — ბევრს ნუ იფიქრებ. ვინც ისინი დახატა, ის არტისტები დახატავენ შენს ეტიკეტებს.", done: "taste", press: { en: "“Select”", ge: "„აირჩიე“" } },
+  { page: "taste", at: RED, side: "above",
+    en: "Press the red button to go on.",
+    ge: "გასაგრძელებლად დააჭირე წითელ ღილაკს.", done: "page:vision", press: PRESS_RED },
   /* ── front label details ── */
   { page: "vision", at: { x: 136, y: 342, w: 551, h: 207 }, side: "below",
     /* 2026-09-26 (owner): an empty box is a choice too — an abstraction */

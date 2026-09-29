@@ -77,7 +77,10 @@ const HNW = "'HNW', 'Helvetica Neue', Helvetica, sans-serif";
    rewrites it (the history seed below turns it into ?page=…, which wiped
    the e-mail link's ?resume= and landed the visitor on the home page) */
 const BOOT_SEARCH = typeof window !== "undefined" ? window.location.search : "";
-const ORDER = ["welcome", "vision", "loader", "options", "backdetails", "backdesign", "bottle", "assets", "checkout", "blank",
+const ORDER = ["welcome",
+  /* 2026-09-28 (owner): the TASTE page — "before we start, select 3 horses
+     you like" — the artists of the chosen horses paint the labels */
+  "taste", "vision", "loader", "options", "backdetails", "backdesign", "bottle", "assets", "checkout", "blank",
   /* 2026-09-27 (owner): buying NEW VERSIONS — a page of its own, off the
      labels page (no artboard; the bar stands on FRONT LABEL) */
   "more",
@@ -202,6 +205,7 @@ const SKIP_TO: Partial<Record<PageKey, PageKey>> = {
    current page's stop instead of stopping half way. */
 const THICK: Record<PageKey, number | null> = {
   welcome: null,
+  taste: BAR_X0,                                  /* 2026-09-28: the start dot alone, no line yet */
   vision: CIRCLE_X[0],
   loader: CIRCLE_X[0],
   options: CIRCLE_X[1],
@@ -215,7 +219,7 @@ const THICK: Record<PageKey, number | null> = {
   artists: null, artist: null,                    /* round 112 #4: no bar on the artists' pages */
 };
 /* highest station index REACHED — that dot (and earlier ones) turn red */
-const STEP_OF: Record<PageKey, number> = { welcome: -1, vision: 0, loader: 0, options: 1, backdetails: 2, backdesign: 3, bottle: 4, assets: 5, checkout: 5, blank: 0, more: 1, artists: -1, artist: -1 };
+const STEP_OF: Record<PageKey, number> = { welcome: -1, taste: -1, vision: 0, loader: 0, options: 1, backdetails: 2, backdesign: 3, bottle: 4, assets: 5, checkout: 5, blank: 0, more: 1, artists: -1, artist: -1 };
 
 /* ROUND 63: the bar no longer eats a white strip — every page's content
    band runs to the footer edge and the bar paints on top of it. */
@@ -225,7 +229,7 @@ const BAND_BOTTOM: Record<PageKey, number> = Object.fromEntries(ORDER.map((p) =>
    artboard's natural empty bands so the cut never crosses a text row or a
    drawn box (loader entry fades, so its entry is unused) */
 const STRIP_BOUNDS: Record<PageKey, [number, number]> = {
-  welcome: [360, 560], vision: [225, 460], loader: [225, 460],
+  welcome: [360, 560], taste: [225, 515], vision: [225, 460], loader: [225, 460],
   options: [225, 543], backdetails: [225, 468],
   backdesign: [165, 540], bottle: [225, 515], assets: [165, 540], checkout: [250, 500], blank: [225, 460],
   artists: [300, 560], artist: [330, 560], more: [225, 460],
@@ -596,9 +600,9 @@ export default function NewUI() {
   const [mailLink, setMailLink] = useState("");
   const [mailBusy, setMailBusy] = useState(false);
   /* the new versions' pay page: $9 for three, $19 for nine */
-  /* 2026-09-28 (owner): TRIES — one try = three new versions, one by each
-     artist; packs of 3 ($9) and 10 ($19), nothing deducted from the pack */
-  const [morePack, setMorePack] = useState<3 | 10>(3);
+  /* 2026-09-28 (owner): TRIES — one try = three new versions; packs of 1
+     ($5), 3 ($9) and 10 ($19), nothing deducted from the Final Pack */
+  const [morePack, setMorePack] = useState<1 | 3 | 10>(1);
   /* ROUND 60 #1 (owner): each style column is its OWN mini-carousel —
      a variations press generates ONE new label of that style, dots under
      the label switch between the original (0) and its variations. */
@@ -1398,7 +1402,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
      the visitor picks paint the run (none = three chosen at random); an
      artist's page's "paint with…" preselects that one */
   const [pickArtists, setPickArtists] = useState<string[]>([]);
-  const [painters, setPainters] = useState<{ id: string; name: string; avatar: string; crop: string; page: boolean }[]>([]);
+  const [painters, setPainters] = useState<{ id: string; name: string; avatar: string; crop: string; page: boolean; horse?: string; horseOrder?: number }[]>([]);
+  /* the taste page's message ("select 3"), in its own reserved row */
+  const [tasteWarn, setTasteWarn] = useState(false);
   const [styleOpen, setStyleOpen] = useState(false);
   useEffect(() => {
     fetch("/api/artists").then((r) => r.json()).then((b) => { setSiteArtists(b.artists || []); setPainters(b.painters || []); }).catch(() => { });
@@ -1704,7 +1710,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
      jumps to that page's first note, stepping back (Edit Details, Back)
      returns to the last note of the page they are on — so the black note
      is always about where they stand. */
-  const GUIDE_PAGES = ["vision", "loader", "options", "backdetails", "backdesign", "bottle", "assets", "checkout"];
+  const GUIDE_PAGES = ["taste", "vision", "loader", "options", "backdetails", "backdesign", "bottle", "assets", "checkout"];
   const [guideWarn, setGuideWarn] = useState(-1);      /* the step whose Next already warned once */
   /* 2026-09-27: a note whose action is done shows "✓" a moment first */
   const [guideOk, setGuideOk] = useState(-1);
@@ -1728,6 +1734,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       : d === "assetsSaved" ? assetsSaved
       : d === "confirm" ? !!confirmModal
       : d === "marketClosed" ? markets.length > 0 && !marketOpen
+      : d === "taste" ? pickArtists.length >= Math.min(3, painters.filter((a) => a.horse).length)
       : false;
   };
   const guideNeedsMet = (n?: string) =>
@@ -1782,7 +1789,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       setTimeout(() => { setGuideOk(-1); setGuide((g) => (g === guide ? g + 1 : g)); }, 700);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [guide, guideTick, tut, page, vision, selected, markets, marketOpen, backSaved, assetsStage, assets.front, assetsSaved, confirmModal]);
+  }, [guide, guideTick, tut, page, vision, selected, markets, marketOpen, backSaved, assetsStage, assets.front, assetsSaved, confirmModal, pickArtists]);
   useEffect(() => {
     if (!tourEnd) return;
     setNudge((n) => n + 1);
@@ -1801,8 +1808,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     /* the visitor's own order comes back (the story borrowed the page) */
     restoreRef.current(false);
     /* round 72 #2: straight into the real Your Vision page, not the home
-       page — they have just watched the whole story, so they start work */
-    go("vision");
+       page — they have just watched the whole story, so they start work.
+       2026-09-28 (owner): the taste page comes first */
+    go("taste");
   }, [go, stopTutorial]);
 
   useEffect(() => {
@@ -2999,6 +3007,56 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         </>);
       }
 
+      /* 2026-09-28 (owner's Horse.pdf): THE TASTE PAGE — before any label,
+         the visitor picks the three horses they like; each horse is painted
+         by one of the artists (tools/make-horse.mts — every new painter
+         gets one), and the picked horses' artists paint the labels. Up to
+         four a row, margin to margin, as the owner laid them out; a fifth
+         painter opens a second row. */
+      case "taste": {
+        const list = painters.filter((a) => a.horse).sort((x, y) => (x.horseOrder ?? 99) - (y.horseOrder ?? 99));
+        const need = Math.min(3, list.length);
+        const IW = 240, IH = 160, COLS = 4;
+        const colX = (k: number) => 137.14 + k * ((1302.86 - 137.14 - IW) / (COLS - 1));
+        const rows = Math.ceil(list.length / COLS);
+        /* one row: the owner's y (image 330.76, Select on 543.08); two rows
+           share the band between the subtitle and the bar */
+        const rowY = (r: number) => rows <= 1 ? 330.76 : 232 + r * 222;
+        const full = pickArtists.length >= need;
+        const toggle = (id: string) => {
+          setTasteWarn(false);
+          setPickArtists((pa) => pa.includes(id) ? pa.filter((x) => x !== id) : pa.length >= need ? pa : [...pa, id]);
+        };
+        return (<>
+          <span style={{ ...px(137.14, baseTop(149.08, 19), 900, 22), font: `700 19px ${HNW}`, lineHeight: "19px", color: INK, whiteSpace: "nowrap" }}>{t("BEFORE WE START, SELECT 3 HORSES YOU LIKE.")}</span>
+          {[t("Do not overthink, just select the ones"), t("that catch your attention.")].map((ln, i) => (
+            <span key={"tsub" + i} style={{ ...px(136.97, baseTop(182.56 + i * 18, 15), 700, 18), font: `italic 15px ${HNW}`, lineHeight: "15px", color: INK, whiteSpace: "nowrap" }}>{ln}</span>
+          ))}
+          {list.map((a, k) => {
+            const x = colX(k % COLS), y = rowY(Math.floor(k / COLS)), cx = x + IW / 2;
+            const on = pickArtists.includes(a.id), grey = !on && full;
+            const base = y + IH + 52.32;
+            return (
+              <span key={"horse" + a.id} style={{ opacity: grey ? 0.35 : 1, transition: `opacity 240ms ${EASE}` }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={a.horse} alt="" draggable={false} onClick={() => toggle(a.id)}
+                  style={{ ...px(x, y, IW, IH), objectFit: "contain", display: "block", cursor: grey ? "default" : "pointer" }} />
+                <button onClick={() => toggle(a.id)} disabled={grey} aria-label={`select ${a.name}`}
+                  style={{ ...px(cx - 28.24 - 10.56, base - 4.4 - 10.56 - 4, 90, 29), ...ghost, cursor: grey ? "default" : "pointer", textTransform: "none" }}>
+                  <span style={{ position: "absolute", left: 0, top: 4 }}>{ringSvg(21.12, on, { stroke: 3, dot: 9 })}</span>
+                  <span style={{ position: "absolute", left: 10.56 + 28.24 - 7.43, top: baseTop(base, 15) - (base - 4.4 - 10.56 - 4), font: `700 15px/15px ${HNW}`, color: INK, whiteSpace: "nowrap" }}>{t("Select")}</span>
+                </button>
+              </span>
+            );
+          })}
+          {/* the red button asks for three — said here, in its own row */}
+          {tasteWarn && (
+            <span style={{ ...px(137.14, baseTop(rowY(rows - 1) + IH + 100, 13), 1165.72, 16), font: `13px ${HNW}`, lineHeight: "13px", color: BAR_RED, textAlign: "center", display: "block" }}>
+              {need > 1 ? t("Select 3 horses to continue.") : t("Select a horse to continue.")}</span>
+          )}
+        </>);
+      }
+
       /* one artist: her portrait, her words, the button that starts a
          label in her hand, and six of her own paintings */
       case "artist": {
@@ -3457,33 +3515,40 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       }
       case "more": {
         /* 2026-09-27 (owner): NEW VERSIONS, bought — the Final Pack's price
-           list alone in the middle of an empty page: two rows (one choice),
-           the glass to clink below, and the red button turned into Pay.
-           2026-09-28 (owner): sold as TRIES — 3 for $9, 10 for $19 */
-        const L = 480, R = 960, B0 = 372, STEP = 34.3;
-        const ROWS: { n: 3 | 10; price: number; label: string }[] = [
-          { n: 3, price: 9, label: "3 tries · 9 new versions" }, { n: 10, price: 19, label: "10 tries · 30 new versions" },
+           list alone in the middle of an empty page, the glass to clink
+           below, and the red button turned into Pay.
+           2026-09-28 (owner's No-tries-page.pdf): three packs — 1 try $5,
+           3 tries $9, 10 tries $19 — ruled above, between and below, under
+           the owner's bottle-woman drawing; every number is his file's */
+        const L = 525.7, R = 917.71, RULE0 = 500.08, STEP = 33.75;
+        const ROWS: { n: 1 | 3 | 10; price: number; label: string }[] = [
+          { n: 1, price: 5, label: "1 try / 3 new versions" },
+          { n: 3, price: 9, label: "3 tries / 9 new versions" },
+          { n: 10, price: 19, label: "10 tries / 30 new versions" },
         ];
         return (<>
           <span style={{ ...px(139, baseTop(149.08, 24), 600, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t("MORE TRIES")}</span>
           <span style={{ ...px(137.14, baseTop(183, 14), 640, 40), font: `italic 14px ${HNW}`, lineHeight: "18px", color: "#111", whiteSpace: "pre-line" }}>
-            {t("Each try paints 3 new versions of your label.\nYour earlier versions stay — use the arrows beside the labels to go back to them.")}
+            {t("Each try paints 3 new versions of your label.\nYour earlier versions stay.")}
           </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/newui/bottle-woman.svg" alt="" draggable={false} style={{ ...px(689.72, 218.03, 61.77, 253.01), display: "block", pointerEvents: "none" }} />
+          {dashRule(L, RULE0, R - L, false, "mvd-top")}
           {ROWS.map((row, i) => {
-            const y = B0 + i * STEP;
+            const rule = RULE0 + i * STEP, base = rule + 22;
             return (
               <span key={"mv" + row.n}>
-                {dotBtn(L + 9, y - 6.13, morePack === row.n, () => setMorePack(row.n), "mvr" + row.n, { ring: true, r: 9, cover: 24 })}
+                {dotBtn(535.29, rule + 15, morePack === row.n, () => setMorePack(row.n), "mvr" + row.n, { ring: true, r: 9, cover: 24 })}
                 <button onClick={() => setMorePack(row.n)}
-                  style={{ ...px(L + 43.57, baseTop(y, 15), R - L - 120, 18), ...ghost, textAlign: "left", textTransform: "none", font: `15px/15px ${HNW}`, color: "#111", display: "block", whiteSpace: "nowrap" }}>{t(row.label)}</button>
-                <span style={{ ...px(R - 160, baseTop(y, 15), 160, 18), font: `15px/15px ${HNW}`, textAlign: "right", display: "block" }}>{"$" + row.price}</span>
-                {dashRule(L, y + 12.1, R - L, false, "mvd" + row.n)}
+                  style={{ ...px(569.6, baseTop(base, 15), R - 569.6 - 60, 18), ...ghost, textAlign: "left", textTransform: "none", font: `15px/15px ${HNW}`, color: "#111", display: "block", whiteSpace: "nowrap" }}>{t(row.label)}</button>
+                <span style={{ ...px(R - 160, baseTop(base, 15), 160, 18), font: `15px/15px ${HNW}`, textAlign: "right", display: "block" }}>{"$" + row.price}</span>
+                {dashRule(L, rule + STEP, R - L, false, "mvd" + row.n)}
               </span>
             );
           })}
-          {agreeRow((GH) => ({ right: W - R, top: baseTop(B0 + 2 * STEP + 44, 15) - (GH - 15) - 10 }))}
+          {agreeRow((GH) => ({ right: W - R, top: baseTop(665.82, 15) - (GH - 15) - 10 }))}
           {warn && (
-            <span style={{ ...px(L, B0 + 2 * STEP + 70, R - L, 16), font: `13px ${HNW}`, color: "#BA141A", textAlign: "right", display: "block" }}>{warn}</span>
+            <span style={{ ...px(L, 684, R - L, 16), font: `13px ${HNW}`, color: "#BA141A", textAlign: "right", display: "block" }}>{warn}</span>
           )}
         </>);
       }
@@ -4893,7 +4958,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     let firstVisit = true;
                     try { firstVisit = !localStorage.getItem("nui-walked"); localStorage.setItem("nui-walked", "1"); } catch { /* private mode: show it */ }
                     void firstVisit;
-                    if (guideOn) { setGuide(0); go("vision"); return; }
+                    if (guideOn) { setGuide(0); go("taste"); return; }
+                    go("taste"); return;
+                  }
+                  else if (page === "taste") {
+                    /* the three horses are the three artists (2026-09-28) */
+                    const need = Math.min(3, painters.filter((a) => a.horse).length);
+                    if (pickArtists.length < need) { setTasteWarn(true); return; }
                     go("vision"); return;
                   }
                   else if (page === "vision") {
