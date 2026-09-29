@@ -25,7 +25,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   if (!(await requestIsAuthenticated())) return NextResponse.json({ error: "not authenticated" }, { status: 401 });
-  let body: { labelId?: string; before?: unknown; after?: unknown; note?: string; pictureBad?: boolean };
+  let body: { labelId?: string; before?: unknown; after?: unknown; note?: string; pictureBad?: boolean; method?: string };
   try { body = await req.json(); } catch { return NextResponse.json({ error: "invalid JSON" }, { status: 400 }); }
   const id = String(body.labelId || "").replace(/[^a-z0-9-]/gi, "");
   const label = id ? readLabel(id) : null;
@@ -37,6 +37,8 @@ export async function POST(req: Request) {
     widthMm: label.meta.widthMm, heightMm: label.meta.heightMm, artist: (label.meta as { artist?: string }).artist || "",
     note: String(body.note || "").slice(0, 2000),
     pictureBad: !!body.pictureBad,
+    /* how the picture was placed: "panel" (2026-09-29 trial) or the older edge fit */
+    method: body.method === "panel" ? "panel" : "edge",
     before: body.before, after: body.after,
   };
   fs.mkdirSync(DIR, { recursive: true });

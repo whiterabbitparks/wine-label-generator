@@ -51,6 +51,10 @@ export interface HybridInput {
   avoidPairs?: string[];
   /* the artists the visitor picked (ids) — the run's cast comes from them */
   pool?: string[];
+  /* paint a big picture as ONE PANEL (see below) whatever PANEL_METHOD
+     says — the admin's layout batch always does, so the owner's picture
+     corrections are made on the method under trial */
+  panel?: boolean;
 }
 export interface HybridOutput {
   png: string;          /* data URL — the print bitmap at 12 px/mm */
@@ -88,7 +92,7 @@ async function gen429<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
-export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput & { tag: string; painter: string; artist?: string; repainted: boolean; template: string; hasPaper: boolean; refSet: string }> {
+export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput & { tag: string; painter: string; artist?: string; repainted: boolean; template: string; hasPaper: boolean; refSet: string; panel: boolean }> {
   const style = ["traditional", "contemporary", "punk"].includes(inp.style) ? inp.style : "traditional";
   let seed = inp.seed ?? (Math.random() * 0xffffffff) >>> 0;
   const avoid = inp.avoidPairs || [];
@@ -167,7 +171,7 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
     const bl = bleedsOf(tpl);
     edgeSides = (["bottom", "top", "right", "left"] as const).filter((k) => !bl[k]);
     /* (the panel method, below, asks for its own shape instead) */
-    if (edgeSides.length && !(process.env.PANEL_METHOD === "1" && edgeSides.length <= 1)) {
+    if (edgeSides.length && !((inp.panel ?? process.env.PANEL_METHOD === "1") && edgeSides.length <= 1)) {
       /* the type lies across the picture's height (above and/or below it)
          or across its width (beside it) */
       const horiz = edgeSides.every((k) => k === "top" || k === "bottom");
@@ -228,7 +232,7 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
      panel of the window's own shape on plain paper, everything whole inside
      it — and laid in by the composer (compose-template `panel`). The
      "run off the edges / cover the window" asks are dropped. */
-  const panel = process.env.PANEL_METHOD === "1" && artKindOf(tpl) !== "spot" && edgeSides.length <= 1;
+  const panel = (inp.panel ?? process.env.PANEL_METHOD === "1") && artKindOf(tpl) !== "spot" && edgeSides.length <= 1;
   if (panel) {
     const shape = zoneAspect >= 1 ? `about ${zoneAspect.toFixed(1)} times wider than tall` : `about ${(1 / zoneAspect).toFixed(1)} times taller than wide`;
     const panelText = `THE PICTURE IS ONE PANEL: paint the whole scene as a single panel ${shape}, as large as the canvas allows, centred, with plain, flat, empty paper of one tone around it. The panel is filled edge to edge with the scene; its outline is the painter's own loose, irregular edge — never a frame, never a straight ruled line, never an oval. Every figure whole, every face and every animal, the whole story, well inside the panel; its outermost rim may be trimmed away, so nothing important sits near the panel's edges.`;
@@ -287,7 +291,7 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
   });
   if (out.warnings.length) console.warn(`[template ${out.template}] ${out.warnings.join("; ")}`);
   rememberMade({ artist: model.artist.name, template: out.template, face: out.faces.match(/^(.*?) \d{3}\//)?.[1] || out.faces.split(" ")[0], ground: groundWord(out.layout.ground) });
-  return { png: out.png, svg: out.svg, art, faces: out.faces, ink: out.ink, ground: out.layout.ground, prompt: ap.prompt, layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", painter: model.id, artist: model.artist.name, repainted: painted.repainted, template: out.template, hasPaper: cleaned.cleaned, refSet: painted.refSet };
+  return { png: out.png, svg: out.svg, art, faces: out.faces, ink: out.ink, ground: out.layout.ground, prompt: ap.prompt, layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", painter: model.id, artist: model.artist.name, repainted: painted.repainted, template: out.template, hasPaper: cleaned.cleaned, refSet: painted.refSet, panel: panel && cleaned.cleaned };
 }
 
 /* ROUND 86 #3 (owner: "keep the image, just change the layout — tons of
@@ -306,7 +310,7 @@ export function layoutTag(style: string, seed: number): string {
    arrangements"): `big` insists on the largest hero sizes; `flip` sets
    the type on the OTHER alignment (a centred style goes left, a left one
    goes centred) */
-export async function relayoutLabel(stored: { art: Buffer; meta: { style: string; widthMm: number; heightMm: number; ground: string; fit?: "yield" | "crop" | "top" | "vignette" } }, data: Record<string, string>, avoid: string[] = [], recipe: { big?: boolean; flip?: boolean } = {}, keep = false): Promise<HybridOutput & { tag: string; template: string }> {
+export async function relayoutLabel(stored: { art: Buffer; meta: { style: string; widthMm: number; heightMm: number; ground: string; fit?: "yield" | "crop" | "top" | "vignette" } }, data: Record<string, string>, avoid: string[] = [], recipe: { big?: boolean; flip?: boolean } = {}, keep = false): Promise<HybridOutput & { tag: string; template: string; panel?: boolean }> {
   const { style, widthMm, heightMm, ground } = stored.meta;
   const raw = `data:image/png;base64,${stored.art.toString("base64")}`;
   /* a picture stored before the clean-paper pass still has its wrinkles;
@@ -327,7 +331,9 @@ export async function relayoutLabel(stored: { art: Buffer; meta: { style: string
     type Side = "top" | "bottom" | "left" | "right";
     const bl = bleedsOf(storedTpl);
     const sides: Side[] = artKindOf(storedTpl) === "spot" ? [] : (["bottom", "top", "right", "left"] as const).filter((k) => !bl[k]);
-    const cl = await cleanPaper(raw, undefined, sides.length ? sides : undefined);
+    /* a panel picture is set again as a panel (cleaned all round) */
+    const wasPanel = !!(stored.meta as { panel?: boolean }).panel;
+    const cl = await cleanPaper(raw, undefined, !wasPanel && sides.length ? sides : undefined);
     /* and in the SAME face: the family was drawn from the label's seed,
        which the label records by name ("EB Garamond 700/400 · t02") —
        a seed that draws that family again is found */
@@ -336,9 +342,10 @@ export async function relayoutLabel(stored: { art: Buffer; meta: { style: string
     if (fam) for (let k = 1; k < 2000; k++) if (facesFor(band, k).hero.family === fam) { keepSeed = k; break; }
     const out = await composeTemplateLabel({
       artwork: cl.art, band, template: storedTpl.id, data, ink: cl.ink, paper: cl.ground,
-      widthMm, heightMm, seed: keepSeed, wineColour: data.wineColorName, edge: cl.cleaned && sides.length ? sides : undefined,
+      widthMm, heightMm, seed: keepSeed, wineColour: data.wineColorName, edge: !wasPanel && cl.cleaned && sides.length ? sides : undefined,
+      panel: wasPanel && cl.cleaned,
     });
-    return { png: out.png, svg: out.svg, art: cl.art, faces: out.faces, ink: out.ink, ground: out.layout.ground || ground, prompt: "(the same painting, the details set again)", layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", template: out.template };
+    return { png: out.png, svg: out.svg, art: cl.art, faces: out.faces, ink: out.ink, ground: out.layout.ground || ground, prompt: "(the same painting, the details set again)", layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", template: out.template, panel: wasPanel && cl.cleaned };
   }
   const cleaned = await cleanPaper(raw);
   const art = cleaned.art;

@@ -81,10 +81,10 @@ async function makeOne(k: number) {
   const data: Record<string, string> = {};
   for (const [key, v] of Object.entries(raw)) data[key] = CASED_FIELDS.has(key as never) ? properCase(v) : v;
   const style = BAND_STYLE[tpl.band] || "traditional";
-  const out = await paintHybridLabel({ vision: idea, style, data, widthMm: w, heightMm: h, artistId: artist?.profile.id, template: tpl.id });
+  const out = await paintHybridLabel({ vision: idea, style, data, widthMm: w, heightMm: h, artistId: artist?.profile.id, template: tpl.id, panel: true });
   const id = saveLabel({
     style, widthMm: w, heightMm: h, faces: out.faces, ground: out.ground, svg: out.svg, png: out.png, art: out.art,
-    prompt: out.prompt, layout: out.layout, fit: out.fit, template: out.template, hasPaper: out.hasPaper, artist: out.artist, refSet: out.refSet,
+    prompt: out.prompt, layout: out.layout, fit: out.fit, template: out.template, hasPaper: out.hasPaper, artist: out.artist, refSet: out.refSet, panel: out.panel,
   });
   const s = read();
   s.items.push({ id, template: out.template, widthMm: w, heightMm: h, artist: out.artist || "", idea: idea.split(" — ")[0], status: "open", madeAt: new Date().toISOString() });

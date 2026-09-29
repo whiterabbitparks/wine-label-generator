@@ -101,7 +101,7 @@ export async function POST(req: Request) {
           ? await relayoutLabel(base, data, [], {}, !!body.keep)
           : await paintHybridLabel({ vision, style, data, widthMm, heightMm, sketch, artistId: artist || undefined, order: order || undefined, avoidPairs, pool });
         const m = base ? base.meta : { style, widthMm, heightMm, fit: out.fit };
-        const id = saveLabel({ style: m.style, widthMm: m.widthMm, heightMm: m.heightMm, faces: out.faces, ground: out.ground, svg: out.svg, png: out.png, art: out.art, prompt: out.prompt, layout: out.layout, fit: m.fit, template: (out as { template?: string }).template, hasPaper: (out as { hasPaper?: boolean }).hasPaper, artist: base ? (base.meta as { artist?: string }).artist : (out as { artist?: string }).artist, refSet: (out as { refSet?: string }).refSet });
+        const id = saveLabel({ style: m.style, widthMm: m.widthMm, heightMm: m.heightMm, faces: out.faces, ground: out.ground, svg: out.svg, png: out.png, art: out.art, prompt: out.prompt, layout: out.layout, fit: m.fit, template: (out as { template?: string }).template, hasPaper: (out as { hasPaper?: boolean }).hasPaper, artist: base ? (base.meta as { artist?: string }).artist : (out as { artist?: string }).artist, refSet: (out as { refSet?: string }).refSet, panel: (out as { panel?: boolean }).panel });
         /* medium-res JPEG for the page's views — the PNG stays the print source */
         let preview: string | null = null;
         try {

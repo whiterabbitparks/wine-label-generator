@@ -24,13 +24,29 @@ type Line = { text: string; x: number; y: number; size: number; tracking: number
 type Box = { x: number; y: number; w: number; h: number };
 type Layout = { W: number; H: number; ground: string; art: Box; artCrop?: Box; lines: Line[] };
 type State = { lines: Line[]; art: Box; ground?: string };
-type Meta = { id: string; template?: string; style: string; widthMm: number; heightMm: number; createdAt: string; artist?: string };
+type Meta = { id: string; template?: string; style: string; widthMm: number; heightMm: number; createdAt: string; artist?: string; panel?: boolean };
 type Item = { id: string; template: string; widthMm: number; heightMm: number; artist: string; idea: string };
 type Batch = { open: Item[]; fixed: number; ok: number; running: { total: number; done: number; failed: string[] } | null };
 
 const PX_PER_MM = 12;
 const PT_PX = PX_PER_MM * 0.3528;          /* 1 pt in label pixels */
 const VIEW_W = 760;                         /* the label's width on screen */
+/* 2026-09-29 (owner: "if I correct the picture's position, do you
+   remember?"): the editor holds the WHOLE painting — the label shows only
+   the part inside the trim + 2 mm bleed, so moving or scaling it can bring
+   back what the composer trimmed away. `art` in the editor's state is that
+   whole-painting box; the saved edit carries both it (`picture`) and the
+   part the label shows (`art`, as before). */
+const wholeOf = (lay: Layout, img: { w: number; h: number }): Box => {
+  const c = lay.artCrop || { x: 0, y: 0, w: img.w, h: img.h };
+  const kx = lay.art.w / c.w, ky = lay.art.h / c.h;
+  return { x: lay.art.x - c.x * kx, y: lay.art.y - c.y * ky, w: img.w * kx, h: img.h * ky };
+};
+const shownOf = (b: Box, lay: Layout, widthMm: number): Box => {
+  const o = 2 * (lay.W / widthMm);
+  const x0 = Math.max(-o, b.x), y0 = Math.max(-o, b.y), x1 = Math.min(lay.W + o, b.x + b.w), y1 = Math.min(lay.H + o, b.y + b.h);
+  return { x: x0, y: y0, w: Math.max(0, x1 - x0), h: Math.max(0, y1 - y0) };
+};
 
 /* labels made before lines carried their element's name: an arced line
    was laid letter by letter — consecutive turned single letters of one
@@ -110,7 +126,7 @@ export function LayoutEditor() {
     const b = await (await fetch(`/api/admin/labels?id=${lid}&part=layout`)).json();
     if (!b.layout) { setMsg("This label has no layout on disk."); return; }
     setMeta(b.meta); setLayout(b.layout); setArtSize(b.art); setFaces(b.faces || {});
-    setSt({ lines: keyed(b.layout.lines), art: { ...b.layout.art }, ground: b.layout.ground });
+    setSt({ lines: keyed(b.layout.lines), art: wholeOf(b.layout, b.art), ground: b.layout.ground });
     setPipette(false); artCanvas.current = null;
   }, []);
   /* nothing open → the first label waiting in the queue */
@@ -195,7 +211,7 @@ export function LayoutEditor() {
   });
 
   const undo = () => setHist((h) => { if (!h.length) return h; setSt(h[h.length - 1]); return h.slice(0, -1); });
-  const reset = () => { if (layout) push({ lines: keyed(layout.lines), art: { ...layout.art }, ground: layout.ground }); };
+  const reset = () => { if (layout) push({ lines: keyed(layout.lines), art: wholeOf(layout, artSize), ground: layout.ground }); };
 
   /* the selected lines' tools — size, weight and hide work on every
      selected line; alignment only on one straight line */
@@ -227,7 +243,7 @@ export function LayoutEditor() {
     if (outcome === "fixed") {
       const r = await fetch("/api/admin/layout-edits", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ labelId: id, note, pictureBad, before: { lines: keyed(layout.lines), art: layout.art, ground: layout.ground }, after: { lines: st.lines, art: st.art, ground: st.ground || layout.ground } }),
+        body: JSON.stringify({ labelId: id, note, pictureBad, before: { lines: keyed(layout.lines), art: layout.art, picture: wholeOf(layout, artSize), imageSize: artSize, ground: layout.ground }, after: { lines: st.lines, art: shownOf(st.art, layout, meta?.widthMm || 110), picture: st.art, imageSize: artSize, ground: st.ground || layout.ground }, method: meta?.panel ? "panel" : "edge" }),
       });
       if (!r.ok) { const b = await r.json().catch(() => ({})); setMsg("Could not save: " + (b.error || r.status)); return; }
     }
@@ -236,10 +252,10 @@ export function LayoutEditor() {
     refresh();
   };
 
-  const changed = !!(st && layout && JSON.stringify({ l: st.lines, a: st.art, g: (st.ground || layout.ground).toUpperCase() }) !== JSON.stringify({ l: keyed(layout.lines), a: layout.art, g: layout.ground.toUpperCase() }));
+  const changed = !!(st && layout && JSON.stringify({ l: st.lines, a: st.art, g: (st.ground || layout.ground).toUpperCase() }) !== JSON.stringify({ l: keyed(layout.lines), a: wholeOf(layout, artSize), g: layout.ground.toUpperCase() }));
   const scaleView = layout ? VIEW_W / layout.W : 1;
   const M = 5 * PX_PER_MM;
-  const selBoxes = st ? sel.map((k) => (k === "art" ? st.art : bboxOf(k))).filter((b): b is Box => !!b) : [];
+  const selBoxes = st ? sel.map((k) => (k === "art" && layout ? shownOf(st.art, layout, meta?.widthMm || 110) : bboxOf(k))).filter((b): b is Box => !!b) : [];
   /* the grid starts ON the margin lines and ends on them: the space
      between is cut into equal steps of about 5 mm */
   const grid = (() => {
@@ -293,8 +309,7 @@ export function LayoutEditor() {
                 const svg = svgRef.current, c = artCanvas.current; if (!svg || !c || !st) return;
                 const r = svg.getBoundingClientRect();
                 const lx = (e.clientX - r.left) / r.width * layout.W, ly = (e.clientY - r.top) / r.height * layout.H;
-                const crop = layout.artCrop || { x: 0, y: 0, w: artSize.w, h: artSize.h };
-                const px2 = crop.x + (lx - st.art.x) / st.art.w * crop.w, py2 = crop.y + (ly - st.art.y) / st.art.h * crop.h;
+                const px2 = (lx - st.art.x) / st.art.w * artSize.w, py2 = (ly - st.art.y) / st.art.h * artSize.h;
                 const fx = px2 / artSize.w * c.width, fy = py2 / artSize.h * c.height;
                 if (fx < 0 || fy < 0 || fx >= c.width || fy >= c.height) { setMsg("Click on the painting itself."); return; }
                 const d = c.getContext("2d")!.getImageData(Math.floor(fx), Math.floor(fy), 1, 1).data;
@@ -303,12 +318,12 @@ export function LayoutEditor() {
               }}
               onPointerDown={(e) => { if (!e.shiftKey) setSel([]); }}>
               <rect width={layout.W} height={layout.H} fill={st.ground || layout.ground} />
-              {/* the picture, cropped as the label shows it */}
-              <svg x={st.art.x} y={st.art.y} width={st.art.w} height={st.art.h} preserveAspectRatio="none" overflow="hidden"
-                viewBox={layout.artCrop ? `${layout.artCrop.x} ${layout.artCrop.y} ${layout.artCrop.w} ${layout.artCrop.h}` : `0 0 ${artSize.w} ${artSize.h}`}>
-                <image href={`/api/admin/labels?id=${id}&part=art`} width={artSize.w} height={artSize.h} preserveAspectRatio="none" />
-              </svg>
-              <rect x={st.art.x} y={st.art.y} width={st.art.w} height={st.art.h} fill="transparent" style={{ cursor: "move" }} onPointerDown={onDown("art")} />
+              {/* the whole painting, shown as far as the label + its 2 mm bleed */}
+              {(() => { const v = shownOf(st.art, layout, meta?.widthMm || 110); return (<>
+                <clipPath id="le-shown"><rect x={v.x} y={v.y} width={v.w} height={v.h} /></clipPath>
+                <image href={`/api/admin/labels?id=${id}&part=art`} x={st.art.x} y={st.art.y} width={st.art.w} height={st.art.h} preserveAspectRatio="none" clipPath="url(#le-shown)" />
+                <rect x={v.x} y={v.y} width={v.w} height={v.h} fill="transparent" style={{ cursor: "move" }} onPointerDown={onDown("art")} />
+              </>); })()}
               {/* the type */}
               {st.lines.map((l, i) => (
                 <text key={i} data-key={l.key} x={l.x} y={l.y} fontFamily={`"${l.family}"`} fontWeight={l.weight} fontSize={l.size}
