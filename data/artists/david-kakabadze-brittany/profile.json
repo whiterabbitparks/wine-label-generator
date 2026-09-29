@@ -1,6 +1,6 @@
 {
   "id": "david-kakabadze-brittany",
-  "name": "David Kakabadze · Brittany",
+  "name": "David Kakabadze",
   "country": "Georgia",
   "portfolio": "https://en.wikipedia.org/wiki/David_Kakabadze",
   "medium": "Watercolour and gouache on paper, forms held by soft, thick, blurred dark outlines, colour bleeding inside them",
@@ -10,53 +10,46 @@
     "decorative"
   ],
   "colour": "light paper with soft washes of rose, ochre, violet, cobalt and teal, thick blurred dark-blue outlines",
-  "form": "Breton houses, windmills, harbours and sailing boats on rippled water, stylised waves as repeated curls, sometimes simplified into flat biomorphic shapes",
+  "form": "Breton houses, windmills, castles, harbours and sailing boats on rippled water, stylised waves as repeated curls",
   "never": "never photographic, never oil-paint texture, never a dark overall ground, never printed text or letters",
   "mood": "light, lyrical and quiet",
   "consent": "PUBLIC DOMAIN — the artist died in 1952 (more than 70 years ago); the works are reproductions of his paintings. Portrait: his own self-portrait (public domain).",
   "status": "pilot",
   "active": true,
-  "bio": "David Kakabadze (1889–1952), the Georgian avant-garde painter, spent most of the 1920s in Paris and painted the coast of Brittany again and again — houses, mills, harbours and boats in watercolour, held by soft, glowing dark outlines, some of them drifting into pure abstract shapes. This is the light, lyrical side of the painter of the Imereti landscapes.",
-  "page": false,
-  "pageOrder": 7,
+  "bio": "David Kakabadze (1889–1952), the Georgian avant-garde painter, spent most of the 1920s in Paris and painted the coast of Brittany again and again — houses, mills, harbours and boats in watercolour, held by soft, glowing dark outlines. This is the light, lyrical side of one of the founders of Georgian modern art.",
+  "page": true,
+  "pageOrder": 5,
   "crop": "50% 35%",
   "website": "https://en.wikipedia.org/wiki/David_Kakabadze",
-  "charterBy": "Claude's draft from the 11 watercolours (public domain), 2026-09-29 — split from his oils at the owner's word",
+  "charterBy": "Claude's draft from the 8 Breton watercolours (public domain), 2026-09-29 — the oils and the abstractions retired at the owner's word",
   "refs": [
     "work-06.jpg",
     "work-09.jpg",
     "work-04.jpg",
-    "work-02.jpg"
+    "work-07.jpg"
   ],
   "refSets": [
     [
       "work-06.jpg",
+      "work-04.jpg",
+      "work-08.jpg"
+    ],
+    [
+      "work-09.jpg",
+      "work-01.jpg",
+      "work-05.jpg"
+    ],
+    [
       "work-07.jpg",
-      "work-10.jpg"
+      "work-10.jpg",
+      "work-06.jpg"
     ],
     [
       "work-04.jpg",
-      "work-05.jpg",
-      "work-01.jpg"
-    ],
-    [
       "work-08.jpg",
-      "work-09.jpg",
-      "work-11.jpg"
-    ],
-    [
-      "work-12.jpg",
-      "work-13.jpg",
-      "work-02.jpg",
-      "work-11.jpg"
+      "work-09.jpg"
     ]
   ],
-  "bioGe": "დავით კაკაბაძე (1889–1952), ქართული ავანგარდის მხატვარი, 1920-იან წლებში პარიზში ცხოვრობდა და ბრეტანის სანაპიროს არაერთხელ ხატავდა — სახლებს, წისქვილებს, ნავსადგურებსა და ნავებს აკვარელით, რბილი, მოკაშკაშე მუქი კონტურებით, ზოგს სუფთა აბსტრაქციამდე მიყვანილს. ეს იმერეთის პეიზაჟების ავტორის მსუბუქი, ლირიკული მხარეა.",
-  "abstractSet": 3,
-  "trainExclude": [
-    "work-12.jpg",
-    "work-13.jpg"
-  ],
-  "horseOrder": 6,
-  "pageOf": "david-kakabadze"
+  "bioGe": "დავით კაკაბაძე (1889–1952), ქართული ავანგარდის მხატვარი, 1920-იან წლებში პარიზში ცხოვრობდა და ბრეტანის სანაპიროს არაერთხელ ხატავდა — სახლებს, წისქვილებს, ნავსადგურებსა და ნავებს აკვარელით, რბილი, მოკაშკაშე მუქი კონტურებით. ეს ქართული თანამედროვე ხელოვნების ერთ-ერთი ფუძემდებლის მსუბუქი, ლირიკული მხარეა.",
+  "horseOrder": 5
 }

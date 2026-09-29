@@ -14,10 +14,10 @@
   "never": "never photographic, never soft blended gradients, never watercolour washes or dark outlines, never printed text or letters",
   "mood": "calm, sunlit and structured",
   "consent": "PUBLIC DOMAIN — the artist died in 1952 (more than 70 years ago); the works are reproductions of his paintings. Portrait: his own self-portrait (public domain).",
-  "status": "pilot",
-  "active": true,
+  "status": "retired 2026-09-29 (owner: only the watercolour direction stays)",
+  "active": false,
   "bio": "David Kakabadze (1889–1952) was a leading Georgian avant-garde painter, graphic artist and stage designer. Born in Imereti, he studied in St Petersburg and spent most of the 1920s in Paris, painting the coast of Brittany in luminous watercolours and experimenting with abstraction, collage and film. His oil landscapes of Imereti — hills built from small glowing fields like a patchwork — joined European modernism with Georgian tradition. His hand lives here in two models: the Imereti oils and the Brittany watercolours.",
-  "page": true,
+  "page": false,
   "pageOrder": 6,
   "crop": "50% 35%",
   "website": "https://en.wikipedia.org/wiki/David_Kakabadze",
@@ -50,10 +50,5 @@
       "work-09.jpg"
     ]
   ],
-  "bioGe": "დავით კაკაბაძე (1889–1952) — ქართული ავანგარდის ერთ-ერთი წამყვანი მხატვარი, გრაფიკოსი და თეატრის მხატვარი. დაიბადა იმერეთში, სწავლობდა პეტერბურგში, 1920-იან წლებში კი პარიზში ცხოვრობდა, ბრეტანის სანაპიროს მოკაშკაშე აკვარელებით ხატავდა და აბსტრაქციით, კოლაჟითა და კინოთი ექსპერიმენტირებდა. მისი იმერეთის ზეთის პეიზაჟები — ბორცვები, პატარა ყანებისგან აწყობილი, როგორც ნაჭრების მოზაიკა — ევროპულ მოდერნიზმს ქართულ ტრადიციას უკავშირებს. აქ მისი ხელი ორ მოდელად ცხოვრობს: იმერეთის ზეთი და ბრეტანის აკვარელი.",
-  "horseOrder": 5,
-  "pageName": "David Kakabadze",
-  "pageMerge": [
-    "david-kakabadze-brittany"
-  ]
+  "bioGe": "დავით კაკაბაძე (1889–1952) — ქართული ავანგარდის ერთ-ერთი წამყვანი მხატვარი, გრაფიკოსი და თეატრის მხატვარი. დაიბადა იმერეთში, სწავლობდა პეტერბურგში, 1920-იან წლებში კი პარიზში ცხოვრობდა, ბრეტანის სანაპიროს მოკაშკაშე აკვარელებით ხატავდა და აბსტრაქციით, კოლაჟითა და კინოთი ექსპერიმენტირებდა. მისი იმერეთის ზეთის პეიზაჟები — ბორცვები, პატარა ყანებისგან აწყობილი, როგორც ნაჭრების მოზაიკა — ევროპულ მოდერნიზმს ქართულ ტრადიციას უკავშირებს. აქ მისი ხელი ორ მოდელად ცხოვრობს: იმერეთის ზეთი და ბრეტანის აკვარელი."
 }

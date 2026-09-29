@@ -96,6 +96,7 @@ const ARTIST_GE: Record<string, string> = {
   "David Kakabadze": "დავით კაკაბაძე", "Petre Otskheli": "პეტრე ოცხელი",
   "Niko Pirosmani": "ნიკო ფიროსმანი",
   "David Kakabadze · Imereti": "დავით კაკაბაძე · იმერეთი", "David Kakabadze · Brittany": "დავით კაკაბაძე · ბრეტანი",
+  "David Kakabadze": "დავით კაკაბაძე",
   "Oskar Schmerling": "ოსკარ შმერლინგი",
   "Rati Bakradze": "რატი ბაქრაძე",
 };
