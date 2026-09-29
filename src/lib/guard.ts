@@ -28,7 +28,7 @@ import { sendMail } from "@/lib/mail";
 export const VISITOR_COOKIE = "8k_v";
 export type GuardSettings = {
   dailyFreeUsd: number;      /* the breaker */
-  paintUsd: number;          /* what one painted label costs us, roughly (0.17 since the locked repaint, 2026-09-28) */
+  paintUsd: number;          /* what one painted label costs us, roughly (0.17 since the locked repaint; 0.22 with the widened band sketches, 2026-09-29) */
   marketingUsd: number;      /* one marketing run (2 shots + 5 images) */
   ipRunsPerHour: number;     /* soft limit on new runs from one address */
   marketingPerDay: number;   /* marketing runs a visitor may start a day */
@@ -36,7 +36,7 @@ export type GuardSettings = {
   freeRuns: number;          /* free runs every visitor starts with (1; more while testing) */
 };
 export const GUARD_DEFAULTS: GuardSettings = {
-  dailyFreeUsd: 20, paintUsd: 0.17, marketingUsd: 0.35, ipRunsPerHour: 12, marketingPerDay: 3, paintsPerRun: 6, freeRuns: 1,
+  dailyFreeUsd: 20, paintUsd: 0.22, marketingUsd: 0.35, ipRunsPerHour: 12, marketingPerDay: 3, paintsPerRun: 6, freeRuns: 1,
 };
 
 export type Visitor = {

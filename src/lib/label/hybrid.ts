@@ -183,17 +183,45 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
          He chose to ask for a LOWER strip — a fifth lower, and said so
          plainly: nothing tall may leave it. */
       const pct = Math.round(frac * (both ? 0.8 : 1) * 100);
-      const where = both
-        ? (horiz
-          ? `a LOW horizontal strip across the MIDDLE of the canvas, only about ${pct}% of its height — and it stays that low: nothing in it (no tree, tower, figure or branch) rises above or hangs below the strip; tall things are drawn short, leaning or lying down so they fit inside it`
-          : `a NARROW vertical strip down the MIDDLE of the canvas, only about ${pct}% of its width — and it stays that narrow: nothing in it reaches out past the strip's sides`)
-        : edgeSides[0] === "bottom" ? `the top ${pct}% of the canvas` : edgeSides[0] === "top" ? `the bottom ${pct}% of the canvas`
-          : edgeSides[0] === "right" ? `the left ${pct}% of the canvas` : `the right ${pct}% of the canvas`;
       const toward = edgeSides.join(" and toward the ");
-      const edgeText = `THE PAINTING AND ITS EDGE: the painting fills ${where} and runs off the ${runs} edges of the canvas, cut by them as if the sheet were larger. Toward the ${toward} it does NOT reach the edge: it ends in the painter's own loose, irregular edge — brushed, torn or dissolving, never a straight line, never a frame — and beyond that edge the rest of the canvas is plain, flat, EMPTY ground in one tone taken from the painting's own palette, with nothing drawn on it. Everything that matters — every figure whole, every face, the whole story — sits inside the painted part.`;
+      /* 2026-09-29 (owner: "important things still end up outside the
+         crop, Dachi above all — when the picture is BIG, the one rule is
+         that where it meets the ground it is not cut, it ends the way the
+         artist would end it; delete anything that tells it to leave a big
+         empty space on a side"). A ONE-SIDED band no longer asks for a
+         painting in "the top N% with EMPTY ground below": the painting
+         covers the canvas and only a narrow strip of plain ground lies
+         beyond its own edge. What the label cannot hold is said as it is —
+         the label shows the part NEAREST the edge (the composer pins the
+         edge to the type's boundary), the far part is trimmed — so the
+         figures are painted there and only sky or scenery reaches the
+         trimmed part.
+         The TWO-SIDED band (type above AND below) keeps its low strip: its
+         two loose edges must both land inside the label or they become
+         straight cuts on the type (owner, 2026-09-25, Levan's t10) — this
+         is asked of the owner, not silently decided. */
+      let edgeText: string;
+      if (both) {
+        const where = horiz
+          ? `a LOW horizontal strip across the MIDDLE of the canvas, only about ${pct}% of its height — and it stays that low: nothing in it (no tree, tower, figure or branch) rises above or hangs below the strip; tall things are drawn short, leaning or lying down so they fit inside it`
+          : `a NARROW vertical strip down the MIDDLE of the canvas, only about ${pct}% of its width — and it stays that narrow: nothing in it reaches out past the strip's sides`;
+        edgeText = `THE PAINTING AND ITS EDGE: the painting fills ${where} and runs off the ${runs} edges of the canvas, cut by them as if the sheet were larger. Toward the ${toward} it does NOT reach the edge: it ends in the painter's own loose, irregular edge — brushed, torn or dissolving, never a straight line, never a frame — and beyond that edge the canvas is plain, flat ground in one tone taken from the painting's own palette. Everything that matters — every figure whole, every face, the whole story — sits inside the painted part.`;
+      } else {
+        const side = edgeSides[0];
+        edgeText = `THE PAINTING AND ITS EDGE: the painting covers the canvas and runs off the ${runs} edges, cut by them as if the sheet were larger. Toward the ${side} it does NOT reach the edge: it ends in the painter's own loose, irregular edge — brushed, torn or dissolving, never a straight line, never a frame — with only a NARROW strip of plain ground beyond it (about a tenth of the canvas), in one tone taken from the painting's own palette.`
+;
+      }
       ap.prompt = ap.prompt.includes(BLEED) ? ap.prompt.replace(BLEED, edgeText) : `${ap.prompt} ${edgeText}`;
       ap.edgeSide = edgeSides.join(" and ") as never;
     }
+  }
+  /* 2026-09-29: a big picture is widened to its window's proportion
+     before the repaint (models.ts widenStory) — the painted part is the
+     window's shape, so nothing that matters is trimmed. A one-sided band's
+     painted part is the canvas less its narrow ground strip. */
+  if (artKindOf(tpl) !== "spot") {
+    const one = edgeSides.length === 1, horizE = one && (edgeSides[0] === "top" || edgeSides[0] === "bottom");
+    ap.widen = !edgeSides.length ? zoneAspect : one ? (horizE ? zoneAspect * 0.9 : zoneAspect / 0.9) : undefined;
   }
   /* a coloured ground that filled several of the latest paintings rests */
   const rest = artKindOf(tpl) !== "spot" ? restingGround() : "";
