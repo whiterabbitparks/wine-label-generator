@@ -215,13 +215,26 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
       ap.edgeSide = edgeSides.join(" and ") as never;
     }
   }
-  /* 2026-09-29: a big picture is widened to its window's proportion
-     before the repaint (models.ts widenStory) — the painted part is the
-     window's shape, so nothing that matters is trimmed. A one-sided band's
-     painted part is the canvas less its narrow ground strip. */
-  if (artKindOf(tpl) !== "spot") {
-    const one = edgeSides.length === 1, horizE = one && (edgeSides[0] === "top" || edgeSides[0] === "bottom");
-    ap.widen = !edgeSides.length ? zoneAspect : one ? (horizE ? zoneAspect * 0.9 : zoneAspect / 0.9) : undefined;
+  /* 2026-09-29 (owner: "important things end up outside the crop"). A
+     band is up to ~2.5 : 1, the sketch at most 1.5 : 1, so the label shows
+     only part of the painting. Widening the sketch with AI tools (four were
+     tried) wiped or doubled the story; an image guide was ignored. So the
+     SKETCH is told, in words, how much of it is kept and where — the
+     figures SMALL, whole, inside that part, with open sky and ground
+     beyond. Only the sketch reads it (the repaint keeps the arrangement). */
+  if (artKindOf(tpl) !== "spot" && edgeSides.length <= 1) {
+    const canvas = ap.aspect === "landscape" ? 1.5 : ap.aspect === "portrait" ? 2 / 3 : 1;
+    const side = edgeSides[0];
+    const horizE = !side || side === "top" || side === "bottom" ? zoneAspect >= canvas : false;
+    const painted = side ? 0.9 : 1;
+    const kept = Math.min(1, zoneAspect >= canvas ? (canvas / painted) / zoneAspect : zoneAspect / (canvas * painted));
+    if (kept < 0.92) {
+      const pc = Math.round(kept * 100);
+      const band = !side ? `the middle ${pc}% of the canvas's ${horizE ? "height" : "width"}`
+        : side === "bottom" ? `the lower ${pc}% of the painted part` : side === "top" ? `the upper ${pc}% of the painted part`
+        : side === "right" ? `the right-hand ${pc}% of the painted part` : `the left-hand ${pc}% of the painted part`;
+      ap.guide = ` COMPOSITION — ONLY PART OF THIS PICTURE WILL BE SEEN: just ${band}. Compose a WIDE, airy scene: the figures are SMALL — every figure whole, head to foot, every raised arm, jug or glass, every animal — all standing well inside that part, with open sky, ground or scenery filling the rest. Nothing important near the canvas edges.`;
+    }
   }
   /* a coloured ground that filled several of the latest paintings rests */
   const rest = artKindOf(tpl) !== "spot" ? restingGround() : "";

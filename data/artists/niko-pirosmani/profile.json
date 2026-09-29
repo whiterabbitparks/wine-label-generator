@@ -1,0 +1,55 @@
+{
+  "id": "niko-pirosmani",
+  "name": "Niko Pirosmani",
+  "country": "Georgia",
+  "portfolio": "https://en.wikipedia.org/wiki/Niko_Pirosmani",
+  "medium": "Oil on black oilcloth — the bare black cloth is left showing as the night, the shadows and the ground of the picture",
+  "words": [
+    "naive",
+    "monumental",
+    "solemn"
+  ],
+  "colour": "a black oilcloth ground with deep greens, earthy browns, warm whites and ochres, and a few small bright accents of red and yellow",
+  "form": "frontal, still figures and animals set flat against the dark ground — feasting tables, deer, lions, giraffes, fishermen, children, vendors — calm and hieratic, simple strong silhouettes",
+  "never": "never photographic, never deep perspective, never busy, never inscriptions, letters, words or signatures",
+  "mood": "quiet, dignified and tender",
+  "consent": "PUBLIC DOMAIN — the artist died in 1918 (more than 70 years ago); the works are reproductions of his paintings, cleaned of inscriptions and signatures. Portrait: a 1916 photograph by Eduard Klar (1861–1922), public domain (Wikimedia Commons).",
+  "status": "pilot",
+  "active": true,
+  "bio": "Niko Pirosmani (1862–1918) was a self-taught Georgian painter, one of the great naive artists of the twentieth century. Born in Kakheti, he painted signboards and pictures for the taverns of Tbilisi, often on black oilcloth, trading them for food and wine. His feasts, animals and everyday people — still, solemn and glowing against dark grounds — were discovered by the Georgian avant-garde in 1912; today he is Georgia's most beloved painter.",
+  "bioGe": "ნიკო ფიროსმანი (1862–1918) — თვითნასწავლი ქართველი მხატვარი, მეოცე საუკუნის ერთ-ერთი დიდი პრიმიტივისტი. დაიბადა კახეთში, თბილისის დუქნებისთვის ხატავდა აბრებსა და სურათებს, ხშირად შავ მუშამბაზე, და მათ საჭმელსა და ღვინოში ცვლიდა. მისი ქეიფები, ცხოველები და უბრალო ადამიანები — მშვიდი, დიდებული და შავ ფონზე მოკაშკაშე — 1912 წელს ქართულმა ავანგარდმა აღმოაჩინა; დღეს ის საქართველოს ყველაზე საყვარელი მხატვარია.",
+  "page": true,
+  "pageOrder": 8,
+  "crop": "50% 25%",
+  "website": "https://en.wikipedia.org/wiki/Niko_Pirosmani",
+  "charterBy": "Claude's draft from the 23 works (public domain), 2026-09-29",
+  "refs": [
+    "work-07.jpg",
+    "work-21.jpg",
+    "work-04.jpg",
+    "work-01.jpg"
+  ],
+  "refSets": [
+    [
+      "work-07.jpg",
+      "work-10.jpg",
+      "work-06.jpg"
+    ],
+    [
+      "work-21.jpg",
+      "work-16.jpg",
+      "work-02.jpg"
+    ],
+    [
+      "work-04.jpg",
+      "work-15.jpg",
+      "work-13.jpg"
+    ],
+    [
+      "work-01.jpg",
+      "work-05.jpg",
+      "work-19.jpg"
+    ]
+  ],
+  "horseOrder": 7
+}

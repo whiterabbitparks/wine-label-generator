@@ -1,0 +1,55 @@
+{
+  "id": "petre-otskheli",
+  "name": "Petre Otskheli",
+  "country": "Georgia",
+  "portfolio": "https://en.wikipedia.org/wiki/Petre_Otskheli",
+  "medium": "Gouache and tempera stage and costume designs on paper, often on black or dark grey grounds, with pencil lines and white highlights",
+  "words": [
+    "theatrical",
+    "elongated",
+    "constructivist"
+  ],
+  "colour": "black and charcoal grounds with pale ivory, silver-grey and warm sepia, touched with a few accents of red, blue or orange",
+  "form": "tall, elongated figures in sweeping costumes posed like actors on a stage; geometric stage architecture — spiral stairs, round platforms, arches, perspective corridors and beams of light",
+  "never": "never photographic, never cluttered, never printed text or letters",
+  "mood": "dramatic, elegant and dreamlike",
+  "consent": "PUBLIC DOMAIN — the artist died in 1937 (more than 70 years ago); the works are reproductions of his designs. Portrait: a 1930 photograph by an unknown photographer, public domain (Wikimedia Commons).",
+  "status": "pilot",
+  "active": true,
+  "bio": "Petre Otskheli (1907–1937) was a Georgian modernist set and costume designer. Working with director Kote Marjanishvili in Kutaisi and Tbilisi, and briefly in Moscow, he created a bold constructivist stage language of elongated figures, spiral stairs and light. He was executed during Stalin's Great Purge at the age of thirty, yet his designs still shape Georgian scenography.",
+  "page": true,
+  "pageOrder": 7,
+  "crop": "50% 30%",
+  "website": "https://en.wikipedia.org/wiki/Petre_Otskheli",
+  "charterBy": "Claude's draft from the 22 works (public domain), 2026-09-29",
+  "refs": [
+    "work-02.jpg",
+    "work-10.jpg",
+    "work-19.jpg",
+    "work-08.jpg"
+  ],
+  "refSets": [
+    [
+      "work-02.jpg",
+      "work-15.jpg",
+      "work-16.jpg"
+    ],
+    [
+      "work-10.jpg",
+      "work-20.jpg",
+      "work-11.jpg"
+    ],
+    [
+      "work-19.jpg",
+      "work-05.jpg",
+      "work-08.jpg"
+    ],
+    [
+      "work-17.jpg",
+      "work-07.jpg",
+      "work-22.jpg"
+    ]
+  ],
+  "bioGe": "პეტრე ოცხელი (1907–1937) — ქართველი მოდერნისტი, თეატრის დეკორაციებისა და კოსტიუმების მხატვარი. კოტე მარჯანიშვილთან ერთად მუშაობდა ქუთაისსა და თბილისში, მცირე ხნით მოსკოვშიც, და შექმნა თამამი, კონსტრუქტივისტული სცენური ენა: წაგრძელებული ფიგურები, სპირალური კიბეები და სინათლე. სტალინური რეპრესიების დროს, ოცდაათი წლისა, დახვრიტეს, თუმცა მისი ესკიზები დღემდე აყალიბებს ქართულ სცენოგრაფიას.",
+  "horseOrder": 6
+}

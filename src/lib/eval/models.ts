@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import { generateOpenAIImage } from "@/lib/image-provider/openai";
 import { falUpload } from "@/lib/image-provider/flux";
 import { getDb } from "@/lib/db";
@@ -115,7 +116,7 @@ export async function regionNote(region: string): Promise<string> {
   return key && map[key]?.trim() ? ` ${region.trim()} looks like this: ${map[key].trim()} ` : "";
 }
 
-export interface ArtworkPrompt { widen?: number; grapes?: string; prompt: string; subject: string; aspect: "landscape" | "portrait" | "square"; kind?: "spot" | "bleed";
+export interface ArtworkPrompt { guide?: string; /* a composition line for the SKETCH only */ grapes?: string; prompt: string; subject: string; aspect: "landscape" | "portrait" | "square"; kind?: "spot" | "bleed";
   /* 2026-09-23: a band/panel picture ends in the painter's own edge on
      this side (the side facing the type) — see hybrid.ts */
   edgeSide?: string;
@@ -247,7 +248,8 @@ export async function paintStory(model: EvalModel, ap: ArtworkPrompt, extra: { s
   const sketch = extra.sketch && extra.sketch.startsWith("data:image/") ? extra.sketch : null;
   const refs = extra.noRefs ? [] : artistRefs(model.artist.id, 4, extra.refFiles);
   return generateOpenAIImage({
-    prompt: ap.prompt + (sketch ? " The last image is the customer's own sketch: follow its subject and arrangement." : ""),
+    prompt: ap.prompt + (sketch ? " The last image is the customer's own sketch: follow its subject and arrangement." : "")
+      + (ap.guide || ""),
     references: [...refs, ...(sketch ? [sketch] : [])],
     size: GPT_SIZE[ap.aspect], quality: extra.quality || STORY_QUALITY,
   } as never);
@@ -351,42 +353,6 @@ export async function repaintInHand(model: EvalModel, story: string, ap: Artwork
   return `data:${img.headers.get("content-type") || "image/png"};base64,${Buffer.from(await img.arrayBuffer()).toString("base64")}`;
 }
 
-/* 2026-09-29 (owner: "important things still end up outside the crop,
-   Dachi above all"). A band is up to ~2.5 times wider than tall, the
-   sketch at most 1.5 — so a third of the picture's height used to be
-   trimmed off, figures' heads with it, however the painter was asked. The
-   SKETCH is now WIDENED to the window's own proportion before the artist
-   repaints it (fal outpaint: the scene continued, nothing new in it),
-   so the painting fits its window and nothing has to be cut. Only ever
-   enlarges; within 12 % of the window's shape it is left alone. */
-async function widenStory(story: string, target: number): Promise<string> {
-  try {
-    const sharp = (await import("sharp")).default;
-    const buf = Buffer.from(story.slice(story.indexOf(",") + 1), "base64");
-    const m = await sharp(buf).metadata();
-    const w = m.width || 1, h = m.height || 1, a = w / h;
-    if (target <= a * 1.12 && target >= a / 1.12) return story;
-    const cw = target > a ? Math.round(h * target) : w, ch = target > a ? h : Math.round(w / target);
-    const url = await falUpload(buf, "sketch.png", "image/png");
-    /* fal's outpaint continued the scenery seamlessly in the owner-facing
-       test; Bria Expand filled Levan's sides with flat blocks */
-    const dx = Math.round((cw - w) / 2), dy = Math.round((ch - h) / 2);
-    const out = await falPost("fal-ai/image-apps-v2/outpaint", {
-      image_url: url, expand_left: dx, expand_right: cw - w - dx, expand_top: dy, expand_bottom: ch - h - dy, zoom_out_percentage: 0, output_format: "png",
-      /* only the BACKGROUND carries on — told the story, it painted more
-         dogs and horses into the new margins (2026-09-29 test) */
-      prompt: "Continue only the background of this painting, in exactly its style and colours: the same ground, fields, sky and distant landscape carry on to the new edges. The new areas hold NO people, NO animals, NO buildings and NO objects — only landscape, ground and sky. No text, no frame, no border.",
-    }, 90000);
-    const img = await fetch(firstUrl(out));
-    if (!img.ok) return story;
-    console.log(`[painter] sketch widened ${w}×${h} → ${cw}×${ch}`);
-    return `data:image/png;base64,${(await sharp(Buffer.from(await img.arrayBuffer())).png().toBuffer()).toString("base64")}`;
-  } catch (e) {
-    console.warn(`[painter] widen failed (${e instanceof Error ? e.message : e}) — the sketch as painted`);
-    return story;
-  }
-}
-
 /* both steps; `story` is kept so a failed repaint still yields a picture.
    `refSet` is the letter of the owner's set the story was shown (A–D). */
 export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt, extra: { sketch?: string | null; quality?: "low" | "medium" | "high"; refSet?: number } = {}): Promise<{ art: string; story: string; repainted: boolean; error?: string; refSet: string }> {
@@ -410,7 +376,9 @@ export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt, extra
       else refSet = refSet ? `${refSet} (no refs)` : "no refs";
     }
   }
-  if (ap.widen && !ap.abstract) story = await widenStory(story, ap.widen);
+  /* dev aid: PAINT_DEBUG_DIR keeps the sketch and the ask */
+  const dbg = process.env.PAINT_DEBUG_DIR, tag = `${model.artist.id}-${Date.now()}`;
+  if (dbg) { fs.writeFileSync(`${dbg}/${tag}-1-sketch.png`, Buffer.from(story.slice(story.indexOf(",") + 1), "base64")); fs.writeFileSync(`${dbg}/${tag}-0-prompt.txt`, ap.prompt); }
   try {
     return { art: await repaintInHand(model, story, ap), story, repainted: true, refSet };
   } catch (e) {

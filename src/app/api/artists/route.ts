@@ -14,6 +14,7 @@ export interface SiteArtist {
   id: string;
   name: string;
   bio: string;
+  bioGe: string;           /* 2026-09-29: the biography in Georgian, when written */
   link: string;
   linkKind: "instagram" | "site" | "";
   /* round 113 #5: the page carries BOTH marks, as the owner drew them.
@@ -34,7 +35,7 @@ const PUB = path.join(process.cwd(), "public", "newui", "artists");
 export async function GET() {
   const out: SiteArtist[] = [];
   for (const a of listArtists()) {
-    const p = a.profile as typeof a.profile & { bio?: string; page?: boolean; pageOrder?: number; crop?: string; instagram?: string; website?: string };
+    const p = a.profile as typeof a.profile & { bioGe?: string; bio?: string; page?: boolean; pageOrder?: number; crop?: string; instagram?: string; website?: string };
     const dir = path.join(PUB, p.id);
     /* 2026-09-22 (owner, adding Levan): an artist may arrive with her
        paintings and nothing else. What she MUST have to get a page is
@@ -56,6 +57,7 @@ export async function GET() {
       id: p.id,
       name: p.name,
       bio: (p.bio || "").trim(),
+      bioGe: (p.bioGe || "").trim(),
       link,
       linkKind: isIg ? "instagram" : link ? "site" : "",
       /* 2026-09-23 (Giorgi Akhuashvili arrived without a photo): until

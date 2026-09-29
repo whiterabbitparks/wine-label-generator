@@ -93,6 +93,8 @@ const ORDER = ["welcome",
 const ARTIST_GE: Record<string, string> = {
   "Mariam Kvashilava": "მარიამ კვაშილავა", "Levan Amashukeli": "ლევან ამაშუკელი",
   "Giorgi Akhuashvili": "გიორგი ახუაშვილი", "Dachi Mindadze": "დაჩი მინდაძე",
+  "David Kakabadze": "დავით კაკაბაძე", "Petre Otskheli": "პეტრე ოცხელი",
+  "Niko Pirosmani": "ნიკო ფიროსმანი",
 };
 const mtavruli = (s: string) => s.replace(/[\u10D0-\u10FA]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0x1C90 - 0x10D0));
 function artistShort(name: string, lang: "en" | "ge") {
@@ -1428,7 +1430,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   /* ROUND 112 #4 (owner's artboards): the ARTISTS pages — an index of
      everyone who trained a model, and a page each. Read from the public
      /api/artists (name, biography, link and the pictures on disk). */
-  interface SiteArtist { id: string; name: string; bio: string; link: string; linkKind: "instagram" | "site" | ""; instagram: string; website: string; portrait: string; crop: string; works: string[]; labels: string[] }
+  interface SiteArtist { id: string; name: string; bio: string; bioGe?: string; link: string; linkKind: "instagram" | "site" | ""; instagram: string; website: string; portrait: string; crop: string; works: string[]; labels: string[] }
   const [siteArtists, setSiteArtists] = useState<SiteArtist[]>([]);
   const [artistId, setArtistId] = useState("");
   /* round 113 #6: her page shows two sets — her own paintings, or the
@@ -3140,7 +3142,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 <img src={a2.portrait} alt={a2.name}
                   style={{ position: "absolute", left: 110 - R, top: 0, width: R * 2, height: R * 2, borderRadius: R, objectFit: "cover", objectPosition: a2.crop, display: "block" }} />
                 {parts.map((w, k) => (
-                  <span key={k} style={{ position: "absolute", left: 0, top: baseTop(NAME_B - cy + R + k * 22.8, 19), width: 220, textAlign: "center", font: `700 19px ${HNW}`, lineHeight: "19px", color: INK, whiteSpace: "nowrap", textTransform: "uppercase" }}>{w}</span>
+                  <span key={k} style={{ position: "absolute", left: 0, top: baseTop(NAME_B + Math.floor(i / 6) * DY - cy + R + k * 22.8, 19), width: 220, textAlign: "center", font: `700 19px ${HNW}`, lineHeight: "19px", color: INK, whiteSpace: "nowrap", textTransform: "uppercase" }}>{w}</span>
                 ))}
               </button>
             );
@@ -3211,7 +3213,24 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={a2.portrait} alt={a2.name} style={{ ...px(BX, 171.43, BW, 137.14), objectFit: "cover", objectPosition: a2.crop, display: "block" }} />
           <span style={{ ...px(BX, baseTop(357.95, 19), BW + 200, 22), font: `700 19px ${HNW}`, lineHeight: "19px", color: INK, whiteSpace: "nowrap", textTransform: "uppercase" }}>{a2.name}</span>
-          <span style={{ ...px(BX, baseTop(384, 15), BW, 200), font: `15px ${HNW}`, lineHeight: "18px", color: INK, textAlign: "justify" }}>{a2.bio}</span>
+          {/* 2026-09-29: the biography always fits its room (ends 12 above the
+              "Create label" button) — a long one, or a Georgian one, is set a
+              half-step smaller at a time until its lines fit */}
+          {(() => {
+            const bio = lang === "ge" && a2.bioGe ? a2.bioGe : a2.bio;
+            const room = 548.57 - 12 - (384 - 15 * 0.72);
+            const linesAt = (sz: number) => {
+              let n = 1, w = 0;
+              for (const word of bio.split(/\s+/)) {
+                const ww = textW(word + " ", `${sz}px ${HNW}`);
+                if (w + ww > BW && w > 0) { n++; w = ww; } else w += ww;
+              }
+              return n;
+            };
+            let sz = 15;
+            while (sz > 11 && linesAt(sz) * sz * 1.2 > room) sz -= 0.5;
+            return <span style={{ ...px(BX, baseTop(384, sz), BW, room + 20), font: `${sz}px ${HNW}`, lineHeight: `${sz * 1.2}px`, color: INK, textAlign: "justify" }}>{bio}</span>;
+          })()}
           <button onClick={() => { setPickArtists([a2.id]); go("vision"); }}
             style={{ ...px(136.96, 548.57, 343.21, 34.29), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, textTransform: "none" }}>
             {t("Create label with")} {first}{t("’s art")}</button>
