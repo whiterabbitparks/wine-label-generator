@@ -195,6 +195,12 @@ const PAGE_TITLE: Partial<Record<PageKey, string>> = {
   options: "FRONT LABEL OPTIONS", backdesign: "BACK LABEL DESIGN",
   bottle: "BOTTLE DETAILS", assets: "MARKETING ASSETS", checkout: "FINAL PACK",
 };
+/* 2026-09-28 (owner): the red word riding the bar is BACK now — one step
+   back (SKIP_TO is kept for reference, unused) */
+const BACK_TO: Partial<Record<PageKey, PageKey>> = {
+  vision: "taste", options: "vision", backdetails: "options", backdesign: "backdetails",
+  bottle: "backdesign", assets: "bottle", checkout: "assets", more: "options",
+};
 /* 2026-09-23 (owner): where the red SKIP beside the title leads */
 const SKIP_TO: Partial<Record<PageKey, PageKey>> = {
   vision: "backdetails", options: "backdetails",
@@ -3657,7 +3663,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
            2026-09-28 (owner's No-tries-page.pdf): three packs — 1 try $5,
            3 tries $9, 10 tries $19 — ruled above, between and below, under
            the owner's bottle-woman drawing; every number is his file's */
-        const L = 525.7, R = 917.71, RULE0 = 500.08, STEP = 33.75;
+        /* 2026-09-28 (owner, later): the list, the glass row and PAY share ONE
+           width — the glass row's own (glass + text, measured) — centred on
+           the drawing; the whole block 20 higher; the glass row half way
+           between the list's last rule and PAY */
+        const ROW_W = 14.75 + 9 + textW(t("By clinking this glass, I agree to the") + " ", `italic 15px ${HNW}`) + textW(t("Terms & Conditions"), `700 15px ${HNW}`);
+        const L = 720.6 - ROW_W / 2, R = 720.6 + ROW_W / 2, DY = -20, RULE0 = 500.08 + DY, STEP = 33.75;
+        const PAY_Y = 684 + DY, AGREE_BASE = (RULE0 + 3 * STEP + PAY_Y) / 2 + 15;   /* the row (glass top → descenders) centred: measured */
         const ROWS: { n: 1 | 3 | 10; price: number; label: string }[] = [
           { n: 1, price: 5, label: "1 try / 3 new versions" },
           { n: 3, price: 9, label: "3 tries / 9 new versions" },
@@ -3669,28 +3681,28 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             {t("This is for visual exploration only and does not include final print-ready files.\nFinal files are purchased separately.")}
           </span>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/newui/bottle-woman.svg" alt="" draggable={false} style={{ ...px(689.72, 218.03, 61.77, 253.01), display: "block", pointerEvents: "none" }} />
+          <img src="/newui/bottle-woman.svg" alt="" draggable={false} style={{ ...px(689.72, 218.03 + DY, 61.77, 253.01), display: "block", pointerEvents: "none" }} />
           {dashRule(L, RULE0, R - L, false, "mvd-top")}
           {ROWS.map((row, i) => {
             const rule = RULE0 + i * STEP, base = rule + 22;
             return (
               <span key={"mv" + row.n}>
-                {dotBtn(535.29, rule + 15, morePack === row.n, () => setMorePack(row.n), "mvr" + row.n, { ring: true, r: 9, cover: 24 })}
+                {dotBtn(L + 9.59, rule + 15, morePack === row.n, () => setMorePack(row.n), "mvr" + row.n, { ring: true, r: 9, cover: 24 })}
                 <button onClick={() => setMorePack(row.n)}
-                  style={{ ...px(569.6, baseTop(base, 15), R - 569.6 - 60, 18), ...ghost, textAlign: "left", textTransform: "none", font: `15px/15px ${HNW}`, color: "#111", display: "block", whiteSpace: "nowrap" }}>{t(row.label)}</button>
+                  style={{ ...px(L + 43.9, baseTop(base, 15), R - L - 43.9 - 60, 18), ...ghost, textAlign: "left", textTransform: "none", font: `15px/15px ${HNW}`, color: "#111", display: "block", whiteSpace: "nowrap" }}>{t(row.label)}</button>
                 <span style={{ ...px(R - 160, baseTop(base, 15), 160, 18), font: `15px/15px ${HNW}`, textAlign: "right", display: "block" }}>{"$" + row.price}</span>
                 {dashRule(L, rule + STEP, R - L, false, "mvd" + row.n)}
               </span>
             );
           })}
-          {agreeRow((GH) => ({ right: W - R, top: baseTop(665.82, 15) - (GH - 15) - 10 }))}
+          {agreeRow((GH) => ({ right: W - R, top: baseTop(AGREE_BASE, 15) - (GH - 15) - 10 }))}
           {/* 2026-09-28 (owner): PAY under the glass, the list's width — the
               red button is greyed and dead on this page */}
           <button onClick={() => { if (requireAgree()) buyVersions(); }}
-            style={{ ...px(L, 684, R - L, 34.3), cursor: "pointer", font: `700 13px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, textTransform: "none" }}>
+            style={{ ...px(L, PAY_Y, R - L, 34.3), cursor: "pointer", font: `700 13px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, textTransform: "none" }}>
             {t("Pay")}</button>
           {warn && (
-            <span style={{ ...px(L, baseTop(736, 13), R - L, 16), font: `13px/13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block" }}>{boldTC(warn)}</span>
+            <span style={{ ...px(L - 100, baseTop(PAY_Y + 34.3 + 18, 13), R - L + 200, 16), font: `13px/13px ${HNW}`, color: "#BA141A", textAlign: "center", display: "block" }}>{boldTC(warn)}</span>
           )}
         </>);
       }
@@ -4437,8 +4449,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           { name: "Product_Shot_Front.png", img: assets.front?.prev, kind: "front" },
           ...Array.from({ length: Math.max(5, assets.life.length) }, (_, i) => ({ name: `Marketing_Image_${i + 1}.jpg`, img: assets.life[i]?.prev, kind: "front" as const })),
         ] : [
-          { name: "Front_Label.svg", img: savedDream()?.preview || savedDream()?.dream || undefined, kind: "front" },
-          { name: "Back_Label.svg", img: backPng || undefined, kind: "back" },
+          { name: "Front_Label.pdf", img: savedDream()?.preview || savedDream()?.dream || undefined, kind: "front" },
+          { name: "Back_Label.pdf", img: backPng || undefined, kind: "back" },
           { name: "Product_Shot_Front.png", img: assets.front?.prev, kind: "front" },
           { name: "Product_Shot_Back.png", img: assets.back?.prev, kind: "front" },
           ...Array.from({ length: Math.max(5, assets.life.length) }, (_, i) => ({ name: `Marketing_Image_${i + 1}.jpg`, img: assets.life[i]?.prev, kind: "front" as const })),
@@ -4492,7 +4504,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                    whole link and its code come in the paid pack's READ ME */
                 ...(qrMode === "create" ? [`8k.wine/${slug.replace(/-/g, "").slice(0, 3).toUpperCase()}*********`] : [])] },
               ...(packSel[0] ? [{ x: 1055, kind: "folder" as const, name: ["MARKETING", "ASSETS"], files: [`${base}_Bottle_Front.png`, `${base}_Bottle_Back.png`, ...[1, 2, 3, 4, 5].map((n) => `${base}_Image0${n}.png`)] }] : []),
-              ...(packSel[0] ? [{ x: 1275, kind: "folder" as const, name: ["LABELS"], files: [`${base}_Front_Label.pdf`, `${base}_Front_Label.svg`, `Links/${base}_Front_Artwork.png`, `Fonts/`, `${base}_Back_Label.svg`] }] : []),
+              ...(packSel[0] ? [{ x: 1275, kind: "folder" as const, name: ["LABELS"], files: [`${base}_Front_Label.pdf`, `${base}_Back_Label.pdf`, `Fonts/`] }] : []),
             ];
             /* 2026-09-23 (owner): the bar sits HALFWAY between the folder
                mark above and the icons below, the branches dropping the rest */
@@ -5006,12 +5018,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   to the back label details, back label pages to the bottle,
                   the bottle to the Final Pack; not on Marketing Assets, the
                   Final Pack, or while the tutorial tells its story. */}
-              {SKIP_TO[page] && tut < 0 && guide < 0 && (
-                <button onClick={() => go(SKIP_TO[page]!)}
+              {/* 2026-09-28 (owner): SKIP became BACK — one step back */}
+              {BACK_TO[page] && tut < 0 && (
+                <button onClick={() => go(BACK_TO[page]!, -1)}
                   style={{ ...px(thick - 60, baseTop(PROG_Y - 14, BAR_FS), 120, BAR_FS + 4), ...ghost, pointerEvents: modalOpen ? "none" : "auto",
                     font: `700 ${BAR_FS}px/${BAR_FS}px ${HNW}`, color: BAR_RED, textAlign: "center", textTransform: "none", whiteSpace: "nowrap",
                     transition: `left ${SLIDE_MS}ms ${EASE}` }}>
-                  {t("SKIP")}
+                  {t("BACK")}
                 </button>
               )}
               {STEPS.map((st, i) => (
@@ -5206,7 +5219,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     <line x1="20" y1="6" x2="20" y2="24" stroke="#fff" strokeWidth="3.4" />
                     <polyline points="13,17 20,24.5 27,17" fill="none" stroke="#fff" strokeWidth="3.4" />
                   </svg>
-                ) : page === "checkout" || page === "more" ? (
+                ) : page === "checkout" ? (
                   /* the owner's card — back 2026-09-25 with the payment step */
                   <svg viewBox="0 0 44 32" width="23.5" height="17">
                     <rect x="2.5" y="2.5" width="39" height="27" rx="3.5" fill="none" stroke="#fff" strokeWidth="3.4" />

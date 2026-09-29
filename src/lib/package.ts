@@ -6,12 +6,13 @@ import { buildZip } from "@/lib/zip";
 import { readLabel } from "@/lib/label/store";
 import { fontFilesOf } from "@/lib/label/hybrid";
 import { labelPdf } from "@/lib/label/pdf";
+import { backLabelPdf } from "@/lib/label/back-pdf";
 
 /* DELIVERY PACKAGE (owner 2026-09-07): "Proceed to payment" downloads one
    ZIP named after the wine:
      WINE_NAME/
        1. LABELS/          WINE_NAME_Front_Label.tiff (300dpi)
-                           WINE_NAME_Back_Label.svg (2mm bleed)
+                           WINE_NAME_Back_Label.pdf (2mm bleed)
                            Fonts/ (the back label's Barlow Condensed TTFs)
        2. MARKETING ASSETS/ WINE_NAME_Bottle_Front.png · _Bottle_Back.png
                            WINE_NAME_Image01..05.png
@@ -72,8 +73,9 @@ function readmePdf(wine: string, product: PackBody["product"]): Buffer {
     "",
     `Your Final Pack for "${wine}"`,
     "",
-    "1. LABELS - the front label as PDF (print file) and SVG, its artwork",
-    "   and fonts; the back label as SVG with 2 mm bleed and its fonts.",
+    "1. LABELS - the front and the back label as print PDFs (live type,",
+    "   fonts embedded - Illustrator opens them editable; the back label",
+    "   with 2 mm bleed), and the fonts they use.",
     "2. MARKETING ASSETS - two bottle photos and five marketing images.",
     ...(product ? [
       "",
@@ -128,11 +130,9 @@ export async function buildPackage(body: PackBody): Promise<{ zip: Buffer; base:
      TIFF is gone (owner, round 85 #12). A label made before the hybrid
      engine has no id and still ships its bitmap as PNG. */
   const stored = body.frontId ? readLabel(String(body.frontId)) : null;
+  /* 2026-09-28 (owner): no SVGs any more — the labels ship as PDFs only
+     (the artwork is embedded in the PDF, so no Links/ folder either) */
   if (stored) {
-    const artName = `${base}_Front_Artwork.png`;
-    files.push({ name: `${root}1. LABELS/Links/${artName}`, data: stored.art });
-    const linked = stored.svg.replace(/xlink:href="data:image\/[a-z]+;base64,[^"]+"/, `xlink:href="Links/${artName}"`);
-    files.push({ name: `${root}1. LABELS/${base}_Front_Label.svg`, data: Buffer.from(linked, "utf8") });
     if (stored.layout)
       files.push({ name: `${root}1. LABELS/${base}_Front_Label.pdf`, data: await labelPdf(stored.layout, stored.art, stored.meta.widthMm, stored.meta.heightMm) });
     for (const p of fontFilesOf(stored.svg))
@@ -147,7 +147,7 @@ export async function buildPackage(body: PackBody): Promise<{ zip: Buffer; base:
     const out = await composeBackLabel(body.back.data || {}, {
       heightMM, markets, bgColor: String(body.back.bgColor || ""), bleedMM: 2,
     });
-    files.push({ name: `${root}1. LABELS/${base}_Back_Label.svg`, data: Buffer.from(out.svg, "utf8") });
+    files.push({ name: `${root}1. LABELS/${base}_Back_Label.pdf`, data: await backLabelPdf(out.svg) });
   }
   const fontsDir = path.join(process.cwd(), "public", "fonts", "backlabel");
   for (const f of fs.existsSync(fontsDir) ? fs.readdirSync(fontsDir) : [])
