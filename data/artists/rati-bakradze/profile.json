@@ -1,0 +1,54 @@
+{
+  "id": "rati-bakradze",
+  "name": "Rati Bakradze",
+  "country": "Georgia",
+  "portfolio": "",
+  "medium": "Acrylic and oil on canvas, flat opaque colour laid with a loose brush, scratchy lines drawn into the wet paint",
+  "words": [
+    "naive",
+    "playful",
+    "bold"
+  ],
+  "colour": "bright flat colour fields — sky blue, pink, coral red, mustard yellow, grass green and soft grey — with black shapes and small red accents",
+  "form": "simple, childlike figures and animals — black dogs, horses, a bull, birds — in wide landscapes of flat bands of colour; people with oversized hands and faces, flowers and clouds as blobs; sometimes crowded scenes of many small figures",
+  "never": "never photographic, never fine detail or shading, never printed text, letters or numbers, never signatures",
+  "mood": "warm, humorous and a little melancholic",
+  "consent": "VERBAL agreement — the owner, 2026-09-29 (his standing word: an artist he asks me to add has agreed verbally). A short written agreement (share, credit, withdrawal) is still to be signed before any label is sold.",
+  "status": "pilot",
+  "active": true,
+  "bio": "Rati Bakradze is a Georgian painter. His canvases tell small, funny and tender stories in bold, flat colour — black dogs chasing red balls, horses under huge flowers, people with oversized hands under wide skies — painted with a deliberately childlike, loose hand that turns everyday moments into quiet fables. (Draft biography — to be completed with the artist.)",
+  "bioGe": "რატი ბაქრაძე ქართველი მხატვარია. მის ტილოებზე პატარა, სასაცილო და თბილი ამბებია მოთხრობილი თამამი, ბრტყელი ფერით — შავი ძაღლები წითელ ბურთს დასდევენ, ცხენები უზარმაზარ ყვავილებს ქვეშ დგანან, დიდხელიანი ადამიანები ფართო ცის ქვეშ — განზრახ ბავშვური, თავისუფალი ხელით, რომელიც ყოველდღიურ წამებს მშვიდ იგავებად აქცევს. (ბიოგრაფია დრაფტია — შეივსება არტისტთან ერთად.)",
+  "page": true,
+  "pageOrder": 9,
+  "crop": "50% 40%",
+  "horseOrder": 10,
+  "charterBy": "Claude's draft from the 41 works, 2026-09-29 — the owner replaces it with the artist's own answers",
+  "refs": [
+    "work-02.jpg",
+    "work-09.jpg",
+    "work-24.jpg",
+    "work-19.jpg"
+  ],
+  "refSets": [
+    [
+      "work-02.jpg",
+      "work-03.jpg",
+      "work-25.jpg"
+    ],
+    [
+      "work-09.jpg",
+      "work-14.jpg",
+      "work-05.jpg"
+    ],
+    [
+      "work-24.jpg",
+      "work-13.jpg",
+      "work-20.jpg"
+    ],
+    [
+      "work-19.jpg",
+      "work-28.jpg",
+      "work-33.jpg"
+    ]
+  ]
+}
