@@ -4,7 +4,6 @@ import fs from "node:fs";
 import path from "node:path";
 import { requestIsAuthenticated } from "@/lib/admin/session";
 import { LABEL_DIR, readLabel } from "@/lib/label/store";
-import { paperToAlpha } from "@/lib/typeset/paper-alpha";
 
 /* ROUND 98: the hybrid engine's recent labels for the admin — the list
    (newest 40, with counts) and, with ?id=, the label's PNG (&part=thumb
@@ -20,12 +19,6 @@ export async function GET(req: Request) {
     /* 2026-09-23 — the admin's LAYOUT EDITOR: the painting on its own, and
        the label's layout with what the editor needs to redraw it live
        (the painting's size, and which weights each face has on disk) */
-    /* 2026-09-29 (trial): the painting with its paper taken out, for the
-       editor's "transparent paper" switch (src/lib/typeset/paper-alpha.ts) */
-    if (part === "art-alpha") {
-      const png = await paperToAlpha(l.art, l.layout?.ground || l.meta.ground);
-      return new Response(new Uint8Array(png), { headers: { "Content-Type": "image/png", "Cache-Control": "private, max-age=3600" } });
-    }
     if (part === "art") return new Response(new Uint8Array(l.art), { headers: { "Content-Type": "image/png", "Cache-Control": "private, max-age=3600" } });
     if (part === "layout") {
       const m = await sharp(l.art).metadata();
