@@ -50,7 +50,12 @@ const LOCK_NET = "InstantX/FLUX.1-dev-Controlnet-Union";
    for the whole site, whoever asks. */
 let lastWarm = 0;
 let blankUrl = "";
+/* 2026-09-29 (owner): OFF until the site is published — it costs a little
+   whenever someone sits on the details page. Turn on at launch:
+   WARM_PAINTER=1 in .env.local (or flip the default here). */
+const WARM_ON = process.env.WARM_PAINTER === "1";
 export async function warmLockedPainter(): Promise<boolean> {
+  if (!WARM_ON) return false;
   if (!process.env.FAL_KEY || Date.now() - lastWarm < 45_000) return false;
   lastWarm = Date.now();
   const model = artistModels().find((m) => m.lora && isActive(m.artist));
