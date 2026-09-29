@@ -331,6 +331,7 @@ export const UI_GE: Record<string, string> = {
   "No tries left — 3 tries for $9": "ცდები ამოიწურა — 3 ცდა $9-ად",
   "Unlimited tries (admin)": "ცდები შეუზღუდავია (ადმინი)",
   "1 try / 3 new versions": "1 ცდა / 3 ახალი ვერსია",
+  "This is for visual exploration only and does not include final print-ready files.\nFinal files are purchased separately.": "ცდა მხოლოდ ვიზუალური ვარიანტების მოსინჯვისთვისაა და არ მოიცავს საბოლოო, დასაბეჭდ ფაილებს.\nსაბოლოო ფაილების შეძენას სესიის ბოლოს შეძლებთ.",
   "3 tries / 9 new versions": "3 ცდა / 9 ახალი ვერსია",
   "10 tries / 30 new versions": "10 ცდა / 30 ახალი ვერსია",
   "Each try paints 3 new versions of your label.\nYour earlier versions stay.": "ყოველი ცდა თქვენი ეტიკეტის 3 ახალ ვერსიას ხატავს.\nწინა ვერსიები რჩება.",
@@ -436,6 +437,9 @@ export const UI_GE: Record<string, string> = {
   "10 Credits": "10 კრედიტი",
   "100 Credits": "100 კრედიტი",
   "Pay": "გადახდა",
+  "Take a colour from the label": "აიღე ფერი ეტიკეტიდან",
+  "Preparing your files…": "ფაილები მზადდება…",
+  "The download didn't work — please press again.": "ჩამოტვირთვა ვერ მოხერხდა — გთხოვთ, ხელახლა დააჭიროთ.",
   /* round 55 (owner's New folder): top-up page wording */
   "CREDITS": "ᲙᲠᲔᲓᲘᲢᲔᲑᲘ",
   "Proceed to Payment": "გადახდაზე გადასვლა",
