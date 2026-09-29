@@ -1448,6 +1448,17 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const [painters, setPainters] = useState<{ id: string; name: string; avatar: string; crop: string; page: boolean; horse?: string; horseOrder?: number }[]>([]);
   /* the taste page's message ("select 3"), in its own reserved row */
   const [tasteWarn, setTasteWarn] = useState(false);
+  /* 2026-09-29 (owner): the horses come in a RANDOM order on every load, so
+     every artist has the same chance of the first page; eight a page, the
+     arrows turn the pages with the labels' column slide */
+  const tasteOrder = useRef<Map<string, number>>(new Map());
+  const [tastePg, setTastePg] = useState(0);
+  const [tasteSlide, setTasteSlide] = useState<{ from: number; dir: number; n: number } | null>(null);
+  const showTastePg = (k: number) => {
+    setTasteSlide({ from: tastePg, dir: k > tastePg ? 1 : -1, n: Date.now() });
+    setTastePg(k);
+    setTimeout(() => setTasteSlide((sl) => (sl && Date.now() - sl.n >= SLIDE_MS + 200 ? null : sl)), SLIDE_MS + 260);
+  };
   const [styleOpen, setStyleOpen] = useState(false);
   useEffect(() => {
     fetch("/api/artists").then((r) => r.json()).then((b) => { setSiteArtists(b.artists || []); setPainters(b.painters || []); }).catch(() => { });
@@ -3161,48 +3172,70 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
          four a row, margin to margin, as the owner laid them out; a fifth
          painter opens a second row. */
       case "taste": {
-        const list = painters.filter((a) => a.horse).sort((x, y) => (x.horseOrder ?? 99) - (y.horseOrder ?? 99));
+        /* a random order, drawn once per page load for every horse there is */
+        const horses = painters.filter((a) => a.horse);
+        for (const a of horses) if (!tasteOrder.current.has(a.id)) tasteOrder.current.set(a.id, Math.random());
+        const list = [...horses].sort((x, y) => tasteOrder.current.get(x.id)! - tasteOrder.current.get(y.id)!);
         const need = Math.min(3, list.length);
-        const IW = 240, IH = 160, COLS = 4;
+        const IW = 240, IH = 160, COLS = 4, PER = 8;
+        const pages = Math.max(1, Math.ceil(list.length / PER));
+        const pg = Math.min(tastePg, pages - 1);
         const colX = (k: number) => 137.14 + k * ((1302.86 - 137.14 - IW) / (COLS - 1));
-        const rows = Math.ceil(list.length / COLS);
-        /* one row: the owner's y (image 330.76, Select on 543.08); two rows
-           share the band between the subtitle and the bar */
-        const rowY = (r: number) => rows <= 1 ? 330.76 : 225 + r * 235;
-        /* Select's baseline under its picture: the owner's 52.32 for one row,
-           tighter (34) when two rows share the page */
-        const SEL_OFF = rows <= 1 ? 52.32 : 34;
+        /* two rows of four, the block centred between the title and the bar
+           (the owner's subtitle went, 2026-09-29) */
+        const SEL_OFF = 34;
+        const rowY = (r: number) => 208 + r * 235;
         const full = pickArtists.length >= need;
         const toggle = (id: string) => {
           setTasteWarn(false);
           setPickArtists((pa) => pa.includes(id) ? pa.filter((x) => x !== id) : pa.length >= need ? pa : [...pa, id]);
         };
+        const horse = (a: (typeof list)[number], k: number, live: boolean) => {
+          const x = colX(k % COLS), y = rowY(Math.floor(k / COLS)), cx = x + IW / 2;
+          const on = pickArtists.includes(a.id), grey = !on && full;
+          const base = y + IH + SEL_OFF;
+          return (
+            <span key={"horse" + a.id} style={{ opacity: grey ? 0.35 : 1, transition: `opacity 240ms ${EASE}`, pointerEvents: live ? "auto" : "none" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={a.horse} alt="" draggable={false} onClick={() => toggle(a.id)}
+                style={{ ...px(x, y, IW, IH), objectFit: "contain", display: "block", cursor: grey ? "default" : "pointer" }} />
+              <button onClick={() => toggle(a.id)} disabled={grey} aria-label={`select ${a.name}`}
+                style={{ ...px(cx - 28.24 - 10.56, base - 4.4 - 10.56 - 4, 90, 29), ...ghost, cursor: grey ? "default" : "pointer", textTransform: "none" }}>
+                {/* the site's standard ring (18 across, 2 thick, dot 7.5) */}
+                <span style={{ position: "absolute", left: 1.56, top: 5.56 }}>{ringSvg(18, on, { stroke: 2, dot: 7.5 })}</span>
+                <span style={{ position: "absolute", left: 10.56 + 28.24 - 7.43, top: baseTop(base, 15) - (base - 4.4 - 10.56 - 4), font: `700 15px/15px ${HNW}`, color: INK, whiteSpace: "nowrap" }}>{t("Select")}</span>
+              </button>
+            </span>
+          );
+        };
+        /* one page as four column layers — they slide one after another, as
+           the label versions do */
+        const cascade = (col: number, dir: number) => (dir > 0 ? col : COLS - 1 - col) * 70;
+        const pageLayer = (p2: number, mode: "still" | "in" | "out", dir: number) => {
+          const items = list.slice(p2 * PER, p2 * PER + PER);
+          return Array.from({ length: COLS }, (_, col) => (
+            <div key={`tp${p2}-${col}-${mode}`} style={{ position: "absolute", left: 0, top: 0, width: W, height: H, pointerEvents: "none",
+              animation: mode === "still" ? "none" : `${mode === "in" ? (dir > 0 ? "nuiSetInR" : "nuiSetInL") : (dir > 0 ? "nuiSetOutL" : "nuiSetOutR")} ${SLIDE_MS}ms ${EASE} ${cascade(col, dir)}ms both` }}>
+              {items.map((a, k) => (k % COLS === col ? horse(a, k, mode !== "out" && !inSlide) : null))}
+            </div>
+          ));
+        };
+        const midY = (rowY(0) + rowY(1) + IH) / 2;
+        const arrow = (lab: string, x: number, pts: string, to: number) => (
+          <button key={lab} aria-label={lab} onClick={() => showTastePg(to)}
+            style={{ ...px(x - 30 + 6, midY - 36, 60, 72), ...ghost, zIndex: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg viewBox="0 0 18 22" width="25.2" height="33.6" style={{ overflow: "visible" }}><polyline points={pts} fill="none" stroke="#111" strokeWidth="1.6" /></svg>
+          </button>
+        );
         return (<>
           <span style={{ ...px(137.14, baseTop(149.08, 19), 900, 22), font: `700 19px ${HNW}`, lineHeight: "19px", color: INK, whiteSpace: "nowrap" }}>{t("BEFORE WE START, SELECT 3 HORSES YOU LIKE.")}</span>
-          {[t("Do not overthink, just select the ones"), t("that catch your attention.")].map((ln, i) => (
-            <span key={"tsub" + i} style={{ ...px(136.97, baseTop(182.56 + i * 18, 15), 700, 18), font: `italic 15px ${HNW}`, lineHeight: "15px", color: INK, whiteSpace: "nowrap" }}>{ln}</span>
-          ))}
-          {list.map((a, k) => {
-            const x = colX(k % COLS), y = rowY(Math.floor(k / COLS)), cx = x + IW / 2;
-            const on = pickArtists.includes(a.id), grey = !on && full;
-            const base = y + IH + SEL_OFF;
-            return (
-              <span key={"horse" + a.id} style={{ opacity: grey ? 0.35 : 1, transition: `opacity 240ms ${EASE}` }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={a.horse} alt="" draggable={false} onClick={() => toggle(a.id)}
-                  style={{ ...px(x, y, IW, IH), objectFit: "contain", display: "block", cursor: grey ? "default" : "pointer" }} />
-                <button onClick={() => toggle(a.id)} disabled={grey} aria-label={`select ${a.name}`}
-                  style={{ ...px(cx - 28.24 - 10.56, base - 4.4 - 10.56 - 4, 90, 29), ...ghost, cursor: grey ? "default" : "pointer", textTransform: "none" }}>
-                  {/* the site's standard ring (18 across, 2 thick, dot 7.5) on the owner's centre */}
-                  <span style={{ position: "absolute", left: 1.56, top: 5.56 }}>{ringSvg(18, on, { stroke: 2, dot: 7.5 })}</span>
-                  <span style={{ position: "absolute", left: 10.56 + 28.24 - 7.43, top: baseTop(base, 15) - (base - 4.4 - 10.56 - 4), font: `700 15px/15px ${HNW}`, color: INK, whiteSpace: "nowrap" }}>{t("Select")}</span>
-                </button>
-              </span>
-            );
-          })}
+          {tasteSlide && tasteSlide.from !== pg && pageLayer(tasteSlide.from, "out", tasteSlide.dir)}
+          {pageLayer(pg, tasteSlide ? "in" : "still", tasteSlide?.dir || 1)}
+          {pages > 1 && pg > 0 && arrow("previous horses", 137.14 - 48, "13,3 5,11 13,19", pg - 1)}
+          {pages > 1 && pg < pages - 1 && arrow("next horses", 1302.86 + 48 - 12, "5,3 13,11 5,19", pg + 1)}
           {/* the red button asks for three — said here, in its own row */}
           {tasteWarn && (
-            <span style={{ ...px(137.14, baseTop(rowY(rows - 1) + IH + 100, 13), 1165.72, 16), font: `13px ${HNW}`, lineHeight: "13px", color: BAR_RED, textAlign: "center", display: "block" }}>
+            <span style={{ ...px(137.14, baseTop(rowY(1) + IH + SEL_OFF + 30, 13), 1165.72, 16), font: `13px ${HNW}`, lineHeight: "13px", color: BAR_RED, textAlign: "center", display: "block" }}>
               {need > 1 ? t("Select 3 horses to continue.") : t("Select a horse to continue.")}</span>
           )}
         </>);
