@@ -313,7 +313,11 @@ export async function repaintInHand(model: EvalModel, story: string, ap: Artwork
   if (!model.lora) throw new Error(`${model.name} has no trained LoRA yet`);
   if (!process.env.FAL_KEY) throw new Error("FAL_KEY is not set");
   const handOnly = opts.handOnly !== false;
-  const url = await falUpload(Buffer.from(story.slice(story.indexOf(",") + 1), "base64"), "story.png", "image/png");
+  /* PAINT_SMALL=1 (tests): the repaint gets a smaller picture — about half
+     the price; the question a test asks does not need print resolution */
+  let storyBuf = Buffer.from(story.slice(story.indexOf(",") + 1), "base64");
+  if (process.env.PAINT_SMALL === "1") storyBuf = await (await import("sharp")).default(storyBuf).resize(1024, 1024, { fit: "inside" }).png().toBuffer();
+  const url = await falUpload(storyBuf, "story.png", "image/png");
   const locked = !opts.unlocked;
   /* the locked repaint reads the sketch's own description (an abstraction
      keeps its abstract wording); the depth map is made alongside */

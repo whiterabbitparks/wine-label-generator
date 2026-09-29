@@ -1,0 +1,8 @@
+{
+  "url": "https://v3b.fal.media/files/b/0aac55ea/7OpsHurYBIwmbXVXj-QgQ_pytorch_lora_weights.safetensors",
+  "trigger": "NPRSM",
+  "steps": 1500,
+  "works": 22,
+  "captions": true,
+  "trainedAt": "2026-09-29T06:31:10.818Z"
+}

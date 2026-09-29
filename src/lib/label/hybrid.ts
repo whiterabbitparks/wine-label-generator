@@ -166,7 +166,8 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
   if (artKindOf(tpl) !== "spot") {
     const bl = bleedsOf(tpl);
     edgeSides = (["bottom", "top", "right", "left"] as const).filter((k) => !bl[k]);
-    if (edgeSides.length) {
+    /* (the panel method, below, asks for its own shape instead) */
+    if (edgeSides.length && !(process.env.PANEL_METHOD === "1" && edgeSides.length <= 1)) {
       /* the type lies across the picture's height (above and/or below it)
          or across its width (beside it) */
       const horiz = edgeSides.every((k) => k === "top" || k === "bottom");
@@ -222,7 +223,21 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
      SKETCH is told, in words, how much of it is kept and where — the
      figures SMALL, whole, inside that part, with open sky and ground
      beyond. Only the sketch reads it (the repaint keeps the arrangement). */
-  if (artKindOf(tpl) !== "spot" && edgeSides.length <= 1) {
+  /* 2026-09-29 (owner) — THE PANEL METHOD, on trial (PANEL_METHOD=1): a
+     big picture with type on at most one side is painted like a spot — ONE
+     panel of the window's own shape on plain paper, everything whole inside
+     it — and laid in by the composer (compose-template `panel`). The
+     "run off the edges / cover the window" asks are dropped. */
+  const panel = process.env.PANEL_METHOD === "1" && artKindOf(tpl) !== "spot" && edgeSides.length <= 1;
+  if (panel) {
+    const shape = zoneAspect >= 1 ? `about ${zoneAspect.toFixed(1)} times wider than tall` : `about ${(1 / zoneAspect).toFixed(1)} times taller than wide`;
+    const panelText = `THE PICTURE IS ONE PANEL: paint the whole scene as a single panel ${shape}, as large as the canvas allows, centred, with plain, flat, empty paper of one tone around it. The panel is filled edge to edge with the scene; its outline is the painter's own loose, irregular edge — never a frame, never a straight ruled line, never an oval. Every figure whole, every face and every animal, the whole story, well inside the panel; its outermost rim may be trimmed away, so nothing important sits near the panel's edges.`;
+    ap.kind = "spot";
+    ap.edgeSide = undefined;
+    ap.prompt = ap.prompt.includes(BLEED) ? ap.prompt.replace(BLEED, panelText) : `${ap.prompt} ${panelText}`;
+    ap.guide = undefined;
+  }
+  if (!panel && artKindOf(tpl) !== "spot" && edgeSides.length <= 1) {
     const canvas = ap.aspect === "landscape" ? 1.5 : ap.aspect === "portrait" ? 2 / 3 : 1;
     const side = edgeSides[0];
     const horizE = !side || side === "top" || side === "bottom" ? zoneAspect >= canvas : false;
@@ -254,7 +269,7 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
      drawing nothing is touched — a flat ground Levan painted is his. */
   /* a band/panel picture has plain ground only on its type-facing side —
      the paper is looked for there and nowhere else */
-  const cleaned = await cleanPaper(painted.art, undefined, edgeSides.length ? edgeSides : undefined);
+  const cleaned = await cleanPaper(painted.art, undefined, !panel && edgeSides.length ? edgeSides : undefined);
   const art = cleaned.art;
 
   /* 2026-09-23 (owner: "we no longer generate variations — the rules
@@ -266,7 +281,8 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
 
   const out = await composeTemplateLabel({
     artwork: art, band, template: chosen.id, data: inp.data, ink: cleaned.ink, paper: cleaned.ground,
-    edge: cleaned.cleaned && edgeSides.length ? edgeSides : undefined,
+    edge: !panel && cleaned.cleaned && edgeSides.length ? edgeSides : undefined,
+    panel: panel && cleaned.cleaned,
     widthMm, heightMm, seed, wineColour: inp.data.wineColorName,
   });
   if (out.warnings.length) console.warn(`[template ${out.template}] ${out.warnings.join("; ")}`);

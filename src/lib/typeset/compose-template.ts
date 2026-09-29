@@ -31,6 +31,10 @@ export interface TemplateComposeInput {
      on this side (and was cleaned there) — that edge is laid on the
      type's boundary instead of a straight cut */
   edge?: ("top" | "bottom" | "left" | "right")[];
+  /* 2026-09-29 (owner): the picture was painted as ONE PANEL of the
+     window's own shape on plain paper (the spot method) — laid in exactly
+     on the sides that bleed, flexibly toward the type */
+  panel?: boolean;
   textless?: boolean;           /* the label WITHOUT its type — the layout bench draws the words itself */
   /* the drawing's box inside the file, as fractions — cleanPaper knows it
      exactly, because it grew the paper in from the edge */
@@ -214,7 +218,9 @@ export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<C
     layout.art = { x: pxPos.x + bx * s, y: pxPos.y + by * s, w: bw * s, h: bh * s };
     layout.artCrop = { x: bx, y: by, w: bw, h: bh };
   } else {
-    const over = Math.max(layout.W, layout.H) * 0.06;
+    /* 2026-09-29 (owner, reading the PDF: "the picture runs 6.6 mm past the
+       label — it should be 2 mm, 114 × 84 on a 110 × 80 label"): 2 mm */
+    const over = 2 * (layout.W / inp.widthMm);
     const win = {
       x0: bleeds.left ? Math.min(art.x, 0) - over : art.x,
       y0: bleeds.top ? Math.min(art.y, 0) - over : art.y,
@@ -234,7 +240,30 @@ export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<C
     const offY = bestWindow(detail.rows, ah, by, bh, srcH, visTop, visH);
     const offX = bestWindow(detail.cols, aw, bx, bw, srcW, visLeft, visW);
     pxPos = { x: win.x0 - (bx + offX) * s, y: win.y0 - (by + offY) * s };
-    if (inp.edge && inp.edge.length) {
+    if (inp.panel) {
+      /* THE PANEL (2026-09-29, owner: "control the three bleeding sides; the
+         type side can give — a little more room there, or reaching the line;
+         a hint of the painter's edge on a bleeding side is better than losing
+         the picture"). An axis whose both ends bleed is covered exactly (plus
+         the 2 mm); the other axis is anchored on its bleeding end, with the
+         panel's loose fringe (4 %) just past the trim, and runs toward the
+         type as far as it runs — at most 8 % over the window, else the panel
+         is scaled down (its bleeding sides then come in a hair). */
+      const xExact = bleeds.left && bleeds.right, yExact = bleeds.top && bleeds.bottom;
+      const sx = ww / bw, sy = wh / bh;
+      if (xExact && yExact) s = Math.max(sx, sy);
+      else if (xExact) s = Math.min(sx, (wh * 1.08) / (bh * 0.96));
+      else if (yExact) s = Math.min(sy, (ww * 1.08) / (bw * 0.96));
+      else s = Math.min(sx, sy);
+      const pw0 = bw * s, ph0 = bh * s, fx = pw0 * 0.04, fy = ph0 * 0.04;
+      const ix = xExact || (!bleeds.left && !bleeds.right) ? win.x0 + (ww - pw0) / 2 : bleeds.left ? win.x0 - fx : win.x1 - pw0 + fx;
+      const iy = yExact || (!bleeds.top && !bleeds.bottom) ? win.y0 + (wh - ph0) / 2 : bleeds.top ? win.y0 - fy : win.y1 - ph0 + fy;
+      pxPos = { x: ix - bx * s, y: iy - by * s };
+      const B = { x0: -over, y0: -over, x1: layout.W + over, y1: layout.H + over };
+      const d = { x0: Math.max(B.x0, pxPos.x), y0: Math.max(B.y0, pxPos.y), x1: Math.min(B.x1, pxPos.x + aw * s), y1: Math.min(B.y1, pxPos.y + ah * s) };
+      layout.art = { x: d.x0, y: d.y0, w: d.x1 - d.x0, h: d.y1 - d.y0 };
+      layout.artCrop = { x: (d.x0 - pxPos.x) / s, y: (d.y0 - pxPos.y) / s, w: (d.x1 - d.x0) / s, h: (d.y1 - d.y0) / s };
+    } else if (inp.edge && inp.edge.length) {
       const E = new Set(inp.edge);
       /* 2026-09-23 (owner, on Giorgi's t10 with type above AND below the
          picture: "it grew tall and ran over the top lines, and its top was

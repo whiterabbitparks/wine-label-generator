@@ -23,7 +23,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 type Line = { text: string; x: number; y: number; size: number; tracking: number; family: string; weight: number; italic: boolean; anchor: "start" | "middle" | "end"; colour: string; rot?: number; key?: string; hidden?: boolean };
 type Box = { x: number; y: number; w: number; h: number };
 type Layout = { W: number; H: number; ground: string; art: Box; artCrop?: Box; lines: Line[] };
-type State = { lines: Line[]; art: Box };
+type State = { lines: Line[]; art: Box; ground?: string };
 type Meta = { id: string; template?: string; style: string; widthMm: number; heightMm: number; createdAt: string; artist?: string };
 type Item = { id: string; template: string; widthMm: number; heightMm: number; artist: string; idea: string };
 type Batch = { open: Item[]; fixed: number; ok: number; running: { total: number; done: number; failed: string[] } | null };
@@ -70,6 +70,18 @@ export function LayoutEditor() {
   const [showGrid, setShowGrid] = useState(true);
   const [note, setNote] = useState("");
   const [msg, setMsg] = useState("");
+  /* 2026-09-29 (owner): the label's GROUND can be changed too — a colour
+     picker, or a pipette that takes a colour from the painting itself.
+     Every change is saved with the edit (the engine's ground → his), so
+     his corrections can be read for a rule later. */
+  const [pipette, setPipette] = useState(false);
+  const artCanvas = useRef<HTMLCanvasElement | null>(null);
+  useEffect(() => {
+    if (!pipette) return;
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setPipette(false); };
+    window.addEventListener("keydown", esc);
+    return () => window.removeEventListener("keydown", esc);
+  }, [pipette]);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const drag = useRef<{ x: number; y: number; from: State; keys: string[] } | null>(null);
   /* the selection boxes are measured off the drawn letters — one more
@@ -98,7 +110,8 @@ export function LayoutEditor() {
     const b = await (await fetch(`/api/admin/labels?id=${lid}&part=layout`)).json();
     if (!b.layout) { setMsg("This label has no layout on disk."); return; }
     setMeta(b.meta); setLayout(b.layout); setArtSize(b.art); setFaces(b.faces || {});
-    setSt({ lines: keyed(b.layout.lines), art: { ...b.layout.art } });
+    setSt({ lines: keyed(b.layout.lines), art: { ...b.layout.art }, ground: b.layout.ground });
+    setPipette(false); artCanvas.current = null;
   }, []);
   /* nothing open → the first label waiting in the queue */
   useEffect(() => { if (!id && batch.open.length) open(batch.open[0].id); }, [id, batch.open, open]);
@@ -182,7 +195,7 @@ export function LayoutEditor() {
   });
 
   const undo = () => setHist((h) => { if (!h.length) return h; setSt(h[h.length - 1]); return h.slice(0, -1); });
-  const reset = () => { if (layout) push({ lines: keyed(layout.lines), art: { ...layout.art } }); };
+  const reset = () => { if (layout) push({ lines: keyed(layout.lines), art: { ...layout.art }, ground: layout.ground }); };
 
   /* the selected lines' tools — size, weight and hide work on every
      selected line; alignment only on one straight line */
@@ -214,7 +227,7 @@ export function LayoutEditor() {
     if (outcome === "fixed") {
       const r = await fetch("/api/admin/layout-edits", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ labelId: id, note, pictureBad, before: { lines: keyed(layout.lines), art: layout.art }, after: { lines: st.lines, art: st.art } }),
+        body: JSON.stringify({ labelId: id, note, pictureBad, before: { lines: keyed(layout.lines), art: layout.art, ground: layout.ground }, after: { lines: st.lines, art: st.art, ground: st.ground || layout.ground } }),
       });
       if (!r.ok) { const b = await r.json().catch(() => ({})); setMsg("Could not save: " + (b.error || r.status)); return; }
     }
@@ -223,7 +236,7 @@ export function LayoutEditor() {
     refresh();
   };
 
-  const changed = !!(st && layout && JSON.stringify({ l: st.lines, a: st.art }) !== JSON.stringify({ l: keyed(layout.lines), a: layout.art }));
+  const changed = !!(st && layout && JSON.stringify({ l: st.lines, a: st.art, g: (st.ground || layout.ground).toUpperCase() }) !== JSON.stringify({ l: keyed(layout.lines), a: layout.art, g: layout.ground.toUpperCase() }));
   const scaleView = layout ? VIEW_W / layout.W : 1;
   const M = 5 * PX_PER_MM;
   const selBoxes = st ? sel.map((k) => (k === "art" ? st.art : bboxOf(k))).filter((b): b is Box => !!b) : [];
@@ -267,10 +280,29 @@ export function LayoutEditor() {
       {st && layout && meta && (
         <div style={{ display: "flex", gap: 20, alignItems: "flex-start", marginTop: 10 }}>
           <div>
+            {pipette && (
+              <div style={{ ...ui.small, color: "#B71318", marginBottom: 4 }}>Pipette: click the painting to take its colour (Esc to cancel)</div>
+            )}
             <svg ref={svgRef} viewBox={`0 0 ${layout.W} ${layout.H}`} width={VIEW_W} height={layout.H * scaleView}
-              style={{ display: "block", border: "1px solid #E3E3E1", touchAction: "none", userSelect: "none", background: layout.ground }}
-              onPointerMove={onMove} onPointerUp={onUp} onPointerDown={(e) => { if (!e.shiftKey) setSel([]); }}>
-              <rect width={layout.W} height={layout.H} fill={layout.ground} />
+              style={{ display: "block", border: "1px solid #E3E3E1", touchAction: "none", userSelect: "none", background: st.ground || layout.ground, cursor: pipette ? "crosshair" : undefined }}
+              onPointerMove={onMove} onPointerUp={onUp}
+              onPointerDownCapture={(e) => {
+                if (!pipette) return;
+                e.stopPropagation(); e.preventDefault();
+                /* the click in label units → a pixel of the painting */
+                const svg = svgRef.current, c = artCanvas.current; if (!svg || !c || !st) return;
+                const r = svg.getBoundingClientRect();
+                const lx = (e.clientX - r.left) / r.width * layout.W, ly = (e.clientY - r.top) / r.height * layout.H;
+                const crop = layout.artCrop || { x: 0, y: 0, w: artSize.w, h: artSize.h };
+                const px2 = crop.x + (lx - st.art.x) / st.art.w * crop.w, py2 = crop.y + (ly - st.art.y) / st.art.h * crop.h;
+                const fx = px2 / artSize.w * c.width, fy = py2 / artSize.h * c.height;
+                if (fx < 0 || fy < 0 || fx >= c.width || fy >= c.height) { setMsg("Click on the painting itself."); return; }
+                const d = c.getContext("2d")!.getImageData(Math.floor(fx), Math.floor(fy), 1, 1).data;
+                const hex = "#" + [d[0], d[1], d[2]].map((v) => v.toString(16).padStart(2, "0")).join("").toUpperCase();
+                push({ ...st, ground: hex }); setPipette(false); setMsg("");
+              }}
+              onPointerDown={(e) => { if (!e.shiftKey) setSel([]); }}>
+              <rect width={layout.W} height={layout.H} fill={st.ground || layout.ground} />
               {/* the picture, cropped as the label shows it */}
               <svg x={st.art.x} y={st.art.y} width={st.art.w} height={st.art.h} preserveAspectRatio="none" overflow="hidden"
                 viewBox={layout.artCrop ? `${layout.artCrop.x} ${layout.artCrop.y} ${layout.artCrop.w} ${layout.artCrop.h}` : `0 0 ${artSize.w} ${artSize.h}`}>
@@ -325,6 +357,23 @@ export function LayoutEditor() {
                 </div>
               )}
             </>)}
+            {/* THE GROUND (2026-09-29) */}
+            <div style={{ display: "flex", gap: 8, alignItems: "center", borderTop: "1px solid #E3E3E1", paddingTop: 8 }}>
+              <span style={{ fontWeight: 700 }}>Ground</span>
+              <input type="color" value={(st.ground || layout.ground).slice(0, 7)} onChange={(e) => push({ ...st, ground: e.target.value.toUpperCase() })}
+                style={{ width: 34, height: 24, border: "1px solid #111", padding: 0, background: "none", cursor: "pointer" }} title="pick any colour" />
+              <button style={pipette ? { ...ui.btn, background: "#111", color: "#fff" } : ui.btn} onClick={async () => {
+                if (!artCanvas.current) {
+                  const im = new Image(); im.src = `/api/admin/labels?id=${id}&part=art`;
+                  await im.decode().catch(() => null);
+                  const c = document.createElement("canvas"); c.width = im.naturalWidth || 1; c.height = im.naturalHeight || 1;
+                  c.getContext("2d")!.drawImage(im, 0, 0); artCanvas.current = c;
+                }
+                setPipette((v) => !v);
+              }}>pipette</button>
+              {st.ground && st.ground !== layout.ground && <button style={ui.btn} onClick={() => push({ ...st, ground: layout.ground })}>engine's</button>}
+              <span style={ui.small}>{(st.ground || layout.ground).toUpperCase()}</span>
+            </div>
             {sel.includes("art") && (
               <div style={{ display: "flex", gap: 6 }}>
                 <button style={ui.btn} onClick={() => scaleArt(0.97)}>smaller</button>
