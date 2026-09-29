@@ -309,14 +309,15 @@ async function falPost(endpoint: string, body: unknown, ms: number): Promise<Rec
 }
 const firstUrl = (j: Record<string, unknown>) => String((j.image as { url?: string } | undefined)?.url || (j.images as { url?: string }[] | undefined)?.[0]?.url || "");
 
-export async function repaintInHand(model: EvalModel, story: string, ap: ArtworkPrompt, strength = REPAINT_STRENGTH, opts: { handOnly?: boolean; unlocked?: boolean } = { handOnly: true }): Promise<string> {
+export async function repaintInHand(model: EvalModel, story: string, ap: ArtworkPrompt, strength = REPAINT_STRENGTH, opts: { handOnly?: boolean; unlocked?: boolean; small?: boolean } = { handOnly: true }): Promise<string> {
   if (!model.lora) throw new Error(`${model.name} has no trained LoRA yet`);
   if (!process.env.FAL_KEY) throw new Error("FAL_KEY is not set");
   const handOnly = opts.handOnly !== false;
-  /* PAINT_SMALL=1 (tests): the repaint gets a smaller picture — about half
-     the price; the question a test asks does not need print resolution */
+  /* PAINT_SMALL=1 (tests) or `small` (the admin's layout batch): the
+     repaint gets a smaller picture — about half the price; the question a
+     test or a placement correction asks does not need print resolution */
   let storyBuf = Buffer.from(story.slice(story.indexOf(",") + 1), "base64");
-  if (process.env.PAINT_SMALL === "1") storyBuf = await (await import("sharp")).default(storyBuf).resize(1024, 1024, { fit: "inside" }).png().toBuffer();
+  if (opts.small || process.env.PAINT_SMALL === "1") storyBuf = await (await import("sharp")).default(storyBuf).resize(1024, 1024, { fit: "inside" }).png().toBuffer();
   const url = await falUpload(storyBuf, "story.png", "image/png");
   const locked = !opts.unlocked;
   /* the locked repaint reads the sketch's own description (an abstraction
@@ -364,7 +365,7 @@ export async function repaintInHand(model: EvalModel, story: string, ap: Artwork
 
 /* both steps; `story` is kept so a failed repaint still yields a picture.
    `refSet` is the letter of the owner's set the story was shown (A–D). */
-export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt, extra: { sketch?: string | null; quality?: "low" | "medium" | "high"; refSet?: number } = {}): Promise<{ art: string; story: string; repainted: boolean; error?: string; refSet: string }> {
+export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt, extra: { sketch?: string | null; quality?: "low" | "medium" | "high"; refSet?: number; small?: boolean } = {}): Promise<{ art: string; story: string; repainted: boolean; error?: string; refSet: string }> {
   let { set: refSet, files: refFiles } = nextRefSet(model.artist.id, extra.refSet, !!ap.abstract);
   /* 2026-09-23 (owner: "sometimes one of the three labels never comes —
      its place stays empty"): OpenAI's filter refuses some asks at random
@@ -389,7 +390,7 @@ export async function generateArtwork(model: EvalModel, ap: ArtworkPrompt, extra
   const dbg = process.env.PAINT_DEBUG_DIR, tag = `${model.artist.id}-${Date.now()}`;
   if (dbg) { fs.writeFileSync(`${dbg}/${tag}-1-sketch.png`, Buffer.from(story.slice(story.indexOf(",") + 1), "base64")); fs.writeFileSync(`${dbg}/${tag}-0-prompt.txt`, ap.prompt); }
   try {
-    return { art: await repaintInHand(model, story, ap), story, repainted: true, refSet };
+    return { art: await repaintInHand(model, story, ap, undefined, { handOnly: true, small: extra.small }), story, repainted: true, refSet };
   } catch (e) {
     const error = e instanceof Error ? e.message : String(e);
     console.error(`[painter] FLUX + LoRA failed for ${model.id}: ${error} — the story picture ships as painted`);

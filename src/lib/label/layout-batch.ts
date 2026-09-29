@@ -21,7 +21,9 @@ import { randomDetails } from "@/app/demo-fill";
 const FILE = path.join(process.cwd(), "data", "layout-batch.json");
 const SIZES: [number, number][] = [[110, 80], [80, 110], [90, 90], [100, 70]];
 const BAND_STYLE: Record<string, string> = { classical: "traditional", contemporary: "contemporary", free: "punk" };
-export const BATCH_SIZE = 5;
+/* 2026-09-29 (owner): eight a batch, painted small — a placement
+   correction does not need print resolution */
+export const BATCH_SIZE = 8;
 
 export type BatchItem = {
   id: string; template: string; widthMm: number; heightMm: number; artist: string; idea: string;
@@ -81,7 +83,7 @@ async function makeOne(k: number) {
   const data: Record<string, string> = {};
   for (const [key, v] of Object.entries(raw)) data[key] = CASED_FIELDS.has(key as never) ? properCase(v) : v;
   const style = BAND_STYLE[tpl.band] || "traditional";
-  const out = await paintHybridLabel({ vision: idea, style, data, widthMm: w, heightMm: h, artistId: artist?.profile.id, template: tpl.id, panel: true });
+  const out = await paintHybridLabel({ vision: idea, style, data, widthMm: w, heightMm: h, artistId: artist?.profile.id, template: tpl.id, panel: true, small: true });
   const id = saveLabel({
     style, widthMm: w, heightMm: h, faces: out.faces, ground: out.ground, svg: out.svg, png: out.png, art: out.art,
     prompt: out.prompt, layout: out.layout, fit: out.fit, template: out.template, hasPaper: out.hasPaper, artist: out.artist, refSet: out.refSet, panel: out.panel,

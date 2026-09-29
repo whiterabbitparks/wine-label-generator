@@ -277,7 +277,7 @@ export function LayoutEditor() {
       <style>{fontCss}</style>
       {/* the queue: labels still waiting to be looked at */}
       <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 8, fontSize: 12 }}>
-        <button style={{ ...ui.btnDark, opacity: batch.running ? 0.4 : 1 }} disabled={!!batch.running} onClick={make}>Make 5 new labels</button>
+        <button style={{ ...ui.btnDark, opacity: batch.running ? 0.4 : 1 }} disabled={!!batch.running} onClick={make}>Make 8 new labels</button>
         {batch.running
           ? <span>Painting… {batch.running.done} / {batch.running.total} ready (about a minute each, three at a time)</span>
           : <span style={ui.small}>{batch.open.length} waiting · {batch.fixed} fixed · {batch.ok} fine so far</span>}
@@ -290,7 +290,7 @@ export function LayoutEditor() {
             onClick={() => open(m.id)}
             style={{ height: 70, border: m.id === id ? "2px solid #B71318" : "1px solid #E3E3E1", cursor: "pointer", flex: "0 0 auto" }} />
         ))}
-        {!batch.open.length && !batch.running && <span style={ui.small}>The queue is empty — press “Make 5 new labels”.</span>}
+        {!batch.open.length && !batch.running && <span style={ui.small}>The queue is empty — press “Make 8 new labels”.</span>}
       </div>
 
       {st && layout && meta && (
