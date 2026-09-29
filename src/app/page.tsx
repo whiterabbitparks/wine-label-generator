@@ -3164,7 +3164,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         const rows = Math.ceil(list.length / COLS);
         /* one row: the owner's y (image 330.76, Select on 543.08); two rows
            share the band between the subtitle and the bar */
-        const rowY = (r: number) => rows <= 1 ? 330.76 : 232 + r * 222;
+        const rowY = (r: number) => rows <= 1 ? 330.76 : 225 + r * 235;
+        /* Select's baseline under its picture: the owner's 52.32 for one row,
+           tighter (34) when two rows share the page */
+        const SEL_OFF = rows <= 1 ? 52.32 : 34;
         const full = pickArtists.length >= need;
         const toggle = (id: string) => {
           setTasteWarn(false);
@@ -3178,7 +3181,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {list.map((a, k) => {
             const x = colX(k % COLS), y = rowY(Math.floor(k / COLS)), cx = x + IW / 2;
             const on = pickArtists.includes(a.id), grey = !on && full;
-            const base = y + IH + 52.32;
+            const base = y + IH + SEL_OFF;
             return (
               <span key={"horse" + a.id} style={{ opacity: grey ? 0.35 : 1, transition: `opacity 240ms ${EASE}` }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
