@@ -1,8 +1,8 @@
 {
-  "url": "https://v3b.fal.media/files/b/0aac6923/uNaMRR5h7OlmJrkbJq2uU_pytorch_lora_weights.safetensors",
+  "url": "https://v3b.fal.media/files/b/0aac6db2/7McPWm1-MgyNCyAN1FPu4_pytorch_lora_weights.safetensors",
   "trigger": "RTBKR",
   "steps": 1500,
-  "works": 41,
+  "works": 38,
   "captions": true,
-  "trainedAt": "2026-09-29T20:11:27.146Z"
+  "trainedAt": "2026-09-29T23:25:57.615Z"
 }
