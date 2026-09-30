@@ -1,5 +1,7 @@
 import { buildPackage, savePack, type PackBody } from "@/lib/package";
 import { getDb } from "@/lib/db";
+import { paddleOn, packTokenOk } from "@/lib/paddle";
+import { requestIsAuthenticated } from "@/lib/admin/session";
 
 /* DELIVERY PACKAGE (owner 2026-09-07): "Proceed to payment" downloads one
    ZIP named after the wine — the folder is built in src/lib/package.ts.
@@ -10,14 +12,25 @@ import { getDb } from "@/lib/db";
 export const maxDuration = 120;
 
 export async function POST(req: Request) {
-  let body: PackBody & { code?: string };
+  let body: PackBody & { code?: string; payToken?: string; fake?: boolean };
   try {
     body = await req.json();
   } catch {
     return new Response(JSON.stringify({ error: "invalid JSON body" }), { status: 400 });
   }
+  /* 2026-09-30: with Paddle connected the pack is let out only against a
+     paid transaction's receipt key (or to the admin, or while the TEMP
+     fake-payment switch is allowed) */
+  if (paddleOn()) {
+    const fake = body.fake === true && process.env.FAKE_PAY !== "0";
+    let ok = fake || (await requestIsAuthenticated());
+    const txn = !ok ? packTokenOk(String(body.payToken || "")) : null;
+    if (txn) ok = !!(await (await getDb()).collection("payments").findOne({ _id: txn } as never));
+    if (!ok) return new Response(JSON.stringify({ error: "not-paid" }), { status: 402 });
+  }
   try {
-    const { code, ...pack } = body;
+    const { code, payToken, fake, ...pack } = body;
+    void payToken; void fake;
     if (code) try { savePack(String(code), pack); } catch { /* the download matters more */ }
     /* the READ ME gets the order's product page and its code */
     if (code) try {

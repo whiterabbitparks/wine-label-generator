@@ -372,6 +372,7 @@ export const UI_GE: Record<string, string> = {
   /* 2026-09-27 (owner): the Final Pack's three prices */
   "Print ready Labels & Marketing Assets": "საბეჭდად მზა ეტიკეტები და სამარკეტინგო მასალა",
   "Published Product Page & QR Code (1 year hosting)": "პროდუქტის გვერდი და QR კოდი (1 წლის ჰოსტინგი)",
+  "Product Page & QR Code — 1 year, renews yearly": "პროდუქტის გვერდი და QR კოდი — 1 წელი, ყოველწლიურად განახლდება",
   "1 Hour session with a human designer": "1 საათი დიზაინერთან",
   "Total:": "ჯამი:",
   "Pay & Download": "გადახდა და ჩამოტვირთვა",

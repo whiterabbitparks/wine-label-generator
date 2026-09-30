@@ -1182,7 +1182,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     if (pressed > 0) nextBtnRef.current?.animate([{ transform: "scale(1)" }, { transform: "scale(1.09)", offset: 0.45 }, { transform: "scale(1)" }], { duration: 260, easing: "cubic-bezier(0.33, 1, 0.68, 1)" });
   }, [pressed]);
 
-  const [packSel, setPackSel] = useState<boolean[]>([true, true, false]);
+  const [packSel, setPackSel] = useState<boolean[]>([true, true, true]);
   const [agree, setAgree] = useState(false);
   /* ROUND 75 (owner): the new Final Pack has TWO buttons — Download stays
      grey and dead until "Proceed to payment" has gone through */
@@ -1271,7 +1271,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   useEffect(() => {
     if (page !== "checkout") return;
     /* ROUND 53 #6 (owner): the T&C ring starts UNCHECKED — always */
-    setAgree(false); setPaid(false);
+    /* a Paddle receipt for this order means it is paid (2026-09-30) */
+    setAgree(!!payToken.current); setPaid(!!payToken.current);
     if (customLabel) setPackSel([false, false, true, false]);
     else setPackSel((ps) => [ps[0], qrMode !== "upload", ps[2], false]);
   }, [page, qrMode, customLabel]);
@@ -2464,7 +2465,52 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const who = selectedArtist();
     nextFromFront(true, who ? [who.id] : undefined);
   }
+  /* 2026-09-30: PADDLE — Paddle.js is loaded on first use; a checkout opens
+     as Paddle's overlay; when it completes, the server reads the payment
+     back from Paddle (/api/paddle/confirm) before anything is given */
+  const paddleCfg = useRef<{ on: boolean; env?: string; token?: string; prices?: Record<string, string> } | null>(null);
+  const paddleDone = useRef<((txn: string) => void) | null>(null);
+  const payToken = useRef("");
+  useEffect(() => { try { payToken.current = localStorage.getItem("nui-pay-token") || ""; } catch { } }, []);
+  const paddleReady = async (): Promise<boolean> => {
+    if (!paddleCfg.current) paddleCfg.current = await fetch("/api/paddle/config").then((r) => r.json()).catch(() => ({ on: false }));
+    const cfg = paddleCfg.current!;
+    if (!cfg.on) return false;
+    const w = window as unknown as { Paddle?: { Environment: { set: (e: string) => void }; Initialize: (o: unknown) => void; Checkout: { open: (o: unknown) => void; close: () => void }; __nui?: boolean } };
+    if (!w.Paddle) await new Promise<void>((res, rej) => { const sc = document.createElement("script"); sc.src = "https://cdn.paddle.com/paddle/v2/paddle.js"; sc.onload = () => res(); sc.onerror = () => rej(new Error("paddle.js")); document.head.appendChild(sc); });
+    if (w.Paddle && !w.Paddle.__nui) {
+      if (cfg.env === "sandbox") w.Paddle.Environment.set("sandbox");
+      w.Paddle.Initialize({ token: cfg.token, eventCallback: (e: { name?: string; data?: { transaction_id?: string } }) => {
+        if (e.name === "checkout.completed" && e.data?.transaction_id && paddleDone.current) { const f = paddleDone.current; paddleDone.current = null; f(e.data.transaction_id); }
+        if (e.name === "checkout.closed") paddleDone.current = null;
+      } });
+      w.Paddle.__nui = true;
+    }
+    return !!w.Paddle;
+  };
+  /* opens the overlay for these price keys; resolves with the server's word */
+  const paddlePay = async (keys: string[]): Promise<{ ok?: boolean; runs?: number; packToken?: string } | null> => {
+    if (!(await paddleReady().catch(() => false))) return null;
+    const cfg = paddleCfg.current!, w = window as unknown as { Paddle: { Checkout: { open: (o: unknown) => void; close: () => void } } };
+    const items = keys.map((k) => cfg.prices?.[k]).filter(Boolean).map((priceId) => ({ priceId, quantity: 1 }));
+    if (!items.length) return null;
+    return new Promise((resolve) => {
+      paddleDone.current = async (txn: string) => {
+        const r = await fetch("/api/paddle/confirm", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ transactionId: txn }) }).catch(() => null);
+        const j = r?.ok ? await r.json().catch(() => null) : null;
+        setTimeout(() => { try { w.Paddle.Checkout.close(); } catch { } }, 1800);
+        resolve(j);
+      };
+      w.Paddle.Checkout.open({ items, settings: { displayMode: "overlay", theme: "light", locale: lang === "ge" ? "en" : "en" } });
+    });
+  };
   async function buyVersions() {
+    /* the real payment (Paddle) — unless the TEMP fake switch or the admin */
+    if (!fakePay && !vis?.admin) {
+      const j = await paddlePay(["try" + morePack]);
+      if (j?.ok && j.runs) { await refreshVis(); nextFromFront(dreams.length > 0); return; }
+      if (j === null && paddleCfg.current?.on) return;   /* closed without paying */
+    }
     try {
       const r = await fetch("/api/visitor/pay", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pack: morePack, fake: fakePay }) });
       /* bought → straight on to the try they came for */
@@ -2599,7 +2645,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
          the restored productUrl (round 28b, meant to survive a reload of
          the SAME in-progress order) must not leak into a NEW wine. Mint a
          fresh order code too, so a later publish never reuses the old one. */
-      setProductUrl(""); productCode.current = Math.random().toString(36).slice(2, 10);
+      setProductUrl(""); productCode.current = Math.random().toString(36).slice(2, 10); payToken.current = ""; try { localStorage.removeItem("nui-pay-token"); } catch { }   /* a new order: the old receipt no longer applies */
       try { localStorage.removeItem("nui-product-code"); } catch { }
       /* ROUND 47: generating a fresh label ends own-label (assets-only)
          mode. ROUND 48: wine colour re-derives from the new label's field
@@ -2677,9 +2723,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   /* 2026-09-27 (owner): three rows — the labels and the marketing assets
      are one item now */
   const PACK = [
-    { name: "Print ready Labels & Marketing Assets", price: 199 },
-    { name: "Published Product Page & QR Code (1 year hosting)", price: 29 },
-    { name: "1 Hour session with a human designer", price: 49 },
+    /* 2026-09-30 (owner): $399 / $49 a year (renews) / $99, the designer hour ticked from the start */
+    { name: "Print ready Labels & Marketing Assets", price: 399 },
+    { name: "Product Page & QR Code — 1 year, renews yearly", price: 49 },
+    { name: "1 Hour session with a human designer", price: 99 },
   ];
   /* an own-label order buys the marketing assets alone (round 47) */
   const OWN_PRICE = 9;
@@ -2741,6 +2788,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         body: JSON.stringify({
           /* keeps this pack beside the order's product page */
           code: productUrl ? productCode.current : undefined,
+          /* the Paddle receipt (or the TEMP fake switch) lets the pack out */
+          payToken: payToken.current || undefined, fake: fakePay || undefined,
           wineName: f.wine || "Wine",
           /* ROUND 47: an own-label order ships marketing assets only —
              the customer already has their printed labels */
@@ -4066,7 +4115,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         const ROWS: { n: 1 | 3 | 10; price: number; label: string }[] = [
           { n: 1, price: 5, label: "1 try / 3 new versions" },
           { n: 3, price: 9, label: "3 tries / 9 new versions" },
-          { n: 10, price: 19, label: "10 tries / 30 new versions" },
+          { n: 10, price: 15, label: "10 tries / 30 new versions" },   /* $15 (owner, 2026-09-30) */
         ];
         return (<>
           <span style={{ ...px(139, baseTop(149.08, 24), 600, 24), font: `700 24px ${HNW}`, lineHeight: "24px", color: "#111", whiteSpace: "nowrap" }}>{t("MORE TRIES")}</span>
@@ -5630,7 +5679,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                       if (requireAgree()) {
                         /* TEMP: paid only with the fake-payment switch (or an admin) */
                         if (fakePay || vis?.admin) setPaid(true);
-                        else { setWarn(t("Payments aren't connected yet — coming soon.")); setTimeout(() => setWarn(""), 5000); }
+                        else {
+                          /* Paddle: the chosen rows, then the receipt */
+                          const keys = customLabel ? (packSel[0] ? ["own"] : []) : (["pack", "page", "designer"] as const).filter((_, k) => packSel[k]);
+                          paddlePay([...keys]).then((j) => {
+                            if (j?.ok && j.packToken) { payToken.current = j.packToken; try { localStorage.setItem("nui-pay-token", j.packToken); } catch { } setPaid(true); }
+                            else if (j !== null || !paddleCfg.current?.on) { setWarn(t("Payments aren't connected yet — coming soon.")); setTimeout(() => setWarn(""), 5000); }
+                          });
+                        }
                       }
                     }
                     else proceedToPayment();
@@ -5950,7 +6006,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               </span>
               <button onClick={() => {
                 try { localStorage.removeItem("nui-order"); localStorage.removeItem("nui-product-code"); } catch { }
-                setProductUrl(""); productCode.current = Math.random().toString(36).slice(2, 10);
+                setProductUrl(""); productCode.current = Math.random().toString(36).slice(2, 10); payToken.current = ""; try { localStorage.removeItem("nui-pay-token"); } catch { }   /* a new order: the old receipt no longer applies */
                 setResumeAsk(null);
                 /* 2026-09-28 (owner): a new label starts at its details */
                 go("vision");
