@@ -2,9 +2,13 @@
   "id": "dachi-mindadze",
   "name": "Dachi Mindadze",
   "country": "Georgia",
-  "portfolio": "",
+  "portfolio": "https://www.artsper.com/us/contemporary-artists/georgia/129731/davit-dachi-mindadze",
   "medium": "Ink, brush and pen drawing with watercolour and acrylic washes, sometimes collage and oil stick, on warm toned paper",
-  "words": ["gestural", "raw", "expressive"],
+  "words": [
+    "gestural",
+    "raw",
+    "expressive"
+  ],
   "colour": "sepia and warm cream paper grounds and dense black ink, with bold patches of crimson red, magenta, chrome yellow and a little sky blue",
   "form": "figures and animals — horses, bulls, dogs, lone men — drawn with fast scratchy pen lines and heavy dry-brush ink, loose scribbled details and collage fragments around them; long, gangly, distorted anatomy",
   "never": "never neat or polished, never smooth digital rendering, never realistic proportions, never printed text or letters",
@@ -13,11 +17,38 @@
   "horseOrder": 2,
   "status": "pilot",
   "active": true,
-  "bio": "",
+  "bio": "Davit (Dachi) Mindadze, born in 1985, is a self-taught Georgian painter and one of the most distinctive voices of his generation. His neo-expressionist work is raw and energetic — often painted in oil, acrylic and mixed media on unconventional surfaces such as nut sacks, where the rough weave becomes part of the picture. (Draft biography — to be completed with the artist.)",
   "page": true,
   "pageOrder": 5,
-  "crop": "74% 40%",
+  "crop": "43% 38%",
   "charterBy": "Claude's draft from the 14 works, 2026-09-26 (work 11 left out: Georgian handwriting would teach the model to paint letters) — the owner replaces it with the artist's own answers",
-  "refs": ["work-01.jpg", "work-03.jpg", "work-07.jpg", "work-13.jpg"],
-  "refSets": [["work-01.jpg", "work-06.jpg", "work-09.jpg"], ["work-03.jpg", "work-05.jpg", "work-10.jpg"], ["work-02.jpg", "work-07.jpg", "work-14.jpg"], ["work-04.jpg", "work-13.jpg", "work-15.jpg"]]
+  "refs": [
+    "work-01.jpg",
+    "work-03.jpg",
+    "work-07.jpg",
+    "work-13.jpg"
+  ],
+  "refSets": [
+    [
+      "work-01.jpg",
+      "work-06.jpg",
+      "work-09.jpg"
+    ],
+    [
+      "work-03.jpg",
+      "work-05.jpg",
+      "work-10.jpg"
+    ],
+    [
+      "work-02.jpg",
+      "work-07.jpg",
+      "work-14.jpg"
+    ],
+    [
+      "work-04.jpg",
+      "work-13.jpg",
+      "work-15.jpg"
+    ]
+  ],
+  "bioGe": "დავით (დაჩი) მინდაძე, დაბადებული 1985 წელს, თვითნასწავლი ქართველი მხატვარია და თავისი თაობის ერთ-ერთი ყველაზე გამორჩეული ხმა. მისი ნეოექსპრესიონისტული ნამუშევრები უხეში და ენერგიულია — ხშირად ზეთით, აკრილითა და შერეული ტექნიკით ნახატი არატრადიციულ ზედაპირებზე, მაგალითად თხილის ტომრებზე, სადაც ქსოვილის უხეში ფაქტურა სურათის ნაწილი ხდება. (ბიოგრაფია დრაფტია — შეივსება არტისტთან ერთად.)"
 }

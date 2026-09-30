@@ -3216,10 +3216,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               );
             })}
           </div>
-          {n > 1 && ([["previous image", L - 3.33, "13,3 5,11 13,19", -1], ["next image", R - 12 + 3.33, "5,3 13,11 5,19", 1]] as const).map(([lab, x, pts, d]) => (
+          {/* the arrows as big as the labels page's, where they stand there (owner, 2026-09-30) */}
+          {n > 1 && ([["previous image", L - 48, "13,3 5,11 13,19", -1], ["next image", R + 48 - 12, "5,3 13,11 5,19", 1]] as const).map(([lab, x, pts, d]) => (
             <button key={lab} aria-label={lab} onClick={() => setGalIdx(cur + d)}
-              style={{ ...px(x - 16, MID - 22, 44, 44), ...ghost, pointerEvents: "auto", zIndex: 12, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-              <svg viewBox="0 0 18 22" width="12" height="16"><polyline points={pts} fill="none" stroke="#111" strokeWidth="1.6" /></svg>
+              style={{ ...px(x - 30 + 6, MID - 36, 60, 72), ...ghost, pointerEvents: "auto", zIndex: 12, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+              <svg viewBox="0 0 18 22" width="25.2" height="33.6" style={{ overflow: "visible" }}><polyline points={pts} fill="none" stroke="#111" strokeWidth="1.6" /></svg>
             </button>
           ))}
           {cap && (
