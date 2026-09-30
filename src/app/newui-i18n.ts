@@ -46,6 +46,8 @@ export const SVG_GE: Record<string, string> = {
   "Style By:": "სტილი:",
   /* 2026-09-30 (owner): never say a label is an artist's work — "Inspired by" everywhere */
   "Inspired by:": "ინსპირაცია:",
+  "Roll the dice": "შემომთავაზე",
+  "Click to put it back": "დააჭირე, რომ დააბრუნო",
   "Create a label inspired by": "შექმენი ეტიკეტი — ინსპირაცია:",
   "Labels inspired by": "ეტიკეტები მისი ინსპირაციით",
   "An abstraction inspired by the artist's style": "აბსტრაქცია არტისტის სტილის ინსპირაციით",

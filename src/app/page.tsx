@@ -526,6 +526,19 @@ async function groundOf(url: string): Promise<string> {
   });
 }
 
+/* the dice's throws reach the LATEST taste page (the roll itself was set
+   going by an earlier render, which knows an older ring) — 2026-09-30 */
+function TasteThrow({ onThrow }: { onThrow: () => void }) {
+  const ref = useRef(onThrow);
+  ref.current = onThrow;
+  useEffect(() => {
+    const h = () => ref.current();
+    document.addEventListener("nui-taste-throw", h);
+    return () => document.removeEventListener("nui-taste-throw", h);
+  }, []);
+  return null;
+}
+
 export default function NewUI() {
   const [page, setPage] = useState<PageKey>("welcome");
   /* dev aid: /?page=bottle jumps straight to a page (no generation needed) */
@@ -1491,6 +1504,26 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     setTastePg(k);
     setTimeout(() => setTasteSlide((sl) => (sl && Date.now() - sl.n >= SLIDE_MS + 200 ? null : sl)), SLIDE_MS + 260);
   };
+  /* 2026-09-30 (owner): THE HORSE CAROUSEL. `tasteRing` = the horses still
+     to choose from, in a random order drawn once per load; `tasteCur` = the
+     one in the middle. A pick leaves the ring (its place goes to the next),
+     a horse sent back from the column comes back into the MIDDLE.
+     `tasteSpin` = while the dice roll, how long each step's slide takes. */
+  const [tasteRing, setTasteRing] = useState<string[] | null>(null);
+  const [tasteCur, setTasteCur] = useState(0);
+  const [tasteSpin, setTasteSpin] = useState(0);
+  const tasteRolling = useRef(false);
+  /* a picked horse flies from the middle to its slot (and back), as the
+     saved labels fly to the folder: where it flew from, by key */
+  const tasteFly = useRef<Record<string, { x: number; y: number; w: number; h: number }>>({});
+  useEffect(() => {
+    const hs = painters.filter((a) => a.horse).map((a) => a.id);
+    if (!hs.length) return;
+    setTasteRing((r) => {
+      if (r) return [...r, ...hs.filter((id) => !r.includes(id) && !pickArtists.includes(id))];
+      return hs.map((id) => ({ id, k: Math.random() })).sort((a, b2) => a.k - b2.k).map((x) => x.id).filter((id) => !pickArtists.includes(id));
+    });
+  }, [painters]);   // eslint-disable-line react-hooks/exhaustive-deps
   const [styleOpen, setStyleOpen] = useState(false);
   useEffect(() => {
     fetch("/api/artists").then((r) => r.json()).then((b) => { setSiteArtists(b.artists || []); setPainters(b.painters || []); }).catch(() => { });
@@ -3286,77 +3319,135 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       /* 2026-09-28 (owner's Horse.pdf): THE TASTE PAGE — before any label,
          the visitor picks the three horses they like; each horse is painted
          by one of the artists (tools/make-horse.mts — every new painter
-         gets one), and the picked horses' artists paint the labels. Up to
-         four a row, margin to margin, as the owner laid them out; a fifth
-         painter opens a second row. */
+         gets one), and the picked horses' artists inspire the labels.
+         2026-09-30 (owner): ONE CAROUSEL, three quarters of the page from
+         the left margin, in the Final Pack's ring manner; under it, centred,
+         "○ Select" with how many of three are chosen, and "Roll the dice".
+         The picks fly into the free quarter on the right, top to bottom (as
+         saved files fly to the folder); the middle horse is picked by its
+         own click too, and the next one takes its place; a picked horse
+         clicked flies back into the middle. The dice: the ring speeds up,
+         spins to the right and throws out one horse, a second, a third,
+         then slows to a stop — about four seconds. */
       case "taste": {
-        /* a random order, drawn once per page load for every horse there is */
-        const horses = painters.filter((a) => a.horse);
-        for (const a of horses) if (!tasteOrder.current.has(a.id)) tasteOrder.current.set(a.id, Math.random());
-        const list = [...horses].sort((x, y) => tasteOrder.current.get(x.id)! - tasteOrder.current.get(y.id)!);
-        const need = Math.min(3, list.length);
-        const IW = 240, IH = 160, COLS = 4, PER = 8;
-        const pages = Math.max(1, Math.ceil(list.length / PER));
-        const pg = Math.min(tastePg, pages - 1);
-        const colX = (k: number) => 137.14 + k * ((1302.86 - 137.14 - IW) / (COLS - 1));
-        /* two rows of four, the block centred between the title and the bar
-           (the owner's subtitle went, 2026-09-29) */
-        const SEL_OFF = 34;
-        const rowY = (r: number) => 208 + r * 235;
-        const full = pickArtists.length >= need;
-        const toggle = (id: string) => {
+        const byId = new Map(painters.filter((a) => a.horse).map((a) => [a.id, a]));
+        const need = Math.min(3, byId.size);
+        const ring = (tasteRing || []).filter((id) => byId.has(id) && !pickArtists.includes(id));
+        const n = ring.length;
+        const cur = n ? ((tasteCur % n) + n) % n : 0;
+        const L = 137.14, R = 1302.86, X1 = L + (R - L) * 0.75;
+        const CW = 420, CH = 280, CX = (L + X1) / 2, TOP = 206, MIDY = TOP + CH / 2;
+        const centre = { x: CX - CW / 2, y: TOP, w: CW, h: CH };
+        const SW = 225, SH = 150, SX = X1 + 20 + (R - X1 - 20 - SW) / 2;
+        const slot = (i: number) => ({ x: SX, y: 196 + i * (SH + 24), w: SW, h: SH });
+        const flyInto = (el: HTMLElement, from: { x: number; y: number; w: number; h: number }, to: { x: number; y: number; w: number; h: number }, ms = 640) => {
+          el.animate([{ transform: `translate(${from.x - to.x}px, ${from.y - to.y}px) scale(${from.w / to.w})`, transformOrigin: "0 0" }, { transform: "translate(0, 0) scale(1)", transformOrigin: "0 0" }], { duration: ms, easing: EASE });
+        };
+        const pickMid = (rolling = false) => {
+          const id = ring[cur];
+          if (!id || pickArtists.length >= need) return;
           setTasteWarn(false);
-          setPickArtists((pa) => pa.includes(id) ? pa.filter((x) => x !== id) : pa.length >= need ? pa : [...pa, id]);
+          tasteFly.current["slot:" + id] = centre;
+          setPickArtists((pa) => (pa.includes(id) || pa.length >= need ? pa : [...pa, id]));
+          setTasteRing((r) => (r || []).filter((x) => x !== id));
+          if (!rolling) setTasteCur((c) => c);
         };
-        const horse = (a: (typeof list)[number], k: number, live: boolean) => {
-          const x = colX(k % COLS), y = rowY(Math.floor(k / COLS)), cx = x + IW / 2;
-          const on = pickArtists.includes(a.id), grey = !on && full;
-          const base = y + IH + SEL_OFF;
+        const unpick = (id: string, from: { x: number; y: number; w: number; h: number }) => {
+          if (tasteRolling.current) return;
+          tasteFly.current["ring:" + id] = from;
+          setPickArtists((pa) => pa.filter((x) => x !== id));
+          /* back into the MIDDLE of the ring */
+          setTasteRing((r) => { const rr = (r || []).filter((x) => x !== id && !pickArtists.includes(x)); const at = rr.length ? ((cur % rr.length) + rr.length) % rr.length : 0; return [...rr.slice(0, at), id, ...rr.slice(at)]; });
+          setTasteCur(cur);
+        };
+        /* the dice: step times speed up, hold while three are thrown out,
+           then slow down — the ring turns to the right (the one on the left
+           comes into the middle) */
+        const roll = async () => {
+          if (tasteRolling.current || n < 2) return;
+          tasteRolling.current = true;
+          setTasteWarn(false);
+          if (pickArtists.length >= need) {
+            setTasteRing((r) => [...(r || []), ...pickArtists.filter((x) => !(r || []).includes(x))]);
+            setPickArtists([]);
+            await sleep(60);
+          }
+          const steps = [360, 280, 215, 170, 135, 110, 95];
+          const hold = 88, slowDown = [100, 125, 160, 210, 275, 360, 460];
+          const turn = async (ms: number) => { setTasteSpin(ms); setTasteCur((c) => c - 1); await sleep(ms); };
+          for (const ms of steps) await turn(ms);
+          const want = need - (pickArtists.length >= need ? 0 : pickArtists.length);
+          for (let k = 0; k < want; k++) {
+            for (let j = 0; j < 3; j++) await turn(hold);
+            /* the horse in the middle is thrown out, to the right */
+            setTasteSpin(hold);
+            document.dispatchEvent(new CustomEvent("nui-taste-throw"));
+            await sleep(hold);
+          }
+          for (const ms of slowDown) await turn(ms);
+          setTasteSpin(0);
+          tasteRolling.current = false;
+        };
+        const items = ring.map((id, i) => {
+          let rel = ((i - cur) % n + n) % n;
+          if (rel > n / 2) rel -= n;
+          if (Math.abs(rel) > 3) return null;
+          const a = byId.get(id)!;
+          const ar = Math.abs(rel);
+          const scale = ar === 0 ? 1 : ar === 1 ? 0.6 : ar === 2 ? 0.38 : 0.25;
+          const dx = rel === 0 ? 0 : Math.sign(rel) * (ar === 1 ? 300 : ar === 2 ? 455 : 560);
+          const ms = tasteSpin || 520, ease = tasteSpin ? "linear" : EASE;
           return (
-            <span key={"horse" + a.id} style={{ opacity: grey ? 0.35 : 1, transition: `opacity 240ms ${EASE}`, pointerEvents: live ? "auto" : "none" }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={a.horse} alt="" draggable={false} onClick={() => toggle(a.id)}
-                style={{ ...px(x, y, IW, IH), objectFit: "contain", display: "block", cursor: grey ? "default" : "pointer" }} />
-              <button onClick={() => toggle(a.id)} disabled={grey} aria-label={`select ${a.name}`}
-                style={{ ...px(cx - 28.24 - 10.56, base - 4.4 - 10.56 - 4, 90, 29), ...ghost, cursor: grey ? "default" : "pointer", textTransform: "none" }}>
-                {/* the site's standard ring (18 across, 2 thick, dot 7.5) */}
-                <span style={{ position: "absolute", left: 1.56, top: 5.56 }}>{ringSvg(18, on, { stroke: 2, dot: 7.5 })}</span>
-                <span style={{ position: "absolute", left: 10.56 + 28.24 - 7.43, top: baseTop(base, 15) - (base - 4.4 - 10.56 - 4), font: `700 15px/15px ${HNW}`, color: INK, whiteSpace: "nowrap" }}>{t("Select")}</span>
-              </button>
-            </span>
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img key={"th" + id} src={a.horse} alt="" draggable={false}
+              ref={(el) => { const f = tasteFly.current["ring:" + id]; if (el && f) { delete tasteFly.current["ring:" + id]; flyInto(el, f, centre); } }}
+              onClick={() => { if (tasteRolling.current) return; if (ar === 0) pickMid(); else setTasteCur(i); }}
+              style={{ position: "absolute", left: centre.x - L, top: 0, width: CW, height: CH, objectFit: "contain", zIndex: 10 - ar,
+                transform: `translate(${dx}px, 0) scale(${scale})`, filter: ar ? `blur(${ar === 1 ? 2 : 3.5}px)` : "none", opacity: ar === 0 ? 1 : ar === 1 ? 0.55 : ar === 2 ? 0.28 : 0,
+                transition: `transform ${ms}ms ${ease}, filter ${ms}ms ${ease}, opacity ${ms}ms ${ease}`, cursor: "pointer", userSelect: "none" }} />
           );
-        };
-        /* one page as four column layers — they slide one after another, as
-           the label versions do */
-        const cascade = (col: number, dir: number) => (dir > 0 ? col : COLS - 1 - col) * 70;
-        const pageLayer = (p2: number, mode: "still" | "in" | "out", dir: number) => {
-          const items = list.slice(p2 * PER, p2 * PER + PER);
-          return Array.from({ length: COLS }, (_, col) => (
-            <div key={`tp${p2}-${col}-${mode}`} style={{ position: "absolute", left: 0, top: 0, width: W, height: H, pointerEvents: "none",
-              animation: mode === "still" ? "none" : `${mode === "in" ? (dir > 0 ? "nuiSetInR" : "nuiSetInL") : (dir > 0 ? "nuiSetOutL" : "nuiSetOutR")} ${SLIDE_MS}ms ${EASE} ${cascade(col, dir)}ms both` }}>
-              {items.map((a, k) => (k % COLS === col ? horse(a, k, mode !== "out" && !inSlide) : null))}
-            </div>
-          ));
-        };
-        const midY = (rowY(0) + rowY(1) + IH) / 2;
-        const arrow = (lab: string, x: number, pts: string, to: number) => (
-          <button key={lab} aria-label={lab} onClick={() => showTastePg(to)}
-            style={{ ...px(x - 30 + 6, midY - 36, 60, 72), ...ghost, zIndex: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <svg viewBox="0 0 18 22" width="25.2" height="33.6" style={{ overflow: "visible" }}><polyline points={pts} fill="none" stroke="#111" strokeWidth="1.6" /></svg>
-          </button>
-        );
+        });
+        const SEL_BASE = TOP + CH + 36;
+        const DICE = { y: SEL_BASE + 22, h: 34.3, w: 210 };
+        const MSG_BASE = (DICE.y + DICE.h + PROG_Y) / 2 + 4;
         return (<>
           {/* centred across the page (owner, 2026-09-29) */}
           <span style={{ ...px(0, baseTop(149.08, 19), W, 22), font: `700 19px ${HNW}`, lineHeight: "19px", color: INK, whiteSpace: "nowrap", textAlign: "center", display: "block" }}>{t("BEFORE WE START, SELECT 3 HORSES YOU LIKE.")}</span>
-          {tasteSlide && tasteSlide.from !== pg && pageLayer(tasteSlide.from, "out", tasteSlide.dir)}
-          {pageLayer(pg, tasteSlide ? "in" : "still", tasteSlide?.dir || 1)}
-          {pages > 1 && pg > 0 && arrow("previous horses", 137.14 - 48, "13,3 5,11 13,19", pg - 1)}
-          {pages > 1 && pg < pages - 1 && arrow("next horses", 1302.86 + 48 - 12, "5,3 13,11 5,19", pg + 1)}
-          {/* the red button asks for three — said here, in its own row */}
-          {tasteWarn && (
-            <span style={{ ...px(137.14, baseTop(rowY(1) + IH + SEL_OFF + 30, 13), 1165.72, 16), font: `13px ${HNW}`, lineHeight: "13px", color: BAR_RED, textAlign: "center", display: "block" }}>
+          {!inSlide && <TasteThrow onThrow={() => pickMid(true)} />}
+          <div style={{ ...px(L, TOP, X1 - L, CH), overflow: "hidden" }}>{items}</div>
+          {n > 1 && ([["previous horse", L - 48, "13,3 5,11 13,19", 1], ["next horse", X1 + 2, "5,3 13,11 5,19", -1]] as const).map(([lab, x, pts, d]) => (
+            <button key={lab} aria-label={lab} onClick={() => { if (!tasteRolling.current) setTasteCur(cur - d); }}
+              style={{ ...px(x - 30 + 6, MIDY - 36, 60, 72), ...ghost, pointerEvents: "auto", zIndex: 12, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+              <svg viewBox="0 0 18 22" width="25.2" height="33.6" style={{ overflow: "visible" }}><polyline points={pts} fill="none" stroke="#111" strokeWidth="1.6" /></svg>
+            </button>
+          ))}
+          {/* ○ Select — and how many of three are chosen */}
+          <button onClick={() => { if (!tasteRolling.current) pickMid(); }} disabled={pickArtists.length >= need} aria-label="select the horse in the middle"
+            style={{ ...px(CX - 60, SEL_BASE - 20, 120, 29), ...ghost, pointerEvents: "auto", cursor: pickArtists.length >= need ? "default" : "pointer", textTransform: "none", opacity: pickArtists.length >= need ? 0.35 : 1, transition: `opacity 240ms ${EASE}` }}>
+            <span style={{ position: "absolute", left: 6, top: 5.5 }}>{ringSvg(18, false, { stroke: 2, dot: 7.5 })}</span>
+            <span style={{ position: "absolute", left: 33, top: baseTop(SEL_BASE, 15) - (SEL_BASE - 20), font: `700 15px/15px ${HNW}`, color: INK, whiteSpace: "nowrap" }}>
+              {t("Select")} <span style={{ fontWeight: 400, color: "#8a887e" }}>{pickArtists.length}/{need}</span></span>
+          </button>
+          {/* Roll the dice */}
+          <button onClick={roll} style={{ ...px(CX - DICE.w / 2, DICE.y, DICE.w, DICE.h), cursor: "pointer", font: `700 ${BAR_FS}px ${HNW}`, letterSpacing: 0.3, background: "#fff", color: "#111", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 3, textTransform: "uppercase", pointerEvents: "auto" }}>
+            {t("Roll the dice")}</button>
+          {pickArtists.length < need && (
+            <span style={{ ...px(L, baseTop(MSG_BASE, 13), X1 - L, 16), font: `13px ${HNW}`, lineHeight: "13px", color: tasteWarn ? BAR_RED : "#6b6a60", textAlign: "center", display: "block" }}>
               {need > 1 ? t("Select 3 horses to continue.") : t("Select a horse to continue.")}</span>
           )}
+          {/* the chosen ones, top to bottom, in the free quarter */}
+          {Array.from({ length: need }, (_, i) => {
+            const sl = slot(i), id = pickArtists[i], a = id ? byId.get(id) : undefined;
+            return a ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img key={"ts" + id} src={a.horse} alt="" draggable={false} title={t("Click to put it back")}
+                ref={(el) => { const f = tasteFly.current["slot:" + id]; if (el && f) { delete tasteFly.current["slot:" + id]; flyInto(el, f, sl, 700); } }}
+                onClick={() => unpick(id, sl)}
+                style={{ ...px(sl.x, sl.y, sl.w, sl.h), objectFit: "contain", cursor: "pointer", pointerEvents: "auto", zIndex: 20 }} />
+            ) : (
+              <span key={"tse" + i} style={{ ...px(sl.x, sl.y, sl.w, sl.h), border: "1px dashed #C9C7BF", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", font: `13px ${HNW}`, color: "#C9C7BF" }}>{i + 1}</span>
+            );
+          })}
         </>);
       }
 
@@ -4004,9 +4095,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           ).map((ln, i) => (
             <span key={"bc" + i} style={{ ...px(139.6, baseTop(517 + i * 18, 13), 560, 14), font: `13px ${HNW}`, color: "#111", lineHeight: "13px", whiteSpace: "nowrap" }}>{ln}</span>
           ))}
-          <a href="https://www.gs1.org/standards/get-barcodes" target="_blank" rel="noreferrer"
-            style={{ ...px(139.6, baseTop(553, 11), 320, 14), font: `italic 11px ${HNW}`, color: "#8a8a8a", textDecoration: "underline", lineHeight: "11px" }}>
-            {t("No GTIN yet? Register at gs1.org")}</a>
+          {/* (2026-09-30, owner: the GS1 registration link is gone) */}
           {/* ── QR pair, exactly where the mock puts them ── */}
           <button onClick={() => { setQrImg(""); setQrMode(qrMode === "create" ? "" : "create"); }} style={{ ...px(754, 450, 241, 34.3), ...modeStyle(qrMode === "create") }}>{t("Create QR Code")}</button>
           <label style={{ ...px(1064, 450, 239, 34.3), ...modeStyle(qrMode === "upload") }}>
@@ -4921,7 +5010,18 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const tutX = vt < 0 ? null : vt < STEPS.length ? STEPS[vt].x : NEXT_X;
   const thick = vt >= 0 ? (vt < STEPS.length ? STEPS[vt].x : CIRCLE_X[CIRCLE_X.length - 1]) : THICK[barPage];
   const onArtists = page === "artists" || page === "artist" || page === "gallery";
-  nudgeOk.current = (vt >= 0 && (tutIdle || vt >= tutLast)) || page === "checkout";
+  /* 2026-09-30 (owner): the red button RESTS — grey, no hover, no press —
+     until the page has what it needs: three horses on the taste page; on
+     the front and back details pages, anything at all put in. The bottle
+     page is red from the start (every row already has a pick). Never in
+     the walkthrough, whose arrow turns its pages. */
+  const frontTouched = !!vision.trim() || !!sketch || FRONT_ROWS.some((k2) => (f[k2] || "").trim());
+  const backTouched = !!(b.description || "").trim() || BACK_ROWS.some((k2) => (b[k2] || "").trim()) || !!gtin.trim() || !!qrMode || markets.length > 0;
+  const nextOff = tut < 0 && (page === "more"
+    || (page === "taste" && pickArtists.length < Math.min(3, painters.filter((a) => a.horse).length))
+    || (page === "vision" && !frontTouched)
+    || (page === "backdetails" && !backTouched));
+  nudgeOk.current = ((vt >= 0 && (tutIdle || vt >= tutLast)) || page === "checkout") && !nextOff;
   const bandBottom = BAND_BOTTOM[page];
   /* ROUND 108 #20 (owner): NOTHING ever slides over the header, the rules
      or the bar — so every transition, the welcome page's included, moves
@@ -5324,11 +5424,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 (`both`) outranks any :hover transform, so after one pulse the
                 button had stopped answering the mouse. */}
             {preparing && page === "checkout" && (
-              <span style={{ ...px(NEXT_X - 150, baseTop(LABEL_BASE, BAR_FS), 300, 20), font: `300 ${BAR_FS}px/${BAR_FS}px ${HNW}`, lineHeight: `${BAR_FS}px`, color: INK, textAlign: "center", display: "block", whiteSpace: "nowrap", pointerEvents: "none", animation: `nuiFadeIn 300ms ${EASE} both` }}>
-                {t("Preparing your files…")}</span>
+              <button tabIndex={-1} aria-hidden style={{ ...px(NEXT_X - 150, baseTop(LABEL_BASE, BAR_FS), 300, 20), ...ghost, font: `300 ${BAR_FS}px/${BAR_FS}px ${HNW}`, color: BAR_RED, textAlign: "center", textTransform: "none", whiteSpace: "nowrap", pointerEvents: "none", animation: `nuiFadeIn 300ms ${EASE} both` }}>
+                {t("Preparing your files…")}</button>
             )}
             {(page !== "loader" || tut >= 0) && (
-              <div className="nui-next"
+              <div className={nextOff ? undefined : "nui-next"}
                 style={{
                   position: "absolute", left: (tutX !== null ? tutX : page === "welcome" ? WELCOME_X : onArtists ? BACK_X : NEXT_X) - NEXT_R, top: PROG_Y - NEXT_R,
                   width: NEXT_R * 2, height: NEXT_R * 2, borderRadius: NEXT_R,
@@ -5446,8 +5546,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 style={{
                   position: "absolute", inset: 0,
                   /* the tries page pays with its own PAY button — the red one rests, grey */
-                  borderRadius: NEXT_R, background: page === "more" ? "#C9C7BF" : BAR_RED, border: "none", pointerEvents: page === "more" ? "none" : "auto",
-                  padding: 0, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                  borderRadius: NEXT_R, background: nextOff ? "#C9C7BF" : BAR_RED, border: "none", pointerEvents: nextOff ? "none" : "auto",
+                  padding: 0, cursor: nextOff ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                  transition: `background 240ms ${EASE}`,
                   animation: arrowFly ? `btnFly ${SLIDE_MS}ms ${EASE} both` : "none",
                 }}>
                 {/* ROUND 109: the artboard's smaller arrow — 18.25 long,
