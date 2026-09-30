@@ -1,0 +1,55 @@
+{
+  "id": "gvantsa-mzareulishvili",
+  "name": "Gvantsa Mzareulishvili",
+  "country": "Georgia",
+  "portfolio": "https://dribbble.com/Gvanca24",
+  "medium": "Digital illustration drawn by hand on a tablet (Procreate), bold coloured outlines filled with flat, bright colour and soft brushy texture",
+  "words": [
+    "playful",
+    "vivid",
+    "joyful"
+  ],
+  "colour": "candy pinks, lilac and violet, sky blue, lime and mint green, orange and hot red — high-key, sweet and saturated, often on one flat bright ground",
+  "form": "stylish young women in patterned, colour-blocked clothes and chunky shoes, moving or posing; old Tbilisi courtyards, carved wooden balconies, staircases and streets drawn in pastel line with many small details; flowers, stars and sparkles scattered around",
+  "never": "never photographic, never dull or muddy colour, never heavy shadow, never inscriptions, letters, words, signs with writing, logos or signatures",
+  "mood": "cheerful, dreamy and light",
+  "consent": "VERBAL agreement — the owner, 2026-09-30 (his standing word: an artist he asks me to add has agreed verbally). A short written agreement (share, credit, withdrawal) is still to be signed before any label is sold.",
+  "status": "pilot",
+  "active": true,
+  "bio": "Gvantsa Mzareulishvili is a Georgian illustrator and graphic designer. Her world is a colourful one: confident young women in bold, patterned clothes, and the old courtyards and carved balconies of Tbilisi redrawn in candy pinks, lilacs and sky blues — drawn by hand, full of small details, flowers and sparkle. (Draft biography — to be completed with the artist.)",
+  "bioGe": "გვანცა მზარეულიშვილი ქართველი ილუსტრატორი და გრაფიკული დიზაინერია. მისი სამყარო ფერადია: თავდაჯერებული ახალგაზრდა ქალები თამამ, ნახატიან სამოსში და ძველი თბილისის ეზოები და ჩუქურთმიანი აივნები, ხელახლა დახატული ვარდისფერში, იასამნისფერსა და ცისფერში — ხელით, უამრავი წვრილმანით, ყვავილებითა და ბზინვარებით. (ბიოგრაფია დრაფტია — შეივსება არტისტთან ერთად.)",
+  "page": true,
+  "pageOrder": 11,
+  "crop": "50% 40%",
+  "horseOrder": 11,
+  "charterBy": "Claude's draft from the 19 works, 2026-09-30 — the owner replaces it with the artist's own answers",
+  "refs": [
+    "work-04.jpg",
+    "work-06.jpg",
+    "work-14.jpg",
+    "work-13.jpg"
+  ],
+  "refSets": [
+    [
+      "work-04.jpg",
+      "work-18.jpg",
+      "work-03.jpg"
+    ],
+    [
+      "work-06.jpg",
+      "work-01.jpg",
+      "work-08.jpg"
+    ],
+    [
+      "work-09.jpg",
+      "work-14.jpg",
+      "work-19.jpg"
+    ],
+    [
+      "work-11.jpg",
+      "work-13.jpg",
+      "work-10.jpg"
+    ]
+  ],
+  "refSetsWhy": "Claude's first sets (2026-09-30), by the owner's set logic: one MANNER per set, different subjects inside it. A, B = bold figures/objects on one flat bright ground; C, D = pastel line drawings of streets and courtyards. The owner re-arranges in Admin → Artists."
+}
