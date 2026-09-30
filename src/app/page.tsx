@@ -314,7 +314,7 @@ const sliceDefs = (p: PageKey): Slice[] => {
   const [b1, b2] = STRIP_BOUNDS[p];
   return [{ y1: b1, delay: STRIP_DELAYS[0] }, { y0: b1, y1: b2, delay: STRIP_DELAYS[1] }, { y0: b2, delay: STRIP_DELAYS[2] }];
 };
-const maxSliceDelay = (p: PageKey) => Math.max(...sliceDefs(p).map((s) => s.delay));
+const maxSliceDelay = (p: PageKey) => { void p; return UNIT_MAX + Math.round(SLIDE_MS * 0.06); };
 
 /* THE IDEAS behind "Give me an idea" live in ./ideas (the admin's layout
    batch paints from them too) */
@@ -527,6 +527,54 @@ async function groundOf(url: string): Promise<string> {
     img.onerror = () => res("#FFFFFF");
     img.src = url;
   });
+}
+
+/* UNIT PARALLAX (owner, 2026-09-30: "never break or slice one unit — a
+   photo, a text block, a button; move the elements as whole blocks and make
+   the parallax with their speed and timing"). A page is drawn ONCE, in this
+   holder; on a transition each of its top-level elements slides as a whole,
+   its start delayed by where it stands (top first, then along the way it
+   travels) and its speed a touch different — nothing is clipped into strips.
+   The holder stays mounted from arrival to departure (mode in → none → out),
+   so no picture is ever made twice (the cover's flicker). */
+const UNIT_MAX = 230;
+function UnitSlide({ mode, dir, top, delay0 = 0, children }: { mode: "in" | "out" | "none"; dir: number; top: number; delay0?: number; children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  useLayoutEffect(() => {
+    const root = ref.current;
+    if (!root || mode === "none") return;
+    const rr = root.getBoundingClientRect();
+    if (!rr.width || !rr.height) return;
+    const anims: Animation[] = [];
+    for (const el of Array.from(root.children) as HTMLElement[]) {
+      /* where the unit's ink really is: its own box, or (a group drawn in a
+         full-page wrapper) the union of its leaves */
+      let r = el.getBoundingClientRect();
+      if (!r.width || !r.height || r.width >= rr.width * 0.98) {
+        let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity, n = 0;
+        for (const c of Array.from(el.querySelectorAll("img,svg,span,button,p,div")).slice(0, 400) as HTMLElement[]) {
+          if (c.children.length && c.tagName !== "svg" && c.tagName !== "BUTTON") continue;
+          const b = c.getBoundingClientRect();
+          if (!b.width || !b.height || b.width >= rr.width * 0.98) continue;
+          x0 = Math.min(x0, b.left); y0 = Math.min(y0, b.top); x1 = Math.max(x1, b.right); y1 = Math.max(y1, b.bottom); n++;
+        }
+        if (n) r = { left: x0, top: y0, width: x1 - x0, height: y1 - y0 } as DOMRect;
+      }
+      const yN = Math.min(1, Math.max(0, (r.top + r.height / 2 - rr.top) / rr.height));
+      const xN = Math.min(1, Math.max(0, (r.left + r.width / 2 - rr.left) / rr.width));
+      const along = dir > 0 ? xN : 1 - xN;
+      const delay = delay0 + Math.round(yN * 150 + along * 80);
+      const dur = Math.round(SLIDE_MS * (0.94 + yN * 0.12));
+      /* a transform needs a box — an inline group becomes a (zero-size) block */
+      if (getComputedStyle(el).display === "inline") el.style.display = "block";
+      const off = mode === "in" ? dir * 1440 : -dir * 1440;
+      anims.push(el.animate(
+        mode === "in" ? [{ transform: `translateX(${off}px)` }, { transform: "translateX(0)" }] : [{ transform: "translateX(0)" }, { transform: `translateX(${off}px)` }],
+        { duration: dur, delay, easing: EASE, fill: mode === "in" ? "backwards" : "forwards" }));
+    }
+    return () => { if (mode === "out") anims.forEach((a) => a.cancel()); };
+  }, [mode]);   // eslint-disable-line react-hooks/exhaustive-deps
+  return <div ref={ref} style={{ position: "absolute", left: 0, top, width: W, height: H }}>{children}</div>;
 }
 
 export default function NewUI() {
@@ -3273,7 +3321,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         );
         const cap = items[cur];
         return (<>
-          <div style={{ ...px(L, baseTop(183, 14) - 3, R - L, 20), display: "flex", alignItems: "center", columnGap: 24, flexWrap: "nowrap" }}>
+          {/* the names spread from margin to margin, evenly (2026-09-30) */}
+          <div style={{ ...px(L, baseTop(183, 14) - 3, R - L, 20), display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "nowrap" }}>
             {chip(t("All"), !galPick.length, () => toggle(null), "gal-all")}
             {names.map((nm) => chip(nameOf(nm), galPick.includes(nm), () => toggle(nm), "gal-" + nm))}
           </div>
@@ -3298,7 +3347,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {n > 1 && carArrow("previous image", -1, L - ARROW_OUT, MID, () => setGalIdx(cur - 1))}
           {n > 1 && carArrow("next image", 1, R + ARROW_OUT, MID, () => setGalIdx(cur + 1))}
           {cap && (
-            <span key={"gcap" + cap.src} style={{ ...px(L, baseTop(TOP + SIZE + 22, 13), R - L, 16), font: `13px ${HNW}`, lineHeight: "13px", color: "#111", textAlign: "center", display: "block", whiteSpace: "nowrap", animation: `nuiFadeIn 400ms ${EASE} both` }}>
+            <span key={"gcap" + cap.src} style={{ ...px(L, baseTop(TOP + SIZE + 34, 13), R - L, 16), font: `13px ${HNW}`, lineHeight: "13px", color: "#111", textAlign: "center", display: "block", whiteSpace: "nowrap", animation: `nuiFadeIn 400ms ${EASE} both` }}>
               {cap.artist ? (<>{t("Inspired by:")} <b>{nameOf(cap.artist)}</b> · </>) : null}{cap.wine}
               <span style={{ color: "#8a887e" }}>{`   ${cur + 1} / ${n}`}</span>
             </span>
@@ -5176,20 +5225,19 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 <div style={{ position: "absolute", left: 0, top: pageTop, width: W, height: H }}>{pageSpace(p, true)}</div>
               </div>
             );
+            /* 2026-09-30: whole units, never slices (UnitSlide) — one holder
+               per page, kept (by its key) from arrival to departure */
+            const unit = (p: PageKey, mode: "in" | "out" | "none", delay0 = 0) => (
+              <UnitSlide key={"u-" + p} mode={mode} dir={dir} top={pageTop} delay0={delay0}>{pageSpace(p, mode !== "none")}</UnitSlide>
+            );
+            const layers: React.ReactNode[] = [];
+            if (prev) layers.push(prev === "loader" ? faded(prev, "nuiFadeOut") : unit(prev, "out"));
+            if (prev) layers.push(page === "loader" ? faded(page, "nuiFadeIn", SLIDE_MS + maxSliceDelay(prev)) : unit(page, "in", outBase));
+            else if (page === "welcome") { if (coverReady) layers.push(unit(page, "in")); }
+            else layers.push(unit(page, "none"));
             return (
               <div style={{ position: "absolute", left: 0, top: fullSlide ? 0 : BAND_TOP, width: W, height: zoneH, overflow: "hidden" }}>
-                {/* round 9 #1: entering the loader, the old page fully slides
-                    out FIRST, then the loader fades in */}
-                {prev && (prev === "loader" ? faded(prev, "nuiFadeOut") : slices(prev, false))}
-                {prev
-                  ? (page === "loader" ? faded(page, "nuiFadeIn", SLIDE_MS + maxSliceDelay(prev)) : slices(page, true))
-                  /* 2026-09-30 (owner: "the cover still flickers"): the home page
-                     STAYS in its slide layers once they have landed — it used to be
-                     swapped for a static copy when the intro ended, and every
-                     picture was made anew (a blank frame in Safari). Same keys, same
-                     slot: nothing is re-created, the finished animation just rests. */
-                  : page === "welcome" ? (coverReady ? slices(page, true) : null)
-                  : <div style={{ position: "absolute", left: 0, top: pageTop, width: W, height: H }}>{pageSpace(page, false)}</div>}
+                {layers}
               </div>
             );
           })()}
@@ -5297,7 +5345,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   whose hands the labels are painted in */}
               <button onClick={openArtists}
                 style={{ ...ghost, font: `700 13px ${HNW}`, color: page === "artists" || page === "artist" ? BAR_RED : INK, whiteSpace: "nowrap", textTransform: "uppercase", pointerEvents: "auto" }}>{t("About artists")}</button>
-              <span style={{ font: `700 13px ${HNW}`, color: INK, whiteSpace: "nowrap", textTransform: "uppercase", pointerEvents: "auto" }}>{t("Contact")}</span>
+              {/* (2026-09-30: Contact left the header for the footer) */}
               {/* 2026-09-30 (owner): GALLERY, before guided mode */}
               <button onClick={openGallery}
                 style={{ ...ghost, font: `700 13px ${HNW}`, color: page === "gallery" ? BAR_RED : INK, whiteSpace: "nowrap", textTransform: "uppercase", pointerEvents: "auto" }}>{t("Gallery")}</button>
@@ -5440,6 +5488,24 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 hover lives on a WRAPPER — the button's own pulse animation
                 (`both`) outranks any :hover transform, so after one pulse the
                 button had stopped answering the mouse. */}
+            {/* 2026-09-30 (owner): THE FOOTER — under the bar, on the left
+                margin, well clear of the step names: the logo, then the
+                address, the contacts and the links in columns (PLACEHOLDER
+                details until the real ones come). Hidden while the
+                walkthrough's cards stand there. */}
+            {tut < 0 && (() => {
+              const FB = 872, LH = 15, fs = `11px/11px ${HNW}`, col = "#555";
+              const line = (x: number, i: number, txt: string, href?: string) => href
+                ? <a key={x + "-" + i} href={href} style={{ ...px(x, baseTop(FB + i * LH, 11), 220, 14), font: fs, color: col, textDecoration: "none", whiteSpace: "nowrap", pointerEvents: "auto" }}>{txt}</a>
+                : <span key={x + "-" + i} style={{ ...px(x, baseTop(FB + i * LH, 11), 220, 14), font: fs, color: col, whiteSpace: "nowrap", display: "block" }}>{txt}</span>;
+              return (<>
+                <span style={{ ...px(137.14, baseTop(FB, 14), 150, 16), font: `700 14px/14px ${HNW}`, color: INK, whiteSpace: "nowrap", display: "block" }}>8K.WINE</span>
+                {[t("8K Labels LLC"), t("#33 Chikovani St."), t("0171 Tbilisi, Georgia")].map((x2, i) => line(300, i, x2))}
+                {line(520, 0, "hello@8k.wine", "mailto:hello@8k.wine")}
+                {line(520, 1, "+995 555 000 000", "tel:+995555000000")}
+                {[["Instagram", "https://instagram.com/"], ["Facebook", "https://facebook.com/"], ["LinkedIn", "https://linkedin.com/"]].map(([n2, h], i) => line(720, i, n2, h))}
+              </>);
+            })()}
             {/* 2026-09-30 (owner): "Skip" under the red button on the horses
                 page — three artists chosen at random on the details page */}
             {page === "taste" && tut < 0 && (

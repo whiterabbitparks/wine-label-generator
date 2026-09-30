@@ -14,6 +14,6 @@ export const ABOUT_GE: string[] = [
  "მაგრამ ტექნოლოგია მხოლოდ ინსტრუმენტია. ისინი მას იმისთვის იყენებენ, რომ ადამიანის შემოქმედებას მეტი სივრცე მისცენ და ადამიანური ისტორიების მოყოლაში დაეხმარონ. სწორედ ამიტომ პლატფორმა ნამდვილი არტისტების ვიზუალურ ენებთან მუშაობს — ისტორიული ოსტატებიდან მათთან მომუშავე თანამედროვე არტისტებამდე — და ადამიანის მხატვრულ ხედვას ტექნოლოგიის გულში აყენებს."
 ];
 export const FOUNDERS = [
-  { name: "Giorgi Popiashvili", nameGe: "გიორგი პოპიაშვილი", photo: "/newui/about/giorgi.jpg", pos: "50% 28%" },
+  { name: "Giorgi Popiashvili", nameGe: "გიორგი პოპიაშვილი", photo: "/newui/about/giorgi.jpg", pos: "50% 84%" },
   { name: "Levan Lepsveridze", nameGe: "ლევან ლეფსვერიძე", photo: "/newui/about/levan.jpg", pos: "50% 22%" },
 ];

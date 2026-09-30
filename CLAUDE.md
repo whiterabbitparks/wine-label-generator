@@ -77,6 +77,9 @@ John/Doe), MongoDB Atlas db `8k-labels`.
   (owner, 2026-09-30).
 - A demo/cover project's description must match its wine colour (owner,
   2026-09-30: a rosé described as red is an obvious slip).
+- Page transitions move WHOLE units (a photo, a text block, a button) —
+  never clip a page into strips; the parallax is each unit's own timing
+  (UnitSlide, owner 2026-09-30).
 - UI: Special Elite only (self-hosted), WHITE ground + grey accents
   (#E3E3E1 tabs; beige era ended 2026-08-16), all-black 2px lines.
 - Cover images: black & white (grayscale filter), never cropped — the hero
