@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import fs from "node:fs";
 import path from "node:path";
 import { listArtists } from "@/lib/label/artists";
+import { listShowcase } from "@/lib/label/showcase";
 
 /* THE ARTISTS, FOR THE SITE (round 112 #4, owner's artboards). Public —
    this is the page a visitor reads, not the admin's. It carries only what
@@ -58,7 +59,11 @@ export async function GET() {
       }
       return { w, l };
     });
-    for (let i = 0; i < 12; i++) for (const e of each) { if (e.w[i]) works.push(e.w[i]); if (e.l[i]) labels.push(e.l[i]); }
+    /* 2026-09-30 (owner): "Labels from" = six of the marketing images made
+       with this artist's labels (showcase.ts), the prepared label files
+       only to fill what is still empty */
+    labels.push(...listShowcase(members));
+    for (let i = 0; i < 12; i++) for (const e of each) { if (e.w[i]) works.push(e.w[i]); if (e.l[i] && labels.length < 6) labels.push(e.l[i]); }
     const memberNames = members.map((id) => listArtists().find((x) => x.profile.id === id)?.profile.name || "").filter(Boolean);
     const link = (p.portfolio || "").trim();
     const isIg = /instagram\./i.test(link);

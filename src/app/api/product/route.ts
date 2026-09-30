@@ -2,7 +2,9 @@ import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { properCase, CASED_FIELDS } from "@/lib/label/casing";
-import { savePack, type PackBody } from "@/lib/package";
+import { savePack, dataBuf, type PackBody } from "@/lib/package";
+import { readLabel } from "@/lib/label/store";
+import { artistIdByName, saveShowcase } from "@/lib/label/showcase";
 import { visitorOf, previewKey } from "@/lib/guard";
 import { requestIsAuthenticated } from "@/lib/admin/session";
 
@@ -58,6 +60,16 @@ export async function POST(req: Request) {
   if (v?._id) await db.collection("products").updateOne({ _id: code, owner: { $in: [null, ""] } } as never, { $set: { owner: v._id } });
   /* the Final Pack's makings, full size, for the page's DOWNLOAD ASSETS */
   if (body.pack && typeof body.pack === "object") try { savePack(code, body.pack as PackBody); } catch { /* the page still stands */ }
+  /* 2026-09-30 (owner): the OWNER's marketing images go to the painter's
+     page ("Labels from …") — only when he (admin) publishes; a customer's
+     never do (src/lib/label/showcase.ts) */
+  try {
+    const pk = (body.pack || {}) as PackBody;
+    const lab = pk.frontId ? readLabel(String(pk.frontId).replace(/[^a-z0-9-]/gi, "")) : null;
+    const who = lab ? artistIdByName(String((lab.meta as { artist?: string }).artist || "")) : null;
+    const imgs = (pk.lifestyle || []).map((u) => dataBuf(u)).filter((b): b is Buffer => !!b);
+    if (who && imgs.length && (await requestIsAuthenticated())) await saveShowcase(who, code, imgs);
+  } catch { /* the page still stands */ }
   /* the maker's own preview key (see previewKey) */
   const own = (await db.collection("products").findOne({ _id: code } as never, { projection: { owner: 1 } })) as { owner?: string } | null;
   const mine = (v?._id && own?.owner === v._id) || (await requestIsAuthenticated());
