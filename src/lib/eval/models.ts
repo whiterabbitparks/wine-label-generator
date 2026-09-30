@@ -121,7 +121,7 @@ export async function regionNote(region: string): Promise<string> {
   return key && map[key]?.trim() ? ` ${region.trim()} looks like this: ${map[key].trim()} ` : "";
 }
 
-export interface ArtworkPrompt { guide?: string; /* a composition line for the SKETCH only */ grapes?: string; prompt: string; subject: string; aspect: "landscape" | "portrait" | "square"; kind?: "spot" | "bleed";
+export interface ArtworkPrompt { guide?: string; /* a composition line for the SKETCH only */ around?: string; /* what lies round a floating drawing: "paper", or the artist's own ground (Pirosmani's black) */ grapes?: string; prompt: string; subject: string; aspect: "landscape" | "portrait" | "square"; kind?: "spot" | "bleed";
   /* 2026-09-23: a band/panel picture ends in the painter's own edge on
      this side (the side facing the type) — see hybrid.ts */
   edgeSide?: string;
@@ -336,7 +336,7 @@ export async function repaintInHand(model: EvalModel, story: string, ap: Artwork
     ? (ap.edgeSide
       ? `Keep the composition exactly: the painting runs off the other edges, and on the ${ap.edgeSide} side it ends in its own loose irregular edge with the plain, flat, empty ground beyond it — keep that ground plain and empty, never paint into it, never add a border.`
       : "Paint right to every edge — no empty paper, no margin, no border.")
-    : "Keep the plain, empty paper around the drawing."}${what ? " No text, no letters, no border." : ""}`.slice(0, 1900);
+    : `Keep the plain, empty ${ap.around || "paper"} around the drawing.`}${what ? " No text, no letters, no border." : ""}`.slice(0, 1900);
   let out: Record<string, unknown> | null = null;
   if (locked && depthUrl) {
     try {

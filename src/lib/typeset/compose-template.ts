@@ -217,6 +217,21 @@ export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<C
     };
     layout.art = { x: pxPos.x + bx * s, y: pxPos.y + by * s, w: bw * s, h: bh * s };
     layout.artCrop = { x: bx, y: by, w: bw, h: bh };
+    /* 2026-09-30: grown to its room by its outline (fitSpot, below) —
+       shown as a wider piece of the sheet so no wisp of the drawing meets
+       a straight cut (the sheet's own outer 1.5 % stays out: the repaint
+       leaves a hairline there) */
+    const grown = process.env.SPOT_FIT_OLD === "1" ? null : await fitSpot(inp.artwork, ground, layout, art, aw, ah, s);
+    if (grown) {
+      s = grown.s; pxPos = { x: grown.x, y: grown.y };
+      const over = 2 * (layout.W / inp.widthMm);
+      const m = 0.015;
+      const src = { x0: Math.max(aw * m, bx - aw * 0.05), y0: Math.max(ah * m, by - ah * 0.05), x1: Math.min(aw * (1 - m), bx + bw + aw * 0.05), y1: Math.min(ah * (1 - m), by + bh + ah * 0.05) };
+      const d = { x0: Math.max(-over, pxPos.x + src.x0 * s), y0: Math.max(-over, pxPos.y + src.y0 * s), x1: Math.min(layout.W + over, pxPos.x + src.x1 * s), y1: Math.min(layout.H + over, pxPos.y + src.y1 * s) };
+      layout.art = { x: d.x0, y: d.y0, w: d.x1 - d.x0, h: d.y1 - d.y0 };
+      layout.artCrop = { x: (d.x0 - pxPos.x) / s, y: (d.y0 - pxPos.y) / s, w: (d.x1 - d.x0) / s, h: (d.y1 - d.y0) / s };
+      clip = layout.art;
+    }
   } else {
     /* 2026-09-29 (owner, reading the PDF: "the picture runs 6.6 mm past the
        label — it should be 2 mm, 114 × 84 on a 110 × 80 label"): 2 mm */
@@ -385,4 +400,116 @@ function bestWindow(profile: number[], full: number, start: number, span: number
     if (score > bestScore) { bestScore = score; best = off; }
   }
   return best;
+}
+
+/* A SPOT GROWS TO ITS ROOM (owner, 2026-09-30: "the small pictures leave
+   far too much empty space — I enlarge nearly every one by hand; leave
+   some room around them, but less. On the taller labels they may run off
+   the edges so the height is not left empty"). His eight corrections of
+   spot layouts were ALL enlargements, ×2 on the median, and in every one
+   the drawing's own OUTLINE — not its rectangle — stopped just short of
+   the type: the empty corners of its box slid in beside the words, where
+   they are only paper.
+
+   So the drawing is measured by its ink, not its box, and made as large as
+   it can be while every inked spot keeps GAP from every line of type
+   (the words' real extent, measured from the glyphs), and EDGE from the
+   trim — except on a TALL label, where it may run off the two sides (at
+   most an eighth of the drawing's width each side). Among the positions
+   that allow the largest size, the one whose middle sits nearest the
+   middle of the template's picture room wins. Never smaller than the old
+   fit, never so large the painting prints below ~200 dpi. null → the old
+   fit stands. */
+const SPOT_GAP_MM = 2, SPOT_EDGE_MM = 3;
+export async function fitSpot(
+  artwork: string, ground: string, layout: { W: number; H: number; lines: { text: string; x: number; y: number; size: number; tracking: number; family: string; weight: number; italic: boolean; anchor: "start" | "middle" | "end"; rot?: number }[] },
+  room: { x: number; y: number; w: number; h: number }, aw: number, ah: number, sMin: number,
+): Promise<{ s: number; x: number; y: number } | null> {
+  const { measure, inkExtent } = await import("./fonts");
+  const W = layout.W, H = layout.H;
+  /* the ink, on a grid of at most ~160 cells a side */
+  const n = Math.max(aw, ah) > 160 ? 160 / Math.max(aw, ah) : 1;
+  const gw = Math.max(8, Math.round(aw * n)), gh = Math.max(8, Math.round(ah * n));
+  const { data, info } = await sharp(Buffer.from(artwork.slice(artwork.indexOf(",") + 1), "base64")).removeAlpha().resize(gw, gh, { fit: "fill" }).raw().toBuffer({ resolveWithObject: true });
+  const P = [1, 3, 5].map((k) => parseInt(ground.slice(k, k + 2), 16));
+  const ink = new Uint8Array(gw * gh);
+  let x0 = gw, y0 = gh, x1 = -1, y1 = -1, cnt = 0, sx = 0, sy = 0;
+  for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) {
+    const i = (y * gw + x) * info.channels;
+    if (Math.max(Math.abs(data[i] - P[0]), Math.abs(data[i + 1] - P[1]), Math.abs(data[i + 2] - P[2])) > 24) {
+      ink[y * gw + x] = 1; cnt++; sx += x; sy += y;
+      if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+    }
+  }
+  if (cnt < 20) return null;
+  /* the points tested: every inked cell on the outline, and a sparse
+     sample of the inside (a word could sit wholly over the drawing) */
+  const pts: [number, number][] = [];
+  for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) {
+    if (!ink[y * gw + x]) continue;
+    const edge = x === 0 || y === 0 || x === gw - 1 || y === gh - 1 || !ink[y * gw + x - 1] || !ink[y * gw + x + 1] || !ink[(y - 1) * gw + x] || !ink[(y + 1) * gw + x];
+    if (edge || (x % 4 === 0 && y % 4 === 0)) pts.push([(x + 0.5) / gw * aw, (y + 0.5) / gh * ah]);
+  }
+  const inkL = x0 / gw * aw, inkR = (x1 + 1) / gw * aw, inkT = y0 / gh * ah, inkB = (y1 + 1) / gh * ah;
+  const cx = sx / cnt / gw * aw, cy = sy / cnt / gh * ah;           /* the ink's middle */
+
+  /* where ink may not go, on a 4-px raster of the label */
+  const C = 4, cw = Math.ceil(W / C), ch = Math.ceil(H / C);
+  const bad = new Uint8Array(cw * ch);
+  const gap = SPOT_GAP_MM * PX_PER_MM, edge = SPOT_EDGE_MM * PX_PER_MM;
+  const tall = H / W >= 1.2;
+  const mark = (ax: number, ay: number, bx: number, by: number) => {
+    for (let y = Math.max(0, Math.floor(ay / C)); y <= Math.min(ch - 1, Math.floor(by / C)); y++)
+      for (let x = Math.max(0, Math.floor(ax / C)); x <= Math.min(cw - 1, Math.floor(bx / C)); x++) bad[y * cw + x] = 1;
+  };
+  for (const l of layout.lines) {
+    if (!l.text.trim()) continue;
+    const f = { family: l.family, weight: l.weight, italic: l.italic };
+    const w = measure(l.text, f, l.size, l.size ? l.tracking / l.size : 0);
+    const e = inkExtent(l.text, f, l.size);
+    let lx = l.anchor === "start" ? l.x : l.anchor === "middle" ? l.x - w / 2 : l.x - w;
+    let rx = lx + w, ty = l.y - e.up, by = l.y + e.down;
+    if (l.rot) {                                   /* a turned line: the box of its turned corners */
+      const r = (l.rot * Math.PI) / 180, co = Math.cos(r), si = Math.sin(r);
+      const cs = [[lx, ty], [rx, ty], [lx, by], [rx, by]].map(([px2, py2]) => [l.x + (px2 - l.x) * co - (py2 - l.y) * si, l.y + (px2 - l.x) * si + (py2 - l.y) * co]);
+      lx = Math.min(...cs.map((c) => c[0])); rx = Math.max(...cs.map((c) => c[0])); ty = Math.min(...cs.map((c) => c[1])); by = Math.max(...cs.map((c) => c[1]));
+    }
+    mark(lx - gap, ty - gap, rx + gap, by + gap);
+  }
+  mark(0, 0, W, edge); mark(0, H - edge, W, H);
+  if (!tall) { mark(0, 0, edge, H); mark(W - edge, 0, W, H); }
+
+  const ok = (s: number, ox: number, oy: number) => {
+    if (tall) {                                    /* at most an eighth of the drawing off each side */
+      const lose = (inkR - inkL) * s / 8;
+      if (ox + inkL * s < -lose || ox + inkR * s > W + lose) return false;
+    } else if (ox + inkL * s < 0 || ox + inkR * s > W) return false;
+    if (oy + inkT * s < 0 || oy + inkB * s > H) return false;
+    for (const [px2, py2] of pts) {
+      const X = ox + px2 * s, Y = oy + py2 * s;
+      if (X < 0 || X >= W) continue;               /* past a tall label's side: nothing to hit */
+      if (bad[Math.floor(Y / C) * cw + Math.floor(X / C)]) return false;
+    }
+    return true;
+  };
+  /* the positions for one size, nearest the room's middle first */
+  const want = { x: room.x + room.w / 2, y: room.y + room.h / 2 };
+  const place = (s: number): { x: number; y: number } | null => {
+    const bx = want.x - cx * s, by = want.y - cy * s;
+    const step = 6, R = Math.max(W, H) * 0.5;
+    const cands: [number, number, number][] = [];
+    for (let dy = -R; dy <= R; dy += step) for (let dx = -R; dx <= R; dx += step) cands.push([dx * dx + dy * dy, dx, dy]);
+    cands.sort((a, b) => a[0] - b[0]);
+    for (const [, dx, dy] of cands) if (ok(s, bx + dx, by + dy)) return { x: bx + dx, y: by + dy };
+    return null;
+  };
+  const sMax = Math.min(12 / (200 / 25.4), sMin * 4);   /* ≥ 200 dpi */
+  let lo = sMin, hi = sMax, best = place(lo);
+  if (!best) return null;
+  let bestS = lo;
+  for (let k = 0; k < 11; k++) {
+    const mid = (lo + hi) / 2, p = place(mid);
+    if (p) { lo = mid; best = p; bestS = mid; } else hi = mid;
+  }
+  return { s: bestS, x: best.x, y: best.y };
 }
