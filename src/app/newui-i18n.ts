@@ -68,6 +68,7 @@ export const SVG_GE: Record<string, string> = {
   /* options */
   "FRONT LABEL OPTIONS": "ᲬᲘᲜᲐ ᲔᲢᲘᲙᲔᲢᲘᲡ ᲕᲐᲠᲘᲐᲜᲢᲔᲑᲘ",
   "GALLERY": "ᲒᲐᲚᲔᲠᲔᲐ",
+  "ABOUT US": "ᲩᲕᲔᲜ ᲨᲔᲡᲐᲮᲔᲑ",
   "Traditional": "ტრადიციული",
   "Contemporary": "თანამედროვე",
   "Punk": "პანკი",

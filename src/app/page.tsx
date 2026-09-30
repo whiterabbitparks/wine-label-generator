@@ -16,6 +16,7 @@ import { IDEAS } from "./ideas";
 import { GUIDE, type GuideStep } from "./guide";
 import { UI_GE, SVG_GE } from "./newui-i18n";
 import { GALLERY } from "./gallery-data";
+import { ABOUT_EN, ABOUT_GE, FOUNDERS } from "./about-data";
 import { COVERS, type CoverProject } from "./cover-projects";
 
 const W = 1440, H = 823;
@@ -92,7 +93,9 @@ const ORDER = ["welcome",
   "artists", "artist",
   /* 2026-09-30 (owner): the GALLERY — the marketing images made so far,
      a big carousel, filtered by artist; like the artists' pages, no bar */
-  "gallery"] as const;
+  "gallery",
+  /* 2026-09-30 (owner): ABOUT US — the founders and why */
+  "about"] as const;
 /* 2026-09-28 (owner #7): NEW TRY names the selected label's artist —
    "M. Kvashilava" / „მ. კვაშილავა" (Georgian in Mtavruli on the button) */
 const ARTIST_GE: Record<string, string> = {
@@ -205,7 +208,7 @@ const CIRCLE_X = STEPS.map((s2) => s2.x);
 /* the pages whose title is drawn big (round 63) */
 const PAGE_TITLE: Partial<Record<PageKey, string>> = {
   options: "FRONT LABEL OPTIONS", backdesign: "BACK LABEL DESIGN",
-  bottle: "BOTTLE DETAILS", assets: "MARKETING ASSETS", checkout: "FINAL PACK", gallery: "GALLERY",
+  bottle: "BOTTLE DETAILS", assets: "MARKETING ASSETS", checkout: "FINAL PACK", gallery: "GALLERY", about: "ABOUT US",
 };
 /* 2026-09-28 (owner): the red word riding the bar is BACK now — one step
    back (SKIP_TO is kept for reference, unused) */
@@ -234,10 +237,10 @@ const THICK: Record<PageKey, number | null> = {
   checkout: CIRCLE_X[5],                         /* round 93 #7: to the last station, not into the button */
   blank: null,                                    /* round 94 #2: takes the page it stands in for */
   more: CIRCLE_X[1],
-  artists: null, artist: null, gallery: null,     /* round 112 #4: no bar on the artists' pages (nor the gallery) */
+  artists: null, artist: null, gallery: null, about: null,     /* round 112 #4: no bar on the artists' pages (nor the gallery) */
 };
 /* highest station index REACHED — that dot (and earlier ones) turn red */
-const STEP_OF: Record<PageKey, number> = { welcome: -1, taste: -1, vision: 0, loader: 0, options: 1, backdetails: 2, backdesign: 3, bottle: 4, assets: 5, checkout: 5, blank: 0, more: 1, artists: -1, artist: -1, gallery: -1 };
+const STEP_OF: Record<PageKey, number> = { welcome: -1, taste: -1, vision: 0, loader: 0, options: 1, backdetails: 2, backdesign: 3, bottle: 4, assets: 5, checkout: 5, blank: 0, more: 1, artists: -1, artist: -1, gallery: -1, about: -1 };
 
 /* ROUND 63: the bar no longer eats a white strip — every page's content
    band runs to the footer edge and the bar paints on top of it. */
@@ -250,7 +253,7 @@ const STRIP_BOUNDS: Record<PageKey, [number, number]> = {
   welcome: [360, 560], taste: [225, 515], vision: [225, 460], loader: [225, 460],
   options: [225, 543], backdetails: [225, 468],
   backdesign: [165, 540], bottle: [225, 515], assets: [165, 540], checkout: [250, 500], blank: [225, 460],
-  artists: [300, 560], artist: [330, 560], more: [225, 460], gallery: [200, 590],
+  artists: [300, 560], artist: [330, 560], more: [225, 460], gallery: [200, 590], about: [200, 590],
 };
 
 /* CONTENT-AWARE PARALLAX (owner round 16 #3): these pages slice by their
@@ -896,6 +899,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const [galIdx, setGalIdx] = useState(0);
   const [galPick, setGalPick] = useState<string[]>([]);
   const galleryFrom = useRef<PageKey | null>(null);
+  const aboutFrom = useRef<PageKey | null>(null);
   /* 2026-09-27 (owner): the Final Pack always opens on the front label —
      then the back label, the bottles, the marketing images, the page */
   useEffect(() => { if (page === "checkout") setCarIdx(0); }, [page]);
@@ -1526,6 +1530,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     window.addEventListener("keydown", k);
     return () => window.removeEventListener("keydown", k);
   }, [page]);
+  const openAbout = () => { if (tutRef.current >= 0) stopTutRef.current(); if (page !== "about") aboutFrom.current = pageNow.current; go("about"); };
   const openGallery = () => { if (tutRef.current >= 0) stopTutRef.current(); if (page !== "gallery") galleryFrom.current = pageNow.current; setGalIdx(0); go("gallery"); };
   const openArtists = () => { if (tutRef.current >= 0) stopTutRef.current(); if (page !== "artists" && page !== "artist") artistsFrom.current = pageNow.current; go("artists"); };
   const wheelCanvas = useRef<HTMLCanvasElement | null>(null);
@@ -3214,6 +3219,32 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
          portraits with the names under them — a slot the platform has
          not filled yet is an empty grey disc. Press one and that
          artist's own page opens. */
+      case "about": {
+        /* the founders in a column on the left — photo, name, "Founder" —
+           Giorgi above, Levan below; the text over the page's full height
+           on the right (owner's second option, 2026-09-30) */
+        const L = 137.14, R = 1302.86, PW = 228, PH = 176, TOP = 176, TX = L + PW + 64;
+        const paras = lang === "ge" ? ABOUT_GE : ABOUT_EN;
+        return (<>
+          {FOUNDERS.map((fd, i) => {
+            const y = TOP + i * (PH + 88);
+            return (
+              <span key={"fd" + i}>
+                <span style={{ ...px(L, y, PW, PH), background: "#ECECEA", display: "block", overflow: "hidden" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={fd.photo} alt={fd.name} onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = "hidden"; }}
+                    style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "50% 30%", display: "block" }} />
+                </span>
+                <span style={{ ...px(L, baseTop(y + PH + 26, 15), PW, 18), font: `700 15px/15px ${HNW}`, color: INK, whiteSpace: "nowrap", display: "block" }}>{lang === "ge" ? fd.nameGe : fd.name}</span>
+                <span style={{ ...px(L, baseTop(y + PH + 46, 13), PW, 16), font: `italic 13px/13px ${HNW}`, color: INK, whiteSpace: "nowrap", display: "block" }}>{lang === "ge" ? "დამფუძნებელი" : "Founder"}</span>
+              </span>
+            );
+          })}
+          <div style={{ ...px(TX, TOP - 4, R - TX, 560), font: `${lang === "ge" ? 13.5 : 14.5}px/${lang === "ge" ? 21 : 22}px ${HNW}`, color: INK, textAlign: "left" }}>
+            {paras.map((pp, i) => <p key={"ap" + i} style={{ margin: i ? "11px 0 0" : 0 }}>{pp}</p>)}
+          </div>
+        </>);
+      }
       case "gallery": {
         /* 2026-09-30 (owner): GALLERY — the title on the page margin; under
            it, where the pages keep their italic note, the artists to show
@@ -3379,7 +3410,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           if (Math.abs(rel) > 2) return null;
           const a = byId.get(id)!;
           const ar = Math.abs(rel);
-          const scale = ar === 0 ? 1 : ar === 1 ? 0.62 : 0.4;
+          const scale = ar === 0 ? 1 : ar === 1 ? 0.465 : 0.3;   /* the side horses 25 % smaller (2026-09-30) */
           const dx = rel === 0 ? 0 : Math.sign(rel) * (ar === 1 ? 360 : 470);
           /* while spinning each step glides linearly; the last one settles */
           const ms = tasteSpin ? Math.abs(tasteSpin) : 520, ease = tasteSpin < 0 ? "linear" : tasteSpin > 0 ? "cubic-bezier(0.22, 1, 0.36, 1)" : EASE;
@@ -4985,7 +5016,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const step = vt >= 0 ? vt : STEP_OF[barPage];
   const tutX = vt < 0 ? null : vt < STEPS.length ? STEPS[vt].x : NEXT_X;
   const thick = vt >= 0 ? (vt < STEPS.length ? STEPS[vt].x : CIRCLE_X[CIRCLE_X.length - 1]) : THICK[barPage];
-  const onArtists = page === "artists" || page === "artist" || page === "gallery";
+  const onArtists = page === "artists" || page === "artist" || page === "gallery" || page === "about";
   /* 2026-09-30 (owner): the red button RESTS — grey, no hover, no press —
      until the page has what it needs: three horses on the taste page; on
      the front and back details pages, anything at all put in. The bottle
@@ -5250,7 +5281,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             <div style={{ position: "absolute", left: 0, width: W, top: baseTop(FOLDER_TOP + 13 * 0.72, 13) - 6, lineHeight: "13px", display: "flex", justifyContent: "center", alignItems: "baseline", columnGap: 44, pointerEvents: "none" }}>
               {/* 2026-09-23 (owner): the menu in capitals, both languages
                   (Georgian turns to Mtavruli) */}
-              <span style={{ font: `700 13px ${HNW}`, color: INK, whiteSpace: "nowrap", textTransform: "uppercase", pointerEvents: "auto" }}>{t("About Us")}</span>
+              <button onClick={openAbout}
+                style={{ ...ghost, font: `700 13px ${HNW}`, color: page === "about" ? BAR_RED : INK, whiteSpace: "nowrap", textTransform: "uppercase", pointerEvents: "auto" }}>{t("About Us")}</button>
               {/* ROUND 112 #4 (owner): Gallery became ARTISTS — the people
                   whose hands the labels are painted in */}
               <button onClick={openArtists}
@@ -5447,6 +5479,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   if (page === "artist") { go("artists", -1); return; }
                   if (page === "artists") { go(artistsFrom.current || "welcome", -1); return; }
                   if (page === "gallery") { go(galleryFrom.current || "welcome", -1); return; }
+                  if (page === "about") { go(aboutFrom.current || "welcome", -1); return; }
                   if (page === "welcome") {
                     /* round 72 #3 (owner, TEMP while we test): EVERY arrival
                        gets the walkthrough, refresh included. Later this
