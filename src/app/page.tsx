@@ -3375,11 +3375,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         const items = ring.map((id, i) => {
           let rel = ((i - cur) % n + n) % n;
           if (rel > n / 2) rel -= n;
-          if (Math.abs(rel) > 3) return null;
+          /* (2026-09-30: only the middle and one each side) */
+          if (Math.abs(rel) > 2) return null;
           const a = byId.get(id)!;
           const ar = Math.abs(rel);
-          const scale = ar === 0 ? 1 : ar === 1 ? 0.62 : ar === 2 ? 0.4 : 0.26;
-          const dx = rel === 0 ? 0 : Math.sign(rel) * (ar === 1 ? 400 : ar === 2 ? 478 : 560);
+          const scale = ar === 0 ? 1 : ar === 1 ? 0.62 : 0.4;
+          const dx = rel === 0 ? 0 : Math.sign(rel) * (ar === 1 ? 360 : 470);
           /* while spinning each step glides linearly; the last one settles */
           const ms = tasteSpin ? Math.abs(tasteSpin) : 520, ease = tasteSpin < 0 ? "linear" : tasteSpin > 0 ? "cubic-bezier(0.22, 1, 0.36, 1)" : EASE;
           return (
@@ -3388,7 +3389,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               ref={(el) => { const f = tasteFly.current["ring:" + id]; if (el && f) { delete tasteFly.current["ring:" + id]; flyInto(el, { ...f, x: f.x - L + 0, y: f.y - TOP }, { x: centre.x - L, y: 0, w: CW, h: CH }); } }}
               onClick={() => { if (tasteRolling.current) return; if (ar === 0) pickMid(); else setTasteCur(i); }}
               style={{ position: "absolute", left: centre.x - L, top: 0, width: CW, height: CH, objectFit: "contain", zIndex: 10 - ar,
-                transform: `translate(${dx}px, 0) scale(${scale})`, filter: ar ? `blur(${ar === 1 ? 2 : 7}px)` : "none", opacity: ar === 0 ? 1 : ar === 1 ? 0.55 : ar === 2 ? 0.28 : 0,
+                transform: `translate(${dx}px, 0) scale(${scale})`, filter: ar ? `blur(${ar === 1 ? 4.5 : 7}px)` : "none", opacity: ar === 0 ? 1 : ar === 1 ? 0.55 : 0,
                 transition: `transform ${ms}ms ${ease}, filter ${ms}ms ${ease}, opacity ${ms}ms ${ease}`, cursor: "pointer", userSelect: "none" }} />
           );
         });
@@ -3399,11 +3400,16 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {/* the arrows' tips on the margins */}
           {n > 1 && carArrow("previous horse", -1, L, MIDY, () => { if (!tasteRolling.current) setTasteCur(cur - 1); })}
           {n > 1 && carArrow("next horse", 1, R, MIDY, () => { if (!tasteRolling.current) setTasteCur(cur + 1); })}
-          {/* the site's own Select (the labels page's ring and word) + how many of three */}
-          <span style={{ opacity: pickArtists.length >= need ? 0.35 : 1, transition: `opacity 240ms ${EASE}` }}>
-            {selectCtl(CX - 14, SEL_BASE - 5.2, false, pickArtists.length >= need ? null : pickMid, "tasteSel")}
-            <button tabIndex={-1} aria-hidden style={{ ...px(CX - 14 + (18 + 10 + t("Select").length * 7.4) / 2 + 14, baseTop(SEL_BASE, 15), 40, 18), ...ghost, textAlign: "left", textTransform: "none", font: `15px/15px ${HNW}`, color: "#8a887e", whiteSpace: "nowrap", pointerEvents: "none" }}>{pickArtists.length}/{need}</button>
-          </span>
+          {/* "Select" and "n/3", no ring, centred together on the page (2026-09-30) */}
+          {(() => {
+            const w1 = textW(t("Select"), `15px ${HNW}`), w2 = textW(`${pickArtists.length}/${need}`, `15px ${HNW}`), gap = 12;
+            const x0 = CX - (w1 + gap + w2) / 2, off = pickArtists.length >= need;
+            return (<>
+              <button onClick={pickMid} disabled={off} aria-label="select the horse in the middle"
+                style={{ ...px(x0 - 8, baseTop(SEL_BASE, 15), w1 + 16, 18), ...ghost, pointerEvents: "auto", textAlign: "center", textTransform: "none", font: `15px/15px ${HNW}`, color: off ? "#B3B1A8" : "#111", whiteSpace: "nowrap", cursor: off ? "default" : "pointer" }}>{t("Select")}</button>
+              <button tabIndex={-1} aria-hidden style={{ ...px(x0 + w1 + gap, baseTop(SEL_BASE, 15), w2 + 4, 18), ...ghost, textAlign: "left", textTransform: "none", font: `15px/15px ${HNW}`, color: "#8a887e", whiteSpace: "nowrap", pointerEvents: "none" }}>{pickArtists.length}/{need}</button>
+            </>);
+          })()}
           {/* the chosen ones, in a row, centred */}
           {Array.from({ length: need }, (_, i) => {
             const sl = slot(i), id = pickArtists[i], a = id ? byId.get(id) : undefined;
@@ -4988,7 +4994,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const frontTouched = !!vision.trim() || !!sketch || FRONT_ROWS.some((k2) => (f[k2] || "").trim());
   const backTouched = !!(b.description || "").trim() || BACK_ROWS.some((k2) => (b[k2] || "").trim()) || !!gtin.trim() || !!qrMode || markets.length > 0;
   const nextOff = tut < 0 && (page === "more"
-    || (page === "taste" && pickArtists.length < 1)
     || (page === "vision" && !frontTouched)
     || (page === "backdetails" && !backTouched));
   nudgeOk.current = ((vt >= 0 && (tutIdle || vt >= tutLast)) || page === "checkout") && !nextOff;
@@ -5393,6 +5398,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 hover lives on a WRAPPER — the button's own pulse animation
                 (`both`) outranks any :hover transform, so after one pulse the
                 button had stopped answering the mouse. */}
+            {/* 2026-09-30 (owner): "Skip" under the red button on the horses
+                page — three artists chosen at random on the details page */}
+            {page === "taste" && tut < 0 && (
+              <button onClick={() => { setPickArtists([]); go("vision"); }}
+                style={{ ...px(NEXT_X - 150, baseTop(LABEL_BASE, BAR_FS), 300, 20), ...ghost, font: `300 ${BAR_FS}px/${BAR_FS}px ${HNW}`, color: BAR_RED, textAlign: "center", textTransform: "none", whiteSpace: "nowrap", pointerEvents: "auto", cursor: "pointer" }}>
+                {lang === "ge" ? "გამოტოვე" : "Skip"}</button>
+            )}
             {preparing && page === "checkout" && (
               <button tabIndex={-1} aria-hidden style={{ ...px(NEXT_X - 150, baseTop(LABEL_BASE, BAR_FS), 300, 20), ...ghost, font: `300 ${BAR_FS}px/${BAR_FS}px ${HNW}`, color: BAR_RED, textAlign: "center", textTransform: "none", whiteSpace: "nowrap", pointerEvents: "none", animation: `nuiFadeIn 300ms ${EASE} both` }}>
                 {t("Preparing your files…")}</button>
@@ -5454,8 +5466,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   }
                   else if (page === "taste") {
                     /* the three horses are the three artists (2026-09-28) */
-                    /* (2026-09-30: one horse is enough to go on) */
-                    if (pickArtists.length < 1) { setTasteWarn(true); return; }
+                    /* (2026-09-30: live from the start — no horse picked means
+                       three artists chosen at random, as "Skip" does) */
                     go("vision"); return;
                   }
                   else if (page === "vision") {

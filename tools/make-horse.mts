@@ -38,5 +38,8 @@ fs.writeFileSync(path.join(keep, `horse-${variant}-${Date.now()}.png`), png);
 const out = path.join("public", "newui", "artists", id, "horse.jpg");
 fs.mkdirSync(path.dirname(out), { recursive: true });
 await sharp(png).resize(720, 480, { fit: "contain", background: "#fff" }).flatten({ background: "#fff" }).jpeg({ quality: 86 }).toFile(out);
+/* and cut out (2026-09-30): the taste page shows horse.png */
+{ const { cutoutHorse } = await import("@/lib/label/horse-cutout");
+  fs.writeFileSync(out.replace(/\.jpg$/, ".png"), await cutoutHorse(fs.readFileSync(out))); }
 console.log(`${model.artist.name}: ${out}${cl.cleaned ? "" : " (the paper could not be cleaned — check it)"}`);
 process.exit(0);

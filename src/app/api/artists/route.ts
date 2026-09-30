@@ -100,7 +100,8 @@ export async function GET() {
     const avatar = page?.portrait || (fs.existsSync(path.join(dir, "avatar.jpg")) ? `/newui/artists/${p.id}/avatar.jpg` : "");
     /* 2026-09-28 (owner): the taste page's horse — every painter paints one
        (tools/make-horse.mts), shown in the owner's order (horseOrder) */
-    const horse = fs.existsSync(path.join(dir, "horse.jpg")) ? `/newui/artists/${p.id}/horse.jpg` : "";
+    /* 2026-09-30: the cut-out horse (horse-cutout.ts) when there is one */
+    const horse = fs.existsSync(path.join(dir, "horse.png")) ? `/newui/artists/${p.id}/horse.png` : fs.existsSync(path.join(dir, "horse.jpg")) ? `/newui/artists/${p.id}/horse.jpg` : "";
     const hp = a.profile as typeof a.profile & { horseOrder?: number };
     return { id: p.id, name: p.name, avatar, crop: page?.crop || "50% 40%", page: !!page, order: p.pageOrder ?? 99, horse, horseOrder: hp.horseOrder ?? 50 + (p.pageOrder ?? 49) };
   }).sort((x, y) => x.order - y.order);
