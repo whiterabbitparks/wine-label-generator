@@ -2624,14 +2624,17 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     if (page !== "checkout") packJob.current = null;
   }, [page, paid]);   // eslint-disable-line react-hooks/exhaustive-deps
   const lastDl = useRef(0);
+  /* 2026-09-30 (owner): "Preparing your files…" stands centred UNDER the red
+     button that was pressed, not in the page's message line */
+  const [preparing, setPreparing] = useState(false);
   async function proceedToPayment() {
     /* a double press is one download (2.5 s after one, presses rest) */
     if (packBusy.current || Date.now() - lastDl.current < 2500) return;
     packBusy.current = true;
-    const slow = setTimeout(() => setWarn(t("Preparing your files…")), 400);
+    const slow = setTimeout(() => setPreparing(true), 400);
     try {
       const blob = await buildPack();
-      clearTimeout(slow); setWarn("");
+      clearTimeout(slow); setPreparing(false);
       const u = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = u; a.download = `${(f.wine || "Wine").replace(/[^\w]+/g, "_")}.zip`; a.click();
@@ -2642,7 +2645,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       try { localStorage.removeItem("nui-order"); localStorage.removeItem("nui-product-code"); } catch { }
       setTimeout(() => URL.revokeObjectURL(u), 60_000);
     } catch {
-      clearTimeout(slow);
+      clearTimeout(slow); setPreparing(false);
       setWarn(t("The download didn't work — please press again.")); setTimeout(() => setWarn(""), 5000);
     } finally { packBusy.current = false; }
   }
@@ -5310,6 +5313,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 hover lives on a WRAPPER — the button's own pulse animation
                 (`both`) outranks any :hover transform, so after one pulse the
                 button had stopped answering the mouse. */}
+            {preparing && page === "checkout" && (
+              <span style={{ ...px(NEXT_X - 150, baseTop(LABEL_BASE, BAR_FS), 300, 20), font: `300 ${BAR_FS}px/${BAR_FS}px ${HNW}`, lineHeight: `${BAR_FS}px`, color: INK, textAlign: "center", display: "block", whiteSpace: "nowrap", pointerEvents: "none", animation: `nuiFadeIn 300ms ${EASE} both` }}>
+                {t("Preparing your files…")}</span>
+            )}
             {(page !== "loader" || tut >= 0) && (
               <div className="nui-next"
                 style={{
