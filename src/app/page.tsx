@@ -526,19 +526,6 @@ async function groundOf(url: string): Promise<string> {
   });
 }
 
-/* the dice's throws reach the LATEST taste page (the roll itself was set
-   going by an earlier render, which knows an older ring) — 2026-09-30 */
-function TasteThrow({ onThrow }: { onThrow: () => void }) {
-  const ref = useRef(onThrow);
-  ref.current = onThrow;
-  useEffect(() => {
-    const h = () => ref.current();
-    document.addEventListener("nui-taste-throw", h);
-    return () => document.removeEventListener("nui-taste-throw", h);
-  }, []);
-  return null;
-}
-
 export default function NewUI() {
   const [page, setPage] = useState<PageKey>("welcome");
   /* dev aid: /?page=bottle jumps straight to a page (no generation needed) */
@@ -2886,6 +2873,19 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       </button>
     );
   };
+  /* 2026-09-30 (owner): ONE arrow for every carousel — the labels page's,
+     30 % smaller (17.64 × 23.52) — placed by its TIP, so a carousel's two
+     tips stand the same distance from its middle */
+  const carArrow = (lab: string, dir: -1 | 1, tipX: number, cy: number, onClick: () => void) => {
+    const k = 0.98, w = 18 * k, h = 22 * k, sx = tipX - (dir < 0 ? 5 : 13) * k;
+    return (
+      <button key={lab} aria-label={lab} onClick={onClick}
+        style={{ ...px(sx - 13, cy - 30, w + 26, 60), ...ghost, pointerEvents: "auto", zIndex: 12, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+        <svg viewBox="0 0 18 22" width={w} height={h} style={{ overflow: "visible" }}><polyline points={dir < 0 ? "13,3 5,11 13,19" : "5,3 13,11 5,19"} fill="none" stroke="#111" strokeWidth="1.6" /></svg>
+      </button>
+    );
+  };
+  const ARROW_OUT = 47.6;   /* a page-wide carousel's tips stand this far outside the margins */
   const cross = (cx: number, cy: number, key: string, thick = false) => (
     /* thick arms = 33px, matching the baked st14 pluses (532.06→565.02).
        Round 85 #7: hairline arms on the half-pixel, crisp, so the plus
@@ -3053,6 +3053,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       <span key={k} style={{ position: "absolute", left: 0, top: 0, width: W, height: H, pointerEvents: "none", transformOrigin: `${B0}px ${BY}px`, transform: `translateX(${137.14 - B0}px) scale(${BS})` }}>{kids}</span>
     );
     const cf = CP.front;
+    /* a long idea is set a little smaller, so it and "Inspired by" keep clear of the details */
+    const visLong = (lang === "ge" ? CP.visionGe : CP.vision).length > (lang === "ge" ? 190 : 200);
+    const visFs = lang === "ge" ? (visLong ? 7.1 : 7.9) : (visLong ? 8.1 : 8.99), visLh = lang === "ge" ? (visLong ? 8.7 : 9.6) : (visLong ? 9.7 : 10.79);
     const DETAILS: [string, string][] = ([
       ["Producer:", cf.producer], ["Wine Name:", cf.wine], ["Vintage:", cf.vintage], ["Grape Variety:", cf.grape],
       ["Region, Country:", cf.regionCountry], ["Special mention:", cf.special], ["Sweetness:", cf.sweetness], ["Colour:", cf.colour],
@@ -3077,7 +3080,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         </svg>
         {/* the Georgian story runs longer — set a touch smaller so it keeps the
             same air above the details as the English */}
-        <span style={{ ...px(152.6, baseTop(381.07, lang === "ge" ? 7.9 : 8.99), 222, 58), font: `${lang === "ge" ? 7.9 : 8.99}px ${HNW}`, lineHeight: lang === "ge" ? "9.6px" : "10.79px", color: "#000" }}>{lang === "ge" ? CP.visionGe : CP.vision}</span>
+        <span style={{ ...px(152.6, baseTop(381.07, lang === "ge" ? 7.9 : 8.99), 222, 58), font: `${visFs}px ${HNW}`, lineHeight: `${visLh}px`, color: "#000" }}>{lang === "ge" ? CP.visionGe : CP.vision}
+          {/* 2026-09-30 (owner): whose style inspired the chosen label */}
+          <span style={{ display: "block", marginTop: lang === "ge" ? 2 : 3, fontStyle: "italic" }}><b style={{ fontStyle: "normal" }}>{t("Inspired by:")}</b> {lang === "ge" ? ARTIST_GE[CP.artists[CP.chosen]] || CP.artists[CP.chosen] : CP.artists[CP.chosen]}</span></span>
         {DETAILS.map(([k, v], i) => (
           <span key={"hd" + i}>
             <span style={{ ...px(152.6, baseTop(445.44 + i * 9, 6.59), 60, 9), font: `700 6.59px ${HNW}`, lineHeight: "6.59px", color: "#000", whiteSpace: "nowrap" }}>{t(k)}</span>
@@ -3223,12 +3228,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         const cur = n ? ((galIdx % n) + n) % n : 0;
         const nameOf = (nm: string) => (lang === "ge" ? ARTIST_GE[nm] || nm : nm);
         const toggle = (nm: string | null) => { setGalIdx(0); setGalPick((p2) => (nm === null ? [] : p2.includes(nm) ? p2.filter((x) => x !== nm) : [...p2, nm])); };
-        const ring = (on: boolean) => (
-          <svg width="13" height="13" viewBox="0 0 13 13" style={{ flex: "none", position: "relative", top: 1.5 }}>
-            <circle cx="6.5" cy="6.5" r="5.9" fill="none" stroke="#111" strokeWidth="1.2" />
-            {on && <circle cx="6.5" cy="6.5" r="3.3" fill="#111" />}
-          </svg>
-        );
+        const ring = (on: boolean) => <span style={{ position: "relative", top: 1 }}>{ringSvg(14, on, { stroke: 1.3, dot: 6.5 })}</span>;
         const chip = (label: string, on: boolean, onClick: () => void, key: string) => (
           <button key={key} onClick={onClick} style={{ ...ghost, pointerEvents: "auto", display: "flex", alignItems: "center", columnGap: 7, font: `${on ? 700 : 400} 14px/14px ${HNW}`, color: "#111", whiteSpace: "nowrap", textTransform: "none", cursor: "pointer" }}>
             {ring(on)}{label}
@@ -3258,12 +3258,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             })}
           </div>
           {/* the arrows as big as the labels page's, where they stand there (owner, 2026-09-30) */}
-          {n > 1 && ([["previous image", L - 48, "13,3 5,11 13,19", -1], ["next image", R + 48 - 12, "5,3 13,11 5,19", 1]] as const).map(([lab, x, pts, d]) => (
-            <button key={lab} aria-label={lab} onClick={() => setGalIdx(cur + d)}
-              style={{ ...px(x - 30 + 6, MID - 36, 60, 72), ...ghost, pointerEvents: "auto", zIndex: 12, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-              <svg viewBox="0 0 18 22" width="25.2" height="33.6" style={{ overflow: "visible" }}><polyline points={pts} fill="none" stroke="#111" strokeWidth="1.6" /></svg>
-            </button>
-          ))}
+          {n > 1 && carArrow("previous image", -1, L - ARROW_OUT, MID, () => setGalIdx(cur - 1))}
+          {n > 1 && carArrow("next image", 1, R + ARROW_OUT, MID, () => setGalIdx(cur + 1))}
           {cap && (
             <span key={"gcap" + cap.src} style={{ ...px(L, baseTop(TOP + SIZE + 22, 13), R - L, 16), font: `13px ${HNW}`, lineHeight: "13px", color: "#111", textAlign: "center", display: "block", whiteSpace: "nowrap", animation: `nuiFadeIn 400ms ${EASE} both` }}>
               {cap.artist ? (<>{t("Inspired by:")} <b>{nameOf(cap.artist)}</b> · </>) : null}{cap.wine}
@@ -3330,27 +3326,34 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
          spins to the right and throws out one horse, a second, a third,
          then slows to a stop — about four seconds. */
       case "taste": {
+        /* 2026-09-30 (owner, later): the carousel CENTRED on the page; the
+           chosen three in a row under "Roll the dice", centred, each with an
+           X (the site's plus turned 45°) that sends it back into the middle
+           of the ring. The dice are a ROULETTE: the ring speeds up, spins
+           and slows to a stop on a random horse — the visitor picks it. */
         const byId = new Map(painters.filter((a) => a.horse).map((a) => [a.id, a]));
         const need = Math.min(3, byId.size);
         const ring = (tasteRing || []).filter((id) => byId.has(id) && !pickArtists.includes(id));
         const n = ring.length;
         const cur = n ? ((tasteCur % n) + n) % n : 0;
-        const L = 137.14, R = 1302.86, X1 = L + (R - L) * 0.75;
-        const CW = 420, CH = 280, CX = (L + X1) / 2, TOP = 206, MIDY = TOP + CH / 2;
+        const L = 137.14, R = 1302.86, CX = W / 2;
+        const CW = 375, CH = 250, TOP = 172, MIDY = TOP + CH / 2;
         const centre = { x: CX - CW / 2, y: TOP, w: CW, h: CH };
-        const SW = 225, SH = 150, SX = X1 + 20 + (R - X1 - 20 - SW) / 2;
-        const slot = (i: number) => ({ x: SX, y: 196 + i * (SH + 24), w: SW, h: SH });
+        const SEL_BASE = TOP + CH + 30;
+        const DICE = { y: SEL_BASE + 18, h: 34.3, w: 210 };
+        const SW = 165, SH = 110, GAP = 30, SY = DICE.y + DICE.h + 26;
+        const slot = (i: number) => ({ x: CX - (need * SW + (need - 1) * GAP) / 2 + i * (SW + GAP), y: SY, w: SW, h: SH });
+        const MSG_BASE = (SY + SH + PROG_Y - NEXT_R) / 2 + 4;
         const flyInto = (el: HTMLElement, from: { x: number; y: number; w: number; h: number }, to: { x: number; y: number; w: number; h: number }, ms = 640) => {
           el.animate([{ transform: `translate(${from.x - to.x}px, ${from.y - to.y}px) scale(${from.w / to.w})`, transformOrigin: "0 0" }, { transform: "translate(0, 0) scale(1)", transformOrigin: "0 0" }], { duration: ms, easing: EASE });
         };
-        const pickMid = (rolling = false) => {
+        const pickMid = () => {
           const id = ring[cur];
-          if (!id || pickArtists.length >= need) return;
+          if (!id || pickArtists.length >= need || tasteRolling.current) return;
           setTasteWarn(false);
           tasteFly.current["slot:" + id] = centre;
           setPickArtists((pa) => (pa.includes(id) || pa.length >= need ? pa : [...pa, id]));
           setTasteRing((r) => (r || []).filter((x) => x !== id));
-          if (!rolling) setTasteCur((c) => c);
         };
         const unpick = (id: string, from: { x: number; y: number; w: number; h: number }) => {
           if (tasteRolling.current) return;
@@ -3360,31 +3363,20 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           setTasteRing((r) => { const rr = (r || []).filter((x) => x !== id && !pickArtists.includes(x)); const at = rr.length ? ((cur % rr.length) + rr.length) % rr.length : 0; return [...rr.slice(0, at), id, ...rr.slice(at)]; });
           setTasteCur(cur);
         };
-        /* the dice: step times speed up, hold while three are thrown out,
-           then slow down — the ring turns to the right (the one on the left
-           comes into the middle) */
+        /* the roulette: every step's time on one smooth curve — long at the
+           ends, short in the middle (1 − sin)² — so it eases in and out; the
+           number of steps is random, so is the horse it stops on */
         const roll = async () => {
           if (tasteRolling.current || n < 2) return;
           tasteRolling.current = true;
           setTasteWarn(false);
-          if (pickArtists.length >= need) {
-            setTasteRing((r) => [...(r || []), ...pickArtists.filter((x) => !(r || []).includes(x))]);
-            setPickArtists([]);
-            await sleep(60);
+          const N = 18 + Math.floor(Math.random() * n);
+          for (let i = 0; i < N; i++) {
+            const tt = (i + 0.5) / N, ms = Math.round(85 + 520 * Math.pow(1 - Math.sin(Math.PI * tt), 2));
+            setTasteSpin(i === N - 1 ? ms * 1.6 : -ms);   /* the last step settles, eased out */
+            setTasteCur((c) => c - 1);
+            await sleep(i === N - 1 ? ms * 1.6 : ms);
           }
-          const steps = [360, 280, 215, 170, 135, 110, 95];
-          const hold = 88, slowDown = [100, 125, 160, 210, 275, 360, 460];
-          const turn = async (ms: number) => { setTasteSpin(ms); setTasteCur((c) => c - 1); await sleep(ms); };
-          for (const ms of steps) await turn(ms);
-          const want = need - (pickArtists.length >= need ? 0 : pickArtists.length);
-          for (let k = 0; k < want; k++) {
-            for (let j = 0; j < 3; j++) await turn(hold);
-            /* the horse in the middle is thrown out, to the right */
-            setTasteSpin(hold);
-            document.dispatchEvent(new CustomEvent("nui-taste-throw"));
-            await sleep(hold);
-          }
-          for (const ms of slowDown) await turn(ms);
           setTasteSpin(0);
           tasteRolling.current = false;
         };
@@ -3394,60 +3386,62 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           if (Math.abs(rel) > 3) return null;
           const a = byId.get(id)!;
           const ar = Math.abs(rel);
-          const scale = ar === 0 ? 1 : ar === 1 ? 0.6 : ar === 2 ? 0.38 : 0.25;
-          const dx = rel === 0 ? 0 : Math.sign(rel) * (ar === 1 ? 300 : ar === 2 ? 455 : 560);
-          const ms = tasteSpin || 520, ease = tasteSpin ? "linear" : EASE;
+          const scale = ar === 0 ? 1 : ar === 1 ? 0.62 : ar === 2 ? 0.4 : 0.26;
+          const dx = rel === 0 ? 0 : Math.sign(rel) * (ar === 1 ? 320 : ar === 2 ? 480 : 575);
+          /* while spinning each step glides linearly; the last one settles */
+          const ms = tasteSpin ? Math.abs(tasteSpin) : 520, ease = tasteSpin < 0 ? "linear" : tasteSpin > 0 ? "cubic-bezier(0.22, 1, 0.36, 1)" : EASE;
           return (
             /* eslint-disable-next-line @next/next/no-img-element */
             <img key={"th" + id} src={a.horse} alt="" draggable={false}
-              ref={(el) => { const f = tasteFly.current["ring:" + id]; if (el && f) { delete tasteFly.current["ring:" + id]; flyInto(el, f, centre); } }}
+              ref={(el) => { const f = tasteFly.current["ring:" + id]; if (el && f) { delete tasteFly.current["ring:" + id]; flyInto(el, { ...f, x: f.x - L + 0, y: f.y - TOP }, { x: centre.x - L, y: 0, w: CW, h: CH }); } }}
               onClick={() => { if (tasteRolling.current) return; if (ar === 0) pickMid(); else setTasteCur(i); }}
               style={{ position: "absolute", left: centre.x - L, top: 0, width: CW, height: CH, objectFit: "contain", zIndex: 10 - ar,
                 transform: `translate(${dx}px, 0) scale(${scale})`, filter: ar ? `blur(${ar === 1 ? 2 : 3.5}px)` : "none", opacity: ar === 0 ? 1 : ar === 1 ? 0.55 : ar === 2 ? 0.28 : 0,
                 transition: `transform ${ms}ms ${ease}, filter ${ms}ms ${ease}, opacity ${ms}ms ${ease}`, cursor: "pointer", userSelect: "none" }} />
           );
         });
-        const SEL_BASE = TOP + CH + 36;
-        const DICE = { y: SEL_BASE + 22, h: 34.3, w: 210 };
-        const MSG_BASE = (DICE.y + DICE.h + PROG_Y) / 2 + 4;
         return (<>
           {/* centred across the page (owner, 2026-09-29) */}
           <span style={{ ...px(0, baseTop(149.08, 19), W, 22), font: `700 19px ${HNW}`, lineHeight: "19px", color: INK, whiteSpace: "nowrap", textAlign: "center", display: "block" }}>{t("BEFORE WE START, SELECT 3 HORSES YOU LIKE.")}</span>
-          {!inSlide && <TasteThrow onThrow={() => pickMid(true)} />}
-          <div style={{ ...px(L, TOP, X1 - L, CH), overflow: "hidden" }}>{items}</div>
-          {n > 1 && ([["previous horse", L - 48, "13,3 5,11 13,19", 1], ["next horse", X1 + 2, "5,3 13,11 5,19", -1]] as const).map(([lab, x, pts, d]) => (
-            <button key={lab} aria-label={lab} onClick={() => { if (!tasteRolling.current) setTasteCur(cur - d); }}
-              style={{ ...px(x - 30 + 6, MIDY - 36, 60, 72), ...ghost, pointerEvents: "auto", zIndex: 12, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-              <svg viewBox="0 0 18 22" width="25.2" height="33.6" style={{ overflow: "visible" }}><polyline points={pts} fill="none" stroke="#111" strokeWidth="1.6" /></svg>
-            </button>
-          ))}
+          <div style={{ ...px(L, TOP, R - L, CH), overflow: "hidden" }}>{items}</div>
+          {n > 1 && carArrow("previous horse", -1, L - ARROW_OUT, MIDY, () => { if (!tasteRolling.current) setTasteCur(cur - 1); })}
+          {n > 1 && carArrow("next horse", 1, R + ARROW_OUT, MIDY, () => { if (!tasteRolling.current) setTasteCur(cur + 1); })}
           {/* ○ Select — and how many of three are chosen */}
-          <button onClick={() => { if (!tasteRolling.current) pickMid(); }} disabled={pickArtists.length >= need} aria-label="select the horse in the middle"
+          <button onClick={pickMid} disabled={pickArtists.length >= need} aria-label="select the horse in the middle"
             style={{ ...px(CX - 60, SEL_BASE - 20, 120, 29), ...ghost, pointerEvents: "auto", cursor: pickArtists.length >= need ? "default" : "pointer", textTransform: "none", opacity: pickArtists.length >= need ? 0.35 : 1, transition: `opacity 240ms ${EASE}` }}>
             <span style={{ position: "absolute", left: 6, top: 5.5 }}>{ringSvg(18, false, { stroke: 2, dot: 7.5 })}</span>
             <span style={{ position: "absolute", left: 33, top: baseTop(SEL_BASE, 15) - (SEL_BASE - 20), font: `700 15px/15px ${HNW}`, color: INK, whiteSpace: "nowrap" }}>
               {t("Select")} <span style={{ fontWeight: 400, color: "#8a887e" }}>{pickArtists.length}/{need}</span></span>
           </button>
-          {/* Roll the dice */}
+          {/* Roll the dice — the roulette */}
           <button onClick={roll} style={{ ...px(CX - DICE.w / 2, DICE.y, DICE.w, DICE.h), cursor: "pointer", font: `700 ${BAR_FS}px ${HNW}`, letterSpacing: 0.3, background: "#fff", color: "#111", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 3, textTransform: "uppercase", pointerEvents: "auto" }}>
             {t("Roll the dice")}</button>
-          {pickArtists.length < need && (
-            <span style={{ ...px(L, baseTop(MSG_BASE, 13), X1 - L, 16), font: `13px ${HNW}`, lineHeight: "13px", color: tasteWarn ? BAR_RED : "#6b6a60", textAlign: "center", display: "block" }}>
-              {need > 1 ? t("Select 3 horses to continue.") : t("Select a horse to continue.")}</span>
-          )}
-          {/* the chosen ones, top to bottom, in the free quarter */}
+          {/* the chosen ones, in a row, centred */}
           {Array.from({ length: need }, (_, i) => {
             const sl = slot(i), id = pickArtists[i], a = id ? byId.get(id) : undefined;
             return a ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img key={"ts" + id} src={a.horse} alt="" draggable={false} title={t("Click to put it back")}
+              <span key={"ts" + id}
                 ref={(el) => { const f = tasteFly.current["slot:" + id]; if (el && f) { delete tasteFly.current["slot:" + id]; flyInto(el, f, sl, 700); } }}
-                onClick={() => unpick(id, sl)}
-                style={{ ...px(sl.x, sl.y, sl.w, sl.h), objectFit: "contain", cursor: "pointer", pointerEvents: "auto", zIndex: 20 }} />
+                style={{ ...px(sl.x, sl.y, sl.w, sl.h), zIndex: 20 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={a.horse} alt="" draggable={false} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
+                {/* the site's plus, turned 45° — sends it back */}
+                <button aria-label={t("Click to put it back")} onClick={() => unpick(id, sl)}
+                  style={{ position: "absolute", right: -12, top: -12, width: 24, height: 24, ...ghost, pointerEvents: "auto", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <svg viewBox="0 0 18 18" width="14" height="14" style={{ transform: "rotate(45deg)" }}>
+                    <line x1="9" y1="0" x2="9" y2="18" stroke="#000" strokeWidth="1.3" />
+                    <line x1="0" y1="9" x2="18" y2="9" stroke="#000" strokeWidth="1.3" />
+                  </svg>
+                </button>
+              </span>
             ) : (
               <span key={"tse" + i} style={{ ...px(sl.x, sl.y, sl.w, sl.h), border: "1px dashed #C9C7BF", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", font: `13px ${HNW}`, color: "#C9C7BF" }}>{i + 1}</span>
             );
           })}
+          {pickArtists.length < need && (
+            <span style={{ ...px(L, baseTop(MSG_BASE, 13), R - L, 16), font: `13px ${HNW}`, lineHeight: "13px", color: tasteWarn ? BAR_RED : "#6b6a60", textAlign: "center", display: "block" }}>
+              {need > 1 ? t("Select 3 horses to continue.") : t("Select a horse to continue.")}</span>
+          )}
         </>);
       }
 
@@ -3873,12 +3867,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         /* 2026-09-28 (owner #6): the arrows three times bigger — size and
            stroke together (the stroke scales with the viewBox) */
         /* (later, owner): 30 % smaller again, and a little further out */
-        const chevron = (lab: string, x: number, pts: string, go2: number) => (
-          <button key={lab} aria-label={lab} onClick={() => showSet(go2)}
-            style={{ ...px(x - 30 + 6, (AREA_TOP + AREA_BOT) / 2 - 36, 60, 72), ...ghost, zIndex: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <svg viewBox="0 0 18 22" width="25.2" height="33.6" style={{ overflow: "visible" }}><polyline points={pts} fill="none" stroke="#111" strokeWidth="1.6" /></svg>
-          </button>
-        );
+        const chevron = (lab: string, dir: -1 | 1, go2: number) =>
+          carArrow(lab, dir, dir < 0 ? 137.14 - ARROW_OUT : 1302.86 + ARROW_OUT, (AREA_TOP + AREA_BOT) / 2, () => showSet(go2));
         /* 2026-09-30 (owner): A RUN IN PROGRESS — straight on this page, each
            column its own wine glass (the marketing boxes' loader) until its
            label lands, then the label fades in. The box is the size the
@@ -3952,8 +3942,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               furniture, deactivated and grey */}
           {!gen && dreams.length === 0 && OPT_FRAMES.map((fr, fi) => selectCtl(fr.x + OPT_W / 2, SEL_CY, false, null, "grey" + fi))}
           {/* the arrows between the sets, left and right of the labels */}
-          {!gen && sets.length > 1 && setIdx > 0 && chevron("previous versions", OPT_FRAMES[0].x - 48, "13,3 5,11 13,19", setIdx - 1)}
-          {!gen && sets.length > 1 && setIdx < sets.length - 1 && chevron("next versions", OPT_FRAMES[2].x + OPT_W + 48 - 12, "5,3 13,11 5,19", setIdx + 1)}
+          {!gen && sets.length > 1 && setIdx > 0 && chevron("previous versions", -1, setIdx - 1)}
+          {!gen && sets.length > 1 && setIdx < sets.length - 1 && chevron("next versions", 1, setIdx + 1)}
           {/* 2026-09-28 (owner): NEW TRY under the middle label, where NEW
               VERSIONS stood — black while a try is waiting, white when the
               next one must be bought; the line under it says which */}
@@ -4968,12 +4958,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           </div>
           {/* the chevrons */}
           {/* each chevron's TIP on its edge (the tip sits 3.33 inside the 12 px mark) */}
-          {([["prev slide", ARR_L - 3.33, "13,3 5,11 13,19"], ["next slide", ARR_R - 12 + 3.33, "5,3 13,11 5,19"]] as const).map(([lab, x, pts]) => (
-            <button key={lab} aria-label={lab} onClick={() => setCarIdx((c) => (c + (lab === "next slide" ? 1 : slides.length - 1)) % slides.length)}
-              style={{ ...px(x - 16, CAR_MID - 22, 44, 44), ...ghost, zIndex: 12, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <svg viewBox="0 0 18 22" width="12" height="16"><polyline points={pts} fill="none" stroke="#111" strokeWidth="1.6" /></svg>
-            </button>
-          ))}
+          {carArrow("prev slide", -1, ARR_L, CAR_MID, () => setCarIdx((c) => (c + slides.length - 1) % slides.length))}
+          {carArrow("next slide", 1, ARR_R, CAR_MID, () => setCarIdx((c) => (c + 1) % slides.length))}
           {/* 2026-09-23 (owner): "I agree to the Terms & Conditions" at the
               bottom right of the folders' side, its right edge on the page
               margin, on the rule's foot. Its ring is our loader's wine glass
