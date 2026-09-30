@@ -556,10 +556,15 @@ export default function NewUI() {
   /* 2026-09-23 (owner): the home page slides in on first open too, its
      groups in their cascade — as if arriving from another page */
   const [intro, setIntro] = useState(true);
+  /* 2026-09-30 (owner: "the cover's pictures load, vanish and come back —
+     it flickers"): the cover waits until every one of its pictures is
+     loaded AND decoded, and only then slides in (at most 2.5 s) */
+  const [coverReady, setCoverReady] = useState(false);
   useEffect(() => {
+    if (!coverReady) return;
     const id = setTimeout(() => setIntro(false), SLIDE_MS + maxSliceDelay("welcome") + 60);
     return () => clearTimeout(id);
-  }, []);
+  }, [coverReady]);
   /* ENG/GEO (owner 2026-09-07): every live text goes through t() */
   const [lang, setLang] = useState<"en" | "ge">("en");
   useEffect(() => { try { const l = localStorage.getItem("nui-lang"); if (l === "ge") setLang("ge"); } catch { } }, []);
@@ -892,6 +897,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const pick = pool[Math.floor(Math.random() * pool.length)] || COVERS[0];
     try { localStorage.setItem("nui-cover", pick.slug); localStorage.setItem("nui-cover-seen", JSON.stringify([...seen, pick.slug])); } catch { }
     setCover(pick);
+    const srcs = [pick.home.label, pick.home.market1, pick.home.market2, pick.home.bottleFront, pick.home.bottleBack, "/newui/home/shadow-small.webp"];
+    const done = () => setCoverReady(true);
+    Promise.all(srcs.map((u) => { const im = new Image(); im.src = u; return im.decode().catch(() => { }); })).then(done);
+    setTimeout(done, 2500);
   }, []);
   const CP = cover || COVERS[0];
   const cpCap = CP.wheel ? { wheel: CP.wheel, shade: CP.shade ?? 0.5 } : capFromRgb(CP.cap);
@@ -3037,7 +3046,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const BLUE = CP.arrow;
     const img = (src: string, x: number, y: number, w: number, h: number) => (
       /* eslint-disable-next-line @next/next/no-img-element */
-      <img key={src} src={src} alt="" draggable={false} style={{ ...px(x, y, w, h), display: "block", pointerEvents: "none", opacity: cover ? 1 : 0 }} />
+      <img key={src} src={src} alt="" draggable={false} decoding="sync" style={{ ...px(x, y, w, h), display: "block", pointerEvents: "none", opacity: coverReady ? 1 : 0 }} />
     );
     /* the blue "↦" between the steps */
     const arrow = (x: number, k: string) => (
@@ -3233,14 +3242,15 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 <span style={{ ...px(L, y, PW, PH), background: "#ECECEA", display: "block", overflow: "hidden" }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={fd.photo} alt={fd.name} onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = "hidden"; }}
-                    style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "50% 30%", display: "block" }} />
+                    style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: fd.pos, display: "block" }} />
                 </span>
                 <span style={{ ...px(L, baseTop(y + PH + 26, 15), PW, 18), font: `700 15px/15px ${HNW}`, color: INK, whiteSpace: "nowrap", display: "block" }}>{lang === "ge" ? fd.nameGe : fd.name}</span>
                 <span style={{ ...px(L, baseTop(y + PH + 46, 13), PW, 16), font: `italic 13px/13px ${HNW}`, color: INK, whiteSpace: "nowrap", display: "block" }}>{lang === "ge" ? "დამფუძნებელი" : "Founder"}</span>
               </span>
             );
           })}
-          <div style={{ ...px(TX, TOP - 4, R - TX, 560), font: `${lang === "ge" ? 13.5 : 14.5}px/${lang === "ge" ? 21 : 22}px ${HNW}`, color: INK, textAlign: "left" }}>
+          {/* its right edge on the folder's left edge; justified, the last line left (2026-09-30) */}
+          <div style={{ ...px(TX, TOP - 4, FOLDER_X - TX, 560), font: `${lang === "ge" ? 13.5 : 14.5}px/${lang === "ge" ? 21 : 22}px ${HNW}`, color: INK, textAlign: "justify", textAlignLast: "left" }}>
             {paras.map((pp, i) => <p key={"ap" + i} style={{ margin: i ? "11px 0 0" : 0 }}>{pp}</p>)}
           </div>
         </>);
@@ -3411,7 +3421,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           const a = byId.get(id)!;
           const ar = Math.abs(rel);
           const scale = ar === 0 ? 1 : ar === 1 ? 0.465 : 0.3;   /* the side horses 25 % smaller (2026-09-30) */
-          const dx = rel === 0 ? 0 : Math.sign(rel) * (ar === 1 ? 360 : 470);
+          const dx = rel === 0 ? 0 : Math.sign(rel) * (ar === 1 ? 390 : 470);   /* a third of the way on toward the arrows (2026-09-30) */
           /* while spinning each step glides linearly; the last one settles */
           const ms = tasteSpin ? Math.abs(tasteSpin) : 520, ease = tasteSpin < 0 ? "linear" : tasteSpin > 0 ? "cubic-bezier(0.22, 1, 0.36, 1)" : EASE;
           return (
@@ -5178,7 +5188,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 {prev && (prev === "loader" ? faded(prev, "nuiFadeOut") : slices(prev, false))}
                 {prev
                   ? (page === "loader" ? faded(page, "nuiFadeIn", SLIDE_MS + maxSliceDelay(prev)) : slices(page, true))
-                  : intro && page === "welcome" ? slices(page, true)
+                  : intro && page === "welcome" ? (coverReady ? slices(page, true) : null)
                   : <div style={{ position: "absolute", left: 0, top: pageTop, width: W, height: H }}>{pageSpace(page, false)}</div>}
               </div>
             );
