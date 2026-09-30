@@ -3253,7 +3253,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img key={g.src} src={g.src} alt={g.wine} onClick={ar ? () => setGalIdx(i) : undefined}
                   style={{ position: "absolute", left: (R - L - 60) / 2 - SIZE / 2, top: 10, width: SIZE, height: SIZE, objectFit: "cover", zIndex: 10 - ar,
-                    transform: `translate(${dx}px, 0) scale(${scale})`, filter: ar ? `blur(${ar === 1 ? 4 : 7}px)` : "none", opacity: ar === 0 ? 1 : ar === 1 ? 0.55 : 0.28,
+                    transform: `translate(${dx}px, 0) scale(${scale})`, filter: ar ? `blur(${ar === 1 ? 2.5 : 7}px)` : "none", opacity: ar === 0 ? 1 : ar === 1 ? 0.55 : 0.28,
                     transition: `transform 520ms ${EASE}, filter 520ms ${EASE}, opacity 520ms ${EASE}`, cursor: ar ? "pointer" : undefined }} />
               );
             })}
@@ -3345,9 +3345,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
            centred in the room between the title and Select */
         const SW = 132, SH = 88, GAP = 24, SY = 612;
         const slot = (i: number) => ({ x: CX - (need * SW + (need - 1) * GAP) / 2 + i * (SW + GAP), y: SY, w: SW, h: SH });
-        const DICE = { y: SY - 26 - 34.3, h: 34.3, w: 210 };
-        const SEL_BASE = DICE.y - 26;
-        const CW = 495, CH = 330, MIDY = (149.08 + SEL_BASE - 15 * 0.72) / 2, TOP = MIDY - CH / 2;
+        /* (later: "Roll the dice" gone — Select stands over the picks and the
+           carousel takes all the room up to the title, its middle horse as
+           big as it fits) */
+        const SEL_BASE = SY - 30;
+        const ROOM0 = 149.08 + 18, ROOM1 = SEL_BASE - 15 * 0.72 - 18;
+        const CH = ROOM1 - ROOM0, CW = CH * 1.5, MIDY = (ROOM0 + ROOM1) / 2, TOP = ROOM0;
         const centre = { x: CX - CW / 2, y: TOP, w: CW, h: CH };
         const flyInto = (el: HTMLElement, from: { x: number; y: number; w: number; h: number }, to: { x: number; y: number; w: number; h: number }, ms = 640) => {
           el.animate([{ transform: `translate(${from.x - to.x}px, ${from.y - to.y}px) scale(${from.w / to.w})`, transformOrigin: "0 0" }, { transform: "translate(0, 0) scale(1)", transformOrigin: "0 0" }], { duration: ms, easing: EASE });
@@ -3368,31 +3371,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           setTasteRing((r) => { const rr = (r || []).filter((x) => x !== id && !pickArtists.includes(x)); const at = rr.length ? ((cur % rr.length) + rr.length) % rr.length : 0; return [...rr.slice(0, at), id, ...rr.slice(at)]; });
           setTasteCur(cur);
         };
-        /* the roulette: every step's time on one smooth curve — long at the
-           ends, short in the middle (1 − sin)² — so it eases in and out; the
-           number of steps is random, so is the horse it stops on */
-        const roll = async () => {
-          if (tasteRolling.current || n < 2) return;
-          tasteRolling.current = true;
-          setTasteWarn(false);
-          /* a horse it has not stopped on yet (the round starts again when all have) */
-          let pool = ring.filter((id, i) => i !== cur && !tasteLanded.current.has(id));
-          if (!pool.length) { tasteLanded.current = new Set(); pool = ring.filter((_, i) => i !== cur); }
-          const target = pool[Math.floor(Math.random() * pool.length)];
-          tasteLanded.current.add(target);
-          const k = ((cur - ring.indexOf(target)) % n + n) % n;
-          const N = k < 7 ? k + n : k;
-          const raw = Array.from({ length: N }, (_, i) => 85 + 520 * Math.pow(1 - Math.sin(Math.PI * (i + 0.5) / N), 2));
-          const scale = 1250 / raw.reduce((a, b2) => a + b2, 0);
-          for (let i = 0; i < N; i++) {
-            const ms = Math.max(28, Math.round(raw[i] * scale));
-            setTasteSpin(i === N - 1 ? ms * 1.6 : -ms);   /* the last step settles, eased out */
-            setTasteCur((c) => c - 1);
-            await sleep(i === N - 1 ? ms * 1.6 : ms);
-          }
-          setTasteSpin(0);
-          tasteRolling.current = false;
-        };
+        /* (the dice's roulette was removed with its button, 2026-09-30) */
         const items = ring.map((id, i) => {
           let rel = ((i - cur) % n + n) % n;
           if (rel > n / 2) rel -= n;
@@ -3400,7 +3379,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           const a = byId.get(id)!;
           const ar = Math.abs(rel);
           const scale = ar === 0 ? 1 : ar === 1 ? 0.62 : ar === 2 ? 0.4 : 0.26;
-          const dx = rel === 0 ? 0 : Math.sign(rel) * (ar === 1 ? 372 : ar === 2 ? 470 : 560);
+          const dx = rel === 0 ? 0 : Math.sign(rel) * (ar === 1 ? 400 : ar === 2 ? 478 : 560);
           /* while spinning each step glides linearly; the last one settles */
           const ms = tasteSpin ? Math.abs(tasteSpin) : 520, ease = tasteSpin < 0 ? "linear" : tasteSpin > 0 ? "cubic-bezier(0.22, 1, 0.36, 1)" : EASE;
           return (
@@ -3409,7 +3388,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               ref={(el) => { const f = tasteFly.current["ring:" + id]; if (el && f) { delete tasteFly.current["ring:" + id]; flyInto(el, { ...f, x: f.x - L + 0, y: f.y - TOP }, { x: centre.x - L, y: 0, w: CW, h: CH }); } }}
               onClick={() => { if (tasteRolling.current) return; if (ar === 0) pickMid(); else setTasteCur(i); }}
               style={{ position: "absolute", left: centre.x - L, top: 0, width: CW, height: CH, objectFit: "contain", zIndex: 10 - ar,
-                transform: `translate(${dx}px, 0) scale(${scale})`, filter: ar ? `blur(${ar === 1 ? 4 : 7}px)` : "none", opacity: ar === 0 ? 1 : ar === 1 ? 0.55 : ar === 2 ? 0.28 : 0,
+                transform: `translate(${dx}px, 0) scale(${scale})`, filter: ar ? `blur(${ar === 1 ? 2 : 7}px)` : "none", opacity: ar === 0 ? 1 : ar === 1 ? 0.55 : ar === 2 ? 0.28 : 0,
                 transition: `transform ${ms}ms ${ease}, filter ${ms}ms ${ease}, opacity ${ms}ms ${ease}`, cursor: "pointer", userSelect: "none" }} />
           );
         });
@@ -3423,11 +3402,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {/* the site's own Select (the labels page's ring and word) + how many of three */}
           <span style={{ opacity: pickArtists.length >= need ? 0.35 : 1, transition: `opacity 240ms ${EASE}` }}>
             {selectCtl(CX - 14, SEL_BASE - 5.2, false, pickArtists.length >= need ? null : pickMid, "tasteSel")}
-            <span style={{ ...px(CX - 14 + (18 + 10 + t("Select").length * 7.4) / 2 + 6, baseTop(SEL_BASE, 15), 40, 18), font: `15px/15px ${HNW}`, color: "#8a887e", whiteSpace: "nowrap" }}>{pickArtists.length}/{need}</span>
+            <button tabIndex={-1} aria-hidden style={{ ...px(CX - 14 + (18 + 10 + t("Select").length * 7.4) / 2 + 14, baseTop(SEL_BASE, 15), 40, 18), ...ghost, textAlign: "left", textTransform: "none", font: `15px/15px ${HNW}`, color: "#8a887e", whiteSpace: "nowrap", pointerEvents: "none" }}>{pickArtists.length}/{need}</button>
           </span>
-          {/* Roll the dice — the roulette */}
-          <button onClick={roll} style={{ ...px(CX - DICE.w / 2, DICE.y, DICE.w, DICE.h), cursor: "pointer", font: `700 ${BAR_FS}px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 3, textTransform: "uppercase", pointerEvents: "auto" }}>
-            {t("Roll the dice")}</button>
           {/* the chosen ones, in a row, centred */}
           {Array.from({ length: need }, (_, i) => {
             const sl = slot(i), id = pickArtists[i], a = id ? byId.get(id) : undefined;
@@ -4957,7 +4933,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               return (
                 <div key={"car" + i} onClick={ar ? () => setCarIdx(i) : undefined}
                   style={{ position: "absolute", left: cx0 - CAR.w / 2, top: cy0, width: CAR.w, height: CAR.h, zIndex: 10 - ar,
-                    transform: `translate(${dx}px, ${dy}px) scale(${scale})`, filter: ar ? `blur(${ar === 1 ? 4 : 7}px)` : "none", opacity: ar === 0 ? 1 : ar === 1 ? 0.55 : 0.28,
+                    transform: `translate(${dx}px, ${dy}px) scale(${scale})`, filter: ar ? `blur(${ar === 1 ? 2.5 : 7}px)` : "none", opacity: ar === 0 ? 1 : ar === 1 ? 0.55 : 0.28,
                     transition: `transform 520ms ${EASE}, filter 520ms ${EASE}, opacity 520ms ${EASE}`, cursor: ar ? "pointer" : undefined }}>
                   {inner}
                 </div>
@@ -5012,7 +4988,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const frontTouched = !!vision.trim() || !!sketch || FRONT_ROWS.some((k2) => (f[k2] || "").trim());
   const backTouched = !!(b.description || "").trim() || BACK_ROWS.some((k2) => (b[k2] || "").trim()) || !!gtin.trim() || !!qrMode || markets.length > 0;
   const nextOff = tut < 0 && (page === "more"
-    || (page === "taste" && pickArtists.length < Math.min(3, painters.filter((a) => a.horse).length))
+    || (page === "taste" && pickArtists.length < 1)
     || (page === "vision" && !frontTouched)
     || (page === "backdetails" && !backTouched));
   nudgeOk.current = ((vt >= 0 && (tutIdle || vt >= tutLast)) || page === "checkout") && !nextOff;
@@ -5478,8 +5454,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   }
                   else if (page === "taste") {
                     /* the three horses are the three artists (2026-09-28) */
-                    const need = Math.min(3, painters.filter((a) => a.horse).length);
-                    if (pickArtists.length < need) { setTasteWarn(true); return; }
+                    /* (2026-09-30: one horse is enough to go on) */
+                    if (pickArtists.length < 1) { setTasteWarn(true); return; }
                     go("vision"); return;
                   }
                   else if (page === "vision") {
