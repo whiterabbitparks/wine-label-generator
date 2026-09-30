@@ -1,0 +1,56 @@
+{
+  "id": "grigol-tatishvili",
+  "name": "Grigol Tatishvili",
+  "country": "Georgia",
+  "portfolio": "",
+  "medium": "Wood engraving from a nineteenth-century Georgian primer: fine black lines, parallel hatching and cross-hatching cut into the block, printed in black ink on white paper",
+  "words": [
+    "engraved",
+    "precise",
+    "classical"
+  ],
+  "colour": "black ink only, on white or light warm cream paper — no colour",
+  "form": "animals and birds, village life of old Georgia — peasants at work, riders, children, harvests — clay vessels and qvevri, plants, trees, fields and churches; clear, well-drawn subjects, often a vignette whose edge fades into the white paper",
+  "never": "never colour, never a dark or coloured background, never modern objects, never letters, captions, numbers or signatures",
+  "mood": "calm, gentle and instructive, like a page of a children's primer",
+  "paper": "white or light warm cream paper",
+  "consent": "PUBLIC DOMAIN — the engravings of the 1899 edition of Deda Ena (Grigol Tatishvili after drawings by Oskar Schmerling). The book's portrait of Tsar Nicholas II was left out (owner's folder, screenshot 02.27.19).",
+  "status": "pilot",
+  "active": true,
+  "bio": "Grigol Tatishvili was the engraver who cut into wood the illustrations of the 1899 edition of Deda Ena — \"Mother Tongue\", Iakob Gogebashvili's primer, the book every Georgian learns the language from. The drawings were Oskar Schmerling's; Tatishvili turned them into wood engravings, and his fine black line — the animals, the village life, the vessels, fields and churches of old Georgia — is the one generations of Georgian children grew up with. (Draft biography.)",
+  "bioGe": "გრიგოლ ტატიშვილი ის გრავიორია, რომელმაც 1899 წლის „დედა ენის“ ილუსტრაციები ხეზე ამოკვეთა. „დედა ენა“ — იაკობ გოგებაშვილის წიგნი — ის წიგნია, რომლითაც ყველა ქართველი ენას სწავლობს. ნახატები ოსკარ შმერლინგს ეკუთვნის; ტატიშვილმა ისინი ხის გრავიურებად აქცია და მისი წვრილი შავი ხაზი — ძველი საქართველოს ცხოველები, სოფლის ცხოვრება, ჭურჭელი, მინდვრები და ეკლესიები — ქართველ ბავშვთა თაობებს ახსოვთ. (ბიოგრაფია დრაფტია.)",
+  "page": true,
+  "pageOrder": 12,
+  "crop": "50% 45%",
+  "horseOrder": 12,
+  "charterBy": "Claude's draft from the 44 engravings, 2026-09-30",
+  "refs": [
+    "work-12.jpg",
+    "work-16.jpg",
+    "work-37.jpg",
+    "work-42.jpg"
+  ],
+  "refSets": [
+    [
+      "work-12.jpg",
+      "work-18.jpg",
+      "work-04.jpg"
+    ],
+    [
+      "work-16.jpg",
+      "work-31.jpg",
+      "work-29.jpg"
+    ],
+    [
+      "work-37.jpg",
+      "work-36.jpg",
+      "work-40.jpg"
+    ],
+    [
+      "work-42.jpg",
+      "work-34.jpg",
+      "work-21.jpg"
+    ]
+  ],
+  "refSetsWhy": "Claude's first sets (2026-09-30): one manner a set, subjects varied — A isolated vignettes on white, B figure scenes with open edges, C full-tone rectangular scenes, D open landscapes with animals and people."
+}

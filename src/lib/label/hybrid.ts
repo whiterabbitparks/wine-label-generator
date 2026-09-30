@@ -241,12 +241,21 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
      label took the cream. An artist with a ground of his own (profile
      keepGround) gets it round the drawing too, and the label with it. */
   const kg = (model.artist as { keepGround?: string }).keepGround;
-  const around = kg ? `plain ${kg} ground (the artist's own bare ${kg} ground, never white or cream paper)` : "paper";
+  /* 2026-09-30 (owner, Grigol Tatishvili: "this artist always on white and
+     light warm tones"): an artist whose ground is always a LIGHT paper
+     (profile `paper`) — named round a floating drawing, asked of every
+     picture, and never rotated away by the ground-variety rule */
+  const pg = (model.artist as { paper?: string }).paper;
+  const around = pg ? `plain ${pg}` : kg ? `plain ${kg} ground (the artist's own bare ${kg} ground, never white or cream paper)` : "paper";
   if (kg) ap.around = `${kg} ground`;
+  if (pg) {
+    ap.around = pg;
+    ap.prompt += ` THE GROUND: always ${pg} — the picture stays light; never a dark, black or strongly coloured field, sky or background, whatever the story.`;
+  }
   if (kg && artKindOf(tpl) === "spot") ap.prompt += ` THE GROUND ROUND THE DRAWING is the artist's own plain ${kg} — flat and empty, never white or cream paper.`;
   if (panel) {
     const shape = zoneAspect >= 1 ? `about ${zoneAspect.toFixed(1)} times wider than tall` : `about ${(1 / zoneAspect).toFixed(1)} times taller than wide`;
-    const panelText = `THE PICTURE IS ONE PANEL: paint the whole scene as a single panel ${shape}, large and centred, with a clear margin of ${kg ? `flat, empty ${around}` : "plain, flat, empty paper of one tone"} on ALL FOUR sides — about a tenth of the canvas on each side, nothing painted there, the panel never touching the canvas edge. The panel is filled edge to edge with the scene; its outline is the painter's own loose, irregular edge — never a frame, never a straight ruled line, never an oval. Every figure whole, every face and every animal, the whole story, well inside the panel; its outermost rim may be trimmed away, so nothing important sits near the panel's edges.`;
+    const panelText = `THE PICTURE IS ONE PANEL: paint the whole scene as a single panel ${shape}, large and centred, with a clear margin of ${kg || pg ? `flat, empty ${around}` : "plain, flat, empty paper of one tone"} on ALL FOUR sides — about a tenth of the canvas on each side, nothing painted there, the panel never touching the canvas edge. The panel is filled edge to edge with the scene; its outline is the painter's own loose, irregular edge — never a frame, never a straight ruled line, never an oval. Every figure whole, every face and every animal, the whole story, well inside the panel; its outermost rim may be trimmed away, so nothing important sits near the panel's edges.`;
     ap.kind = "spot";
     ap.edgeSide = undefined;
     ap.prompt = ap.prompt.includes(BLEED) ? ap.prompt.replace(BLEED, panelText) : `${ap.prompt} ${panelText}`;
@@ -269,7 +278,7 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
   /* a coloured ground that filled several of the latest paintings rests */
   /* an artist whose own ground is one colour keeps it (Pirosmani's black) */
   const rest0 = artKindOf(tpl) !== "spot" ? restingGround() : "";
-  const rest = rest0 && rest0 === (model.artist as { keepGround?: string }).keepGround ? "" : rest0;
+  const rest = pg || (rest0 && rest0 === (model.artist as { keepGround?: string }).keepGround) ? "" : rest0;
   if (rest) ap.prompt += ` GROUND COLOUR — for variety: this time the ground is NOT ${rest}; take another of the artist's own colours for it.`;
   /* a spot or a panel floats on its paper: its sketch must show paper all
      round (see generateArtwork `accept`) — the ink box clear of the sheet's
@@ -279,7 +288,7 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
     const c = await cleanPaper(s);
     return c.cleaned && c.ink.x > 0.015 && c.ink.y > 0.015 && c.ink.x + c.ink.w < 0.985 && c.ink.y + c.ink.h < 0.985;
   };
-  const retry = `IMPORTANT — THE LAST TRY FILLED THE WHOLE CANVAS: this time leave a wide empty margin of ${kg ? around : "plain, flat paper"} on ALL FOUR sides, about a tenth of the canvas each side; the picture must not touch any edge of the canvas.`;
+  const retry = `IMPORTANT — THE LAST TRY FILLED THE WHOLE CANVAS: this time leave a wide empty margin of ${kg || pg ? around : "plain, flat paper"} on ALL FOUR sides, about a tenth of the canvas each side; the picture must not touch any edge of the canvas.`;
   const painted = await gen429(() => generateArtwork(model, ap, { sketch: inp.sketch || null, refSet: inp.refSet, small: inp.small, ...(floats ? { accept: onPaper, retry } : {}) }));
   /* 2026-09-22 (owner): the artist's LoRA learned her PAPER as well as
      her hand, so the picture arrives wrinkled and unevenly lit, and its

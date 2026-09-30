@@ -104,6 +104,7 @@ const ARTIST_GE: Record<string, string> = {
   "Oskar Schmerling": "ოსკარ შმერლინგი",
   "Rati Bakradze": "რატი ბაქრაძე",
   "Gvantsa Mzareulishvili": "გვანცა მზარეულიშვილი",
+  "Grigol Tatishvili": "გრიგოლ ტატიშვილი",
 };
 const mtavruli = (s: string) => s.replace(/[\u10D0-\u10FA]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0x1C90 - 0x10D0));
 function artistShort(name: string, lang: "en" | "ge") {

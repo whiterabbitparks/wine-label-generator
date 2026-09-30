@@ -28,6 +28,8 @@ export interface ArtistProfile {
   abstractSet?: number;
   /* a ground colour this artist keeps however often it recurs (Pirosmani's black) */
   keepGround?: string;
+  /* 2026-09-30: a ground that is ALWAYS a light paper (Grigol Tatishvili: white or warm cream) */
+  paper?: string;
   /* works shown to the sketch painter but left out of a LoRA training */
   trainExclude?: string[];
   /* 2026-09-23: the ART DIRECTOR's note on a painter's hand, kept apart
