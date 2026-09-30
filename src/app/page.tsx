@@ -5499,6 +5499,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 ? <a key={x + "-" + i} href={href} style={{ ...px(x, baseTop(FB + i * LH, 11), 220, 14), font: fs, color: col, textDecoration: "none", whiteSpace: "nowrap", pointerEvents: "auto" }}>{txt}</a>
                 : <span key={x + "-" + i} style={{ ...px(x, baseTop(FB + i * LH, 11), 220, 14), font: fs, color: col, whiteSpace: "nowrap", display: "block" }}>{txt}</span>;
               return (<>
+                {/* the site's dashed rule over the contacts, margin to margin (2026-09-30) */}
+                {dashRule(137.14, FB - 28, 1302.86 - 137.14, false, "footRule")}
                 <span style={{ ...px(137.14, baseTop(FB, 14), 150, 16), font: `700 14px/14px ${HNW}`, color: INK, whiteSpace: "nowrap", display: "block" }}>8K.WINE</span>
                 {[t("8K Labels LLC"), t("#33 Chikovani St."), t("0171 Tbilisi, Georgia")].map((x2, i) => line(300, i, x2))}
                 {line(520, 0, "hello@8k.wine", "mailto:hello@8k.wine")}
