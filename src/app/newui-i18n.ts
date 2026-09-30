@@ -326,6 +326,7 @@ export const UI_GE: Record<string, string> = {
   "No try is spent — only the text is set again.": "ცდა არ იხარჯება — მხოლოდ ტექსტი განახლდება.",
   "Painting is paused on our side for a moment — your try wasn't used. Please try again later.": "ხატვა ჩვენს მხარეს დროებით შეჩერებულია — ცდა არ დაგეხარჯათ. გთხოვთ, სცადოთ მოგვიანებით.",
   "The labels couldn't be painted — your try wasn't used. Please try again.": "ეტიკეტები ვერ დაიხატა — ცდა არ დაგეხარჯათ. გთხოვთ, სცადოთ თავიდან.",
+  "This label couldn't be painted.": "ეს ეტიკეტი ვერ დაიხატა.",
   "MORE TRIES": "ᲓᲐᲛᲐᲢᲔᲑᲘᲗᲘ ᲪᲓᲔᲑᲘ",
   "Tries left:": "დარჩენილი ცდები:",
   "No tries left — 3 tries for $9": "ცდები ამოიწურა — 3 ცდა $9-ად",

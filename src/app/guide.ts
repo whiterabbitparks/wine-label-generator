@@ -15,6 +15,7 @@ export type GuidePage = "taste" | "vision" | "loader" | "options" | "backdetails
 export type GuideDone =
   | "vision"          /* three words in the idea box */
   | "selected"        /* a front label saved */
+  | "painted"         /* the labels of a run have all landed (2026-09-30) */
   | "markets"         /* a market picked */
   | "backSaved"       /* the back label saved */
   | "assetsReady"     /* shots and images all in */
@@ -92,9 +93,11 @@ export const GUIDE: GuideStep[] = [
     en: "Check what you wrote; Edit Details takes you back if you want to change the details. Hit Create to see labels.",
     ge: "გადაამოწმე რაც ჩაწერე; რედაქტირება უკან დაგაბრუნებს, თუ დეტალების შეცვლა გინდა. დააჭირე შექმნას, რომ ეტიკეტები ნახო.", done: "page:loader" },
   /* ── painting ── */
-  { page: "loader", at: { x: 620, y: 592, w: 200, h: 4 }, side: "below",
-    en: "Three artists are painting right now. It takes about a minute.",
-    ge: "სამი არტისტი ახლა ხატავს. დაახლოებით ერთი წუთი დასჭირდება.", done: "page:options", wait: true },
+  /* 2026-09-30: the painting happens ON the labels page now — each column
+     its own glass; the note waits there until the three have landed */
+  { page: "options", at: { x: 137, y: 290, w: 1166, h: 250 }, side: "above",
+    en: "Three artists are painting right now — each label appears as soon as it's ready.",
+    ge: "სამი არტისტი ახლა ხატავს — ყოველი ეტიკეტი გამოჩნდება, როგორც კი მზად იქნება.", done: "painted", wait: true },
   /* ── front label ── */
   { page: "options", at: { x: 137, y: 200, w: 1166, h: 340 }, side: "above",
     en: "Three designs, each in a different artist's style. Click a label to see it big, and if you like one, select it.",

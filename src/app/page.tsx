@@ -848,6 +848,13 @@ function flattenLabel(im: HTMLImageElement, fallback: string): string {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const [selected, setSelected] = useState(-1);
   const [genProgress, setGenProgress] = useState(0);
+  /* 2026-09-30 (owner: "instead of the glass loader, go straight to the
+     labels page and load each label with its own glass, as marketing does —
+     waiting for all three and then seeing them is harder to sit through"):
+     a run in progress, column by column (by style: traditional,
+     contemporary, punk). The labels page shows it instead of the set on
+     show until the run is committed. */
+  const [gen, setGen] = useState<{ cols: (Dream | "wait" | "fail")[]; append: boolean; t0: number } | null>(null);
   const [frontSig, setFrontSig] = useState("");
   /* 2026-09-23 (owner: "within a session the label changes only when it is
      generated anew"): what the PAINTINGS were made from — the idea, the
@@ -1024,10 +1031,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
      click — jump-ahead pages show placeholders instead of generating */
   const barJumped = useRef(false);
   useEffect(() => {
-    if (!(assetsStage || page === "loader")) return;
+    if (!(assetsStage || page === "loader" || gen)) return;
     const iv = setInterval(() => setTick((t) => t + 1), 700);
     return () => clearInterval(iv);
-  }, [assetsStage, page]);
+  }, [assetsStage, page, gen]);
   useEffect(() => { dreamT.current = Date.now(); }, [genProgress, page]);
   /* the displayed wine level never goes DOWN (creep resets on real jumps) */
   const fillMax = useRef(0);
@@ -1803,6 +1810,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       : d === "assetsSaved" ? assetsSaved
       : d === "confirm" ? !!confirmModal
       : d === "marketClosed" ? markets.length > 0 && !marketOpen
+      : d === "painted" ? !gen
       : d === "taste" ? pickArtists.length >= Math.min(3, painters.filter((a) => a.horse).length)
       : false;
   };
@@ -2008,17 +2016,19 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           break;
         }
         case 1: {
-          /* round 72 #9: the real loader plays first — just quicker — and
-             the finished designs land straight after it, no grey slots */
+          /* 2026-09-30 (owner): as the real run now does — the labels page at
+             once, each column's glass until its label lands, one by one */
           setDreams([]); setSelected(-1);
-          /* round 94 #10: a second of loader is enough for a demo */
-          for (const g of [0.5, 0.97]) {
-            setGenProgress(g);
-            if (!(await hold(320))) return;
+          const tutD = ["traditional", "contemporary", "punk"].map((st2, i) => ({ style: st2, dream: TUT_LABELS[i], preview: TUT_LABELS[i], artist: TUT_ARTISTS[i] }));
+          setGen({ cols: ["wait", "wait", "wait"], append: false, t0: Date.now() });
+          if (page !== "options") go("options");
+          if (!(await hold(SLIDE_MS + 500))) { setGen(null); return; }
+          for (let i = 0; i < 3; i++) {
+            if (!(await hold(i ? 450 : 250))) { setGen(null); return; }
+            setGen((g) => g ? { ...g, cols: g.cols.map((c, k) => (k === i ? tutD[i] : c)) } : g);
           }
-          if (!(await hold(200))) return;
-          setDreams(["traditional", "contemporary", "punk"].map((st2, i) => ({ style: st2, dream: TUT_LABELS[i], preview: TUT_LABELS[i], artist: TUT_ARTISTS[i] })));
-          go("options");
+          if (!(await hold(700))) { setGen(null); return; }
+          setDreams(tutD); setGen(null);
           setGenProgress(0);
           if (!(await hold(SLIDE_MS + 900))) return;
           /* round 89 #1 (owner): no variation play — the pointer goes
@@ -2409,7 +2419,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     /* the labels already shown — a new version repeats none of their
        artist + layout pairs */
     const prev = append ? sets.flat().map((d) => d?.id).filter(Boolean) as string[] : [];
-    go("loader");
+    const STY3 = ["traditional", "contemporary", "punk"];
+    const land = (style: string, v: Dream | "fail") => setGen((g) => g ? { ...g, cols: g.cols.map((c, k) => (k === STY3.indexOf(style) ? v : c)) } : g);
+    setGen({ cols: ["wait", "wait", "wait"], append, t0: Date.now() });
+    go("options");
     setGenProgress(0);
     const genT0 = Date.now();   /* round 46: feed the loader's REAL average */
     /* round 84: ONE payload builder — this copy still carried the demo
@@ -2419,10 +2432,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const one = async (style: string): Promise<Dream> => {
       /* round 56 #3 (TEMP dev switch): fake the run with existing art */
       if (!liveGenRef.current) {
-        await sleep(500);
+        await sleep(700 + STY3.indexOf(style) * 900);
         setGenProgress((p) => p + 1 / 3);
         const d0 = dreams.find(Boolean);
         const fake = { style, dream: d0?.dream || FAKE_IMG, preview: d0?.preview || FAKE_IMG };
+        land(style, fake);
         return fake;
       }
       const r = await fetch("/api/dream-label", {
@@ -2450,7 +2464,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       }
       setGenProgress((p) => p + 1 / 3);
       /* round 94 #6: two contrasting re-layouts of the same painting ride along */
-      return { style, dream: res.dream || "", preview: res.preview || null, id: res.id, artist: res.artist, variants: (res.variants || []).map((v) => ({ style, dream: v.dream, preview: v.preview, id: v.id })) };
+      const got: Dream = { style, dream: res.dream || "", preview: res.preview || null, id: res.id, artist: res.artist, variants: (res.variants || []).map((v) => ({ style, dream: v.dream, preview: v.preview, id: v.id })) };
+      land(style, got);
+      return got;
     };
     const errs: string[] = [];
     try {
@@ -2463,7 +2479,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
          sequentially, before giving up on them */
       for (let i = 0; i < styles3.length; i++) {
         if (settled[i].status === "rejected") {
-          try { ok.push(await one(styles3[i])); } catch { /* that style stays out */ }
+          try { ok.push(await one(styles3[i])); } catch { land(styles3[i], "fail"); /* that style stays out */ }
         }
       }
       if (!ok.length) throw new Error("nothing-painted");
@@ -2471,7 +2487,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       refreshVis();
       if (append) {
         /* the new set joins the others and is the one on show */
-        setSets((p) => [...p, ok]); setSetIdx(sets.length);
+        setSets((p) => [...p, ok]); setSetIdx(sets.length); setGen(null);
         go("options");
         return;
       }
@@ -2496,6 +2512,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         s.push(Math.round((Date.now() - genT0) / 1000));
         localStorage.setItem("nui-gen-secs", JSON.stringify(s.slice(-10)));
       } catch { }
+      setGen(null);
       go("options");
     } catch (e) {
       /* 2026-09-28 (owner saw "all generations failed" twice — the image
@@ -2511,6 +2528,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         ? "Painting is paused on our side for a moment — your try wasn't used. Please try again later."
         : "The labels couldn't be painted — your try wasn't used. Please try again."));
       setTimeout(() => setWarn(""), 9000);
+      setGen(null);
       go(append ? "options" : "vision", -1);
     }
   }
@@ -3571,8 +3589,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
            column's label will land. ONE measurement, used by the head and
            by the label itself; with no dream yet it falls back to the
            size the customer typed, so the empty page draws the same box. */
-        const labelBox = (fi: number) => {
-          const nat = imgDims[fi];
+        const labelBox = (fi: number, typed = false) => {
+          const nat = typed ? null : imgDims[fi];
           const ar = nat ? nat.w / nat.h : (Number(f.width) || 110) / (Number(f.height) || 80);
           let lw: number, lh: number;
           if (ar >= 1) { lw = OPT_W; lh = OPT_W / ar; if (lh > AREA_BOT - AREA_TOP) { lh = AREA_BOT - AREA_TOP; lw = lh * ar; } }
@@ -3678,39 +3696,92 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             <svg viewBox="0 0 18 22" width="25.2" height="33.6" style={{ overflow: "visible" }}><polyline points={pts} fill="none" stroke="#111" strokeWidth="1.6" /></svg>
           </button>
         );
+        /* 2026-09-30 (owner): A RUN IN PROGRESS — straight on this page, each
+           column its own wine glass (the marketing boxes' loader) until its
+           label lands, then the label fades in. The box is the size the
+           customer typed; a column that could not be painted says so. */
+        const genLayer = () => {
+          if (!gen) return null;
+          const ds = gen.cols.map((c) => (typeof c === "object" ? c : undefined)) as Dream[];
+          let avg = 45;
+          try {
+            const s2 = (JSON.parse(localStorage.getItem("nui-gen-secs") || "[]") as number[]).filter((n) => Number.isFinite(n) && n > 0);
+            if (s2.length) avg = s2.reduce((a, b2) => a + b2, 0) / s2.length;
+          } catch { }
+          const fill = Math.min(0.92, 0.08 + 0.84 * ((Date.now() - gen.t0) / 1000) / avg + tick * 0);
+          return OPT_FRAMES.map((_, fi) => {
+            const c = gen.cols[fi];
+            const { lx, ly, lw, lh } = labelBox(fi, true);
+            return (
+              <span key={"gen" + fi}>
+                {styleHead(ds, fi)}
+                {typeof c === "object" ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src={c.preview || c.dream} alt={c.style} style={{ ...px(lx, ly, lw, lh), objectFit: "fill", pointerEvents: "none", animation: `nuiFadeIn 600ms ${EASE} both` }} />
+                ) : c === "fail" ? (
+                  <div style={{ ...px(lx, ly, lw, lh), background: "#ECECEA", display: "flex", alignItems: "center", justifyContent: "center", font: `12px ${HNW}`, color: "#8a887e", textAlign: "center", padding: 12, boxSizing: "border-box" }}>
+                    {t("This label couldn't be painted.")}
+                  </div>
+                ) : (
+                  <div style={{ ...px(lx, ly, lw, lh), display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                    {miniGlass("gen" + fi, fill)}
+                    <span style={{ marginTop: 8, font: `14px ${HNW}`, color: "#111", letterSpacing: 2, lineHeight: "10px" }}>
+                      {[0, 1, 2].map((dd) => <span key={dd} style={{ animation: `nuiDot 1.2s ${dd * 0.2}s infinite` }}>.</span>)}
+                    </span>
+                  </div>
+                )}
+                {cross(lx - 10, ly - 10, `gtl${fi}`)}{cross(lx + lw + 10, ly - 10, `gtr${fi}`)}
+                {cross(lx - 10, ly + lh + 10, `gbl${fi}`)}{cross(lx + lw + 10, ly + lh + 10, `gbr${fi}`)}
+                {selectCtl(OPT_FRAMES[fi].x + OPT_W / 2, SEL_CY, false, null, "gsel" + fi)}
+              </span>
+            );
+          });
+        };
         /* the saved label's own box — the red button flies it from here */
-        if (!inSlide && selected >= 0 && selSet === setIdx && dreams[selected]) {
+        if (!gen && !inSlide && selected >= 0 && selSet === setIdx && dreams[selected]) {
           const bx = labelBox(selected), d0 = viewedDream(selected);
           leaveFlight.current.options = d0 ? { src: d0.preview || d0.dream, x: bx.lx, y: bx.ly, w: bx.lw, h: bx.lh } : null;
         }
         return (<>
-          {dreams.length === 0 && OPT_FRAMES.map((_, fi) => styleHead([], fi))}
-          {setSlide && sets[setSlide.from] && setLayer(setSlide.from, "out", setSlide.dir)}
-          {dreams.length > 0 && setLayer(setIdx, setSlide ? "in" : "still", setSlide?.dir || 1)}
-          {dreams.length === 0 && OPT_FRAMES.map((fr, i) =>
+          {genLayer()}
+          {!gen && dreams.length === 0 && OPT_FRAMES.map((_, fi) => styleHead([], fi))}
+          {!gen && setSlide && sets[setSlide.from] && setLayer(setSlide.from, "out", setSlide.dir)}
+          {!gen && dreams.length > 0 && setLayer(setIdx, setSlide ? "in" : "still", setSlide?.dir || 1)}
+          {!gen && dreams.length === 0 && OPT_FRAMES.map((fr, i) =>
             notMade(fr.x, OPT_TOP, OPT_W, OPT_BOT - OPT_TOP, "front", "nmopt" + i))}
           {/* ROUND 53 #8: a bar-jump before generation shows the REAL page
               furniture, deactivated and grey */}
-          {dreams.length === 0 && OPT_FRAMES.map((fr, fi) => selectCtl(fr.x + OPT_W / 2, SEL_CY, false, null, "grey" + fi))}
+          {!gen && dreams.length === 0 && OPT_FRAMES.map((fr, fi) => selectCtl(fr.x + OPT_W / 2, SEL_CY, false, null, "grey" + fi))}
           {/* the arrows between the sets, left and right of the labels */}
-          {sets.length > 1 && setIdx > 0 && chevron("previous versions", OPT_FRAMES[0].x - 48, "13,3 5,11 13,19", setIdx - 1)}
-          {sets.length > 1 && setIdx < sets.length - 1 && chevron("next versions", OPT_FRAMES[2].x + OPT_W + 48 - 12, "5,3 13,11 5,19", setIdx + 1)}
+          {!gen && sets.length > 1 && setIdx > 0 && chevron("previous versions", OPT_FRAMES[0].x - 48, "13,3 5,11 13,19", setIdx - 1)}
+          {!gen && sets.length > 1 && setIdx < sets.length - 1 && chevron("next versions", OPT_FRAMES[2].x + OPT_W + 48 - 12, "5,3 13,11 5,19", setIdx + 1)}
           {/* 2026-09-28 (owner): NEW TRY under the middle label, where NEW
               VERSIONS stood — black while a try is waiting, white when the
               next one must be bought; the line under it says which */}
           {(() => {
             const NT = { x: OPT_FRAMES[1].x + 0.2, y: NT_Y, w: OPT_W, h: 34.3 };
             const left = vis?.admin ? Infinity : (vis?.runsLeft ?? 1);
-            const ready = dreams.length > 0 && left > 0;
+            const ready = !gen && dreams.length > 0 && left > 0;
             const who = selectedArtist();
             /* 2026-09-28 (owner #2): "1 try = 3 new labels. Tries left: N", the
                number red, a little further from the button. A message (a
                refused or failed try) takes this line's place, all red. */
-            const note = warn ? warn : !dreams.length ? "" : (<>
+            /* while a run paints: the loader's own wait note (its measured average) */
+            const waitNote = (() => {
+              let avg = 0;
+              try {
+                const s2 = (JSON.parse(localStorage.getItem("nui-gen-secs") || "[]") as number[]).filter((n) => Number.isFinite(n) && n > 0);
+                if (s2.length) avg = Math.round(s2.reduce((a, b2) => a + b2, 0) / s2.length);
+              } catch { }
+              return avg
+                ? t("Please stay on this page — preparing your labels usually takes about {N} seconds.").replace("{N}", String(avg))
+                : t("Please stay on this page — preparing your labels usually takes 15–35 seconds.");
+            })();
+            const note = warn ? warn : gen ? (tut >= 0 ? "" : waitNote) : !dreams.length ? "" : (<>
               {t("1 try = 3 new labels.")} {t("Tries left:")} <span style={{ color: BAR_RED, fontWeight: 700 }}>{vis?.admin ? "∞" : left}</span>
             </>);
             return (<>
-              {dreams.length > 0 ? (
+              {!gen && dreams.length > 0 ? (
                 <button onClick={() => newTry()}
                   style={{ ...px(NT.x, NT.y, NT.w, NT.h), cursor: "pointer", font: `700 ${BAR_FS}px ${HNW}`, letterSpacing: 0.3, background: ready ? "#111" : "#fff", color: ready ? "#fff" : "#111", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 3, transition: `background 240ms ${EASE}, color 240ms ${EASE}` }}>
                   {t("NEW TRY")}{who ? ` (${artistShort(who.name, lang)})` : ""}</button>
@@ -5175,10 +5246,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     const nx = tut + 1;
                     setTut(nx);
                     /* 2026-09-28: leaving the marketing page saves its images first */
-                    if (page === "assets") { const pg2: PageKey = nx === 1 ? "loader" : TUT_PAGES[nx]; if (pg2 === "checkout") { saveAssetsThen(() => go(pg2)); return; } }
+                    if (page === "assets") { const pg2: PageKey = TUT_PAGES[nx]; if (pg2 === "checkout") { saveAssetsThen(() => go(pg2)); return; } }
                     if (page === "options" || page === "backdesign") { const pg2: PageKey = TUT_PAGES[nx]; if (pg2 !== page) { if (page === "backdesign") setBackSaved(true); flyThen(leaveFlight.current[page], () => go(pg2)); return; } }
-                    /* round 72 #9: FRONT LABEL opens on the loader */
-                    const pg: PageKey = nx === 1 ? "loader" : TUT_PAGES[nx];
+                    /* 2026-09-30: FRONT LABEL opens on the labels page itself (its columns load there) */
+                    const pg: PageKey = TUT_PAGES[nx];
+                    /* the demo run's glasses are up before the page slides in */
+                    if (nx === 1) { setDreams([]); setGen({ cols: ["wait", "wait", "wait"], append: false, t0: Date.now() }); }
                     if (pg !== page) go(pg);
                     return;
                   }
