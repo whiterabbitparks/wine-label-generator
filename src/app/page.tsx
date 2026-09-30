@@ -15,6 +15,7 @@ import { randomDetails } from "./demo-fill";
 import { IDEAS } from "./ideas";
 import { GUIDE, type GuideStep } from "./guide";
 import { UI_GE, SVG_GE } from "./newui-i18n";
+import { GALLERY } from "./gallery-data";
 
 const W = 1440, H = 823;
 /* ROUND 106 (owner's New_Progressbar_Tutorial_Header_Footer artboards,
@@ -87,7 +88,10 @@ const ORDER = ["welcome",
   /* ROUND 112 #4 (owner's artboards): the people behind the paintings —
      an index of everyone who trained a model, and a page each. They are
      not wizard steps: no progress bar, and the red button walks back. */
-  "artists", "artist"] as const;
+  "artists", "artist",
+  /* 2026-09-30 (owner): the GALLERY — the marketing images made so far,
+     a big carousel, filtered by artist; like the artists' pages, no bar */
+  "gallery"] as const;
 /* 2026-09-28 (owner #7): NEW TRY names the selected label's artist —
    "M. Kvashilava" / „მ. კვაშილავა" (Georgian in Mtavruli on the button) */
 const ARTIST_GE: Record<string, string> = {
@@ -199,7 +203,7 @@ const CIRCLE_X = STEPS.map((s2) => s2.x);
 /* the pages whose title is drawn big (round 63) */
 const PAGE_TITLE: Partial<Record<PageKey, string>> = {
   options: "FRONT LABEL OPTIONS", backdesign: "BACK LABEL DESIGN",
-  bottle: "BOTTLE DETAILS", assets: "MARKETING ASSETS", checkout: "FINAL PACK",
+  bottle: "BOTTLE DETAILS", assets: "MARKETING ASSETS", checkout: "FINAL PACK", gallery: "GALLERY",
 };
 /* 2026-09-28 (owner): the red word riding the bar is BACK now — one step
    back (SKIP_TO is kept for reference, unused) */
@@ -228,10 +232,10 @@ const THICK: Record<PageKey, number | null> = {
   checkout: CIRCLE_X[5],                         /* round 93 #7: to the last station, not into the button */
   blank: null,                                    /* round 94 #2: takes the page it stands in for */
   more: CIRCLE_X[1],
-  artists: null, artist: null,                    /* round 112 #4: no bar on the artists' pages */
+  artists: null, artist: null, gallery: null,     /* round 112 #4: no bar on the artists' pages (nor the gallery) */
 };
 /* highest station index REACHED — that dot (and earlier ones) turn red */
-const STEP_OF: Record<PageKey, number> = { welcome: -1, taste: -1, vision: 0, loader: 0, options: 1, backdetails: 2, backdesign: 3, bottle: 4, assets: 5, checkout: 5, blank: 0, more: 1, artists: -1, artist: -1 };
+const STEP_OF: Record<PageKey, number> = { welcome: -1, taste: -1, vision: 0, loader: 0, options: 1, backdetails: 2, backdesign: 3, bottle: 4, assets: 5, checkout: 5, blank: 0, more: 1, artists: -1, artist: -1, gallery: -1 };
 
 /* ROUND 63: the bar no longer eats a white strip — every page's content
    band runs to the footer edge and the bar paints on top of it. */
@@ -244,7 +248,7 @@ const STRIP_BOUNDS: Record<PageKey, [number, number]> = {
   welcome: [360, 560], taste: [225, 515], vision: [225, 460], loader: [225, 460],
   options: [225, 543], backdetails: [225, 468],
   backdesign: [165, 540], bottle: [225, 515], assets: [165, 540], checkout: [250, 500], blank: [225, 460],
-  artists: [300, 560], artist: [330, 560], more: [225, 460],
+  artists: [300, 560], artist: [330, 560], more: [225, 460], gallery: [200, 590],
 };
 
 /* CONTENT-AWARE PARALLAX (owner round 16 #3): these pages slice by their
@@ -879,6 +883,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const [ppLoaded, setPpLoaded] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [carIdx, setCarIdx] = useState(0);
+  /* the gallery's carousel and its artist filter (none ticked = all) */
+  const [galIdx, setGalIdx] = useState(0);
+  const [galPick, setGalPick] = useState<string[]>([]);
+  const galleryFrom = useRef<PageKey | null>(null);
   /* 2026-09-27 (owner): the Final Pack always opens on the front label —
      then the back label, the bottles, the marketing images, the page */
   useEffect(() => { if (page === "checkout") setCarIdx(0); }, [page]);
@@ -1481,6 +1489,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   /* 2026-09-23 (owner: "in the middle of the tutorial, 8K took me home
      but the bar still said Front Label Details"): the header's links, like
      the browser's Back (round 108 #21), stop the story before they go */
+  /* the gallery turns with the keyboard's arrows too */
+  useEffect(() => {
+    if (page !== "gallery") return;
+    const k = (e: KeyboardEvent) => { if (e.key === "ArrowRight") setGalIdx((i) => i + 1); else if (e.key === "ArrowLeft") setGalIdx((i) => i - 1); };
+    window.addEventListener("keydown", k);
+    return () => window.removeEventListener("keydown", k);
+  }, [page]);
+  const openGallery = () => { if (tutRef.current >= 0) stopTutRef.current(); if (page !== "gallery") galleryFrom.current = pageNow.current; setGalIdx(0); go("gallery"); };
   const openArtists = () => { if (tutRef.current >= 0) stopTutRef.current(); if (page !== "artists" && page !== "artist") artistsFrom.current = pageNow.current; go("artists"); };
   const wheelCanvas = useRef<HTMLCanvasElement | null>(null);
 
@@ -3148,6 +3164,69 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
          portraits with the names under them — a slot the platform has
          not filled yet is an empty grey disc. Press one and that
          artist's own page opens. */
+      case "gallery": {
+        /* 2026-09-30 (owner): GALLERY — the title on the page margin; under
+           it, where the pages keep their italic note, the artists to show
+           (none ticked = all; tick one or several); then ONE big carousel
+           between the header and the footer, in the Final Pack's manner —
+           the current image big and sharp in the middle, its neighbours
+           smaller, pale and blurred to each side, sliding round as on a
+           ring — the chevrons on the page margins. */
+        const L = 137.14, R = 1302.86, TOP = 212, SIZE = 470, MID = TOP + SIZE / 2;   /* under the filter row (183); the caption clear of the footer rule */
+        const names = [...new Set(GALLERY.map((g) => g.artist).filter(Boolean))].sort((a2, b2) => a2.localeCompare(b2));
+        const items = GALLERY.filter((g) => !galPick.length || galPick.includes(g.artist));
+        const n = items.length;
+        const cur = n ? ((galIdx % n) + n) % n : 0;
+        const nameOf = (nm: string) => (lang === "ge" ? ARTIST_GE[nm] || nm : nm);
+        const toggle = (nm: string | null) => { setGalIdx(0); setGalPick((p2) => (nm === null ? [] : p2.includes(nm) ? p2.filter((x) => x !== nm) : [...p2, nm])); };
+        const ring = (on: boolean) => (
+          <svg width="13" height="13" viewBox="0 0 13 13" style={{ flex: "none", position: "relative", top: 1.5 }}>
+            <circle cx="6.5" cy="6.5" r="5.9" fill="none" stroke="#111" strokeWidth="1.2" />
+            {on && <circle cx="6.5" cy="6.5" r="3.3" fill="#111" />}
+          </svg>
+        );
+        const chip = (label: string, on: boolean, onClick: () => void, key: string) => (
+          <button key={key} onClick={onClick} style={{ ...ghost, pointerEvents: "auto", display: "flex", alignItems: "center", columnGap: 7, font: `${on ? 700 : 400} 14px/14px ${HNW}`, color: "#111", whiteSpace: "nowrap", textTransform: "none", cursor: "pointer" }}>
+            {ring(on)}{label}
+          </button>
+        );
+        const cap = items[cur];
+        return (<>
+          <div style={{ ...px(L, baseTop(183, 14) - 3, R - L, 20), display: "flex", alignItems: "center", columnGap: 24, flexWrap: "nowrap" }}>
+            {chip(t("All"), !galPick.length, () => toggle(null), "gal-all")}
+            {names.map((nm) => chip(nameOf(nm), galPick.includes(nm), () => toggle(nm), "gal-" + nm))}
+          </div>
+          <div style={{ ...px(L + 30, TOP - 10, R - L - 60, SIZE + 20), overflow: "hidden" }}>
+            {items.map((g, i) => {
+              let rel = n ? ((i - cur) % n + n) % n : 0;
+              if (rel > n / 2) rel -= n;
+              if (Math.abs(rel) > 2) return null;
+              const ar = Math.abs(rel);
+              const scale = ar === 0 ? 1 : ar === 1 ? 0.62 : 0.4;
+              const dx = rel === 0 ? 0 : Math.sign(rel) * (ar === 1 ? 420 : 600);
+              return (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img key={g.src} src={g.src} alt={g.wine} onClick={ar ? () => setGalIdx(i) : undefined}
+                  style={{ position: "absolute", left: (R - L - 60) / 2 - SIZE / 2, top: 10, width: SIZE, height: SIZE, objectFit: "cover", zIndex: 10 - ar,
+                    transform: `translate(${dx}px, 0) scale(${scale})`, filter: ar ? `blur(${ar === 1 ? 2.5 : 4}px)` : "none", opacity: ar === 0 ? 1 : ar === 1 ? 0.55 : 0.28,
+                    transition: `transform 520ms ${EASE}, filter 520ms ${EASE}, opacity 520ms ${EASE}`, cursor: ar ? "pointer" : undefined }} />
+              );
+            })}
+          </div>
+          {n > 1 && ([["previous image", L - 3.33, "13,3 5,11 13,19", -1], ["next image", R - 12 + 3.33, "5,3 13,11 5,19", 1]] as const).map(([lab, x, pts, d]) => (
+            <button key={lab} aria-label={lab} onClick={() => setGalIdx(cur + d)}
+              style={{ ...px(x - 16, MID - 22, 44, 44), ...ghost, pointerEvents: "auto", zIndex: 12, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+              <svg viewBox="0 0 18 22" width="12" height="16"><polyline points={pts} fill="none" stroke="#111" strokeWidth="1.6" /></svg>
+            </button>
+          ))}
+          {cap && (
+            <span key={"gcap" + cap.src} style={{ ...px(L, baseTop(TOP + SIZE + 22, 13), R - L, 16), font: `13px ${HNW}`, lineHeight: "13px", color: "#111", textAlign: "center", display: "block", whiteSpace: "nowrap", animation: `nuiFadeIn 400ms ${EASE} both` }}>
+              {cap.artist ? (<>{t("Style By:")} <b>{nameOf(cap.artist)}</b> · </>) : null}{cap.wine}
+              <span style={{ color: "#8a887e" }}>{`   ${cur + 1} / ${n}`}</span>
+            </span>
+          )}
+        </>);
+      }
       case "artists": {
         const R = 68.57, CX0 = 205.71, DX = 205.71, CY0 = 342.86, DY = 240, NAME_B = 445.51;
         const slots = 12;
@@ -4828,7 +4907,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const step = vt >= 0 ? vt : STEP_OF[barPage];
   const tutX = vt < 0 ? null : vt < STEPS.length ? STEPS[vt].x : NEXT_X;
   const thick = vt >= 0 ? (vt < STEPS.length ? STEPS[vt].x : CIRCLE_X[CIRCLE_X.length - 1]) : THICK[barPage];
-  const onArtists = page === "artists" || page === "artist";
+  const onArtists = page === "artists" || page === "artist" || page === "gallery";
   nudgeOk.current = (vt >= 0 && (tutIdle || vt >= tutLast)) || page === "checkout";
   const bandBottom = BAND_BOTTOM[page];
   /* ROUND 108 #20 (owner): NOTHING ever slides over the header, the rules
@@ -5089,6 +5168,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               <button onClick={openArtists}
                 style={{ ...ghost, font: `700 13px ${HNW}`, color: page === "artists" || page === "artist" ? BAR_RED : INK, whiteSpace: "nowrap", textTransform: "uppercase", pointerEvents: "auto" }}>{t("About artists")}</button>
               <span style={{ font: `700 13px ${HNW}`, color: INK, whiteSpace: "nowrap", textTransform: "uppercase", pointerEvents: "auto" }}>{t("Contact")}</span>
+              {/* 2026-09-30 (owner): GALLERY, before guided mode */}
+              <button onClick={openGallery}
+                style={{ ...ghost, font: `700 13px ${HNW}`, color: page === "gallery" ? BAR_RED : INK, whiteSpace: "nowrap", textTransform: "uppercase", pointerEvents: "auto" }}>{t("Gallery")}</button>
               {/* 2026-09-28 (owner): GUIDED MODE — the walk-through's notes, on or
                   off, beside the language. The footer's switch, grey when off
                   (outline and dot); on: a black outline and our red dot */}
@@ -5265,6 +5347,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                      the visitor pressed ARTISTS */
                   if (page === "artist") { go("artists", -1); return; }
                   if (page === "artists") { go(artistsFrom.current || "welcome", -1); return; }
+                  if (page === "gallery") { go(galleryFrom.current || "welcome", -1); return; }
                   if (page === "welcome") {
                     /* round 72 #3 (owner, TEMP while we test): EVERY arrival
                        gets the walkthrough, refresh included. Later this

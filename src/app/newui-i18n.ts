@@ -17,6 +17,7 @@ export const SVG_GE: Record<string, string> = {
   /* chrome (baked copies under the static bar) */
   "About Us": "ჩვენ შესახებ",
   "Gallery": "გალერეა",
+  "All": "ყველა",
   "Contact": "კონტაქტი",
   "Front Label": "წინა ეტიკეტი",
   "Check out": "შეკვეთა",
@@ -59,6 +60,7 @@ export const SVG_GE: Record<string, string> = {
   "Volume:": "მოცულობა:",
   /* options */
   "FRONT LABEL OPTIONS": "ᲬᲘᲜᲐ ᲔᲢᲘᲙᲔᲢᲘᲡ ᲕᲐᲠᲘᲐᲜᲢᲔᲑᲘ",
+  "GALLERY": "ᲒᲐᲚᲔᲠᲔᲐ",
   "Traditional": "ტრადიციული",
   "Contemporary": "თანამედროვე",
   "Punk": "პანკი",
