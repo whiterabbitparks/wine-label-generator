@@ -3742,7 +3742,23 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           const bx = labelBox(selected), d0 = viewedDream(selected);
           leaveFlight.current.options = d0 ? { src: d0.preview || d0.dream, x: bx.lx, y: bx.ly, w: bx.lw, h: bx.lh } : null;
         }
+        /* while a run paints: the loader's own wait note (its measured
+           average), under the page title as the pages' italic notes stand
+           (owner, 2026-09-30) — not in the walkthrough, where it would lie */
+        const waitNote = (() => {
+          let avg = 0;
+          try {
+            const s2 = (JSON.parse(localStorage.getItem("nui-gen-secs") || "[]") as number[]).filter((n) => Number.isFinite(n) && n > 0);
+            if (s2.length) avg = Math.round(s2.reduce((a, b2) => a + b2, 0) / s2.length);
+          } catch { }
+          return avg
+            ? t("Please stay on this page — preparing your labels usually takes about {N} seconds.").replace("{N}", String(avg))
+            : t("Please stay on this page — preparing your labels usually takes 15–35 seconds.");
+        })();
         return (<>
+          {gen && tut < 0 && (
+            <span style={{ ...px(137.14, baseTop(183, 14), 1000, 18), font: `italic 14px ${HNW}`, lineHeight: "18px", color: "#111", whiteSpace: "nowrap", animation: `nuiFadeIn 400ms ${EASE} both` }}>{waitNote}</span>
+          )}
           {genLayer()}
           {!gen && dreams.length === 0 && OPT_FRAMES.map((_, fi) => styleHead([], fi))}
           {!gen && setSlide && sets[setSlide.from] && setLayer(setSlide.from, "out", setSlide.dir)}
@@ -3766,18 +3782,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             /* 2026-09-28 (owner #2): "1 try = 3 new labels. Tries left: N", the
                number red, a little further from the button. A message (a
                refused or failed try) takes this line's place, all red. */
-            /* while a run paints: the loader's own wait note (its measured average) */
-            const waitNote = (() => {
-              let avg = 0;
-              try {
-                const s2 = (JSON.parse(localStorage.getItem("nui-gen-secs") || "[]") as number[]).filter((n) => Number.isFinite(n) && n > 0);
-                if (s2.length) avg = Math.round(s2.reduce((a, b2) => a + b2, 0) / s2.length);
-              } catch { }
-              return avg
-                ? t("Please stay on this page — preparing your labels usually takes about {N} seconds.").replace("{N}", String(avg))
-                : t("Please stay on this page — preparing your labels usually takes 15–35 seconds.");
-            })();
-            const note = warn ? warn : gen ? (tut >= 0 ? "" : waitNote) : !dreams.length ? "" : (<>
+            const note = warn ? warn : gen ? "" : !dreams.length ? "" : (<>
               {t("1 try = 3 new labels.")} {t("Tries left:")} <span style={{ color: BAR_RED, fontWeight: 700 }}>{vis?.admin ? "∞" : left}</span>
             </>);
             return (<>

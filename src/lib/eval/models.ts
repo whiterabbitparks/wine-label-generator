@@ -35,7 +35,10 @@ import { readArtist, listArtists, artistRefs, nextRefSet, artistCharter, isActiv
 export const REPAINT_STRENGTH = 0.7;
 export const UNLOCKED_STRENGTH = 0.53;
 const LOCK = { scale: 0.6, end: 0.5 };
-const LOCK_WAIT_MS = 60000;
+/* 2026-09-30 (owner: "switch off the rule that paints differently after 60 s
+   — the story sometimes runs away, I think that's why"): the locked painter
+   is given three minutes and never handed over to the unlocked one */
+const LOCK_WAIT_MS = 180000;
 const LOCK_ENDPOINT = "fal-ai/flux-general/image-to-image";
 const LOCK_NET = "InstantX/FLUX.1-dev-Controlnet-Union";
 
@@ -330,7 +333,10 @@ export async function repaintInHand(model: EvalModel, story: string, ap: Artwork
   const [what, depthUrl] = locked
     ? await Promise.all([
       ap.abstract ? Promise.resolve("") : captionOf(story),
-      falPost("fal-ai/image-preprocessors/depth-anything/v2", { image_url: url }, 60000).then(firstUrl).catch(() => ""),
+      (async () => {
+        for (let k = 0; k < 2; k++) { const d = await falPost("fal-ai/image-preprocessors/depth-anything/v2", { image_url: url }, 60000).then(firstUrl).catch(() => ""); if (d) return d; }
+        return "";
+      })(),
     ])
     : ["", ""];
   const prompt = `${model.lora.trigger} style. ${ap.abstract
@@ -343,19 +349,25 @@ export async function repaintInHand(model: EvalModel, story: string, ap: Artwork
       : "Paint right to every edge — no empty paper, no margin, no border.")
     : `Keep the plain, empty ${ap.around || "paper"} around the drawing.`}${what ? " No text, no letters, no border." : ""}`.slice(0, 1900);
   let out: Record<string, unknown> | null = null;
+  if (locked && !depthUrl) throw new Error("the sketch's depth map could not be made");
   if (locked && depthUrl) {
-    try {
-      /* a cold painter can take two minutes to wake. 2026-09-28 (owner): after
-         60 s the label is finished by the fast unlocked painter instead —
-         nobody waits two minutes (the warm-up below makes this rare) */
-      out = await falPost(LOCK_ENDPOINT, {
-        prompt, image_url: url, strength, num_inference_steps: 28, guidance_scale: 3.5, output_format: "png",
-        loras: [{ path: model.lora.url, scale: LORA_SCALE }],
-        controlnet_unions: [{ path: LOCK_NET, controls: [{ control_image_url: depthUrl, control_mode: "depth", conditioning_scale: LOCK.scale, end_percentage: LOCK.end }] }],
-      }, LOCK_WAIT_MS);
-    } catch (e) {
-      console.warn(`[painter] ${model.id}: locked repaint failed (${e instanceof Error ? e.message : e}) — unlocked ${UNLOCKED_STRENGTH}`);
+    /* a cold painter can take two minutes to wake — it is waited for (up
+       to three), and a real error (not a timeout) is tried once more; the
+       unlocked painter no longer takes over (2026-09-30, owner) */
+    for (let k = 0; k < 2 && !(out && firstUrl(out)); k++) {
+      try {
+        out = await falPost(LOCK_ENDPOINT, {
+          prompt, image_url: url, strength, num_inference_steps: 28, guidance_scale: 3.5, output_format: "png",
+          loras: [{ path: model.lora.url, scale: LORA_SCALE }],
+          controlnet_unions: [{ path: LOCK_NET, controls: [{ control_image_url: depthUrl, control_mode: "depth", conditioning_scale: LOCK.scale, end_percentage: LOCK.end }] }],
+        }, LOCK_WAIT_MS);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        console.warn(`[painter] ${model.id}: locked repaint failed (${msg})${k === 0 && !/abort|timeout/i.test(msg) ? " — trying again" : ""}`);
+        if (/abort|timeout/i.test(msg)) break;
+      }
     }
+    if (!out || !firstUrl(out)) throw new Error("the locked painter did not finish");
   }
   if (!out || !firstUrl(out)) {
     out = await falPost("fal-ai/flux-lora/image-to-image", {
