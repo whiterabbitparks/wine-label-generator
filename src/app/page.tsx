@@ -1500,6 +1500,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const [tasteCur, setTasteCur] = useState(0);
   const [tasteSpin, setTasteSpin] = useState(0);
   const tasteRolling = useRef(false);
+  const tasteLanded = useRef<Set<string>>(new Set());   /* the dice never stop twice on one horse (until all have come up) */
   /* a picked horse flies from the middle to its slot (and back), as the
      saved labels fly to the folder: where it flew from, by key */
   const tasteFly = useRef<Record<string, { x: number; y: number; w: number; h: number }>>({});
@@ -3252,7 +3253,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img key={g.src} src={g.src} alt={g.wine} onClick={ar ? () => setGalIdx(i) : undefined}
                   style={{ position: "absolute", left: (R - L - 60) / 2 - SIZE / 2, top: 10, width: SIZE, height: SIZE, objectFit: "cover", zIndex: 10 - ar,
-                    transform: `translate(${dx}px, 0) scale(${scale})`, filter: ar ? `blur(${ar === 1 ? 2.5 : 4}px)` : "none", opacity: ar === 0 ? 1 : ar === 1 ? 0.55 : 0.28,
+                    transform: `translate(${dx}px, 0) scale(${scale})`, filter: ar ? `blur(${ar === 1 ? 4 : 7}px)` : "none", opacity: ar === 0 ? 1 : ar === 1 ? 0.55 : 0.28,
                     transition: `transform 520ms ${EASE}, filter 520ms ${EASE}, opacity 520ms ${EASE}`, cursor: ar ? "pointer" : undefined }} />
               );
             })}
@@ -3337,13 +3338,17 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         const n = ring.length;
         const cur = n ? ((tasteCur % n) + n) % n : 0;
         const L = 137.14, R = 1302.86, CX = W / 2;
-        const CW = 375, CH = 250, TOP = 172, MIDY = TOP + CH / 2;
-        const centre = { x: CX - CW / 2, y: TOP, w: CW, h: CH };
-        const SEL_BASE = TOP + CH + 30;
-        const DICE = { y: SEL_BASE + 18, h: 34.3, w: 210 };
-        const SW = 165, SH = 110, GAP = 30, SY = DICE.y + DICE.h + 26;
+        /* 2026-09-30 (owner, later): the picks' row low (its foot a little
+           under where the "select 3" line stood), 20 % smaller; Select and
+           the (black) dice button above it at the same distance as before;
+           the carousel — horses a third bigger, drawn closer together —
+           centred in the room between the title and Select */
+        const SW = 132, SH = 88, GAP = 24, SY = 612;
         const slot = (i: number) => ({ x: CX - (need * SW + (need - 1) * GAP) / 2 + i * (SW + GAP), y: SY, w: SW, h: SH });
-        const MSG_BASE = (SY + SH + PROG_Y - NEXT_R) / 2 + 4;
+        const DICE = { y: SY - 26 - 34.3, h: 34.3, w: 210 };
+        const SEL_BASE = DICE.y - 26;
+        const CW = 495, CH = 330, MIDY = (149.08 + SEL_BASE - 15 * 0.72) / 2, TOP = MIDY - CH / 2;
+        const centre = { x: CX - CW / 2, y: TOP, w: CW, h: CH };
         const flyInto = (el: HTMLElement, from: { x: number; y: number; w: number; h: number }, to: { x: number; y: number; w: number; h: number }, ms = 640) => {
           el.animate([{ transform: `translate(${from.x - to.x}px, ${from.y - to.y}px) scale(${from.w / to.w})`, transformOrigin: "0 0" }, { transform: "translate(0, 0) scale(1)", transformOrigin: "0 0" }], { duration: ms, easing: EASE });
         };
@@ -3370,9 +3375,17 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           if (tasteRolling.current || n < 2) return;
           tasteRolling.current = true;
           setTasteWarn(false);
-          const N = 18 + Math.floor(Math.random() * n);
+          /* a horse it has not stopped on yet (the round starts again when all have) */
+          let pool = ring.filter((id, i) => i !== cur && !tasteLanded.current.has(id));
+          if (!pool.length) { tasteLanded.current = new Set(); pool = ring.filter((_, i) => i !== cur); }
+          const target = pool[Math.floor(Math.random() * pool.length)];
+          tasteLanded.current.add(target);
+          const k = ((cur - ring.indexOf(target)) % n + n) % n;
+          const N = k < 7 ? k + n : k;
+          const raw = Array.from({ length: N }, (_, i) => 85 + 520 * Math.pow(1 - Math.sin(Math.PI * (i + 0.5) / N), 2));
+          const scale = 1250 / raw.reduce((a, b2) => a + b2, 0);
           for (let i = 0; i < N; i++) {
-            const tt = (i + 0.5) / N, ms = Math.round(85 + 520 * Math.pow(1 - Math.sin(Math.PI * tt), 2));
+            const ms = Math.max(28, Math.round(raw[i] * scale));
             setTasteSpin(i === N - 1 ? ms * 1.6 : -ms);   /* the last step settles, eased out */
             setTasteCur((c) => c - 1);
             await sleep(i === N - 1 ? ms * 1.6 : ms);
@@ -3387,7 +3400,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           const a = byId.get(id)!;
           const ar = Math.abs(rel);
           const scale = ar === 0 ? 1 : ar === 1 ? 0.62 : ar === 2 ? 0.4 : 0.26;
-          const dx = rel === 0 ? 0 : Math.sign(rel) * (ar === 1 ? 320 : ar === 2 ? 480 : 575);
+          const dx = rel === 0 ? 0 : Math.sign(rel) * (ar === 1 ? 372 : ar === 2 ? 470 : 560);
           /* while spinning each step glides linearly; the last one settles */
           const ms = tasteSpin ? Math.abs(tasteSpin) : 520, ease = tasteSpin < 0 ? "linear" : tasteSpin > 0 ? "cubic-bezier(0.22, 1, 0.36, 1)" : EASE;
           return (
@@ -3396,7 +3409,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               ref={(el) => { const f = tasteFly.current["ring:" + id]; if (el && f) { delete tasteFly.current["ring:" + id]; flyInto(el, { ...f, x: f.x - L + 0, y: f.y - TOP }, { x: centre.x - L, y: 0, w: CW, h: CH }); } }}
               onClick={() => { if (tasteRolling.current) return; if (ar === 0) pickMid(); else setTasteCur(i); }}
               style={{ position: "absolute", left: centre.x - L, top: 0, width: CW, height: CH, objectFit: "contain", zIndex: 10 - ar,
-                transform: `translate(${dx}px, 0) scale(${scale})`, filter: ar ? `blur(${ar === 1 ? 2 : 3.5}px)` : "none", opacity: ar === 0 ? 1 : ar === 1 ? 0.55 : ar === 2 ? 0.28 : 0,
+                transform: `translate(${dx}px, 0) scale(${scale})`, filter: ar ? `blur(${ar === 1 ? 4 : 7}px)` : "none", opacity: ar === 0 ? 1 : ar === 1 ? 0.55 : ar === 2 ? 0.28 : 0,
                 transition: `transform ${ms}ms ${ease}, filter ${ms}ms ${ease}, opacity ${ms}ms ${ease}`, cursor: "pointer", userSelect: "none" }} />
           );
         });
@@ -3404,17 +3417,16 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           {/* centred across the page (owner, 2026-09-29) */}
           <span style={{ ...px(0, baseTop(149.08, 19), W, 22), font: `700 19px ${HNW}`, lineHeight: "19px", color: INK, whiteSpace: "nowrap", textAlign: "center", display: "block" }}>{t("BEFORE WE START, SELECT 3 HORSES YOU LIKE.")}</span>
           <div style={{ ...px(L, TOP, R - L, CH), overflow: "hidden" }}>{items}</div>
-          {n > 1 && carArrow("previous horse", -1, L - ARROW_OUT, MIDY, () => { if (!tasteRolling.current) setTasteCur(cur - 1); })}
-          {n > 1 && carArrow("next horse", 1, R + ARROW_OUT, MIDY, () => { if (!tasteRolling.current) setTasteCur(cur + 1); })}
-          {/* ○ Select — and how many of three are chosen */}
-          <button onClick={pickMid} disabled={pickArtists.length >= need} aria-label="select the horse in the middle"
-            style={{ ...px(CX - 60, SEL_BASE - 20, 120, 29), ...ghost, pointerEvents: "auto", cursor: pickArtists.length >= need ? "default" : "pointer", textTransform: "none", opacity: pickArtists.length >= need ? 0.35 : 1, transition: `opacity 240ms ${EASE}` }}>
-            <span style={{ position: "absolute", left: 6, top: 5.5 }}>{ringSvg(18, false, { stroke: 2, dot: 7.5 })}</span>
-            <span style={{ position: "absolute", left: 33, top: baseTop(SEL_BASE, 15) - (SEL_BASE - 20), font: `700 15px/15px ${HNW}`, color: INK, whiteSpace: "nowrap" }}>
-              {t("Select")} <span style={{ fontWeight: 400, color: "#8a887e" }}>{pickArtists.length}/{need}</span></span>
-          </button>
+          {/* the arrows' tips on the margins */}
+          {n > 1 && carArrow("previous horse", -1, L, MIDY, () => { if (!tasteRolling.current) setTasteCur(cur - 1); })}
+          {n > 1 && carArrow("next horse", 1, R, MIDY, () => { if (!tasteRolling.current) setTasteCur(cur + 1); })}
+          {/* the site's own Select (the labels page's ring and word) + how many of three */}
+          <span style={{ opacity: pickArtists.length >= need ? 0.35 : 1, transition: `opacity 240ms ${EASE}` }}>
+            {selectCtl(CX - 14, SEL_BASE - 5.2, false, pickArtists.length >= need ? null : pickMid, "tasteSel")}
+            <span style={{ ...px(CX - 14 + (18 + 10 + t("Select").length * 7.4) / 2 + 6, baseTop(SEL_BASE, 15), 40, 18), font: `15px/15px ${HNW}`, color: "#8a887e", whiteSpace: "nowrap" }}>{pickArtists.length}/{need}</span>
+          </span>
           {/* Roll the dice — the roulette */}
-          <button onClick={roll} style={{ ...px(CX - DICE.w / 2, DICE.y, DICE.w, DICE.h), cursor: "pointer", font: `700 ${BAR_FS}px ${HNW}`, letterSpacing: 0.3, background: "#fff", color: "#111", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 3, textTransform: "uppercase", pointerEvents: "auto" }}>
+          <button onClick={roll} style={{ ...px(CX - DICE.w / 2, DICE.y, DICE.w, DICE.h), cursor: "pointer", font: `700 ${BAR_FS}px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 3, textTransform: "uppercase", pointerEvents: "auto" }}>
             {t("Roll the dice")}</button>
           {/* the chosen ones, in a row, centred */}
           {Array.from({ length: need }, (_, i) => {
@@ -3438,10 +3450,6 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               <span key={"tse" + i} style={{ ...px(sl.x, sl.y, sl.w, sl.h), border: "1px dashed #C9C7BF", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", font: `13px ${HNW}`, color: "#C9C7BF" }}>{i + 1}</span>
             );
           })}
-          {pickArtists.length < need && (
-            <span style={{ ...px(L, baseTop(MSG_BASE, 13), R - L, 16), font: `13px ${HNW}`, lineHeight: "13px", color: tasteWarn ? BAR_RED : "#6b6a60", textAlign: "center", display: "block" }}>
-              {need > 1 ? t("Select 3 horses to continue.") : t("Select a horse to continue.")}</span>
-          )}
         </>);
       }
 
@@ -4949,7 +4957,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               return (
                 <div key={"car" + i} onClick={ar ? () => setCarIdx(i) : undefined}
                   style={{ position: "absolute", left: cx0 - CAR.w / 2, top: cy0, width: CAR.w, height: CAR.h, zIndex: 10 - ar,
-                    transform: `translate(${dx}px, ${dy}px) scale(${scale})`, filter: ar ? `blur(${ar === 1 ? 2.5 : 4}px)` : "none", opacity: ar === 0 ? 1 : ar === 1 ? 0.55 : 0.28,
+                    transform: `translate(${dx}px, ${dy}px) scale(${scale})`, filter: ar ? `blur(${ar === 1 ? 4 : 7}px)` : "none", opacity: ar === 0 ? 1 : ar === 1 ? 0.55 : 0.28,
                     transition: `transform 520ms ${EASE}, filter 520ms ${EASE}, opacity 520ms ${EASE}`, cursor: ar ? "pointer" : undefined }}>
                   {inner}
                 </div>
