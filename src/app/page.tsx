@@ -555,16 +555,11 @@ export default function NewUI() {
   const [prev, setPrev] = useState<PageKey | null>(null);
   /* 2026-09-23 (owner): the home page slides in on first open too, its
      groups in their cascade — as if arriving from another page */
-  const [intro, setIntro] = useState(true);
   /* 2026-09-30 (owner: "the cover's pictures load, vanish and come back —
      it flickers"): the cover waits until every one of its pictures is
      loaded AND decoded, and only then slides in (at most 2.5 s) */
   const [coverReady, setCoverReady] = useState(false);
-  useEffect(() => {
-    if (!coverReady) return;
-    const id = setTimeout(() => setIntro(false), SLIDE_MS + maxSliceDelay("welcome") + 60);
-    return () => clearTimeout(id);
-  }, [coverReady]);
+
   /* ENG/GEO (owner 2026-09-07): every live text goes through t() */
   const [lang, setLang] = useState<"en" | "ge">("en");
   useEffect(() => { try { const l = localStorage.getItem("nui-lang"); if (l === "ge") setLang("ge"); } catch { } }, []);
@@ -5188,7 +5183,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 {prev && (prev === "loader" ? faded(prev, "nuiFadeOut") : slices(prev, false))}
                 {prev
                   ? (page === "loader" ? faded(page, "nuiFadeIn", SLIDE_MS + maxSliceDelay(prev)) : slices(page, true))
-                  : intro && page === "welcome" ? (coverReady ? slices(page, true) : null)
+                  /* 2026-09-30 (owner: "the cover still flickers"): the home page
+                     STAYS in its slide layers once they have landed — it used to be
+                     swapped for a static copy when the intro ended, and every
+                     picture was made anew (a blank frame in Safari). Same keys, same
+                     slot: nothing is re-created, the finished animation just rests. */
+                  : page === "welcome" ? (coverReady ? slices(page, true) : null)
                   : <div style={{ position: "absolute", left: 0, top: pageTop, width: W, height: H }}>{pageSpace(page, false)}</div>}
               </div>
             );
