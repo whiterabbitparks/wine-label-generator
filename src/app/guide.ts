@@ -66,16 +66,16 @@ const PRESS_SELECT = { en: "“Select”", ge: "„აირჩიე“" };
 export const GUIDE: GuideStep[] = [
   /* ── the taste page (2026-09-28) ── */
   { page: "taste", at: { x: 420, y: 132, w: 600, h: 22 }, side: "right",
-    en: "Pick the three horses you like most — don't overthink it. The artists who painted them will paint your labels.",
-    ge: "აირჩიე სამი ცხენი, რომელიც ყველაზე მეტად მოგწონს — ბევრს ნუ იფიქრებ. ვინც ისინი დახატა, ის არტისტები დახატავენ შენს ეტიკეტებს.", done: "taste", press: { en: "“Select”", ge: "„აირჩიე“" } },
+    en: "Pick the three horses you like most — don't overthink it. Your labels will be inspired by the artists behind them.",
+    ge: "აირჩიე სამი ცხენი, რომელიც ყველაზე მეტად მოგწონს — ბევრს ნუ იფიქრებ. შენი ეტიკეტები მათ უკან მდგომი არტისტების ინსპირაციით დაიხატება.", done: "taste", press: { en: "“Select”", ge: "„აირჩიე“" } },
   { page: "taste", at: RED, side: "above",
     en: "Press the red button to go on.",
     ge: "გასაგრძელებლად დააჭირე წითელ ღილაკს.", done: "page:vision", press: PRESS_RED },
   /* ── front label details ── */
   { page: "vision", at: { x: 136, y: 342, w: 551, h: 207 }, side: "below",
     /* 2026-09-26 (owner): an empty box is a choice too — an abstraction */
-    en: "If you know what you want painted on your label, describe it in simple words. Or press “Give me an idea” — and if you leave the box empty, the artist paints an abstraction in their own style.",
-    ge: "თუ იცი რა გინდა ეხატოს ეტიკეტზე, აღწერე მარტივი სიტყვებით. ან დააჭირე „მომეცი იდეა“-ს და თუ ველს ცარიელს დატოვებ, არტისტი თავის სტილში აბსტრაქციას დახატავს." },
+    en: "If you know what you want painted on your label, describe it in simple words. Or press “Give me an idea” — and if you leave the box empty, we paint an abstraction inspired by the artist's style.",
+    ge: "თუ იცი რა გინდა ეხატოს ეტიკეტზე, აღწერე მარტივი სიტყვებით. ან დააჭირე „მომეცი იდეა“-ს და თუ ველს ცარიელს დატოვებ, არტისტის სტილის ინსპირაციით აბსტრაქციას დავხატავთ." },
   { page: "vision", at: { x: 137, y: 275, w: 241, h: 34 }, side: "above",
     en: "Optional: upload a sketch or a photo to show what you mean.",
     ge: "სურვილისამებრ: ატვირთე ესკიზი ან ფოტო, რომ აჩვენო რა გინდა." },
@@ -96,12 +96,12 @@ export const GUIDE: GuideStep[] = [
   /* 2026-09-30: the painting happens ON the labels page now — each column
      its own glass; the note waits there until the three have landed */
   { page: "options", at: { x: 137, y: 290, w: 1166, h: 250 }, side: "above",
-    en: "Three artists are painting right now — each label appears as soon as it's ready.",
-    ge: "სამი არტისტი ახლა ხატავს — ყოველი ეტიკეტი გამოჩნდება, როგორც კი მზად იქნება.", done: "painted", wait: true },
+    en: "Your three labels are being painted right now, each inspired by a different artist — each appears as soon as it's ready.",
+    ge: "შენი სამი ეტიკეტი ახლა იხატება, თითო სხვადასხვა არტისტის ინსპირაციით — ყოველი გამოჩნდება, როგორც კი მზად იქნება.", done: "painted", wait: true },
   /* ── front label ── */
   { page: "options", at: { x: 137, y: 200, w: 1166, h: 340 }, side: "above",
-    en: "Three designs, each in a different artist's style. Click a label to see it big, and if you like one, select it.",
-    ge: "სამი დიზაინი, თითო სხვადასხვა არტისტის სტილში. დააჭირე ეტიკეტს, რომ დიდად ნახო და თუ რომელიმე მოგეწონა, აირჩიე." },
+    en: "Three designs, each inspired by a different artist. Click a label to see it big, and if you like one, select it.",
+    ge: "სამი დიზაინი, თითო სხვადასხვა არტისტის ინსპირაციით. დააჭირე ეტიკეტს, რომ დიდად ნახო და თუ რომელიმე მოგეწონა, აირჩიე." },
   /* the Select row sits halfway between a 110×80 label's foot (539.4) and
      NEW TRY (647.39) — 593.4 (2026-09-28) */
   { page: "options", at: { x: 137, y: 593.4 - 17, w: 1166, h: 34 }, side: "below",

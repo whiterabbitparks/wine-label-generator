@@ -878,12 +878,16 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
      a different one on each load. Picked in the browser before the first
      paint (the server draws the first), never the last one shown. */
   const [cover, setCover] = useState<CoverProject | null>(null);
+  /* 2026-09-30 (owner): every cover is shown once before any comes round
+     again — the round's shown ones are kept (nui-cover-seen); a new round
+     never opens on the one just shown */
   useLayoutEffect(() => {
-    let last = "";
-    try { last = localStorage.getItem("nui-cover") || ""; } catch { }
-    const pool = COVERS.filter((c) => c.slug !== last);
+    let last = "", seen: string[] = [];
+    try { last = localStorage.getItem("nui-cover") || ""; seen = JSON.parse(localStorage.getItem("nui-cover-seen") || "[]"); } catch { }
+    let pool = COVERS.filter((c) => !seen.includes(c.slug));
+    if (!pool.length) { seen = []; pool = COVERS.filter((c) => c.slug !== last); }
     const pick = pool[Math.floor(Math.random() * pool.length)] || COVERS[0];
-    try { localStorage.setItem("nui-cover", pick.slug); } catch { }
+    try { localStorage.setItem("nui-cover", pick.slug); localStorage.setItem("nui-cover-seen", JSON.stringify([...seen, pick.slug])); } catch { }
     setCover(pick);
   }, []);
   const CP = cover || COVERS[0];
@@ -3229,7 +3233,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           ))}
           {cap && (
             <span key={"gcap" + cap.src} style={{ ...px(L, baseTop(TOP + SIZE + 22, 13), R - L, 16), font: `13px ${HNW}`, lineHeight: "13px", color: "#111", textAlign: "center", display: "block", whiteSpace: "nowrap", animation: `nuiFadeIn 400ms ${EASE} both` }}>
-              {cap.artist ? (<>{t("Style By:")} <b>{nameOf(cap.artist)}</b> · </>) : null}{cap.wine}
+              {cap.artist ? (<>{t("Inspired by:")} <b>{nameOf(cap.artist)}</b> · </>) : null}{cap.wine}
               <span style={{ color: "#8a887e" }}>{`   ${cur + 1} / ${n}`}</span>
             </span>
           )}
@@ -3361,7 +3365,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       case "artist": {
         const a2 = siteArtists.find((x) => x.id === artistId) || siteArtists[0];
         if (!a2) return null;
-        const first = a2.name.split(" ")[0];
+        /* in Georgian the name is written in Georgian (2026-09-30) */
+        const first = (lang === "ge" ? ARTIST_GE[a2.name] || a2.name : a2.name).split(" ")[0];
         const BX = 137.14, BW = 342.86;
         const WK = 205.71, WGAP = 274.29, WX = 548.57, WY = 171.37;
         return (<>
@@ -3388,19 +3393,19 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           })()}
           <button onClick={() => { setPickArtists(a2.ids || [a2.id]); go("vision"); }}
             style={{ ...px(136.96, 548.57, 343.21, 34.29), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#111", color: "#fff", border: "none", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4, textTransform: "none" }}>
-            {t("Create label with")} {first}{t("’s art")}</button>
+            {t("Create a label inspired by")} {first}</button>
           {/* ROUND 113 #6 (owner): the two captions are HYPERLINKS —
               underlined, as the owner drew them (his .st5 carries
               text-decoration: underline). "Original art" shows her own
               paintings; "Labels from …" shows the labels already painted
               in her hand. The set being shown is black, the other grey. */}
-          {([["Original art", "art"], ["Labels from", "labels"]] as const).map(([cap, view], i) => {
+          {([["Original art", "art"], ["Labels inspired by", "labels"]] as const).map(([cap, view], i) => {
             const set = view === "art" ? a2.works : a2.labels;
             const on = artistView === view;
             return (
               <button key={view} onClick={() => set.length && setArtistView(view)}
                 style={{ ...px(BX, baseTop(i ? 651.35 : 628.19, 17), 300, 20), ...ghost, font: `700 17px ${HNW}`, lineHeight: "17px", color: on && set.length ? INK : "#b3b3b3", whiteSpace: "nowrap", textAlign: "left", textDecoration: "underline", textUnderlineOffset: 3, cursor: set.length ? "pointer" : "default", textTransform: "none" }}>
-                {view === "art" ? t(cap) : `${t(cap)} ${first}`}</button>
+                {view === "art" || lang === "ge" ? t(cap) : `${t(cap)} ${first}`}</button>
             );
           })}
           {/* ROUND 113 #5 (owner): BOTH marks stand on every artist's page,
@@ -3494,7 +3499,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             /* the picked names in full when they fit the box, else by first
                name ("Mariam, Levan, Dachi") — never cut with an ellipsis */
             const fullNames = chosen.map((a) => a.name).join(", ");
-            const names = textW(t("Style by artist:") + " ", `700 14px ${HNW}`) + textW(fullNames, `14px ${HNW}`) <= SB.w - 12 - 40
+            const names = textW(t("Inspired by:") + " ", `700 14px ${HNW}`) + textW(fullNames, `14px ${HNW}`) <= SB.w - 12 - 40
               ? fullNames : chosen.map((a) => a.name.split(" ")[0]).join(", ");
             const ink = styleOpen ? "#fff" : "#111";
             const AW = 15.4, AH = 7.7;
@@ -3514,7 +3519,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   /* the line box is 24 tall (not 14): the ellipsis clips at it, and
                      a 14-tall box cut the Georgian letters' tails ("სტილი") */
                   <span style={{ position: "absolute", left: 12, top: base - 12 - 0.5255 * 14, height: 24, width: SB.w - 12 - 40, textAlign: "left", font: `14px/24px ${HNW}`, color: ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    <b style={{ fontWeight: 700 }}>{t("Style by artist:")}</b>{" "}{chosen.length ? names : t("3 randomly chosen artists")}
+                    <b style={{ fontWeight: 700 }}>{t("Inspired by:")}</b>{" "}{chosen.length ? names : t("3 randomly chosen artists")}
                   </span>
                 )}
                 <svg viewBox="0 0 22 11" width={AW} height={AH} style={{ position: "absolute", right: 11, top: (SB.h - AH) / 2 }}>
@@ -3703,10 +3708,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 return a2 ? (
                   <button onClick={() => { artistsFrom.current = "options"; setArtistId(a2.id); setArtistView("art"); go("artist"); }}
                     style={{ ...ghost, pointerEvents: "auto", cursor: "pointer", font: `700 ${BAR_FS}px/${BAR_FS}px ${HNW}`, color: INK, whiteSpace: "nowrap", textTransform: "none" }}>
-                    {t("Style By:")} <span style={{ textDecoration: "underline", textUnderlineOffset: 2 }}>{who}</span></button>
+                    {t("Inspired by:")} <span style={{ textDecoration: "underline", textUnderlineOffset: 2 }}>{who}</span></button>
                 ) : (
                   <span style={{ font: `700 ${BAR_FS}px/${BAR_FS}px ${HNW}`, whiteSpace: "nowrap" }}>
-                    {who ? `${t("Style By:")} ${who}` : ""}</span>
+                    {who ? `${t("Inspired by:")} ${who}` : ""}</span>
                 );
               })()}
             </div>
@@ -5938,7 +5943,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 /* 2026-09-26 (owner): no idea and no sketch → an abstraction
                    in the artist's own hand — the popup says so */
                 left.push(<span key="pt">{colTitle(32, t("Prompt:"))}</span>);
-                left.push(<span key="pv" style={{ position: "absolute", left: 32, top: baseTop(y + 43, 15), width: 329, font: `italic 15px/18px ${HNW}` }}>{t("An abstraction in the artist's own style")}</span>);
+                left.push(<span key="pv" style={{ position: "absolute", left: 32, top: baseTop(y + 43, 15), width: 329, font: `italic 15px/18px ${HNW}` }}>{t("An abstraction inspired by the artist's style")}</span>);
                 leftBottom = y + 60;
               }
               if (sketch) {

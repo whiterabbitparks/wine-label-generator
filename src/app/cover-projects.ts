@@ -32,7 +32,9 @@ export const COVERS: CoverProject[] = [
     visionGe: "რბილი გრავიტაცია — ადამიანის ფიგურა მიწიდან სულ რამდენიმე სანტიმეტრზე ლივლივებს, სრულიად მოდუნებული და ამას ვერც ამჩნევს. თმა და ტანსაცმელი ბუნებრივად ეშვება და ჩნდება მსუბუქი შეგრძნება, რომ გრავიტაცია შერბილდა.",
     front: { producer: "MARANI", wine: "TSINANDALI", appellation: "Mukuzani", classification: "", vintage: "2023", grape: "Rkatsiteli", regionCountry: "Kakheti Georgia", special: "Qvevri Wine", sweetness: "Dry", colour: "Amber", wineType: "Wine", alcohol: "12", volume: "750" },
     back: { producerCompany: "POPIKA LLC", producerAddress: "#33 Chikovani St. 0171 Tbilisi, Georgia", importer: "", importerAddress: "", bottlingDate: "22/04/23", lot: "L9876545321", web: "www.popikasmarani.com" },
-    desc: "A vibrant, medium-bodied wine with aromas of ripe cherry, wild berries, and subtle spice. Fresh acidity and soft tannins create a balanced palate, followed by notes of dried herbs and a smooth, lingering finish.",
+    /* 2026-09-30 (owner: "no description may contradict the wine's colour"):
+       an AMBER wine — its old text described a red */
+    desc: "Deep amber from months on the skins in qvevri. Dried apricot, quince and walnut on the nose, a firm grip of tannin and a long, gently spiced finish.",
     labels: [T + "ts-label1.jpg", T + "ts-label2.jpg", T + "ts-label3.jpg"], artists: ["Mariam Kvashilava", "Levan Amashukeli", "Levan Amashukeli"], chosen: 1,
     backLabel: T + "ts-back-label.png", shotFront: T + "ts-shot-front.png", shotBack: T + "ts-shot-back.png", life: [1, 2, 3, 4, 5].map((n) => T + "ts-life" + n + ".jpg"), landing: T + "ts-landing.jpg", qr: "https://8klabels.com/p/wqo2bp5f",
     bottle: { type: "Burgundy", color: "Olive Green", closure: "Wax Seal", finish: "Matte" }, cap: [14, 175, 255],
@@ -85,7 +87,8 @@ export const COVERS: CoverProject[] = [
     visionGe: "კატა ძველ თბილისში ეზოს დაჰყურებს, ზემოდან, თითქმის „თევზის თვალით“. კატა კამერასთან ახლოსაა, თითქოს ორივენი ერთად ვიყურებით ეზოში ძველი თბილისური აივნებით, ეზოს გადაღმა თოკებზე სარეცხი კიდია, ბავშვები თამაშობენ.",
     front: {"producer": "Giorgi's Marani", "wine": "Mzeo", "appellation": "", "classification": "", "vintage": "2020", "grape": "Saperavi", "regionCountry": "Kakheti, Georgia", "special": "Qvevri Aged 6 Months", "sweetness": "Dry", "colour": "Rosé", "wineType": "Wine", "alcohol": "13", "volume": "750"},
     back: {"producerCompany": "\"Giorgi's Marani\" LLC", "producerAddress": "#5 Rustaveli st. 2400 Kvareli, Georgia", "importer": "", "importerAddress": "", "bottlingDate": "27/11/2021", "lot": "", "web": ""},
-    desc: "A deep, medium-bodied red with aromas of black cherry, plum and a touch of spice. Firm tannins and a long, savoury finish.",
+    /* a ROSÉ — the pack's back label had described a red (owner, 2026-09-30) */
+    desc: "Pale salmon pink with aromas of wild strawberry, red currant and rose petal. Fresh and dry, with a crisp, mineral finish.",
     labels: ["/newui/covers/mzeo/l1.jpg", "/newui/covers/mzeo/l2.jpg", "/newui/covers/mzeo/l3.jpg"], artists: ["Gvantsa Mzareulishvili", "Gvantsa Mzareulishvili", "Gvantsa Mzareulishvili"], chosen: 2,
     backLabel: "/newui/covers/mzeo/back-label.png", shotFront: "/newui/covers/mzeo/shot-front.png", shotBack: "/newui/covers/mzeo/shot-back.png", life: [1, 2, 3, 4, 5].map((n) => "/newui/covers/mzeo/life" + n + ".jpg"), landing: "/newui/covers/mzeo/landing.jpg", qr: "https://8klabels.com/p/mzeocov01",
     bottle: {"type": "Burgundy", "color": "Transparent", "closure": "Wax Seal", "finish": "Matte"}, cap: [183, 175, 231],

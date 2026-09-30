@@ -72,6 +72,11 @@ John/Doe), MongoDB Atlas db `8k-labels`.
 - Layout hints have ONE source: buildLayoutHints() (layout-refs.ts) — never
   derive layout hints from image profiles or send thinner hints anywhere.
 - Alcohol/volume always "N% Alc. by Vol. / N mL".
+- NEVER say a label (or any picture we make) is an artist's work, painted or
+  created by them — everywhere "Inspired by: <artist>" / "ინსპირაცია: <artist>"
+  (owner, 2026-09-30).
+- A demo/cover project's description must match its wine colour (owner,
+  2026-09-30: a rosé described as red is an obvious slip).
 - UI: Special Elite only (self-hosted), WHITE ground + grey accents
   (#E3E3E1 tabs; beige era ended 2026-08-16), all-black 2px lines.
 - Cover images: black & white (grayscale filter), never cropped — the hero
