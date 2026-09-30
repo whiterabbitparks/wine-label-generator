@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { properCase, CASED_FIELDS } from "@/lib/label/casing";
 import { savePack, type PackBody } from "@/lib/package";
-import { visitorOf } from "@/lib/guard";
+import { visitorOf, previewKey } from "@/lib/guard";
 import { requestIsAuthenticated } from "@/lib/admin/session";
 
 /* PRODUCT PAGE SNAPSHOT (owner 2026-09-08): when a QR code is requested,
@@ -53,10 +53,15 @@ export async function POST(req: Request) {
      entered once — the code is printed in the READ ME of the paid Final
      Pack, so a link seen before paying opens nothing. Made once, kept. */
   await db.collection("products").updateOne({ _id: code } as never,
-    { $set: doc, $setOnInsert: { pin: String(crypto.randomInt(0, 100000)).padStart(5, "0"), open: false } }, { upsert: true });
+    { $set: doc, $setOnInsert: { pin: String(crypto.randomInt(0, 100000)).padStart(5, "0"), open: false, owner: v?._id || "" } }, { upsert: true });
+  /* a page made before its maker was recorded is claimed by the next maker who publishes it */
+  if (v?._id) await db.collection("products").updateOne({ _id: code, owner: { $in: [null, ""] } } as never, { $set: { owner: v._id } });
   /* the Final Pack's makings, full size, for the page's DOWNLOAD ASSETS */
   if (body.pack && typeof body.pack === "object") try { savePack(code, body.pack as PackBody); } catch { /* the page still stands */ }
-  return NextResponse.json({ ok: true, url: `/p/${code}` });
+  /* the maker's own preview key (see previewKey) */
+  const own = (await db.collection("products").findOne({ _id: code } as never, { projection: { owner: 1 } })) as { owner?: string } | null;
+  const mine = (v?._id && own?.owner === v._id) || (await requestIsAuthenticated());
+  return NextResponse.json({ ok: true, url: `/p/${code}`, ...(mine ? { preview: previewKey(code) } : {}) });
 }
 
 export async function GET(req: Request) {
@@ -65,7 +70,10 @@ export async function GET(req: Request) {
   const db = await getDb();
   const doc = await db.collection("products").findOne({ _id: code } as never);
   if (!doc) return NextResponse.json({ error: "not found" }, { status: 404 });
-  const { pin, tries, ...shown } = doc as Record<string, unknown>;
+  const { pin, tries, owner, ...shown } = doc as Record<string, unknown>;
   void pin; void tries;
-  return NextResponse.json(shown);
+  /* its maker (or the admin) gets the preview key back after a reload */
+  const v = await visitorOf(req, false).catch(() => null);
+  const mine = (v?._id && owner === v._id) || (await requestIsAuthenticated());
+  return NextResponse.json({ ...shown, ...(mine ? { preview: previewKey(code) } : {}) });
 }

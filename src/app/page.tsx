@@ -551,7 +551,7 @@ export default function NewUI() {
       const c = localStorage.getItem("nui-product-code");
       if (c) {
         productCode.current = c;
-        fetch(`/api/product?code=${c}`).then((r) => { if (r.ok) setProductUrl(`/p/${c}`); }).catch(() => { });
+        fetch(`/api/product?code=${c}`).then(async (r) => { if (r.ok) { setProductUrl(`/p/${c}`); const j = await r.json().catch(() => ({})); if (j.preview) setProductKey(j.preview); } }).catch(() => { });
       }
     } catch { }
   }, []);
@@ -863,6 +863,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   /* ingredients text file for the future QR landing page (owner 2026-09-07) */
   const [ingredients, setIngredients] = useState("");
   const [productUrl, setProductUrl] = useState("");
+  /* 2026-09-30: the maker's preview key — the wizard's frames show the page
+     itself, not its code lock (the real page keeps the lock) */
+  const [productKey, setProductKey] = useState("");
+  const productView = productUrl + (productKey ? `?preview=${productKey}` : "");
   /* round 30 #5: the slot-5 thumb takes a few seconds to build — the mini
      glass fills (same living-loader behaviour) until the iframe loads */
   const [ppLoaded, setPpLoaded] = useState(false);
@@ -1341,6 +1345,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             });
             if (r2.ok) {
               setProductUrl(`/p/${productCode.current}`);
+              const j2 = await r2.json().catch(() => ({}));
+              if (j2.preview) setProductKey(j2.preview);
               try { localStorage.setItem("nui-product-code", productCode.current); } catch { }
             }
           } catch { /* page can be published on a later pass */ }
@@ -4447,7 +4453,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     {["#FF5F57", "#FEBC2E", "#28C840"].map((c) => <span key={c} style={{ width: 4.5, height: 4.5, borderRadius: 3, background: c }} />)}
                     <span style={{ flex: 1, margin: "0 8px", height: 7, background: "#fff", borderRadius: 3, font: `5px ${HNW}`, color: "#999", paddingLeft: 4, lineHeight: "7px" }}>8klabels.com{productUrl}</span>
                   </div>
-                  <iframe src={productUrl} title="product page" onLoad={() => setPpLoaded(true)} style={{ width: W, height: 823, transform: `scale(${BW / W})`, transformOrigin: "0 0", border: 0, pointerEvents: "none" }} />
+                  <iframe src={productView} title="product page" onLoad={() => setPpLoaded(true)} style={{ width: W, height: 823, transform: `scale(${BW / W})`, transformOrigin: "0 0", border: 0, pointerEvents: "none" }} />
                 </>)}
                 {(!ready || !ppLoaded) && (
                   <div style={{ position: "absolute", inset: 0, background: assetsStage || ready ? "transparent" : "#ECECEA", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -4685,7 +4691,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                       {["#FF5F57", "#FEBC2E", "#28C840"].map((c) => <span key={c} style={{ width: 4.5, height: 4.5, borderRadius: 3, background: c }} />)}
                       <span style={{ flex: 1, margin: "0 8px", height: 7, background: "#fff", borderRadius: 3, font: `5px ${HNW}`, color: "#999", paddingLeft: 4, lineHeight: "7px" }}>8klabels.com{productUrl}</span>
                     </div>
-                    <iframe src={productUrl} title="product page" style={{ width: W, height: 823, transform: `scale(${320 / W})`, transformOrigin: "0 0", border: 0, pointerEvents: "none" }} />
+                    <iframe src={productView} title="product page" style={{ width: W, height: 823, transform: `scale(${320 / W})`, transformOrigin: "0 0", border: 0, pointerEvents: "none" }} />
                   </div>
                 ) : <div style={{ position: "absolute", left: 40, top: 0, width: CAR.w - 80, height: CAR.h, background: "#ECECEA" }} />)
                 : sd.img

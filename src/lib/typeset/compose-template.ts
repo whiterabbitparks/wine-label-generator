@@ -451,7 +451,15 @@ export async function fitSpot(
     if (edge || (x % 4 === 0 && y % 4 === 0)) pts.push([(x + 0.5) / gw * aw, (y + 0.5) / gh * ah]);
   }
   const inkL = x0 / gw * aw, inkR = (x1 + 1) / gw * aw, inkT = y0 / gh * ah, inkB = (y1 + 1) / gh * ah;
-  const cx = sx / cnt / gw * aw, cy = sy / cnt / gh * ah;           /* the ink's middle */
+  /* the drawing's middle is its CORE (owner, 2026-09-25): the ink with the
+     outermost 3 % of it set aside on each side — not its centre of mass,
+     which a heavy figure on one side drags off (2026-09-30: a centred
+     layout's picture sat 7 mm to the right) */
+  const colN = new Uint32Array(gw), rowN = new Uint32Array(gh);
+  for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) if (ink[y * gw + x]) { colN[x]++; rowN[y]++; }
+  const q = (a: Uint32Array, f: number) => { let acc = 0; for (let k = 0; k < a.length; k++) { acc += a[k]; if (acc >= cnt * f) return k; } return a.length - 1; };
+  const cx = ((q(colN, 0.03) + q(colN, 0.97) + 1) / 2) / gw * aw, cy = ((q(rowN, 0.03) + q(rowN, 0.97) + 1) / 2) / gh * ah;
+  void sx; void sy;
 
   /* where ink may not go, on a 4-px raster of the label */
   const C = 4, cw = Math.ceil(W / C), ch = Math.ceil(H / C);
@@ -494,11 +502,15 @@ export async function fitSpot(
   };
   /* the positions for one size, nearest the room's middle first */
   const want = { x: room.x + room.w / 2, y: room.y + room.h / 2 };
+  const centred = Math.abs(want.x - W / 2) <= PX_PER_MM;
   const place = (s: number): { x: number; y: number } | null => {
     const bx = want.x - cx * s, by = want.y - cy * s;
     const step = 6, R = Math.max(W, H) * 0.5;
+    /* a CENTRED room keeps its drawing centred: at most 1.5 mm sideways —
+       it grows only as far as the centred place allows */
+    const RX = centred ? 1.5 * PX_PER_MM : R;
     const cands: [number, number, number][] = [];
-    for (let dy = -R; dy <= R; dy += step) for (let dx = -R; dx <= R; dx += step) cands.push([dx * dx + dy * dy, dx, dy]);
+    for (let dy = -R; dy <= R; dy += step) for (let dx = -RX; dx <= RX; dx += Math.min(step, RX)) cands.push([dx * dx + dy * dy, dx, dy]);
     cands.sort((a, b) => a[0] - b[0]);
     for (const [, dx, dy] of cands) if (ok(s, bx + dx, by + dy)) return { x: bx + dx, y: by + dy };
     return null;

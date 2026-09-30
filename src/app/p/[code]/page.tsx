@@ -1,4 +1,5 @@
 import { getDb } from "@/lib/db";
+import { previewKey } from "@/lib/guard";
 import ProductClient, { type ProductDoc } from "./product-client";
 
 /* PUBLIC PRODUCT PAGE (owner 2026-09-08): the QR on the back label lands
@@ -7,8 +8,9 @@ import ProductClient, { type ProductDoc } from "./product-client";
 
 export const dynamic = "force-dynamic";
 
-export default async function ProductPage({ params }: { params: Promise<{ code: string }> }) {
+export default async function ProductPage({ params, searchParams }: { params: Promise<{ code: string }>; searchParams: Promise<{ preview?: string }> }) {
   const { code } = await params;
+  const { preview } = await searchParams;
   const clean = code.replace(/[^a-z0-9]/gi, "");
   let doc: ProductDoc | null = null;
   try {
@@ -24,7 +26,10 @@ export default async function ProductPage({ params }: { params: Promise<{ code: 
   }
   /* the code never leaves the server; a page made before the lock (no
      code) stays open */
-  const { pin, tries, ...shown } = doc as ProductDoc & { pin?: string; tries?: unknown; open?: boolean };
-  void tries;
-  return <ProductClient doc={shown} locked={!!pin && !shown.open} />;
+  const { pin, tries, owner, ...shown } = doc as ProductDoc & { pin?: string; tries?: unknown; open?: boolean; owner?: string };
+  void tries; void owner;
+  /* the maker's preview (the wizard's own frame) sees the page unlocked;
+     nothing is opened for anyone else */
+  const previewing = !!preview && preview === previewKey(clean);
+  return <ProductClient doc={shown} locked={!!pin && !shown.open && !previewing} />;
 }

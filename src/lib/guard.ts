@@ -67,6 +67,12 @@ function secret(): string {
   }
   return secretCache;
 }
+/* 2026-09-30 (owner: "the Final Pack's site preview shows the code page —
+   show the page itself there; keep the code for real"): the wizard frames
+   its own product page with this key, which only the page's maker is
+   given (api/product), and /p/<code> shows it unlocked for that one view
+   — the page stays locked, `open` is never touched. */
+export const previewKey = (code: string) => crypto.createHmac("sha256", secret()).update(`preview:${code}`).digest("base64url").slice(0, 24);
 const sign = (id: string) => `${id}.${crypto.createHmac("sha256", secret()).update(id).digest("base64url").slice(0, 32)}`;
 function unsign(v: string | undefined): string | null {
   const id = String(v || "").split(".")[0];
