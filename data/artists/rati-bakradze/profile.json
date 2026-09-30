@@ -31,24 +31,39 @@
   ],
   "refSets": [
     [
-      "work-02.jpg",
-      "work-03.jpg",
-      "work-25.jpg"
+      "work-01.jpg",
+      "work-25.jpg",
+      "work-09.jpg"
     ],
     [
-      "work-09.jpg",
-      "work-14.jpg",
-      "work-05.jpg"
-    ],
-    [
-      "work-24.jpg",
-      "work-13.jpg",
-      "work-20.jpg"
-    ],
-    [
+      "work-05.jpg",
       "work-19.jpg",
-      "work-28.jpg",
       "work-33.jpg"
+    ],
+    [
+      "work-10.jpg",
+      "work-12.jpg",
+      "work-02.jpg"
+    ],
+    [
+      "work-16.jpg",
+      "work-15.jpg",
+      "work-42.jpg"
+    ],
+    [
+      "work-13.jpg",
+      "work-18.jpg",
+      "work-08.jpg"
+    ],
+    [
+      "work-27.jpg",
+      "work-34.jpg",
+      "work-36.jpg"
+    ],
+    [
+      "work-20.jpg",
+      "work-38.jpg",
+      "work-11.jpg"
     ]
   ],
   "trainExclude": [
