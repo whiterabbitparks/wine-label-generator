@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import { generateOpenAIImage } from "@/lib/image-provider/openai";
 import { falUpload } from "@/lib/image-provider/flux";
+import { imageQuality } from "@/lib/image-provider";
 import { getDb } from "@/lib/db";
 import { DEFAULT_REGIONS } from "./regions";
 import type { EvalBrief } from "./briefs";
@@ -317,7 +318,11 @@ export async function repaintInHand(model: EvalModel, story: string, ap: Artwork
      repaint gets a smaller picture — about half the price; the question a
      test or a placement correction asks does not need print resolution */
   let storyBuf = Buffer.from(story.slice(story.indexOf(",") + 1), "base64");
-  if (opts.small || process.env.PAINT_SMALL === "1") storyBuf = await (await import("sharp")).default(storyBuf).resize(1024, 1024, { fit: "inside" }).png().toBuffer();
+  /* 2026-09-30 (owner: "keep the large resolution, but until we launch use
+     the minimum everywhere — there are many tests"): the site-wide switch
+     IMAGE_QUALITY decides — "prod" paints large (1536), anything else small
+     (1024). LAUNCH: set IMAGE_QUALITY=prod on the server. */
+  if (opts.small || process.env.PAINT_SMALL === "1" || imageQuality() !== "prod") storyBuf = await (await import("sharp")).default(storyBuf).resize(1024, 1024, { fit: "inside" }).png().toBuffer();
   const url = await falUpload(storyBuf, "story.png", "image/png");
   const locked = !opts.unlocked;
   /* the locked repaint reads the sketch's own description (an abstraction

@@ -88,3 +88,6 @@ John/Doe), MongoDB Atlas db `8k-labels`.
   paid (tries via /api/visitor/pay {fake:true} → visitor.fakeRuns, counted
   as FREE under the daily budget; the Final Pack) — TEMPORARY until Paddle;
   remove it (and FAKE_PAY handling) before launch.
+- IMAGE_QUALITY="dev" on the server is TEMPORARY (owner 2026-09-30: minimum
+  resolution while testing — the painter repaints at 1024): at launch set
+  IMAGE_QUALITY=prod (large, 1536) — remind the owner.
