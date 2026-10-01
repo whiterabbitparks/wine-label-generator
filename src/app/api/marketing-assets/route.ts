@@ -122,9 +122,11 @@ export async function POST(req: Request) {
   const known = cache.get(sig) || readSet(key);
   /* 2026-09-27: the guard — a visitor who has made labels, a few runs a
      day. A set already made replays free, so only a NEW run is guarded. */
+  let charged: string | null = null;
   if (!known) {
     const g = await allowMarketing(req);
     if (!g.ok) return refuse(g);
+    charged = g.visitor ? String((g.visitor as { _id?: unknown })._id) : null;
   }
   const stream = new ReadableStream({
     async start(controller) {
@@ -147,9 +149,11 @@ export async function POST(req: Request) {
           cache.set(sig, events);
           writeSet(key, events);
           send({ type: "saved", key } as never);
-        }
+        } else await refund(charged);
       } catch (e) {
+        console.warn(`[marketing] run failed: ${e instanceof Error ? e.message : e}`);
         send({ type: "error", error: e instanceof Error ? e.message : String(e) });
+        await refund(charged);
       }
       controller.close();
     },
@@ -157,4 +161,16 @@ export async function POST(req: Request) {
   return new Response(stream, {
     headers: { "Content-Type": "application/x-ndjson; charset=utf-8", "Cache-Control": "no-store" },
   });
+}
+
+/* 2026-10-01: a run that made no image at all is not counted against the
+   visitor's marketing runs for the day (the owner lost his to an OpenAI
+   change that failed every set) */
+async function refund(visitorId: string | null) {
+  if (!visitorId) return;
+  try {
+    const { getDb } = await import("@/lib/db");
+    /* visitor ids are strings (guard.ts Visitor._id) */
+    await (await getDb()).collection("visitors").updateOne({ _id: visitorId, "marketing.n": { $gt: 0 } } as never, { $inc: { "marketing.n": -1 } } as never);
+  } catch { /* nothing to give back */ }
 }
