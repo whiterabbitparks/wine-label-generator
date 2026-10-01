@@ -6,7 +6,7 @@ import { templatesNow } from "@/lib/typeset/overrides";
 import type { Template } from "@/lib/typeset/templates";
 import { cleanPaper, whitenPaper } from "@/lib/typeset/palette";
 import { listArtists } from "./artists";
-import { artKindOf, bleedsOf, facesFor, layoutFromTemplate, templateFields, type ArtKind, type Band } from "@/lib/typeset/templates";
+import { artKindOf, bleedsOf, facesFor, bankFamilies, layoutTypeOf, layoutFromTemplate, templateFields, type ArtKind, type Band, type LayoutType } from "@/lib/typeset/templates";
 import { faceFile, pickRoles, mix } from "@/lib/typeset/fonts";
 import type { Layout } from "@/lib/typeset/compose";
 import { painterFor, castPainter } from "./painters";
@@ -118,25 +118,39 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
      paper with its own edge; a bleed runs off the label. They are
      different pictures, so the column decides which it wants, paints
      that, and only ever shows layouts that use it. */
+  /* 2026-10-01 (owner: "drop the tie between columns and categories —
+     the three versions just need three DIFFERENT layouts: one centred, one
+     set to the sides, one with vertical type; columns and artists don't
+     matter"). The column (its old style name) is only a NUMBER now: the
+     run's token deals the three layout types to the three columns in a
+     random order, and within its type a column takes the layout used
+     least lately (the variety memory), leaving out a layout this artist
+     already showed in the session. */
   const forced = inp.template ? templatesNow().find((t) => t.id === inp.template) : undefined;
-  const band = forced ? forced.band : bandOf(style);
-  /* only the shapes this column's band actually offers — the free
-     column has no wide band drawn, so it must not ask for one */
-  const offered = [...new Set(templatesOf(band).map(artKindOf))];
-  let kind: ArtKind = forced ? artKindOf(forced) : offered[mix(seed, 21) % offered.length] || "spot";
-  /* 2026-09-27 (owner): the VARIETY MEMORY — within the kind, the layouts
-     used least lately are favoured; a pair of this artist and a layout
-     already shown in the session is left out (when another kind still
-     has a fresh one, the kind gives way) */
-  const fresh = (k: ArtKind) => templatesOf(band).filter((t) => artKindOf(t) === k && !avoid.includes(`${model.artist.name}|${t.id}`));
-  if (!forced && !fresh(kind).length) kind = offered.find((k) => fresh(k).length) || kind;
-  const tplPool = fresh(kind).length ? fresh(kind) : templatesOf(band).filter((t) => artKindOf(t) === kind);
-  const tpl = forced || (inp.seed !== undefined ? pickTemplate(band, seed, kind) : pickFresh(tplPool, (t) => t.id, usage("template")));
-  /* and the type's face: of a few seeds, the one whose face is used least */
+  const col = Math.max(0, ["traditional", "contemporary", "punk"].indexOf(style));
+  const hashOf = (x: string) => { let h = 5381; for (let i = 0; i < x.length; i++) h = ((h * 33) ^ x.charCodeAt(i)) >>> 0; return h; };
+  const runKey = inp.order ? hashOf(inp.order) : (mix(seed, 21) >>> 0);
+  const TYPES: LayoutType[] = ["centred", "sides", "vertical"];
+  const perms = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]];
+  const wantType = TYPES[perms[runKey % 6][col % 3]];
+  const ofType = templatesNow().filter((t) => layoutTypeOf(t) === wantType);
+  const freshOfType = ofType.filter((t) => !avoid.includes(`${model.artist.name}|${t.id}`));
+  const tplPool = freshOfType.length ? freshOfType : ofType.length ? ofType : templatesNow();
+  const tpl = forced || (inp.seed !== undefined ? tplPool[mix(seed, 23) % tplPool.length] : pickFresh(tplPool, (t) => t.id, usage("template")));
+  const band = tpl.band;
+  /* and the type's face: of a few seeds, the one whose face is used least —
+     and once the font bank holds approved faces, the run's three versions
+     take three DIFFERENT ones (the token deals them like the layouts) */
   if (inp.seed === undefined) {
-    const faceUse = usage("face");
-    const seeds = Array.from({ length: 12 }, () => (Math.random() * 0xffffffff) >>> 0);
-    seed = pickFresh(seeds, (sd) => facesFor(band, sd).hero.family, faceUse);
+    const fams = bankFamilies();
+    if (inp.order && fams.length >= 2) {
+      const want = fams[(Math.floor(runKey / 6) + col) % fams.length];
+      for (let k = 0; k < 4000; k++) { const sd = (Math.random() * 0xffffffff) >>> 0; if (facesFor(band, sd).small.family === want) { seed = sd; break; } }
+    } else {
+      const faceUse = usage("face");
+      const seeds = Array.from({ length: 12 }, () => (Math.random() * 0xffffffff) >>> 0);
+      seed = pickFresh(seeds, (sd) => facesFor(band, sd).hero.family, faceUse);
+    }
   }
   const zone = tpl.art || { w: tpl.refW, h: tpl.refH };
   const zoneAspect = (zone.w / tpl.refW * widthMm) / (zone.h / tpl.refH * heightMm);
@@ -465,13 +479,15 @@ export async function relayoutLabel(stored: { art: Buffer; meta: { style: string
      painting is cleaned only on its type-facing sides, as when it was
      made (a full clean would flatten a dark painted scene). */
   const storedTpl = templatesNow().find((t) => t.id === (stored.meta as { template?: string }).template);
+  /* the stored label's own layout family (no longer the column's) */
+  const kband: Band = storedTpl?.band || band;
   /* a SCENE label: the painting is the whole label — only the type is set again */
   if (keep && storedTpl && (stored.meta as { scene?: boolean }).scene) {
     const fam = String((stored.meta as { faces?: string }).faces || "").match(/^(.*?) \d{3}\//)?.[1];
     let keepSeed = 1;
-    if (fam) for (let k = 1; k < 2000; k++) if (facesFor(band, k).hero.family === fam) { keepSeed = k; break; }
+    if (fam) for (let k = 1; k < 2000; k++) if (facesFor(kband, k).hero.family === fam) { keepSeed = k; break; }
     const out = await composeTemplateLabel({
-      artwork: raw, band, template: storedTpl.id, data, paper: await meanColour(raw),
+      artwork: raw, band: kband, template: storedTpl.id, data, paper: await meanColour(raw),
       widthMm, heightMm, seed: keepSeed, wineColour: data.wineColorName, scene: true,
     });
     return { png: out.png, svg: out.svg, art: raw, faces: out.faces, ink: out.ink, ground: out.layout.ground || ground, prompt: "(the same painting, the details set again)", layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", template: out.template };
@@ -488,12 +504,12 @@ export async function relayoutLabel(stored: { art: Buffer; meta: { style: string
        a seed that draws that family again is found */
     const fam = String((stored.meta as { faces?: string }).faces || "").match(/^(.*?) \d{3}\//)?.[1];
     let keepSeed = 1;
-    if (fam) for (let k = 1; k < 2000; k++) if (facesFor(band, k).hero.family === fam) { keepSeed = k; break; }
+    if (fam) for (let k = 1; k < 2000; k++) if (facesFor(kband, k).hero.family === fam) { keepSeed = k; break; }
     /* a multiply picture is stored with its paper white: the label keeps
        the ground it was laid on */
     const blend = blendOf((stored.meta as { artist?: string }).artist);
     const out = await composeTemplateLabel({
-      artwork: cl.art, band, template: storedTpl.id, data, ink: cl.ink, paper: cl.ground,
+      artwork: cl.art, band: kband, template: storedTpl.id, data, ink: cl.ink, paper: cl.ground,
       widthMm, heightMm, seed: keepSeed, wineColour: data.wineColorName, edge: !wasPanel && cl.cleaned && sides.length ? sides : undefined,
       panel: wasPanel && cl.cleaned,
       blend, labelGround: blend ? ground : undefined,
@@ -505,8 +521,8 @@ export async function relayoutLabel(stored: { art: Buffer; meta: { style: string
   /* a variation is another layout of the SAME picture — the owner's
      three rows. Only layouts of its own shape, and only the ones it fits
      without being dragged past the trim. */
-  const kind = artKindOf(templatesNow().find((t) => t.id === (stored.meta as { template?: string }).template) || templatesOf(band)[0]);
-  const pool = templatesOf(band).filter((t) => artKindOf(t) === kind);
+  const kind = artKindOf(templatesNow().find((t) => t.id === (stored.meta as { template?: string }).template) || templatesOf(kband)[0]);
+  const pool = templatesOf(kband).filter((t) => artKindOf(t) === kind);
   const scored = pool.map((t) => {
     const probe = layoutFromTemplate({ template: t, fields: templateFields(data), widthMm, heightMm, seed: 1, ground: cleaned.ground, ink: "#111", accent: "#111" });
     return { t, lost: inkLost(t, cleaned.ink, widthMm, heightMm, probe.art) };
@@ -516,7 +532,7 @@ export async function relayoutLabel(stored: { art: Buffer; meta: { style: string
   const seed = (Math.random() * 0xffffffff) >>> 0;
   const blendV = blendOf((stored.meta as { artist?: string }).artist);
   const out = await composeTemplateLabel({
-    artwork: art, band, template: pick.id, data, ink: cleaned.ink, paper: cleaned.ground,
+    artwork: art, band: kband, template: pick.id, data, ink: cleaned.ink, paper: cleaned.ground,
     widthMm, heightMm, seed, wineColour: data.wineColorName,
     blend: blendV, labelGround: blendV ? ground : undefined,
   });

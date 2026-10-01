@@ -158,7 +158,23 @@ export const BAND_FACES: Record<Band, Pool> = {
    sets only its NAME in a "title only" face, the rest in a plain fully
    approved one. A column whose category has no fully approved face yet
    keeps its old faces. */
+/* 2026-10-01, later (owner: "fonts can be spread evenly over the three
+   layout standards — no font category tied to a layout"): once the bank
+   holds approved faces, EVERY label draws from all of them, whatever its
+   layout; the column's category is used only while the bank is empty. */
 const CAT_OF: Record<Band, FontCat> = { classical: "serif", contemporary: "sans", free: "display" };
+const ALL_CATS: FontCat[] = ["serif", "sans", "display"];
+
+/* THE THREE LAYOUT TYPES (owner, 2026-10-01: "three versions, three
+   different layouts — one centred, one set to the sides, one with
+   vertical type; the columns don't matter") — read off his artboards:
+   rotated lines → vertical; mostly centred lines → centred; else sides */
+export type LayoutType = "centred" | "sides" | "vertical";
+export function layoutTypeOf(t: Template): LayoutType {
+  if (t.texts.some((x) => (x as { rot?: number }).rot)) return "vertical";
+  const c = t.texts.filter((x) => (x as { align?: string }).align === "center").length;
+  return c * 2 >= t.texts.length ? "centred" : "sides";
+}
 function bankSets(cat: FontCat): FamilySet[] {
   return Object.values(readBank().fonts).filter((f) => f.cat === cat && f.verdict === "full" && f.weights.length)
     .sort((a, b) => a.family.localeCompare(b.family))
@@ -169,17 +185,20 @@ function bankTitles(cat: FontCat): Face[] {
     .sort((a, b) => a.family.localeCompare(b.family))
     .map((f) => ({ family: f.family, weight: roleWeights(f.weights).bold }));
 }
+export function bankFamilies(): string[] {
+  return ALL_CATS.flatMap((c) => bankSets(c)).map((s) => s.family).sort();
+}
 export function facesFor(band: Band, seed: number): { hero: Face; secondary: Face; small: Face } {
+  const own = ALL_CATS.flatMap((c) => bankSets(c));
   const cat = CAT_OF[band];
-  const own = bankSets(cat);
   const sets = own.length ? own : BAND_FACES[band].sets;
   const set = sets[mix(seed, 13) % sets.length];
-  const titles = bankTitles(cat);
+  const titles = own.length ? ALL_CATS.flatMap((c) => bankTitles(c)) : bankTitles(cat);
   if (titles.length && mix(seed, 29) % 4 === 0) {
     const t = titles[mix(seed, 31) % titles.length];
     /* the plain companion: the column's own approved face — for the
        decorative column a plain sans (or serif) one */
-    const plain = cat === "display" ? [...bankSets("sans"), ...bankSets("serif")] : sets;
+    const plain = own.length ? [...bankSets("sans"), ...bankSets("serif")].concat(own) : cat === "display" ? [...bankSets("sans"), ...bankSets("serif")] : sets;
     const c = plain.length ? plain[mix(seed, 37) % plain.length] : BAND_FACES[band === "free" ? "contemporary" : band].sets[0];
     return { hero: t, secondary: { family: c.family, weight: c.mid }, small: { family: c.family, weight: c.text } };
   }
