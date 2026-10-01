@@ -398,7 +398,7 @@ export function buildShotPrompt(b: MarketingBrief, side: "front" | "back", hasSh
       ? `The ${hasShape ? "THIRD" : "SECOND"} attached image is the finished FRONT-view photograph of THIS VERY BOTTLE — the same physical bottle rotated 180°. COPY its bottle size, position, framing and lighting EXACTLY, and place the back label in EXACTLY the same vertical band at EXACTLY the same height as the front label sits in that photo. The two photographs must overlay perfectly; only the label differs — and the label here is the BACK label (first image), NOT the one visible in that reference photo. `
       : "") +
     `Lighting: crisp premium studio softbox lighting, elegant vertical highlights along the glass, true colours, razor-sharp focus. ` +
-    `CUTOUT: pure transparent background, no surface, no table, no cast shadow, no glow or halo around the silhouette — a clean isolated product cutout.` +
+    `CUTOUT: on a plain, pure white seamless background (#FFFFFF) — no surface, no table, no cast shadow, no reflection on the ground, no glow or halo around the silhouette — a clean isolated product shot.` +
     houseRules(rules)
   );
 }
@@ -663,6 +663,37 @@ function houseRules(rules?: string[]) {
   return rules && rules.length ? ` HOUSE RULES (the art director's standing orders — never break them): ${rules.map((r) => `${r}.`).join(" ")} ` : "";
 }
 
+/* 2026-10-01: OpenAI stopped accepting a transparent background on
+   gpt-image-2 (400), and gpt-image-1.5 — which still allows it — garbles
+   the label's words. So the bottle is painted by gpt-image-2 on plain
+   white and the white is cut away here, grown in from the border only
+   (cutoutHorse, no white strip kept): the glass and the label are never
+   touched. */
+async function cutShot(dataUrl: string): Promise<string> {
+  const { cutoutHorse } = await import("@/lib/label/horse-cutout");
+  const png = await cutoutHorse(Buffer.from(dataUrl.slice(dataUrl.indexOf(",") + 1), "base64"), 0);
+  /* the cut taken one pixel INTO the glass, twice: the anti-aliased rim
+     still carries the white it was painted against (a light line on a
+     dark page) */
+  const { data, info } = await sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const W = info.width, H = info.height;
+  for (let pass = 0; pass < 2; pass++) {
+    const a0 = new Uint8Array(W * H);
+    for (let p = 0; p < W * H; p++) a0[p] = data[p * 4 + 3];
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      let m = a0[y * W + x];
+      if (!m) continue;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const nx = x + dx, ny = y + dy;
+        if (nx >= 0 && ny >= 0 && nx < W && ny < H) m = Math.min(m, a0[ny * W + nx]);
+      }
+      data[(y * W + x) * 4 + 3] = m;
+    }
+  }
+  const out = await sharp(data, { raw: { width: W, height: H, channels: 4 } }).png().toBuffer();
+  return `data:image/png;base64,${out.toString("base64")}`;
+}
+
 export async function generateMarketingAssets(
   b: MarketingBrief,
   frontLabel: string,
@@ -696,8 +727,8 @@ export async function generateMarketingAssets(
     send({ type: "progress", stage: "front shot" });
     const front = await generateImageRawWithRetry({
       prompt: buildShotPrompt(b, "front", !!shape, shotCharter, rules),
-      references: shape ? [frontLabel, shape] : [frontLabel], transparent: true, size: { w: 1024, h: 1536 }, quality: "medium",
-    });
+      references: shape ? [frontLabel, shape] : [frontLabel], size: { w: 1024, h: 1536 }, quality: "medium",
+    }).then(cutShot);
     bottlePhoto = front;
     const frontSized = await sizeShot(front, final);
     send({ type: "shot", side: "front", image: frontSized, preview: await previewOf(front) });
@@ -708,8 +739,8 @@ export async function generateMarketingAssets(
          COPIES its scale, so the two labels can never differ in height */
       const back = await generateImageRawWithRetry({
         prompt: buildShotPrompt(b, "back", !!shape, shotCharter, rules, true),
-        references: shape ? [backLabel, shape, front] : [backLabel, front], transparent: true, size: { w: 1024, h: 1536 }, quality: "medium",
-      });
+        references: shape ? [backLabel, shape, front] : [backLabel, front], size: { w: 1024, h: 1536 }, quality: "medium",
+      }).then(cutShot);
       send({ type: "shot", side: "back", image: await sizeShot(back, final), preview: await previewOf(back) });
     }
   }

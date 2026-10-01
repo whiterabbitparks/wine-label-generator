@@ -35,7 +35,14 @@ function extOf(dataUrl: string): string {
 export async function generateOpenAIImage(job: GenerationJob): Promise<string> {
   const key = process.env.OPENAI_API_KEY;
   if (!key) throw new Error("OPENAI_API_KEY is not set (put it in .env.local, server-side only)");
-  const model = process.env.OPENAI_IMAGE_MODEL || "gpt-image-2";
+  /* 2026-10-01: OpenAI stopped accepting a transparent background on
+     gpt-image-2 ("Transparent background is not supported for this
+     model" — 400), which stopped every marketing set at its first product
+     shot. A transparent ask (the bottle cut-outs) goes to gpt-image-1.5,
+     which still supports it; everything else stays on gpt-image-2. */
+  const model = job.transparent
+    ? process.env.OPENAI_TRANSPARENT_MODEL || "gpt-image-1.5"
+    : process.env.OPENAI_IMAGE_MODEL || "gpt-image-2";
 
   // the Images API has no separate negative-prompt field — fold it into the prompt
   let prompt = job.prompt || "";
