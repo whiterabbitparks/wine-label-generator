@@ -47,6 +47,8 @@ export const SVG_GE: Record<string, string> = {
   /* 2026-09-30 (owner): never say a label is an artist's work — "Inspired by" everywhere */
   "Inspired by:": "ინსპირაცია:",
   "Roll the dice": "შემომთავაზე",
+  "Select a front label": "აირჩიე წინა ეტიკეტი",
+  "Your earlier labels couldn't be loaded — your details are kept, please create the labels again.": "წინა ეტიკეტები ვერ ჩაიტვირთა — დეტალები შენახულია, გთხოვ, ეტიკეტები თავიდან შექმენი.",
   "Click to put it back": "დააჭირე, რომ დააბრუნო",
   "Create a label inspired by": "შექმენი ეტიკეტი — ინსპირაცია:",
   "Labels inspired by": "ეტიკეტები მისი ინსპირაციით",

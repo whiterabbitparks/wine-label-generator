@@ -1291,7 +1291,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     /* round 40 #3: a progress-bar JUMP never starts a paid generation —
        placeholders show "Not yet created"; the run starts only when the
        page is reached through the normal flow (bottle → next) */
-    if (barJumped.current && !assets.front && !assets.back) return;
+    /* (2026-10-01: with a saved front label a jump no longer strands the page
+       on empty boxes — the new brief still waits for the confirmation popup,
+       so nothing is ever paid for without a press) */
+    if (barJumped.current && !assets.front && !assets.back && !savedDream()) return;
     const sel = customLabel ? { style: "contemporary", dream: customLabel, preview: null } : savedDream()!;
     /* round 21 #7: NO client-side "same inputs" skip — it knew nothing
        about admin charter changes and replayed stale sets. The server
@@ -1861,8 +1864,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
           }
         } catch { /* the set is gone — the page will make it again when asked */ }
       }
+      /* only a real picture counts — a missing label answers 404 with JSON,
+         which used to be "restored" as a broken image (2026-10-01) */
       const toData = async (u: string) => {
-        const bl = await (await fetch(u)).blob();
+        const r0 = await fetch(u);
+        if (!r0.ok || !/^image\//.test(r0.headers.get("content-type") || "")) throw new Error("label gone");
+        const bl = await r0.blob();
         return new Promise<string>((res) => { const rd = new FileReader(); rd.onload = () => res(String(rd.result)); rd.readAsDataURL(bl); });
       };
       try {
@@ -1879,7 +1886,16 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
            page; otherwise the labels (the back label is set again first,
            from its details — free; see the resumeTo effect) */
         else if (apply) setResumeTo(rec!.assetsKey && rec!.assetsSig ? "assets" : rec!.backMade ? "backdesign" : "options");
-      } catch { /* the labels are gone from the server — the details stay */ }
+      } catch {
+        /* the labels are gone from the server — the details stay, and the
+           visitor is TOLD and taken to them (2026-10-01: they were left on a
+           page that pretended nothing had been made) */
+        if (apply || resume) {
+          setWarn(t("Your earlier labels couldn't be loaded — your details are kept, please create the labels again."));
+          setTimeout(() => setWarn(""), 9000);
+          go("vision");
+        }
+      }
       restoringRef.current = false;
     })();
   };
@@ -4731,7 +4747,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               </>) : quiet ? null : custom ? (
                 <span style={{ font: `12px ${HNW}`, color: "#8a887e" }}>{t("Not yet created")}</span>
               ) : (
-                <button onClick={() => go("vision", -1)} style={{ ...ghost, position: "relative", width: "100%", height: "100%", font: `12px ${HNW}`, color: "#8a887e", textTransform: "none", cursor: "pointer" }}>{t("Create front label")}</button>
+                /* labels made but none chosen → choose one; none made → make them */
+                dreams.length > 0 && selected < 0
+                  ? <button onClick={() => go("options", -1)} style={{ ...ghost, position: "relative", width: "100%", height: "100%", font: `12px ${HNW}`, color: "#8a887e", textTransform: "none", cursor: "pointer" }}>{t("Select a front label")}</button>
+                  : <button onClick={() => go("vision", -1)} style={{ ...ghost, position: "relative", width: "100%", height: "100%", font: `12px ${HNW}`, color: "#8a887e", textTransform: "none", cursor: "pointer" }}>{t("Create front label")}</button>
               )}
             </div>
           );
@@ -5557,13 +5576,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 {[["Instagram", "https://instagram.com/"], ["Facebook", "https://facebook.com/"], ["LinkedIn", "https://linkedin.com/"]].map(([n2, h], i) => line(720, i, n2, h))}
               </>);
             })()}
-            {/* 2026-09-30 (owner): "Skip" under the red button on the horses
-                page — three artists chosen at random on the details page */}
-            {page === "taste" && tut < 0 && (
-              <button onClick={() => { setPickArtists([]); go("vision"); }}
-                style={{ ...px(NEXT_X - 150, baseTop(LABEL_BASE, BAR_FS), 300, 20), ...ghost, font: `300 ${BAR_FS}px/${BAR_FS}px ${HNW}`, color: BAR_RED, textAlign: "center", textTransform: "none", whiteSpace: "nowrap", pointerEvents: "auto", cursor: "pointer" }}>
-                {lang === "ge" ? "გამოტოვე" : "Skip"}</button>
-            )}
+            {/* (2026-10-01, owner: no "Skip" — the red button is always live on
+                the horses page: no horse = three artists at random, one horse =
+                that artist alone) */}
             {preparing && page === "checkout" && (
               <button tabIndex={-1} aria-hidden style={{ ...px(NEXT_X - 150, baseTop(LABEL_BASE, BAR_FS), 300, 20), ...ghost, font: `300 ${BAR_FS}px/${BAR_FS}px ${HNW}`, color: BAR_RED, textAlign: "center", textTransform: "none", whiteSpace: "nowrap", pointerEvents: "none", animation: `nuiFadeIn 300ms ${EASE} both` }}>
                 {t("Preparing your files…")}</button>
@@ -6008,8 +6023,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 try { localStorage.removeItem("nui-order"); localStorage.removeItem("nui-product-code"); } catch { }
                 setProductUrl(""); productCode.current = Math.random().toString(36).slice(2, 10); payToken.current = ""; try { localStorage.removeItem("nui-pay-token"); } catch { }   /* a new order: the old receipt no longer applies */
                 setResumeAsk(null);
-                /* 2026-09-28 (owner): a new label starts at its details */
-                go("vision");
+                /* 2026-10-01 (owner): a new label starts at the horses page */
+                setPickArtists([]);
+                go("taste");
               }}
                 style={{ ...px(32, 230 - 34.3 - 32, 260, 34.3), cursor: "pointer", font: `12px ${HNW}`, letterSpacing: 0.3, background: "#fff", color: "#111", border: "1px solid #111", boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 4 }}>{t("Start new")}</button>
               <button onClick={() => { setResumeAsk(null); restoreRef.current(false, true); }}
