@@ -632,7 +632,23 @@ export default function NewUI() {
      so the rules, the type and every line in it are drawn crisp. A browser
      without zoom keeps the old transform. */
   const [zoomOK, setZoomOK] = useState(false);
-  useEffect(() => { try { setZoomOK(CSS.supports("zoom", "1")); } catch { /* the transform stays */ } }, []);
+  /* 2026-10-01 (owner's iPad screenshots, twice): Safari applies `zoom`
+     to the BOXES but not to the TYPE — every text came out 1.25× its box
+     (0.8 zoom), so labels ran into their fields, "Upload a sketch…" was
+     cut and MARKET COMPLIANCE ran over its neighbour. Measured: the same
+     page in Chromium at the iPad's 1366 px sets "Bottling Date:" 145 px
+     wide, the iPad 180. Safari (every iPad/iPhone browser is Safari
+     underneath) therefore gets the transform — type and boxes shrink
+     together. `?scale=transform` forces it anywhere (to check). */
+  useEffect(() => {
+    try {
+      const ua = navigator.userAgent;
+      const iOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      const safari = /^((?!chrome|chromium|android|crios|fxios|edg|opr).)*safari/i.test(ua);
+      const forced = new URLSearchParams(BOOT_SEARCH || window.location.search).get("scale") === "transform";
+      setZoomOK(CSS.supports("zoom", "1") && !iOS && !safari && !forced);
+    } catch { /* the transform stays */ }
+  }, []);
   const ruleH = Math.max(1, Math.round(scale * dpr)) / dpr;                  /* CSS px */
   const ruleTop = (y: number) => Math.round((y * scale - ruleH / 2) * dpr) / dpr;   /* CSS px */
   const [arrowFly, setArrowFly] = useState(false);
