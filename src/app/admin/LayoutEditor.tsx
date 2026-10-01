@@ -24,7 +24,7 @@ type Line = { text: string; x: number; y: number; size: number; tracking: number
 type Box = { x: number; y: number; w: number; h: number };
 type Layout = { W: number; H: number; ground: string; art: Box; artCrop?: Box; lines: Line[]; blend?: "multiply" };
 type State = { lines: Line[]; art: Box; ground?: string };
-type Meta = { id: string; template?: string; style: string; widthMm: number; heightMm: number; createdAt: string; artist?: string; panel?: boolean };
+type Meta = { id: string; template?: string; style: string; widthMm: number; heightMm: number; createdAt: string; artist?: string; panel?: boolean; scene?: boolean };
 type Item = { id: string; template: string; widthMm: number; heightMm: number; artist: string; idea: string };
 type Batch = { open: Item[]; fixed: number; ok: number; running: { total: number; done: number; failed: string[] } | null };
 
@@ -263,7 +263,7 @@ export function LayoutEditor() {
     if (outcome === "fixed") {
       const r = await fetch("/api/admin/layout-edits", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ labelId: id, note, pictureBad, before: { lines: keyed(layout.lines), art: layout.art, picture: wholeOf(layout, artSize), imageSize: artSize, ground: layout.ground }, after: { lines: st.lines, art: shownOf(st.art, layout, meta?.widthMm || 110), picture: st.art, imageSize: artSize, ground: st.ground || layout.ground }, method: meta?.panel ? "panel" : "edge" }),
+        body: JSON.stringify({ labelId: id, note, pictureBad, before: { lines: keyed(layout.lines), art: layout.art, picture: wholeOf(layout, artSize), imageSize: artSize, ground: layout.ground }, after: { lines: st.lines, art: shownOf(st.art, layout, meta?.widthMm || 110), picture: st.art, imageSize: artSize, ground: st.ground || layout.ground }, method: meta?.scene ? "scene" : meta?.panel ? "panel" : "edge" }),
       });
       if (!r.ok) { const b = await r.json().catch(() => ({})); setMsg("Could not save: " + (b.error || r.status)); return; }
     }

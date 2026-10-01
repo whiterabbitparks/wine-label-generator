@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     note: String(body.note || "").slice(0, 2000),
     pictureBad: !!body.pictureBad,
     /* how the picture was placed: "panel" (2026-09-29 trial) or the older edge fit */
-    method: body.method === "panel" ? "panel" : "edge",
+    method: body.method === "scene" ? "scene" : body.method === "panel" ? "panel" : "edge",
     before: body.before, after: body.after,
   };
   fs.mkdirSync(DIR, { recursive: true });

@@ -465,6 +465,17 @@ export async function relayoutLabel(stored: { art: Buffer; meta: { style: string
      painting is cleaned only on its type-facing sides, as when it was
      made (a full clean would flatten a dark painted scene). */
   const storedTpl = templatesNow().find((t) => t.id === (stored.meta as { template?: string }).template);
+  /* a SCENE label: the painting is the whole label — only the type is set again */
+  if (keep && storedTpl && (stored.meta as { scene?: boolean }).scene) {
+    const fam = String((stored.meta as { faces?: string }).faces || "").match(/^(.*?) \d{3}\//)?.[1];
+    let keepSeed = 1;
+    if (fam) for (let k = 1; k < 2000; k++) if (facesFor(band, k).hero.family === fam) { keepSeed = k; break; }
+    const out = await composeTemplateLabel({
+      artwork: raw, band, template: storedTpl.id, data, paper: await meanColour(raw),
+      widthMm, heightMm, seed: keepSeed, wineColour: data.wineColorName, scene: true,
+    });
+    return { png: out.png, svg: out.svg, art: raw, faces: out.faces, ink: out.ink, ground: out.layout.ground || ground, prompt: "(the same painting, the details set again)", layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", template: out.template };
+  }
   if (keep && storedTpl) {
     type Side = "top" | "bottom" | "left" | "right";
     const bl = bleedsOf(storedTpl);
