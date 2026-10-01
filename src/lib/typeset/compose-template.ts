@@ -257,7 +257,17 @@ export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<C
     const offY = bestWindow(detail.rows, ah, by, bh, srcH, visTop, visH);
     const offX = bestWindow(detail.cols, aw, bx, bw, srcW, visLeft, visW);
     pxPos = { x: win.x0 - (bx + offX) * s, y: win.y0 - (by + offY) * s };
-    if (inp.panel) {
+    /* 2026-10-01: a big picture is placed by its ink, like a small one (fitArt) */
+    const fitted = inp.panel && process.env.ART_FIT_OLD !== "1" ? await fitArt(inp.artwork, ground, layout, art, aw, ah, bleeds) : null;
+    if (fitted) {
+      s = fitted.s; pxPos = { x: fitted.x, y: fitted.y };
+      const m = 0.015;
+      const B = { x0: -over, y0: -over, x1: layout.W + over, y1: layout.H + over };
+      const d = { x0: Math.max(B.x0, pxPos.x + aw * m * s), y0: Math.max(B.y0, pxPos.y + ah * m * s), x1: Math.min(B.x1, pxPos.x + aw * (1 - m) * s), y1: Math.min(B.y1, pxPos.y + ah * (1 - m) * s) };
+      layout.art = { x: d.x0, y: d.y0, w: d.x1 - d.x0, h: d.y1 - d.y0 };
+      layout.artCrop = { x: (d.x0 - pxPos.x) / s, y: (d.y0 - pxPos.y) / s, w: (d.x1 - d.x0) / s, h: (d.y1 - d.y0) / s };
+      clip = layout.art;
+    } else if (inp.panel) {
       /* THE PANEL (2026-09-29, owner: "control the three bleeding sides; the
          type side can give — a little more room there, or reaching the line;
          a hint of the painter's edge on a bleeding side is better than losing
@@ -527,4 +537,169 @@ export async function fitSpot(
     if (p) { lo = mid; best = p; bestS = mid; } else hi = mid;
   }
   return { s: bestS, x: best.x, y: best.y };
+}
+
+/* A BIG PICTURE IS PLACED LIKE A SMALL ONE (owner, 2026-10-01: "it is the
+   same thing — only pushed to the edge and wider, to fill one side of the
+   label; why so complicated?"; and his own corrections of 20 panel labels
+   in the admin say how). The drawing is measured by its INK, as fitSpot
+   does, and made as large as it can be while every inked point keeps 2 mm
+   from the type. At the edges two cases:
+   - the drawing ends in the painter's own edge (paper beyond it): that
+     edge stays WHOLE on the label — 2 mm in on a side that bleeds, 3 mm
+     on one that does not — except that the one bleeding side of an axis
+     (not the top) may run off by up to 6 % of the drawing; the picture is
+     pushed toward the bleeding side;
+   - the painting runs to the sheet's edge on a side (no paper there): the
+     sheet's straight edge must lie past the trim, by the 2 mm bleed, so
+     no cut shows — losing at most 12 % of the ink off that side.
+   Sizes are tried from the largest down; null → no size works (the caller
+   falls back to the older placement). */
+const ART_LOSS = 0.12, ART_PAINT_EDGE_MM = 2, ART_RUN_OFF = 0.06;
+async function framed(artwork: string, ground: string): Promise<boolean> {
+  const N = 400;
+  const { data, info } = await sharp(Buffer.from(artwork.slice(artwork.indexOf(",") + 1), "base64")).removeAlpha().resize(N, N, { fit: "fill" }).raw().toBuffer({ resolveWithObject: true });
+  const P = [1, 3, 5].map((k) => parseInt(ground.slice(k, k + 2), 16));
+  const ink = (x: number, y: number) => { const i = (y * N + x) * info.channels; return Math.max(Math.abs(data[i] - P[0]), Math.abs(data[i + 1] - P[1]), Math.abs(data[i + 2] - P[2])) > 24; };
+  let straight = 0;
+  for (const side of ["l", "r", "t", "b"]) {
+    const pos: number[] = [];
+    for (let j = Math.round(N * 0.2); j < N * 0.8; j++) {
+      let k = 6;
+      for (; k < N / 2; k++) { const x = side === "l" ? k : side === "r" ? N - 1 - k : j, y = side === "t" ? k : side === "b" ? N - 1 - k : j; if (ink(x, y)) break; }
+      pos.push(k);
+    }
+    pos.sort((x, y) => x - y);
+    if (pos[Math.floor(pos.length * 0.5)] < N / 2 && pos[Math.floor(pos.length * 0.9)] - pos[Math.floor(pos.length * 0.1)] <= 1) straight++;
+  }
+  return straight >= 3;
+}
+export async function fitArt(
+  artwork: string, ground: string, layout: { W: number; H: number; lines: { text: string; x: number; y: number; size: number; tracking: number; family: string; weight: number; italic: boolean; anchor: "start" | "middle" | "end"; rot?: number }[] },
+  room: { x: number; y: number; w: number; h: number }, aw: number, ah: number,
+  bleeds: { top: boolean; bottom: boolean; left: boolean; right: boolean },
+): Promise<{ s: number; x: number; y: number } | null> {
+  const { measure, inkExtent } = await import("./fonts");
+  const W = layout.W, H = layout.H;
+  const n = Math.max(aw, ah) > 180 ? 180 / Math.max(aw, ah) : 1;
+  const gw = Math.max(8, Math.round(aw * n)), gh = Math.max(8, Math.round(ah * n));
+  const { data, info } = await sharp(Buffer.from(artwork.slice(artwork.indexOf(",") + 1), "base64")).removeAlpha().resize(gw, gh, { fit: "fill" }).raw().toBuffer({ resolveWithObject: true });
+  const P = [1, 3, 5].map((k) => parseInt(ground.slice(k, k + 2), 16));
+  const ink = new Uint8Array(gw * gh);
+  const colN = new Uint32Array(gw), rowN = new Uint32Array(gh);
+  let cnt = 0;
+  for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) {
+    const i = (y * gw + x) * info.channels;
+    if (Math.max(Math.abs(data[i] - P[0]), Math.abs(data[i + 1] - P[1]), Math.abs(data[i + 2] - P[2])) > 24) { ink[y * gw + x] = 1; cnt++; colN[x]++; rowN[y]++; }
+  }
+  if (cnt < 30) return null;
+  /* the ink's extent: the outermost 0.5 % of it set aside (a stray speck
+     must not decide where the edge is) */
+  const q = (a: Uint32Array, f: number) => { let acc = 0; for (let k = 0; k < a.length; k++) { acc += a[k]; if (acc >= cnt * f) return k; } return a.length - 1; };
+  const inkL = q(colN, 0.005) / gw * aw, inkR = (q(colN, 0.995) + 1) / gw * aw, inkT = q(rowN, 0.005) / gh * ah, inkB = (q(rowN, 0.995) + 1) / gh * ah;
+  const pts: [number, number][] = [];
+  for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) {
+    if (!ink[y * gw + x]) continue;
+    const edge = x === 0 || y === 0 || x === gw - 1 || y === gh - 1 || !ink[y * gw + x - 1] || !ink[y * gw + x + 1] || !ink[(y - 1) * gw + x] || !ink[(y + 1) * gw + x];
+    if (edge || (x % 4 === 0 && y % 4 === 0)) pts.push([(x + 0.5) / gw * aw, (y + 0.5) / gh * ah]);
+  }
+  /* where ink may not go: every line of type, grown by the gap */
+  const C = 4, cw = Math.ceil(W / C), ch = Math.ceil(H / C);
+  const bad = new Uint8Array(cw * ch);
+  const gap = SPOT_GAP_MM * PX_PER_MM, edgeM = SPOT_EDGE_MM * PX_PER_MM, paintEdge = ART_PAINT_EDGE_MM * PX_PER_MM, over = 2 * PX_PER_MM;
+  const mark = (ax: number, ay: number, bx: number, by: number) => {
+    for (let y = Math.max(0, Math.floor(ay / C)); y <= Math.min(ch - 1, Math.floor(by / C)); y++)
+      for (let x = Math.max(0, Math.floor(ax / C)); x <= Math.min(cw - 1, Math.floor(bx / C)); x++) bad[y * cw + x] = 1;
+  };
+  for (const l of layout.lines) {
+    if (!l.text.trim()) continue;
+    const f = { family: l.family, weight: l.weight, italic: l.italic };
+    const w = measure(l.text, f, l.size, l.size ? l.tracking / l.size : 0);
+    const e = inkExtent(l.text, f, l.size);
+    let lx = l.anchor === "start" ? l.x : l.anchor === "middle" ? l.x - w / 2 : l.x - w;
+    let rx = lx + w, ty = l.y - e.up, by = l.y + e.down;
+    if (l.rot) {
+      const r = (l.rot * Math.PI) / 180, co = Math.cos(r), si = Math.sin(r);
+      const cs = [[lx, ty], [rx, ty], [lx, by], [rx, by]].map(([a, b]) => [l.x + (a - l.x) * co - (b - l.y) * si, l.y + (a - l.x) * si + (b - l.y) * co]);
+      lx = Math.min(...cs.map((c) => c[0])); rx = Math.max(...cs.map((c) => c[0])); ty = Math.min(...cs.map((c) => c[1])); by = Math.max(...cs.map((c) => c[1]));
+    }
+    mark(lx - gap, ty - gap, rx + gap, by + gap);
+  }
+  const textFree = (s: number, ox: number, oy: number) => {
+    for (const [px2, py2] of pts) {
+      const X = ox + px2 * s, Y = oy + py2 * s;
+      if (X < 0 || Y < 0 || X >= W || Y >= H) continue;   /* off the label: nothing to hit */
+      if (bad[Math.floor(Y / C) * cw + Math.floor(X / C)]) return false;
+    }
+    return true;
+  };
+  /* does the drawing run to the sheet's edge on a side (no paper beyond
+     it there)? then that side of the SHEET is a straight cut and must lie
+     past the trim; otherwise the drawing ends in the painter's own edge,
+     and that edge stays whole on the label */
+  const band = (side: "l" | "r" | "t" | "b") => {
+    const horiz = side === "l" || side === "r", len = horiz ? gw : gh, across = horiz ? gh : gw;
+    const k0 = Math.floor(len * 0.015), k1 = Math.max(k0 + 1, Math.ceil(len * 0.022));
+    let n2 = 0, tot = 0;
+    for (let k = k0; k < k1; k++) for (let j = 0; j < across; j++) {
+      const kk = side === "l" || side === "t" ? k : len - 1 - k;
+      n2 += horiz ? ink[j * gw + kk] : ink[kk * gw + j]; tot++;
+    }
+    return n2 / tot > 0.5;
+  };
+  const full = { l: band("l"), r: band("r"), t: band("t"), b: band("b") };
+  /* a drawing that ends in a RULED edge on three or four sides is a framed
+     picture (the model breaking NO_BORDER_RULE): its frame must never show,
+     so all its sides are run past the trim like a sheet's edge (owner's own
+     correction of Oskar Schmerling's t04, 2026-09-30) */
+  let frame = await framed(artwork, ground);
+  if (frame) full.l = full.r = full.t = full.b = true;
+  let lossK = ART_LOSS;
+  const m = 0.015;
+  /* the ink's start along one axis: the range every end allows, and the
+     place wanted in it (toward the one side that bleeds; else the room's
+     middle) */
+  const axis = (lo: boolean, hi: boolean, fLo: boolean, fHi: boolean, inkA: number, inkB: number, img: number, s: number, size: number, want: number, vertical: boolean): number[] => {
+    const len = (inkB - inkA) * s, loss = len * lossK;
+    /* sheet beyond the ink, label px (a frame's own ruled line is the cut) */
+    const padLo = frame ? 0 : (inkA - img * m) * s, padHi = frame ? 0 : (img * (1 - m) - inkB) * s;
+    /* a painted edge on the ONE side of its axis that bleeds may run off
+       the label a little (his t12, t11, t08 corrections) — never the top
+       (heads, sky: every t01 he kept whole); where both ends of the axis
+       bleed it stays whole, 2 mm in */
+    const runLo = lo && !hi && !vertical ? -len * ART_RUN_OFF : paintEdge;
+    const runHi = hi && !lo ? -len * ART_RUN_OFF : paintEdge;
+    let aMin = -Infinity, aMax = Infinity;
+    if (fLo && lo) { aMax = Math.min(aMax, -over + padLo); aMin = Math.max(aMin, -loss); }
+    else aMin = Math.max(aMin, (lo ? runLo : edgeM) + (fLo ? padLo : 0));
+    if (fHi && hi) { aMin = Math.max(aMin, size + over - padHi - len); aMax = Math.min(aMax, size + loss - len); }
+    else aMax = Math.min(aMax, size - (hi ? runHi : edgeM) - (fHi ? padHi : 0) - len);
+    if (aMin > aMax) return [];
+    const pref = lo && !hi ? aMin : hi && !lo ? aMax : want - len / 2;
+    const best = Math.min(aMax, Math.max(aMin, pref));
+    const out = new Set<number>([best]);
+    for (let k = 1; k <= 12; k++) { out.add(Math.min(aMax, best + k * (aMax - aMin) / 12)); out.add(Math.max(aMin, best - k * (aMax - aMin) / 12)); }
+    return [...out].sort((x, y) => Math.abs(x - best) - Math.abs(y - best));
+  };
+  const sCap = 12 / (150 / 25.4);   /* never under ~150 dpi */
+  const sFill = Math.max(W / (inkR - inkL), H / (inkB - inkT)) * 1.3;
+  const sHi = Math.min(sCap, sFill), sLo = sHi * 0.25;
+  const search = () => {
+    for (let k = 0; k <= 48; k++) {
+      const s = sHi * Math.pow(sLo / sHi, k / 48);
+      const xs = axis(bleeds.left, bleeds.right, full.l, full.r, inkL, inkR, aw, s, W, room.x + room.w / 2, false);
+      const ys = axis(bleeds.top, bleeds.bottom, full.t, full.b, inkT, inkB, ah, s, H, room.y + room.h / 2, true);
+      for (const ax of xs) for (const ay of ys) {
+        const ox = ax - inkL * s, oy = ay - inkT * s;
+        if (textFree(s, ox, oy)) return { s, x: ox, y: oy };
+      }
+    }
+    return null;
+  };
+  /* too tall (or wide) for its window to run off where it must: first a
+     deeper crop off the bleeding sides, then — never onto the type — the
+     whole picture kept inside, like a small one */
+  const hit = search() || ((lossK = 0.25), search()) || ((full.l = full.r = full.t = full.b = false), (frame = false), search());
+  if (hit) return hit;
+  return null;
 }

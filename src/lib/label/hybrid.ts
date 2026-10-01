@@ -287,11 +287,27 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
      round (see generateArtwork `accept`) — the ink box clear of the sheet's
      edge on every side */
   const floats = panel || artKindOf(tpl) === "spot";
+  /* 2026-10-01 (owner: "a big picture is the same as a small one, only
+     pushed to one side and wider"): a panel's sketch is also checked for
+     its SHAPE — its ink measured against the window's proportion. A scene
+     drawn far too tall (or too wide) for its band can only be placed by
+     shrinking it or cutting it, so the cheap sketch is drawn again with
+     the proportion said plainly. */
+  const canvasAsp = ap.aspect === "landscape" ? 1.5 : ap.aspect === "portrait" ? 2 / 3 : 1;
+  let refusal: "paper" | "tall" | "wide" = "paper";
   const onPaper = async (s: string) => {
     const c = await cleanPaper(s);
-    return c.cleaned && c.ink.x > 0.015 && c.ink.y > 0.015 && c.ink.x + c.ink.w < 0.985 && c.ink.y + c.ink.h < 0.985;
+    refusal = "paper";
+    if (!(c.cleaned && c.ink.x > 0.015 && c.ink.y > 0.015 && c.ink.x + c.ink.w < 0.985 && c.ink.y + c.ink.h < 0.985)) return false;
+    if (!panel || process.env.SHAPE_CHECK === "0") return true;
+    const r = (c.ink.w / Math.max(0.01, c.ink.h)) * canvasAsp / zoneAspect;
+    if (r < 0.72) { refusal = "tall"; return false; }
+    if (r > 1.4) { refusal = "wide"; return false; }
+    return true;
   };
-  const retry = `IMPORTANT — THE LAST TRY FILLED THE WHOLE CANVAS: this time leave a wide empty margin of ${kg || pg ? around : "plain, flat paper"} on ALL FOUR sides, about a tenth of the canvas each side; the picture must not touch any edge of the canvas.`;
+  const retry = () => refusal === "paper"
+    ? `IMPORTANT — THE LAST TRY FILLED THE WHOLE CANVAS: this time leave a wide empty margin of ${kg || pg ? around : "plain, flat paper"} on ALL FOUR sides, about a tenth of the canvas each side; the picture must not touch any edge of the canvas.`
+    : `IMPORTANT — THE LAST TRY HAD THE WRONG SHAPE: it was ${refusal === "tall" ? "too tall and narrow" : "too wide and low"}. This time the painted panel must be ${zoneAspect >= 1 ? `${zoneAspect.toFixed(1)} times wider than tall — a long ${zoneAspect >= canvasAsp ? "low band running across the whole width of the canvas, with wide empty margin above and below it" : "panel"}` : `${(1 / zoneAspect).toFixed(1)} times taller than wide — an upright panel, with wide empty margin at its sides`}${zoneAspect >= 1 ? "; arrange the figures side by side within it, never stacked into a tall group" : ""}.`;
   const painted = await gen429(() => generateArtwork(model, ap, { sketch: inp.sketch || null, refSet: inp.refSet, small: inp.small, ...(floats ? { accept: onPaper, retry } : {}) }));
   /* 2026-09-22 (owner): the artist's LoRA learned her PAPER as well as
      her hand, so the picture arrives wrinkled and unevenly lit, and its
