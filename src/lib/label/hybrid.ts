@@ -1,6 +1,7 @@
+import sharp from "sharp";
 import { buildArtworkPrompt, asKind, evalModel, generateArtwork, artistModels, BLEED } from "@/lib/eval/models";
 import { ideaInEnglish } from "./translate";
-import { composeTemplateLabel, templatesOf, pickTemplate, inkLost } from "@/lib/typeset/compose-template";
+import { composeTemplateLabel, templatesOf, pickTemplate, inkLost, lineBoxes } from "@/lib/typeset/compose-template";
 import { templatesNow } from "@/lib/typeset/overrides";
 import type { Template } from "@/lib/typeset/templates";
 import { cleanPaper, whitenPaper } from "@/lib/typeset/palette";
@@ -58,6 +59,10 @@ export interface HybridInput {
   panel?: boolean;
   /* repaint at a smaller size (about half the price) — the admin's batch */
   small?: boolean;
+  /* THE SCENE METHOD, on trial (owner 2026-10-01; SCENE_METHOD=1): the
+     painting covers the WHOLE label — the story only in the template's
+     picture room, its own plain background carried on under the type */
+  scene?: boolean;
 }
 export interface HybridOutput {
   png: string;          /* data URL — the print bitmap at 12 px/mm */
@@ -95,7 +100,7 @@ async function gen429<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
-export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput & { tag: string; painter: string; artist?: string; repainted: boolean; template: string; hasPaper: boolean; refSet: string; panel: boolean }> {
+export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput & { tag: string; painter: string; artist?: string; repainted: boolean; template: string; hasPaper: boolean; refSet: string; panel: boolean; scene: boolean }> {
   const style = ["traditional", "contemporary", "punk"].includes(inp.style) ? inp.style : "traditional";
   let seed = inp.seed ?? (Math.random() * 0xffffffff) >>> 0;
   const avoid = inp.avoidPairs || [];
@@ -137,7 +142,10 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
   const zoneAspect = (zone.w / tpl.refW * widthMm) / (zone.h / tpl.refH * heightMm);
   /* no idea and no sketch → an abstraction in the artist's hand (owner, 2026-09-26) */
   const abstract = !String(inp.vision || "").trim() && !inp.sketch;
-  const ap = asKind(await buildArtworkPrompt(brief, model.artist, abstract), artKindOf(tpl) === "spot" ? "spot" : "bleed");
+  /* the scene method: not for an artist whose ground is fixed (Pirosmani's
+     black, Tatishvili's white paper — owner: "those are the exceptions") */
+  const sceneOn = (inp.scene ?? process.env.SCENE_METHOD === "1") && !(model.artist as { keepGround?: string }).keepGround && !(model.artist as { paper?: string }).paper;
+  const ap = asKind(await buildArtworkPrompt(brief, model.artist, abstract), artKindOf(tpl) === "spot" && !sceneOn ? "spot" : "bleed");
   ap.aspect = zoneAspect > 1.25 ? "landscape" : zoneAspect < 0.8 ? "portrait" : "square";
   /* 2026-09-23 (owner, twice): "only the legs of a person on the chair
      showed — work the picture's proportion out from the room the label
@@ -154,7 +162,7 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
      2.3 times wider than tall; a drawing painted near 4:3 fits it only by
      its height and leaves the sides empty. So a spot drawing is told its
      window's shape too — a wide horizontal (or a tall) vignette. */
-  if (artKindOf(tpl) === "spot") {
+  if (artKindOf(tpl) === "spot" && !sceneOn) {
     const canvas = ap.aspect === "landscape" ? 1.5 : ap.aspect === "portrait" ? 2 / 3 : 1;
     if (zoneAspect > canvas * 1.15 || zoneAspect < canvas / 1.15) {
       /* 2026-09-25 (owner: "many of Levan's pictures sit in a rather
@@ -174,7 +182,7 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
     const bl = bleedsOf(tpl);
     edgeSides = (["bottom", "top", "right", "left"] as const).filter((k) => !bl[k]);
     /* (the panel method, below, asks for its own shape instead) */
-    if (edgeSides.length && !((inp.panel ?? process.env.PANEL_METHOD !== "0") && edgeSides.length <= 1)) {
+    if (!sceneOn && edgeSides.length && !((inp.panel ?? process.env.PANEL_METHOD !== "0") && edgeSides.length <= 1)) {
       /* the type lies across the picture's height (above and/or below it)
          or across its width (beside it) */
       const horiz = edgeSides.every((k) => k === "top" || k === "bottom");
@@ -237,7 +245,7 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
      panel of the window's own shape on plain paper, everything whole inside
      it — and laid in by the composer (compose-template `panel`). The
      "run off the edges / cover the window" asks are dropped. */
-  const panel = (inp.panel ?? process.env.PANEL_METHOD !== "0") && artKindOf(tpl) !== "spot" && edgeSides.length <= 1;
+  const panel = !sceneOn && (inp.panel ?? process.env.PANEL_METHOD !== "0") && artKindOf(tpl) !== "spot" && edgeSides.length <= 1;
   /* 2026-09-30 (owner: "Pirosmani's picture is plainly painted on black,
      yet it gets a beige edge"): the ask said PAPER, and paper means cream
      to the model — so a black oilcloth scene sat on a cream sheet and the
@@ -264,7 +272,41 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
     ap.prompt = ap.prompt.includes(BLEED) ? ap.prompt.replace(BLEED, panelText) : `${ap.prompt} ${panelText}`;
     ap.guide = undefined;
   }
-  if (!panel && artKindOf(tpl) !== "spot" && edgeSides.length <= 1) {
+  /* THE SCENE METHOD (owner, 2026-10-01: "where the image zones are,
+     paint the main things of the story; on the rest of the label just
+     carry the neutral background on — Levan's blue sky continued above,
+     the yellow ground below — as part of the painting, but nothing from
+     the story there, no details, no elements"). The canvas takes the
+     LABEL's shape (gpt-image's three shapes are close to labels, unlike
+     bands), the story area is said in numbers, and the sketch is checked
+     for quiet where the type goes (sceneQuiet, below). */
+  let story = { x: 0, y: 0, w: 1, h: 1 };
+  let typeBoxes: { x0: number; y0: number; x1: number; y1: number }[] = [];
+  if (sceneOn) {
+    const la = widthMm / heightMm;
+    ap.aspect = la > 1.2 ? "landscape" : la < 0.83 ? "portrait" : "square";
+    const probe = layoutFromTemplate({ template: tpl, fields: templateFields(inp.data), widthMm, heightMm, seed, ground: "#ffffff", ink: "#111111", accent: "#111111" });
+    /* the canvas is cut to the label's shape round its middle: the story
+       area in canvas fractions */
+    const ca = ap.aspect === "landscape" ? 1.5 : ap.aspect === "portrait" ? 2 / 3 : 1;
+    const fx = la < ca ? la / ca : 1, fy = la > ca ? ca / la : 1;
+    const A = probe.art;
+    story = { x: (1 - fx) / 2 + (A.x / (widthMm * 12)) * fx, y: (1 - fy) / 2 + (A.y / (heightMm * 12)) * fy, w: (A.w / (widthMm * 12)) * fx, h: (A.h / (heightMm * 12)) * fy };
+    /* where the type will sit, in canvas fractions, grown by 2 mm */
+    const g = 2 * 12;
+    typeBoxes = (await lineBoxes(probe.layout.lines)).map((b) => ({
+      x0: (1 - fx) / 2 + ((b.x0 - g) / (widthMm * 12)) * fx, x1: (1 - fx) / 2 + ((b.x1 + g) / (widthMm * 12)) * fx,
+      y0: (1 - fy) / 2 + ((b.y0 - g) / (heightMm * 12)) * fy, y1: (1 - fy) / 2 + ((b.y1 + g) / (heightMm * 12)) * fy,
+    }));
+    const pc = (v: number) => Math.round(Math.max(0, Math.min(1, v)) * 100);
+    const around = [story.y > 0.06 ? "above" : "", story.y + story.h < 0.94 ? "below" : "", story.x > 0.06 ? "to the left of" : "", story.x + story.w < 0.94 ? "to the right of" : ""].filter(Boolean).join(", ");
+    const sceneText = `THE PICTURE IS THE WHOLE LABEL, painted edge to edge on every side — no paper, no margin, no frame, no border, no panel edge. THE STORY AREA: everything that happens — every figure, face, animal, object, building, tree, plant and detail — is painted ONLY inside the area from ${pc(story.x)}% to ${pc(story.x + story.w)}% of the canvas's width and from ${pc(story.y)}% to ${pc(story.y + story.h)}% of its height, filling it well, every figure whole. EVERYWHERE ELSE (${around || "around"} that area) the canvas is only the same painting's own background carried on — its sky, wall, field, ground or water simply continued in its own colours, calm and nearly flat, with only the painter's gentle brush texture — and NOTHING in it: no figures, objects, plants, trees, clouds, buildings, lines, marks or details. Wine-label type will be printed on those plain parts, so they stay quiet and even.`;
+    ap.kind = "bleed";
+    ap.edgeSide = undefined;
+    ap.guide = undefined;
+    ap.prompt = ap.prompt.includes(BLEED) ? ap.prompt.replace(BLEED, sceneText) : `${ap.prompt} ${sceneText}`;
+  }
+  if (!sceneOn && !panel && artKindOf(tpl) !== "spot" && edgeSides.length <= 1) {
     const canvas = ap.aspect === "landscape" ? 1.5 : ap.aspect === "portrait" ? 2 / 3 : 1;
     const side = edgeSides[0];
     const horizE = !side || side === "top" || side === "bottom" ? zoneAspect >= canvas : false;
@@ -286,7 +328,7 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
   /* a spot or a panel floats on its paper: its sketch must show paper all
      round (see generateArtwork `accept`) — the ink box clear of the sheet's
      edge on every side */
-  const floats = panel || artKindOf(tpl) === "spot";
+  const floats = !sceneOn && (panel || artKindOf(tpl) === "spot");
   /* 2026-10-01 (owner: "a big picture is the same as a small one, only
      pushed to one side and wider"): a panel's sketch is also checked for
      its SHAPE — its ink measured against the window's proportion. A scene
@@ -308,7 +350,26 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
   const retry = () => refusal === "paper"
     ? `IMPORTANT — THE LAST TRY FILLED THE WHOLE CANVAS: this time leave a wide empty margin of ${kg || pg ? around : "plain, flat paper"} on ALL FOUR sides, about a tenth of the canvas each side; the picture must not touch any edge of the canvas.`
     : `IMPORTANT — THE LAST TRY HAD THE WRONG SHAPE: it was ${refusal === "tall" ? "too tall and narrow" : "too wide and low"}. This time the painted panel must be ${zoneAspect >= 1 ? `${zoneAspect.toFixed(1)} times wider than tall — a long ${zoneAspect >= canvasAsp ? "low band running across the whole width of the canvas, with wide empty margin above and below it" : "panel"}` : `${(1 / zoneAspect).toFixed(1)} times taller than wide — an upright panel, with wide empty margin at its sides`}${zoneAspect >= 1 ? "; arrange the figures side by side within it, never stacked into a tall group" : ""}.`;
-  const painted = await gen429(() => generateArtwork(model, ap, { sketch: inp.sketch || null, refSet: inp.refSet, small: inp.small, ...(floats ? { accept: onPaper, retry } : {}) }));
+  /* the scene's sketch: quiet where the type goes */
+  const quietOk = async (st: string) => {
+    const q = await sceneQuiet(st, story, typeBoxes);
+    console.warn(`[scene] busy under the type ${(q.out * 100).toFixed(1)}% (story area ${(q.in * 100).toFixed(1)}%)`);
+    return q.out <= SCENE_BUSY_MAX;
+  };
+  const quietRetry = () => `IMPORTANT — THE LAST TRY PUT FIGURES, OBJECTS OR DETAILS OUTSIDE THE STORY AREA: this time everything that happens stays inside the area from ${Math.round(story.x * 100)}% to ${Math.round((story.x + story.w) * 100)}% of the width and ${Math.round(story.y * 100)}% to ${Math.round((story.y + story.h) * 100)}% of the height; outside it ONLY the plain background carried on — sky, wall or ground in its own colour — with nothing in it at all.`;
+  /* a scene that will not stay quiet under the type after its retries is
+     painted the usual way instead (owner: "if anything, back to the
+     current scheme") — only three cheap sketches are lost */
+  let painted: Awaited<ReturnType<typeof generateArtwork>>;
+  try {
+    painted = await gen429(() => generateArtwork(model, ap, { sketch: inp.sketch || null, refSet: inp.refSet, small: inp.small, ...(sceneOn ? { accept: quietOk, retry: quietRetry, strict: !inp.sketch } : floats ? { accept: onPaper, retry } : {}) }));
+  } catch (e) {
+    if (sceneOn && e instanceof Error && e.message === "STORY_REFUSED") {
+      console.warn(`[scene] ${model.id}: the story would not stay out of the type — painted the usual way`);
+      return paintHybridLabel({ ...inp, scene: false, seed, template: tpl.id, artistId: model.artist.id });
+    }
+    throw e;
+  }
   /* 2026-09-22 (owner): the artist's LoRA learned her PAPER as well as
      her hand, so the picture arrives wrinkled and unevenly lit, and its
      rectangle then shows against the label's one flat colour. The clean
@@ -321,7 +382,9 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
      drawing nothing is touched — a flat ground Levan painted is his. */
   /* a band/panel picture has plain ground only on its type-facing side —
      the paper is looked for there and nowhere else */
-  let cleaned = await cleanPaper(painted.art, undefined, !panel && edgeSides.length ? edgeSides : undefined);
+  let cleaned = sceneOn
+    ? { art: painted.art, ground: await meanColour(painted.art), cleaned: false, ink: { x: 0, y: 0, w: 1, h: 1 } }
+    : await cleanPaper(painted.art, undefined, !panel && edgeSides.length ? edgeSides : undefined);
   /* the repaint can hide the sketch's paper under its grain (Kakabadze's
      watercolour sheet, 2026-09-29) — the paper is then looked for more
      leniently, and failing that the drawing's box is taken from the
@@ -350,6 +413,7 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
     artwork: art, band, template: chosen.id, data: inp.data, ink: cleaned.ink, paper: cleaned.ground,
     edge: !panel && cleaned.cleaned && edgeSides.length ? edgeSides : undefined,
     panel: panel && floatOk,
+    scene: sceneOn,
     blend: (model.artist as { blend?: "multiply" }).blend,
     widthMm, heightMm, seed, wineColour: inp.data.wineColorName,
   });
@@ -359,7 +423,7 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
   const kept = blend === "multiply" ? await whitenPaper(art, cleaned.ground) : art;
   if (out.warnings.length) console.warn(`[template ${out.template}] ${out.warnings.join("; ")}`);
   rememberMade({ artist: model.artist.name, template: out.template, face: out.faces.match(/^(.*?) \d{3}\//)?.[1] || out.faces.split(" ")[0], ground: groundWord(out.layout.ground) });
-  return { png: out.png, svg: out.svg, art: kept, faces: out.faces, ink: out.ink, ground: out.layout.ground, prompt: ap.prompt, layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", painter: model.id, artist: model.artist.name, repainted: painted.repainted, template: out.template, hasPaper: cleaned.cleaned, refSet: painted.refSet, panel: panel && floatOk };
+  return { png: out.png, svg: out.svg, art: kept, faces: out.faces, ink: out.ink, ground: out.layout.ground, prompt: ap.prompt, layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", painter: model.id, artist: model.artist.name, repainted: painted.repainted, template: out.template, hasPaper: cleaned.cleaned, refSet: painted.refSet, panel: panel && floatOk, scene: sceneOn };
 }
 
 /* ROUND 86 #3 (owner: "keep the image, just change the layout — tons of
@@ -457,4 +521,29 @@ export function fontFilesOf(svg: string): string[] {
   let m: RegExpExecArray | null;
   while ((m = re.exec(svg))) files.add(faceFile({ family: m[1].replace(/&amp;/g, "&"), weight: Number(m[2]), italic: !!m[3] }));
   return [...files];
+}
+
+/* the scene method's quiet check: how much of the sketch UNDER THE TYPE
+   (each line's box, grown by 2 mm) is busy — 6-px blocks whose brightness
+   varies more than a brush texture does; a figure, object or drawn detail
+   there shows as busy blocks */
+const SCENE_BUSY_MAX = Number(process.env.SCENE_BUSY_MAX || 0.06);
+export async function sceneQuiet(dataUrl: string, story: { x: number; y: number; w: number; h: number }, boxes: { x0: number; y0: number; x1: number; y1: number }[]): Promise<{ out: number; in: number }> {
+  const N = 240, B = 6;
+  const { data } = await sharp(Buffer.from(dataUrl.slice(dataUrl.indexOf(",") + 1), "base64")).removeAlpha().resize(N, N, { fit: "fill" }).greyscale().raw().toBuffer({ resolveWithObject: true });
+  let bo = 0, no = 0, bi = 0, ni = 0;
+  for (let by = 0; by < N; by += B) for (let bx = 0; bx < N; bx += B) {
+    let s1 = 0, s2 = 0;
+    for (let y = by; y < by + B; y++) for (let x = bx; x < bx + B; x++) { const v = data[y * N + x]; s1 += v; s2 += v * v; }
+    const n = B * B, sd = Math.sqrt(Math.max(0, s2 / n - (s1 / n) ** 2));
+    const cx = (bx + B / 2) / N, cy = (by + B / 2) / N;
+    const busy = sd > 20 ? 1 : 0;
+    if (boxes.some((b) => cx >= b.x0 && cx <= b.x1 && cy >= b.y0 && cy <= b.y1)) { bo += busy; no++; }
+    else if (cx > story.x && cx < story.x + story.w && cy > story.y && cy < story.y + story.h) { bi += busy; ni++; }
+  }
+  return { out: no ? bo / no : 0, in: ni ? bi / ni : 0 };
+}
+async function meanColour(dataUrl: string): Promise<string> {
+  const st = await sharp(Buffer.from(dataUrl.slice(dataUrl.indexOf(",") + 1), "base64")).removeAlpha().stats();
+  return "#" + st.channels.slice(0, 3).map((c) => Math.round(c.mean).toString(16).padStart(2, "0")).join("");
 }

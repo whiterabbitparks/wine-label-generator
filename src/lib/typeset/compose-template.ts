@@ -37,6 +37,9 @@ export interface TemplateComposeInput {
   panel?: boolean;
   /* 2026-10-01 (owner): the picture over the ground in multiply — Grigol Tatishvili only (profile `blend`) */
   blend?: "multiply";
+  /* the scene method (owner, 2026-10-01): the picture IS the whole label —
+     laid over the trim and its 2 mm bleed, the type over its quiet parts */
+  scene?: boolean;
   /* the label's ground when it differs from the picture's paper — a
      multiply picture stored with its paper made white keeps the tone its
      label was laid on (re-layouts) */
@@ -202,7 +205,38 @@ export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<C
      type is a straight cut, as his artboards draw the band. */
   let s: number, pxPos: { x: number; y: number };
   let clip: { x: number; y: number; w: number; h: number } | null = null;
-  if (kind === "spot") {
+  if (inp.scene) {
+    const over = 2 * (layout.W / inp.widthMm);
+    s = Math.max((layout.W + 2 * over) / aw, (layout.H + 2 * over) / ah);
+    pxPos = { x: (layout.W - aw * s) / 2, y: (layout.H - ah * s) / 2 };
+    const B = { x0: -over, y0: -over, x1: layout.W + over, y1: layout.H + over };
+    layout.art = { x: B.x0, y: B.y0, w: B.x1 - B.x0, h: B.y1 - B.y0 };
+    layout.artCrop = { x: (B.x0 - pxPos.x) / s, y: (B.y0 - pxPos.y) / s, w: (B.x1 - B.x0) / s, h: (B.y1 - B.y0) / s };
+    clip = layout.art;
+    /* each line's colour is made readable against what lies under IT */
+    const { measure, inkExtent } = await import("./fonts");
+    const img = sharp(Buffer.from(inp.artwork.slice(inp.artwork.indexOf(",") + 1), "base64")).removeAlpha();
+    const raw = await img.raw().toBuffer({ resolveWithObject: true });
+    for (const l of layout.lines) {
+      if (!l.text.trim()) continue;
+      const f = { family: l.family, weight: l.weight, italic: l.italic };
+      const w = measure(l.text, f, l.size, l.size ? l.tracking / l.size : 0), e = inkExtent(l.text, f, l.size);
+      let x0 = l.anchor === "start" ? l.x : l.anchor === "middle" ? l.x - w / 2 : l.x - w, x1 = x0 + w, y0 = l.y - e.up, y1 = l.y + e.down;
+      if (l.rot) {
+        const r = (l.rot * Math.PI) / 180, co = Math.cos(r), si = Math.sin(r);
+        const cs = [[x0, y0], [x1, y0], [x0, y1], [x1, y1]].map(([a, b]) => [l.x + (a - l.x) * co - (b - l.y) * si, l.y + (a - l.x) * si + (b - l.y) * co]);
+        x0 = Math.min(...cs.map((c) => c[0])); x1 = Math.max(...cs.map((c) => c[0])); y0 = Math.min(...cs.map((c) => c[1])); y1 = Math.max(...cs.map((c) => c[1]));
+      }
+      const ix0 = Math.max(0, Math.floor((x0 - pxPos.x) / s)), ix1 = Math.min(aw - 1, Math.ceil((x1 - pxPos.x) / s));
+      const iy0 = Math.max(0, Math.floor((y0 - pxPos.y) / s)), iy1 = Math.min(ah - 1, Math.ceil((y1 - pxPos.y) / s));
+      let r = 0, g = 0, b = 0, n = 0;
+      const C = raw.info.channels;
+      for (let y = iy0; y <= iy1; y += 2) for (let x = ix0; x <= ix1; x += 2) { const i = (y * aw + x) * C; r += raw.data[i]; g += raw.data[i + 1]; b += raw.data[i + 2]; n++; }
+      if (!n) continue;
+      const under = "#" + [r, g, b].map((v) => Math.round(v / n).toString(16).padStart(2, "0")).join("");
+      l.colour = readable(l.colour, under, l.size >= 60 ? 3 : 4.5);
+    }
+  } else if (kind === "spot") {
     /* 2026-09-25 (owner: "the ink has more free space on one side, and
        centred as a whole it looks oddly placed — centre the drawing").
        The box around ALL the ink is stretched by strays — a cloud, a
@@ -710,4 +744,23 @@ export async function fitArt(
   const hit = search() || ((lossK = 0.25), search()) || ((full.l = full.r = full.t = full.b = false), (frame = false), search());
   if (hit) return hit;
   return null;
+}
+
+/* every set line's ink box, label px (rotated lines by their corners) */
+export async function lineBoxes(lines: { text: string; x: number; y: number; size: number; tracking: number; family: string; weight: number; italic: boolean; anchor: "start" | "middle" | "end"; rot?: number }[]): Promise<{ x0: number; y0: number; x1: number; y1: number }[]> {
+  const { measure, inkExtent } = await import("./fonts");
+  const out: { x0: number; y0: number; x1: number; y1: number }[] = [];
+  for (const l of lines) {
+    if (!l.text.trim()) continue;
+    const f = { family: l.family, weight: l.weight, italic: l.italic };
+    const w = measure(l.text, f, l.size, l.size ? l.tracking / l.size : 0), e = inkExtent(l.text, f, l.size);
+    let x0 = l.anchor === "start" ? l.x : l.anchor === "middle" ? l.x - w / 2 : l.x - w, x1 = x0 + w, y0 = l.y - e.up, y1 = l.y + e.down;
+    if (l.rot) {
+      const r = (l.rot * Math.PI) / 180, co = Math.cos(r), si = Math.sin(r);
+      const cs = [[x0, y0], [x1, y0], [x0, y1], [x1, y1]].map(([a, b]) => [l.x + (a - l.x) * co - (b - l.y) * si, l.y + (a - l.x) * si + (b - l.y) * co]);
+      x0 = Math.min(...cs.map((c) => c[0])); x1 = Math.max(...cs.map((c) => c[0])); y0 = Math.min(...cs.map((c) => c[1])); y1 = Math.max(...cs.map((c) => c[1]));
+    }
+    out.push({ x0, y0, x1, y1 });
+  }
+  return out;
 }
