@@ -30,6 +30,8 @@ export interface ArtistProfile {
   keepGround?: string;
   /* 2026-09-30: a ground that is ALWAYS a light paper (Grigol Tatishvili: white or warm cream) */
   paper?: string;
+  /* 2026-10-01: lay the picture over the label's ground in multiply (Grigol Tatishvili) */
+  blend?: "multiply";
   /* works shown to the sketch painter but left out of a LoRA training */
   trainExclude?: string[];
   /* 2026-09-23: the ART DIRECTOR's note on a painter's hand, kept apart

@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import sharp from "sharp";
-import { PDFDocument, rgb, degrees, setCharacterSpacing, pushGraphicsState, popGraphicsState } from "pdf-lib";
+import { PDFDocument, rgb, degrees, setCharacterSpacing, pushGraphicsState, popGraphicsState, BlendMode } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import type { Layout } from "@/lib/typeset/compose";
 import { faceFile } from "@/lib/typeset/fonts";
@@ -50,7 +50,7 @@ export async function labelPdf(layout: Layout, artPng: Buffer, widthMm: number, 
     cropped = await sharp(artPng).extract({ left: cx, top: 0, width: cw, height: ch }).png().toBuffer();
   }
   const img = await doc.embedPng(cropped);
-  page.drawImage(img, { x: a.x * s, y: Hpt - (a.y + a.h) * s, width: a.w * s, height: a.h * s });
+  page.drawImage(img, { x: a.x * s, y: Hpt - (a.y + a.h) * s, width: a.w * s, height: a.h * s, ...(layout.blend === "multiply" ? { blendMode: BlendMode.Multiply } : {}) });
 
   /* the type: one embedded (subset) font per face used */
   /* THE PDF FONT POOL: public/fonts/labels-pdf/ holds every face of

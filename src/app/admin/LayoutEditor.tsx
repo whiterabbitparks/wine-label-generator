@@ -22,7 +22,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type Line = { text: string; x: number; y: number; size: number; tracking: number; family: string; weight: number; italic: boolean; anchor: "start" | "middle" | "end"; colour: string; rot?: number; key?: string; hidden?: boolean };
 type Box = { x: number; y: number; w: number; h: number };
-type Layout = { W: number; H: number; ground: string; art: Box; artCrop?: Box; lines: Line[] };
+type Layout = { W: number; H: number; ground: string; art: Box; artCrop?: Box; lines: Line[]; blend?: "multiply" };
 type State = { lines: Line[]; art: Box; ground?: string };
 type Meta = { id: string; template?: string; style: string; widthMm: number; heightMm: number; createdAt: string; artist?: string; panel?: boolean };
 type Item = { id: string; template: string; widthMm: number; heightMm: number; artist: string; idea: string };
@@ -342,7 +342,7 @@ export function LayoutEditor() {
               {/* the whole painting, shown as far as the label + its 2 mm bleed */}
               {(() => { const v = shownOf(st.art, layout, meta?.widthMm || 110); return (<>
                 <clipPath id="le-shown"><rect x={v.x} y={v.y} width={v.w} height={v.h} /></clipPath>
-                <image href={`/api/admin/labels?id=${id}&part=art`} x={st.art.x} y={st.art.y} width={st.art.w} height={st.art.h} preserveAspectRatio="none" clipPath="url(#le-shown)" />
+                <image href={`/api/admin/labels?id=${id}&part=art`} x={st.art.x} y={st.art.y} width={st.art.w} height={st.art.h} preserveAspectRatio="none" clipPath="url(#le-shown)" style={layout.blend === "multiply" ? { mixBlendMode: "multiply" } : undefined} />
                 <rect x={v.x} y={v.y} width={v.w} height={v.h} fill="transparent" style={{ cursor: "move" }} onPointerDown={onDown("art")} />
               </>); })()}
               {/* the type */}

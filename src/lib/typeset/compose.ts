@@ -47,7 +47,9 @@ export interface LaidLine { text: string; x: number; y: number; size: number; tr
      "wineTypeLine+alcVol"…) — the admin's layout editor and the reading of
      its edits need it; an arced name's letters all carry the same key */
   key?: string }
-export interface Layout { W: number; H: number; ground: string; art: { x: number; y: number; w: number; h: number }; artCrop?: { x: number; y: number; w: number; h: number }; lines: LaidLine[] }
+export interface Layout { W: number; H: number; ground: string; art: { x: number; y: number; w: number; h: number }; artCrop?: { x: number; y: number; w: number; h: number }; lines: LaidLine[];
+  /* 2026-10-01: the picture laid over the ground in MULTIPLY (an artist's profile `blend`) */
+  blend?: "multiply" }
 export interface ComposeOutput { svg: string; png: string; faces: string; ink: string; layout: Layout }
 
 const PX_PER_MM = 12;                       /* 110 mm → 1320 px */

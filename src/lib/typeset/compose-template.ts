@@ -35,6 +35,8 @@ export interface TemplateComposeInput {
      window's own shape on plain paper (the spot method) — laid in exactly
      on the sides that bleed, flexibly toward the type */
   panel?: boolean;
+  /* 2026-10-01 (owner): the picture over the ground in multiply — Grigol Tatishvili only (profile `blend`) */
+  blend?: "multiply";
   textless?: boolean;           /* the label WITHOUT its type — the layout bench draws the words itself */
   /* the drawing's box inside the file, as fractions — cleanPaper knows it
      exactly, because it grew the paper in from the edge */
@@ -323,7 +325,8 @@ export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<C
       + `${t}>${esc(l.text)}</text>`;
   }).join("");
 
-  const image = `<image xlink:href="${inp.artwork}" x="${pxPos.x.toFixed(1)}" y="${pxPos.y.toFixed(1)}" width="${pw.toFixed(1)}" height="${ph.toFixed(1)}" preserveAspectRatio="none"/>`;
+  if (inp.blend === "multiply") layout.blend = "multiply";
+  const image = `<image xlink:href="${inp.artwork}" x="${pxPos.x.toFixed(1)}" y="${pxPos.y.toFixed(1)}" width="${pw.toFixed(1)}" height="${ph.toFixed(1)}" preserveAspectRatio="none"${inp.blend === "multiply" ? ' style="mix-blend-mode:multiply"' : ""}/>`;
   /* a bleeding picture is cut to its window (the straight edge facing the type) */
   const picture = clip
     ? `<clipPath id="artwin"><rect x="${clip.x.toFixed(1)}" y="${clip.y.toFixed(1)}" width="${clip.w.toFixed(1)}" height="${clip.h.toFixed(1)}"/></clipPath><g clip-path="url(#artwin)">${image}</g>`

@@ -4,6 +4,7 @@ import { composeTemplateLabel, templatesOf, pickTemplate, inkLost } from "@/lib/
 import { templatesNow } from "@/lib/typeset/overrides";
 import type { Template } from "@/lib/typeset/templates";
 import { cleanPaper } from "@/lib/typeset/palette";
+import { listArtists } from "./artists";
 import { artKindOf, bleedsOf, facesFor, layoutFromTemplate, templateFields, type ArtKind, type Band } from "@/lib/typeset/templates";
 import { faceFile, pickRoles, mix } from "@/lib/typeset/fonts";
 import type { Layout } from "@/lib/typeset/compose";
@@ -333,6 +334,7 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
     artwork: art, band, template: chosen.id, data: inp.data, ink: cleaned.ink, paper: cleaned.ground,
     edge: !panel && cleaned.cleaned && edgeSides.length ? edgeSides : undefined,
     panel: panel && floatOk,
+    blend: (model.artist as { blend?: "multiply" }).blend,
     widthMm, heightMm, seed, wineColour: inp.data.wineColorName,
   });
   if (out.warnings.length) console.warn(`[template ${out.template}] ${out.warnings.join("; ")}`);
@@ -356,6 +358,12 @@ export function layoutTag(style: string, seed: number): string {
    arrangements"): `big` insists on the largest hero sizes; `flip` sets
    the type on the OTHER alignment (a centred style goes left, a left one
    goes centred) */
+/* the artist's blend, from the name a label records */
+const blendOf = (name?: string): "multiply" | undefined => {
+  const n = String(name || "");
+  const a = n ? listArtists().find((x) => x.profile.name === n || n.startsWith(x.profile.name)) : undefined;
+  return (a?.profile as { blend?: "multiply" } | undefined)?.blend;
+};
 export async function relayoutLabel(stored: { art: Buffer; meta: { style: string; widthMm: number; heightMm: number; ground: string; fit?: "yield" | "crop" | "top" | "vignette" } }, data: Record<string, string>, avoid: string[] = [], recipe: { big?: boolean; flip?: boolean } = {}, keep = false): Promise<HybridOutput & { tag: string; template: string; panel?: boolean }> {
   const { style, widthMm, heightMm, ground } = stored.meta;
   const raw = `data:image/png;base64,${stored.art.toString("base64")}`;
@@ -390,6 +398,7 @@ export async function relayoutLabel(stored: { art: Buffer; meta: { style: string
       artwork: cl.art, band, template: storedTpl.id, data, ink: cl.ink, paper: cl.ground,
       widthMm, heightMm, seed: keepSeed, wineColour: data.wineColorName, edge: !wasPanel && cl.cleaned && sides.length ? sides : undefined,
       panel: wasPanel && cl.cleaned,
+      blend: blendOf((stored.meta as { artist?: string }).artist),
     });
     return { png: out.png, svg: out.svg, art: cl.art, faces: out.faces, ink: out.ink, ground: out.layout.ground || ground, prompt: "(the same painting, the details set again)", layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", template: out.template, panel: wasPanel && cl.cleaned };
   }
