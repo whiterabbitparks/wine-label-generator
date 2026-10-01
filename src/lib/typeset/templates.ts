@@ -198,7 +198,11 @@ export function facesFor(band: Band, seed: number): { hero: Face; secondary: Fac
     const t = titles[mix(seed, 31) % titles.length];
     /* the plain companion: the column's own approved face — for the
        decorative column a plain sans (or serif) one */
-    const plain = own.length ? [...bankSets("sans"), ...bankSets("serif")].concat(own) : cat === "display" ? [...bankSets("sans"), ...bankSets("serif")] : sets;
+    /* the companion is PLAIN: an approved serif or sans with real weights
+       (not a one-weight display face like Bebas Neue) */
+    const textFaces = [...bankSets("sans"), ...bankSets("serif")];
+    const multi = textFaces.filter((x) => x.text !== x.bold);
+    const plain = multi.length ? multi : textFaces.length ? textFaces : sets;
     const c = plain.length ? plain[mix(seed, 37) % plain.length] : BAND_FACES[band === "free" ? "contemporary" : band].sets[0];
     return { hero: t, secondary: { family: c.family, weight: c.mid }, small: { family: c.family, weight: c.text } };
   }
