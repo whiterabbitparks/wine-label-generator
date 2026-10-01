@@ -173,7 +173,7 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
     const bl = bleedsOf(tpl);
     edgeSides = (["bottom", "top", "right", "left"] as const).filter((k) => !bl[k]);
     /* (the panel method, below, asks for its own shape instead) */
-    if (edgeSides.length && !((inp.panel ?? process.env.PANEL_METHOD === "1") && edgeSides.length <= 1)) {
+    if (edgeSides.length && !((inp.panel ?? process.env.PANEL_METHOD !== "0") && edgeSides.length <= 1)) {
       /* the type lies across the picture's height (above and/or below it)
          or across its width (beside it) */
       const horiz = edgeSides.every((k) => k === "top" || k === "bottom");
@@ -229,12 +229,14 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
      SKETCH is told, in words, how much of it is kept and where — the
      figures SMALL, whole, inside that part, with open sky and ground
      beyond. Only the sketch reads it (the repaint keeps the arrangement). */
-  /* 2026-09-29 (owner) — THE PANEL METHOD, on trial (PANEL_METHOD=1): a
+  /* 2026-10-01 (owner: "switch it on for everyone"): ON by default —
+     PANEL_METHOD=0 in the environment turns it off.
+     2026-09-29 (owner) — THE PANEL METHOD, on trial (PANEL_METHOD=1): a
      big picture with type on at most one side is painted like a spot — ONE
      panel of the window's own shape on plain paper, everything whole inside
      it — and laid in by the composer (compose-template `panel`). The
      "run off the edges / cover the window" asks are dropped. */
-  const panel = (inp.panel ?? process.env.PANEL_METHOD === "1") && artKindOf(tpl) !== "spot" && edgeSides.length <= 1;
+  const panel = (inp.panel ?? process.env.PANEL_METHOD !== "0") && artKindOf(tpl) !== "spot" && edgeSides.length <= 1;
   /* 2026-09-30 (owner: "Pirosmani's picture is plainly painted on black,
      yet it gets a beige edge"): the ask said PAPER, and paper means cream
      to the model — so a black oilcloth scene sat on a cream sheet and the
