@@ -1,5 +1,5 @@
 import sharp from "sharp";
-import { inkOf, vignetteOf } from "./palette";
+import { inkOf, vignetteOf, whitenPaper } from "./palette";
 import { layoutFromTemplate, templateFields, artKindOf, bleedsOf, MARGIN_MM, PX_PER_MM, type ArtKind, type Band, type Template } from "./templates";
 import { templatesNow } from "./overrides";
 import type { ComposeOutput } from "./compose";
@@ -37,6 +37,10 @@ export interface TemplateComposeInput {
   panel?: boolean;
   /* 2026-10-01 (owner): the picture over the ground in multiply — Grigol Tatishvili only (profile `blend`) */
   blend?: "multiply";
+  /* the label's ground when it differs from the picture's paper — a
+     multiply picture stored with its paper made white keeps the tone its
+     label was laid on (re-layouts) */
+  labelGround?: string;
   textless?: boolean;           /* the label WITHOUT its type — the layout bench draws the words itself */
   /* the drawing's box inside the file, as fractions — cleanPaper knows it
      exactly, because it grew the paper in from the edge */
@@ -140,7 +144,8 @@ export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<C
      every ground ivory white"). One less variable while the layouts are
      being settled, and a printer's paper does not change per bottle. */
   /* the label's paper IS the painting's paper, flattened to one tone */
-  const ground = inp.paper || vig.ground;
+  const paperG = inp.paper || vig.ground;            /* the picture's own paper: its ink is measured against it */
+  const ground = inp.labelGround || paperG;         /* the label's ground */
   const ink = readable(inks.ink, ground, 7);     /* the body text wants more than the accent */
   const accent = accentFor(inks.accent, inp.wineColour, ground, ink);
 
@@ -208,7 +213,7 @@ export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<C
        make that room, but never below 88% of its size — past that the
        core only moves as far as the room allows. */
     const s0 = Math.min(art.w / bw, art.h / bh);
-    const core = await inkCore(inp.artwork, ground, box);
+    const core = await inkCore(inp.artwork, paperG, box);
     const cx = core ? core.cx * aw : bx + bw / 2, cy = core ? core.cy * ah : by + bh / 2;
     const reachX = Math.max(cx - bx, bx + bw - cx), reachY = Math.max(cy - by, by + bh - cy);
     s = Math.max(0.88 * s0, Math.min(s0, art.w / (2 * reachX), art.h / (2 * reachY)));
@@ -223,7 +228,7 @@ export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<C
        shown as a wider piece of the sheet so no wisp of the drawing meets
        a straight cut (the sheet's own outer 1.5 % stays out: the repaint
        leaves a hairline there) */
-    const grown = process.env.SPOT_FIT_OLD === "1" ? null : await fitSpot(inp.artwork, ground, layout, art, aw, ah, s);
+    const grown = process.env.SPOT_FIT_OLD === "1" ? null : await fitSpot(inp.artwork, paperG, layout, art, aw, ah, s);
     if (grown) {
       s = grown.s; pxPos = { x: grown.x, y: grown.y };
       const over = 2 * (layout.W / inp.widthMm);
@@ -258,7 +263,7 @@ export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<C
     const offX = bestWindow(detail.cols, aw, bx, bw, srcW, visLeft, visW);
     pxPos = { x: win.x0 - (bx + offX) * s, y: win.y0 - (by + offY) * s };
     /* 2026-10-01: a big picture is placed by its ink, like a small one (fitArt) */
-    const fitted = inp.panel && process.env.ART_FIT_OLD !== "1" ? await fitArt(inp.artwork, ground, layout, art, aw, ah, bleeds) : null;
+    const fitted = inp.panel && process.env.ART_FIT_OLD !== "1" ? await fitArt(inp.artwork, paperG, layout, art, aw, ah, bleeds) : null;
     if (fitted) {
       s = fitted.s; pxPos = { x: fitted.x, y: fitted.y };
       const m = 0.015;
@@ -336,7 +341,10 @@ export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<C
   }).join("");
 
   if (inp.blend === "multiply") layout.blend = "multiply";
-  const image = `<image xlink:href="${inp.artwork}" x="${pxPos.x.toFixed(1)}" y="${pxPos.y.toFixed(1)}" width="${pw.toFixed(1)}" height="${ph.toFixed(1)}" preserveAspectRatio="none"${inp.blend === "multiply" ? ' style="mix-blend-mode:multiply"' : ""}/>`;
+  /* under multiply the paper is made white first (whitenPaper), so no
+     rectangle of it shows on the ground */
+  const href = inp.blend === "multiply" ? await whitenPaper(inp.artwork, paperG) : inp.artwork;
+  const image = `<image xlink:href="${href}" x="${pxPos.x.toFixed(1)}" y="${pxPos.y.toFixed(1)}" width="${pw.toFixed(1)}" height="${ph.toFixed(1)}" preserveAspectRatio="none"${inp.blend === "multiply" ? ' style="mix-blend-mode:multiply"' : ""}/>`;
   /* a bleeding picture is cut to its window (the straight edge facing the type) */
   const picture = clip
     ? `<clipPath id="artwin"><rect x="${clip.x.toFixed(1)}" y="${clip.y.toFixed(1)}" width="${clip.w.toFixed(1)}" height="${clip.h.toFixed(1)}"/></clipPath><g clip-path="url(#artwin)">${image}</g>`

@@ -3,7 +3,7 @@ import { ideaInEnglish } from "./translate";
 import { composeTemplateLabel, templatesOf, pickTemplate, inkLost } from "@/lib/typeset/compose-template";
 import { templatesNow } from "@/lib/typeset/overrides";
 import type { Template } from "@/lib/typeset/templates";
-import { cleanPaper } from "@/lib/typeset/palette";
+import { cleanPaper, whitenPaper } from "@/lib/typeset/palette";
 import { listArtists } from "./artists";
 import { artKindOf, bleedsOf, facesFor, layoutFromTemplate, templateFields, type ArtKind, type Band } from "@/lib/typeset/templates";
 import { faceFile, pickRoles, mix } from "@/lib/typeset/fonts";
@@ -353,9 +353,13 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
     blend: (model.artist as { blend?: "multiply" }).blend,
     widthMm, heightMm, seed, wineColour: inp.data.wineColorName,
   });
+  /* a multiply picture is KEPT with its paper made white (the PDF, the
+     admin editor and every re-layout lay that file in multiply) */
+  const blend = (model.artist as { blend?: "multiply" }).blend;
+  const kept = blend === "multiply" ? await whitenPaper(art, cleaned.ground) : art;
   if (out.warnings.length) console.warn(`[template ${out.template}] ${out.warnings.join("; ")}`);
   rememberMade({ artist: model.artist.name, template: out.template, face: out.faces.match(/^(.*?) \d{3}\//)?.[1] || out.faces.split(" ")[0], ground: groundWord(out.layout.ground) });
-  return { png: out.png, svg: out.svg, art, faces: out.faces, ink: out.ink, ground: out.layout.ground, prompt: ap.prompt, layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", painter: model.id, artist: model.artist.name, repainted: painted.repainted, template: out.template, hasPaper: cleaned.cleaned, refSet: painted.refSet, panel: panel && floatOk };
+  return { png: out.png, svg: out.svg, art: kept, faces: out.faces, ink: out.ink, ground: out.layout.ground, prompt: ap.prompt, layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", painter: model.id, artist: model.artist.name, repainted: painted.repainted, template: out.template, hasPaper: cleaned.cleaned, refSet: painted.refSet, panel: panel && floatOk };
 }
 
 /* ROUND 86 #3 (owner: "keep the image, just change the layout — tons of
@@ -410,13 +414,16 @@ export async function relayoutLabel(stored: { art: Buffer; meta: { style: string
     const fam = String((stored.meta as { faces?: string }).faces || "").match(/^(.*?) \d{3}\//)?.[1];
     let keepSeed = 1;
     if (fam) for (let k = 1; k < 2000; k++) if (facesFor(band, k).hero.family === fam) { keepSeed = k; break; }
+    /* a multiply picture is stored with its paper white: the label keeps
+       the ground it was laid on */
+    const blend = blendOf((stored.meta as { artist?: string }).artist);
     const out = await composeTemplateLabel({
       artwork: cl.art, band, template: storedTpl.id, data, ink: cl.ink, paper: cl.ground,
       widthMm, heightMm, seed: keepSeed, wineColour: data.wineColorName, edge: !wasPanel && cl.cleaned && sides.length ? sides : undefined,
       panel: wasPanel && cl.cleaned,
-      blend: blendOf((stored.meta as { artist?: string }).artist),
+      blend, labelGround: blend ? ground : undefined,
     });
-    return { png: out.png, svg: out.svg, art: cl.art, faces: out.faces, ink: out.ink, ground: out.layout.ground || ground, prompt: "(the same painting, the details set again)", layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", template: out.template, panel: wasPanel && cl.cleaned };
+    return { png: out.png, svg: out.svg, art: blend === "multiply" ? await whitenPaper(cl.art, cl.ground) : cl.art, faces: out.faces, ink: out.ink, ground: out.layout.ground || ground, prompt: "(the same painting, the details set again)", layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", template: out.template, panel: wasPanel && cl.cleaned };
   }
   const cleaned = await cleanPaper(raw);
   const art = cleaned.art;
@@ -432,12 +439,14 @@ export async function relayoutLabel(stored: { art: Buffer; meta: { style: string
   const free = scored.filter((x) => !used.has(x.t.id));
   const pick = (free.length ? free : scored.length ? scored : [{ t: pool[0], lost: 0 }])[0].t;
   const seed = (Math.random() * 0xffffffff) >>> 0;
+  const blendV = blendOf((stored.meta as { artist?: string }).artist);
   const out = await composeTemplateLabel({
     artwork: art, band, template: pick.id, data, ink: cleaned.ink, paper: cleaned.ground,
     widthMm, heightMm, seed, wineColour: data.wineColorName,
+    blend: blendV, labelGround: blendV ? ground : undefined,
   });
   void recipe;
-  return { png: out.png, svg: out.svg, art, faces: out.faces, ink: out.ink, ground: out.layout.ground || ground, prompt: "(re-layout of an existing painting)", layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", template: out.template };
+  return { png: out.png, svg: out.svg, art: blendV === "multiply" ? await whitenPaper(art, cleaned.ground) : art, faces: out.faces, ink: out.ink, ground: out.layout.ground || ground, prompt: "(re-layout of an existing painting)", layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", template: out.template };
 }
 
 /* the TTFs a label's SVG sets its type in — shipped beside the SVG so

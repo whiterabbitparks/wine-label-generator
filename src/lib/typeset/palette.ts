@@ -385,3 +385,22 @@ export async function cleanPaper(dataUrl: string, to?: string, sideIn?: Side | S
   const png = await sharp(out, { raw: { width: W, height: H, channels: C as 1 | 2 | 3 | 4 } }).png().toBuffer();
   return { art: `data:image/png;base64,${png.toString("base64")}`, ground: to || ground, cleaned: true, ink };
 }
+
+/* THE PAPER MADE WHITE (owner, 2026-10-01, Grigol Tatishvili: "beyond
+   multiply, it must always draw on clean white — the sheet must take no
+   tone, or the difference shows once it lies on the ground"). Under
+   multiply a toned sheet darkens the label's ground into a visible
+   rectangle (tone × tone). Every pixel is divided by the paper's own
+   colour, so the paper becomes exactly white and vanishes on ANY ground,
+   while the drawing keeps its look: laid in multiply on that same tone it
+   comes back exactly as painted. */
+export async function whitenPaper(dataUrl: string, paper: string): Promise<string> {
+  const P = [1, 3, 5].map((k) => Math.max(1, parseInt(paper.slice(k, k + 2), 16)));
+  if (P.every((v) => v >= 254)) return dataUrl;
+  const buf = Buffer.from(dataUrl.slice(dataUrl.indexOf(",") + 1), "base64");
+  const { data, info } = await sharp(buf).flatten({ background: "#ffffff" }).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  const C = info.channels;
+  for (let i = 0; i < data.length; i += C) for (let c = 0; c < 3; c++) data[i + c] = Math.min(255, Math.round((data[i + c] * 255) / P[c]));
+  const png = await sharp(data, { raw: { width: info.width, height: info.height, channels: C } }).png().toBuffer();
+  return `data:image/png;base64,${png.toString("base64")}`;
+}
