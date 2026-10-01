@@ -23,8 +23,9 @@ import { ArtistsCard } from "./ArtistsCard";
 import { EvalPanel } from "./EvalPanel";
 import { LayoutEditor } from "./LayoutEditor";
 import { GuardCard } from "./GuardCard";
+import { FontsCard } from "./FontsCard";
 
-const TABS = ["Layouts", "Artists", "Marketing", "Evaluate", "System"] as const;
+const TABS = ["Layouts", "Fonts", "Artists", "Marketing", "Evaluate", "System"] as const;
 /* bookmarks made before the tidy still land */
 const OLD_TABS: Record<string, Tab> = { "Layout editor": "Layouts", "Artists & Rules": "Artists" };
 type Tab = (typeof TABS)[number];
@@ -243,6 +244,12 @@ export default function AdminPage() {
         {tab === "Layouts" && (
           <Section title="Layouts" note="Press “Make 8 new labels”: eight fresh labels are painted as the wizard makes them, at a smaller size to save money (all twelve templates in turn, mixed sizes, the artists taking turns). Correct each by hand, then “Save my fix” or “The layout is fine” — either way it leaves the queue. Claude reads your fixes and proposes rules for you to approve; nothing changes the engine by itself.">
             <LayoutEditor />
+          </Section>
+        )}
+
+        {tab === "Fonts" && (
+          <Section title="Fonts" note="One Google font at a time, set as a wine label. ✓ Approve — the whole label may be set in it. Title only — it sets only the wine’s name, a plain approved face sets the rest. ✗ Reject — never shown again. Approved fonts go live at once; a column keeps its old faces until its category has an approved one. Keys: → ✓, ↑ title only, ← ✗, Backspace undo.">
+            <FontsCard />
           </Section>
         )}
 

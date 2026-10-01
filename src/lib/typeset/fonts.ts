@@ -20,7 +20,12 @@ export interface Face { family: string; weight: number; italic?: boolean }
 
 /* file name as downloaded: FamilyNoSpaces-<weight>[i].ttf */
 export function faceFile(f: Face): string {
-  return path.join(FONT_DIR, `${f.family.replace(/\s+/g, "")}-${f.weight}${f.italic ? "i" : ""}.ttf`);
+  const name = `${f.family.replace(/\s+/g, "")}-${f.weight}${f.italic ? "i" : ""}.ttf`;
+  const own = path.join(FONT_DIR, name);
+  if (fs.existsSync(own)) return own;
+  /* a face the owner approved in the admin's font bank (font-bank.ts) */
+  const bank = path.join(process.cwd(), "data", "fonts", "labels", name);
+  return fs.existsSync(bank) ? bank : own;
 }
 
 const cache = new Map<string, opentype.Font>();

@@ -1,4 +1,5 @@
 import { measure, vmetrics, inkExtent, mix, type Face } from "./fonts";
+import { readBank, roleWeights, type FontCat } from "./font-bank";
 import type { LaidLine, Layout } from "./compose";
 
 /* THE OWNER'S LAYOUT TEMPLATES (2026-09-22).
@@ -150,9 +151,38 @@ export const BAND_FACES: Record<Band, Pool> = {
    label"). Not one plus a display face for the name — ONE. Size, weight
    and colour carry the whole hierarchy, which is how a wine label has
    always been set. */
+/* 2026-10-01 (owner): THE FONT BANK decides — the faces he approved in
+   the admin's Fonts tab (font-bank.ts), one category per column (classical
+   = serif, contemporary = sans, free = handwritten/decorative). A label is
+   still ONE family; about one label in four (when the category has any)
+   sets only its NAME in a "title only" face, the rest in a plain fully
+   approved one. A column whose category has no fully approved face yet
+   keeps its old faces. */
+const CAT_OF: Record<Band, FontCat> = { classical: "serif", contemporary: "sans", free: "display" };
+function bankSets(cat: FontCat): FamilySet[] {
+  return Object.values(readBank().fonts).filter((f) => f.cat === cat && f.verdict === "full" && f.weights.length)
+    .sort((a, b) => a.family.localeCompare(b.family))
+    .map((f) => ({ family: f.family, ...roleWeights(f.weights) }));
+}
+function bankTitles(cat: FontCat): Face[] {
+  return Object.values(readBank().fonts).filter((f) => f.cat === cat && f.verdict === "title" && f.weights.length)
+    .sort((a, b) => a.family.localeCompare(b.family))
+    .map((f) => ({ family: f.family, weight: roleWeights(f.weights).bold }));
+}
 export function facesFor(band: Band, seed: number): { hero: Face; secondary: Face; small: Face } {
-  const p = BAND_FACES[band];
-  const set = p.sets[mix(seed, 13) % p.sets.length];
+  const cat = CAT_OF[band];
+  const own = bankSets(cat);
+  const sets = own.length ? own : BAND_FACES[band].sets;
+  const set = sets[mix(seed, 13) % sets.length];
+  const titles = bankTitles(cat);
+  if (titles.length && mix(seed, 29) % 4 === 0) {
+    const t = titles[mix(seed, 31) % titles.length];
+    /* the plain companion: the column's own approved face — for the
+       decorative column a plain sans (or serif) one */
+    const plain = cat === "display" ? [...bankSets("sans"), ...bankSets("serif")] : sets;
+    const c = plain.length ? plain[mix(seed, 37) % plain.length] : BAND_FACES[band === "free" ? "contemporary" : band].sets[0];
+    return { hero: t, secondary: { family: c.family, weight: c.mid }, small: { family: c.family, weight: c.text } };
+  }
   return {
     hero: { family: set.family, weight: set.bold },
     secondary: { family: set.family, weight: set.mid },
@@ -168,6 +198,7 @@ export function facesInUse(): Face[] {
   for (const p of Object.values(BAND_FACES)) {
     for (const s2 of p.sets) for (const w of [s2.text, s2.mid, s2.bold]) out.push({ family: s2.family, weight: w });
   }
+  for (const f of Object.values(readBank().fonts)) if (f.verdict !== "reject") for (const w of f.weights) out.push({ family: f.family, weight: w });
   return out.filter((f, i) => out.findIndex((g) => g.family === f.family && g.weight === f.weight) === i);
 }
 
@@ -816,7 +847,7 @@ export function layoutFromTemplate(inp: TemplateInput): TemplateLayout {
   const layout: Layout = { W, H, ground: inp.ground, art: { x: art.x, y: art.y, w: art.w, h: art.h }, lines: pass.laid };
   return {
     layout, art,
-    faces: `${faces.hero.family} ${faces.hero.weight}/${faces.small.weight} · ${tpl.id} ${tpl.band}${scale < 1 ? ` · type ${(scale * 100).toFixed(0)}%` : ""}`,
+    faces: `${faces.hero.family} ${faces.hero.weight}/${faces.small.weight}${faces.small.family !== faces.hero.family ? ` + ${faces.small.family}` : ""} · ${tpl.id} ${tpl.band}${scale < 1 ? ` · type ${(scale * 100).toFixed(0)}%` : ""}`,
     warnings,
   };
 }

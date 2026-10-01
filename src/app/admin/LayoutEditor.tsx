@@ -152,7 +152,7 @@ export function LayoutEditor() {
       for (const w of faces[fam] || [l.weight]) {
         const k = `${l.family}-${w}`;
         if (seen.has(k)) continue; seen.add(k);
-        out.push(`@font-face{font-family:"${l.family}";font-weight:${w};src:url(/fonts/labels/${fam}-${w}.ttf) format("truetype");}`);
+        out.push(`@font-face{font-family:"${l.family}";font-weight:${w};src:url(/api/fonts/labels/${fam}-${w}.ttf) format("truetype");}`);
       }
     }
     return out.join("\n");

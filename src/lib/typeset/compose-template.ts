@@ -1,5 +1,6 @@
 import sharp from "sharp";
 import { inkOf, vignetteOf, whitenPaper } from "./palette";
+import { rasterLabel } from "./raster";
 import { layoutFromTemplate, templateFields, artKindOf, bleedsOf, MARGIN_MM, PX_PER_MM, type ArtKind, type Band, type Template } from "./templates";
 import { templatesNow } from "./overrides";
 import type { ComposeOutput } from "./compose";
@@ -387,7 +388,7 @@ export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<C
     `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${inp.widthMm}mm" height="${inp.heightMm}mm" viewBox="0 0 ${layout.W} ${layout.H}">`
     + `<rect width="${layout.W}" height="${layout.H}" fill="${ground}"/>`
     + picture + (inp.textless ? "" : texts) + `</svg>`;
-  const png = await sharp(Buffer.from(svg), { density: 12 * 25.4 }).resize(layout.W, layout.H).png().toBuffer();
+  const png = await rasterLabel(svg, layout.W, layout.H);
   return {
     svg, png: `data:image/png;base64,${png.toString("base64")}`,
     faces, ink, layout, template: tpl.id, warnings,
