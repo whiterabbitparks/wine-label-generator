@@ -371,6 +371,14 @@ export function buildShotPrompt(b: MarketingBrief, side: "front" | "back", hasSh
     labelWording(side === "back" ? b.backText : b.frontText) +
     `The FIRST attached image is the wine's ${side} label — apply it to the bottle EXACTLY as given: identical layout, typography, artwork and colours, ` +
     `perfectly legible, wrapped naturally onto the glass curvature. Do NOT redraw, reinterpret, crop or add any text. ` +
+    /* 2026-10-02 (owner: "the back label in the product shot has no white
+       area — labels must stay intact"): the model merged the back label's
+       white codes band into its ground colour. Every colour area is named
+       as a rule, and the back label's two zones are said outright. */
+    `EVERY COLOUR AREA OF THE LABEL STAYS EXACTLY AS IN THE IMAGE: where the label image is white, the printed label is pure white; where it has a coloured field, the same colour in the same place. Never merge or blend areas, never tint white parts to match the rest of the label, never recolour, simplify or restyle any part of the design. ` +
+    (side === "back"
+      ? `This back label has TWO zones that must both appear exactly: the upper part printed on the label's own ground colour with the text, and below it a band of PURE WHITE carrying the QR code, the bottling date and the barcode — that lower band stays clean white, never the ground colour. `
+      : "") +
     /* round 29 #6: never fake paper grain on the label */
     `The label surface is SMOOTH flat print — NEVER invent paper grain, fibre or canvas texture on the label; only a subtle sheen where light grazes it. ` +
     /* round 30 #4: no white slivers above/below the applied label */
@@ -461,7 +469,7 @@ export function buildLifestylePrompt(b: MarketingBrief, scenario: string, charte
     (hasBottlePhoto
       ? `THE BOTTLE — COPY IT, DO NOT REDESIGN IT: the ${ORD[photoAt]} attached image is a finished studio photograph of THIS EXACT bottle with its label applied. The bottle in the scene IS that bottle: the same silhouette, shoulder curve, neck length and width-to-height ratio, the same glass colour, the same closure, and the label at EXACTLY the same size, position and proportions on the glass, with the same layout. Only the pose, the angle and the light change with the scene. ${lf ? "For WHAT the label shows — its words, type and artwork — the label artwork image is the authority, not this photograph. " : ""}`
       : "") +
-    `The ${n(0)} attached image is the wine's front label artwork — it appears on the bottle EXACTLY as given: the same proportions, the same layout, every line of type where it is, legible and true to its colours; never redraw, re-set, stretch or replace it. ` +
+    `The ${n(0)} attached image is the wine's front label artwork — it appears on the bottle EXACTLY as given: the same proportions, the same layout, every line of type where it is, legible and true to its colours (white areas stay white, every coloured field keeps its colour — nothing merged, tinted or restyled); never redraw, re-set, stretch or replace it. ` +
     labelWording(b.frontText) +
     `The label is lit by the same scene light as the bottle (one photographed object, never a pasted-on graphic), and its surface is smooth flat print — no invented paper grain or fibre texture. ` +
     /* round 31b (owner clarification): the bottle may be in ANY pose —
