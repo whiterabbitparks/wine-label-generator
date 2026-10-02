@@ -10,13 +10,25 @@
    memoised promise). The visitor's own text is never shown translated —
    only the painters read it. A failed translation paints the original. */
 
+/* 2026-10-02 (owner): EVERY idea is prepared here now, English too —
+   "fix obvious typos in the prompt" ("DMT Entiry" reached the painter as
+   typed), and drug themes: "let it paint psychedelic themes, but never
+   show a needle being used or cocaine being snorted — psychedelic visuals
+   are welcome". */
 const cache = new Map<string, Promise<string>>();
 const NEEDS = /[^\u0000-ɏ -⁯₠-⃏\s]/;   /* anything beyond Latin + punctuation */
 
 async function translate(text: string): Promise<string> {
   const key = process.env.OPENAI_API_KEY;
   if (!key) return text;
-  const system = "You translate a wine customer's idea for a label illustration into clear, natural English for an illustrator. Keep every subject, animal, object, colour, place and action exactly — add nothing, explain nothing, drop nothing. Names of people, places and grapes stay as names (transliterated). Reply with the English text only.";
+  const system = [
+    "You prepare a wine customer's idea for a label illustration, for an illustrator.",
+    "1. If it is not in English, translate it into clear, natural English.",
+    "2. Correct obvious typos and misspellings (e.g. 'Entiry' → 'Entity', 'mountin' → 'mountain') — nothing else; never reword what is spelled correctly.",
+    "3. Keep every subject, animal, object, colour, place and action exactly — add nothing, explain nothing, drop nothing. Names of people, places and grapes stay as names (transliterated).",
+    "4. The only exception — DRUGS, two firm rules. (a) Drug USE never stays in the text: remove every act of taking a drug — injecting, needles, syringes, snorting, lines of powder, pills, smoking drugs — and leave the people simply present in the scene. (b) When the idea names a drug or a trip (DMT, LSD, psilocybin or 'magic' mushrooms as a trip, ayahuasca, heroin, cocaine…), end with ONE added sentence describing the vision visually: psychedelic colours, kaleidoscopic patterns, luminous otherworldly beings, dreamlike transformations. (Mushrooms as a plain subject, with no trip, stay plain mushrooms.)",
+    "Reply with the prepared text only.",
+  ].join(" ");
   for (const model of [process.env.OPENAI_TRANSLATE_MODEL || "gpt-5.1", "gpt-4o"]) {
     try {
       const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -36,12 +48,13 @@ async function translate(text: string): Promise<string> {
 
 export function ideaInEnglish(text: string): Promise<string> {
   const t = String(text || "").trim();
-  if (!t || !NEEDS.test(t)) return Promise.resolve(text);
+  if (!t) return Promise.resolve(text);
+  void NEEDS;
   let p = cache.get(t);
   if (!p) {
     p = translate(t).then((en) => {
       if (en === t) cache.delete(t);   /* a failure is not remembered */
-      else console.log(`[idea] translated: ${t.slice(0, 80)} → ${en.slice(0, 120)}`);
+      else console.log(`[idea] prepared: ${t.slice(0, 80)} → ${en.slice(0, 160)}`);
       return en;
     });
     cache.set(t, p);
