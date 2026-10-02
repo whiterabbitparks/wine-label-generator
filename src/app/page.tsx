@@ -1296,7 +1296,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     /* a Paddle receipt for this order means it is paid (2026-09-30) */
     setAgree(!!payToken.current); setPaid(!!payToken.current);
     if (customLabel) setPackSel([false, false, true, false]);
-    else setPackSel((ps) => [ps[0], qrMode !== "upload", ps[2], false]);
+    /* 2026-10-02 (owner): the product page & QR is offered ONLY when the
+       visitor chose "Create QR Code" — with no QR, or their own uploaded
+       QR, it is neither ticked, nor active, nor in the total */
+    else setPackSel((ps) => [ps[0], qrMode === "create", ps[2], false]);
   }, [page, qrMode, customLabel]);
 
   /* MARKETING ASSETS (round 13): entering the assets page kicks off the
@@ -2775,7 +2778,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   ];
   /* an own-label order buys the marketing assets alone (round 47) */
   const OWN_PRICE = 9;
-  const total = customLabel ? (packSel[0] ? OWN_PRICE : 0) : PACK.reduce((s, it, i) => s + (packSel[i] ? it.price : 0), 0);
+  const total = customLabel ? (packSel[0] ? OWN_PRICE : 0) : PACK.reduce((s, it, i) => s + (packSel[i] && !(i === 1 && qrMode !== "create") ? it.price : 0), 0);
 
   /* round 18 #4: ONE delivery ZIP named after the wine — labels + fonts,
      marketing assets, sample contract (TEMP free until payments exist) */
@@ -5071,14 +5074,19 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             {bigTotal("$" + total)}
           </>) : (<>
             {/* live dots on the baked rings + the row click zones */}
-            {PACK.map((it, i) => (
-              <span key={it.name}>
-                {dotBtn(RING_X, ringY(ROWB[i]), !!packSel[i], () => setPackSel((ps) => ps.map((v, k) => (k === i ? !v : v))), "pk" + i, { ring: true, r: 9, cover: 24 })}
-                {rowLabel(ROWB[i], t(it.name), () => setPackSel((ps) => ps.map((v, k) => (k === i ? !v : v))), "pl" + i)}
+            {PACK.map((it, i) => {
+              /* the product page row is dead without a created QR (owner, 2026-10-02) */
+              const dead = i === 1 && qrMode !== "create";
+              const flip = () => { if (!dead) setPackSel((ps) => ps.map((v, k) => (k === i ? !v : v))); };
+              return (
+              <span key={it.name} style={dead ? { pointerEvents: "none" } : undefined}>
+                {dotBtn(RING_X, ringY(ROWB[i]), !dead && !!packSel[i], flip, "pk" + i, { ring: true, r: 9, cover: 24 })}
+                {rowLabel(ROWB[i], t(it.name), flip, "pl" + i)}
                 {dashRule(COL_L, ROWB[i] + 12.1, LIST_R - COL_L, false, "pdr" + i)}
                 {priceAt(ROWB[i], "$" + it.price)}
               </span>
-            ))}
+              );
+            })}
             {bigTotal("$" + total)}
           </>)}
           {/* ── the left-hand column: the order ─────────────────────────── */}
@@ -5725,7 +5733,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                         if (fakePay || vis?.admin) setPaid(true);
                         else {
                           /* Paddle: the chosen rows, then the receipt */
-                          const keys = customLabel ? (packSel[0] ? ["own"] : []) : (["pack", "page", "designer"] as const).filter((_, k) => packSel[k]);
+                          const keys = customLabel ? (packSel[0] ? ["own"] : []) : (["pack", "page", "designer"] as const).filter((_, k) => packSel[k] && !(k === 1 && qrMode !== "create"));
                           paddlePay([...keys]).then((j) => {
                             if (j?.ok && j.packToken) { payToken.current = j.packToken; try { localStorage.setItem("nui-pay-token", j.packToken); } catch { } setPaid(true); }
                             else if (j !== null || !paddleCfg.current?.on) { setWarn(t("Payments aren't connected yet — coming soon.")); setTimeout(() => setWarn(""), 5000); }
