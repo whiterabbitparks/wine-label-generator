@@ -248,7 +248,7 @@ export default function AdminPage() {
         )}
 
         {tab === "Fonts" && (
-          <Section title="Fonts" note="One Google font at a time, set as a wine label. ✓ Approve — the whole label may be set in it. Title only — it sets only the wine’s name, a plain approved face sets the rest. ✗ Reject — never shown again. Approved fonts go live at once; a column keeps its old faces until its category has an approved one. Keys: → ✓, ↑ title only, ← ✗, Backspace undo.">
+          <Section title="Fonts" note="One Google font at a time, set as a wine label. ✓ Approve — the whole label may be set in it. Title only — it sets only the wine’s name, a plain approved face sets the rest. ✗ Reject — never shown again. Approved fonts go live at once and are shared by every layout. Never all caps — the font is never set in capitals: a line the layout sets in caps keeps its own case, and a label whose details were typed in capitals uses another font. Keys: → ✓, ↑ title only, ← ✗, Backspace undo.">
             <FontsCard />
           </Section>
         )}
