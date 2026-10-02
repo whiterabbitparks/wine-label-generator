@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/db";
 import { dataBuf, readPack, type PackBody } from "@/lib/package";
+import { resolveImage } from "@/lib/product-images";
 
 /* THE PRODUCT PAGE'S DOWNLOADS (owner 2026-09-26):
      ?code=X&img=N    one gallery picture at full size
@@ -22,8 +23,8 @@ async function packOf(code: string): Promise<PackBody | null> {
   if (!doc) return null;
   return {
     wineName: doc.wine?.wine || doc.wine?.producer || "Wine",
-    shots: { front: doc.images?.front, back: doc.images?.back },
-    lifestyle: (doc.images?.life || []).filter(Boolean),
+    shots: { front: resolveImage(code, doc.images?.front), back: resolveImage(code, doc.images?.back) },
+    lifestyle: (doc.images?.life || []).map((x) => resolveImage(code, x)).filter(Boolean),
   };
 }
 

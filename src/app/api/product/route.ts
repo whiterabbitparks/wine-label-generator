@@ -6,6 +6,7 @@ import { savePack, dataBuf, type PackBody } from "@/lib/package";
 import { readLabel } from "@/lib/label/store";
 import { artistIdByName, saveShowcase } from "@/lib/label/showcase";
 import { visitorOf, previewKey } from "@/lib/guard";
+import { storeImage, resolveImages } from "@/lib/product-images";
 import { requestIsAuthenticated } from "@/lib/admin/session";
 
 /* PRODUCT PAGE SNAPSHOT (owner 2026-09-08): when a QR code is requested,
@@ -42,11 +43,13 @@ export async function POST(req: Request) {
         "bottlingDate", "lot", "web"].map((k) => [k, CASED_FIELDS.has(k) ? properCase(S(wine[k], 200)) : S(wine[k], 200)])),
     description: S(body.description, 2000),
     ingredients: S(body.ingredients, 20000),
+    /* the pictures go to the server's disk, the record keeps their names
+       (src/lib/product-images.ts — the free database is 512 MB) */
     images: {
-      front: img((body.images as Record<string, unknown>)?.front),
-      back: img((body.images as Record<string, unknown>)?.back),
+      front: storeImage(code, "front", img((body.images as Record<string, unknown>)?.front)),
+      back: storeImage(code, "back", img((body.images as Record<string, unknown>)?.back)),
       life: (Array.isArray((body.images as Record<string, unknown>)?.life)
-        ? ((body.images as Record<string, unknown>).life as unknown[]) : []).slice(0, 5).map(img),
+        ? ((body.images as Record<string, unknown>).life as unknown[]) : []).slice(0, 5).map((x, i) => storeImage(code, `life${i + 1}`, img(x))),
     },
     updatedAt: new Date().toISOString(),
   };
@@ -84,6 +87,7 @@ export async function GET(req: Request) {
   if (!doc) return NextResponse.json({ error: "not found" }, { status: 404 });
   const { pin, tries, owner, ...shown } = doc as Record<string, unknown>;
   void pin; void tries;
+  shown.images = resolveImages(code, shown.images as { front?: string; back?: string; life?: string[] } | undefined);
   /* its maker (or the admin) gets the preview key back after a reload */
   const v = await visitorOf(req, false).catch(() => null);
   const mine = (v?._id && owner === v._id) || (await requestIsAuthenticated());

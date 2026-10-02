@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/db";
 import { previewKey } from "@/lib/guard";
+import { resolveImages } from "@/lib/product-images";
 import ProductClient, { type ProductDoc } from "./product-client";
 
 /* PUBLIC PRODUCT PAGE (owner 2026-09-08): the QR on the back label lands
@@ -31,5 +32,6 @@ export default async function ProductPage({ params, searchParams }: { params: Pr
   /* the maker's preview (the wizard's own frame) sees the page unlocked;
      nothing is opened for anyone else */
   const previewing = !!preview && preview === previewKey(clean);
+  shown.images = resolveImages(clean, shown.images);
   return <ProductClient doc={shown} locked={!!pin && !shown.open && !previewing} />;
 }
