@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 type Cat = "serif" | "sans" | "display";
 type CatalogFont = { family: string; cat: Cat; popularity: number; weights: number[] };
-type BankFont = { family: string; cat: Cat; verdict: "full" | "title" | "reject"; weights: number[]; at: string };
+type BankFont = { family: string; cat: Cat; verdict: "full" | "title" | "reject"; weights: number[]; at: string; noCaps?: boolean };
 type Counts = Record<Cat, { full: number; title: number; reject: number }>;
 
 const CATS: { id: Cat; name: string }[] = [
@@ -71,6 +71,8 @@ export function FontsCard() {
   const [counts, setCounts] = useState<Counts | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+  /* "never all caps", marked on the card before its verdict */
+  const [cardNoCaps, setCardNoCaps] = useState(false);
 
   const load = useCallback(async (c: Cat) => {
     setMsg("");
@@ -90,13 +92,14 @@ export function FontsCard() {
     if (busy || (!family && verdict !== "undo")) return;
     setBusy(true);
     setMsg(verdict === "full" || verdict === "title" ? `Installing ${family}…` : "");
-    const r = await fetch("/api/admin/font-bank", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ family, verdict }) });
+    const r = await fetch("/api/admin/font-bank", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ family, verdict, ...(family === cur?.family && cardNoCaps ? { noCaps: true } : {}) }) });
+    if (family === cur?.family) setCardNoCaps(false);
     const b = await r.json().catch(() => ({}));
     setBusy(false);
     if (!r.ok) { setMsg(b.error || `error ${r.status}`); return; }
     setMsg(verdict === "full" ? `${family} — approved, live now` : verdict === "title" ? `${family} — titles only, live now` : verdict === "undo" ? "Undone" : "");
     await load(cat);
-  }, [busy, cur, cat, load]);
+  }, [busy, cur, cat, load, cardNoCaps]);
 
   useEffect(() => {
     const on = (e: KeyboardEvent) => {
@@ -111,6 +114,15 @@ export function FontsCard() {
   }, [judge]);
 
   const kept = useMemo(() => decided.filter((f) => f.verdict !== "reject"), [decided]);
+  const toggleNoCaps = async (f: BankFont) => {
+    setBusy(true);
+    const r = await fetch("/api/admin/font-bank", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ family: f.family, noCaps: !f.noCaps }) });
+    setBusy(false);
+    const b = await r.json().catch(() => ({}));
+    if (!r.ok) { setMsg(b.error || `error ${r.status}`); return; }
+    setMsg(`${f.family} — ${!f.noCaps ? "never all caps" : "capitals allowed again"}`);
+    await load(cat);
+  };
 
   return (
     <div style={{ fontSize: 13 }}>
@@ -131,6 +143,8 @@ export function FontsCard() {
             <button style={btn} disabled={busy} onClick={() => judge("title")}>Title only  ↑</button>
             <button style={{ ...btn, background: "#111", color: "#fff" }} disabled={busy} onClick={() => judge("full")}>✓ Approve  →</button>
           </div>
+          <button style={{ ...btn, minWidth: 0, fontSize: 12, padding: "4px 12px", background: cardNoCaps ? "#111" : "#fff", color: cardNoCaps ? "#fff" : "#111" }} disabled={busy} onClick={() => setCardNoCaps((v) => !v)}>
+            {cardNoCaps ? "✓ Never all caps" : "Never all caps"}</button>
           <div style={{ display: "flex", gap: 12, alignItems: "center", color: "#8a887e" }}>
             <button style={{ ...btn, minWidth: 0, fontSize: 12, padding: "4px 10px" }} disabled={busy} onClick={() => judge("undo")}>Undo last (Backspace)</button>
             <span>{msg}</span>
@@ -146,9 +160,10 @@ export function FontsCard() {
         {kept.map((f) => (
           <div key={f.family} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <Specimen f={f} compact />
-            <div>{f.family} — {f.verdict === "full" ? "whole label" : "titles only"}</div>
+            <div>{f.family} — {f.verdict === "full" ? "whole label" : "titles only"}{f.noCaps ? " · never all caps" : ""}</div>
             <div style={{ display: "flex", gap: 6 }}>
               <button style={{ ...btn, minWidth: 0, fontSize: 11, padding: "2px 8px" }} disabled={busy} onClick={() => judge(f.verdict === "full" ? "title" : "full", f.family)}>{f.verdict === "full" ? "Make titles only" : "Make whole label"}</button>
+              <button style={{ ...btn, minWidth: 0, fontSize: 11, padding: "2px 8px", background: f.noCaps ? "#111" : "#fff", color: f.noCaps ? "#fff" : "#111" }} disabled={busy} onClick={() => toggleNoCaps(f)}>{f.noCaps ? "✓ Never all caps" : "Never all caps"}</button>
               <button style={{ ...btn, minWidth: 0, fontSize: 11, padding: "2px 8px" }} disabled={busy} onClick={() => judge("reject", f.family)}>Remove</button>
             </div>
           </div>

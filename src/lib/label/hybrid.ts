@@ -6,7 +6,7 @@ import { templatesNow } from "@/lib/typeset/overrides";
 import type { Template } from "@/lib/typeset/templates";
 import { cleanPaper, whitenPaper } from "@/lib/typeset/palette";
 import { listArtists } from "./artists";
-import { artKindOf, bleedsOf, facesFor, bankFamilies, layoutTypeOf, layoutFromTemplate, templateFields, type ArtKind, type Band, type LayoutType } from "@/lib/typeset/templates";
+import { artKindOf, bleedsOf, facesFor, bankFamilies, layoutTypeOf, typedCaps, layoutFromTemplate, templateFields, type ArtKind, type Band, type LayoutType } from "@/lib/typeset/templates";
 import { faceFile, pickRoles, mix } from "@/lib/typeset/fonts";
 import type { Layout } from "@/lib/typeset/compose";
 import { painterFor, castPainter } from "./painters";
@@ -141,15 +141,16 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
   /* and the type's face: of a few seeds, the one whose face is used least —
      and once the font bank holds approved faces, the run's three versions
      take three DIFFERENT ones (the token deals them like the layouts) */
+  const tc = typedCaps(Object.values(templateFields(inp.data)));
   if (inp.seed === undefined) {
     const fams = bankFamilies();
     if (inp.order && fams.length >= 2) {
       const want = fams[(Math.floor(runKey / 6) + col) % fams.length];
-      for (let k = 0; k < 4000; k++) { const sd = (Math.random() * 0xffffffff) >>> 0; if (facesFor(band, sd).small.family === want) { seed = sd; break; } }
+      for (let k = 0; k < 4000; k++) { const sd = (Math.random() * 0xffffffff) >>> 0; if (facesFor(band, sd, tc).small.family === want) { seed = sd; break; } }
     } else {
       const faceUse = usage("face");
       const seeds = Array.from({ length: 12 }, () => (Math.random() * 0xffffffff) >>> 0);
-      seed = pickFresh(seeds, (sd) => facesFor(band, sd).hero.family, faceUse);
+      seed = pickFresh(seeds, (sd) => facesFor(band, sd, tc).hero.family, faceUse);
     }
   }
   const zone = tpl.art || { w: tpl.refW, h: tpl.refH };
@@ -485,7 +486,7 @@ export async function relayoutLabel(stored: { art: Buffer; meta: { style: string
   if (keep && storedTpl && (stored.meta as { scene?: boolean }).scene) {
     const fam = String((stored.meta as { faces?: string }).faces || "").match(/^(.*?) \d{3}\//)?.[1];
     let keepSeed = 1;
-    if (fam) for (let k = 1; k < 2000; k++) if (facesFor(kband, k).hero.family === fam) { keepSeed = k; break; }
+    if (fam) for (let k = 1; k < 2000; k++) if (facesFor(kband, k, typedCaps(Object.values(templateFields(data)))).hero.family === fam) { keepSeed = k; break; }
     const out = await composeTemplateLabel({
       artwork: raw, band: kband, template: storedTpl.id, data, paper: await meanColour(raw),
       widthMm, heightMm, seed: keepSeed, wineColour: data.wineColorName, scene: true,
@@ -504,7 +505,7 @@ export async function relayoutLabel(stored: { art: Buffer; meta: { style: string
        a seed that draws that family again is found */
     const fam = String((stored.meta as { faces?: string }).faces || "").match(/^(.*?) \d{3}\//)?.[1];
     let keepSeed = 1;
-    if (fam) for (let k = 1; k < 2000; k++) if (facesFor(kband, k).hero.family === fam) { keepSeed = k; break; }
+    if (fam) for (let k = 1; k < 2000; k++) if (facesFor(kband, k, typedCaps(Object.values(templateFields(data)))).hero.family === fam) { keepSeed = k; break; }
     /* a multiply picture is stored with its paper white: the label keeps
        the ground it was laid on */
     const blend = blendOf((stored.meta as { artist?: string }).artist);

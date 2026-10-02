@@ -11,7 +11,23 @@ const imgsOnPage = (s) => s.page.evaluate(() => [...document.images].filter((i) 
 const REAL = [["traditional", "2026-10-02-e6673e80430d", "Petre Otskheli"], ["contemporary", "2026-10-02-8d3ab6d748f7", "Rati Bakradze"], ["punk", "2026-10-02-1c8df558bdb6", "Niko Pirosmani"]];
 const realOrder = () => ({ v: 1, at: Date.now(), vision: "Two old friends share a jug of wine under a fig tree", f: { producer: "Giorgi's Marani", wine: "Dzelshavi", vintage: "2021", colour: "Red", wineType: "Wine", alcohol: "13", volume: "750", width: "110", height: "80" }, sets: [REAL.map(([style, id, artist]) => ({ style, id, artist }))], setIdx: 0, selSet: 0, selected: -1 });
 
+const totalOf = (s) => s.page.evaluate(() => { const m = document.body.innerText.match(/\$(\d{3,4})(?![\s\S]*Total)/); const all = [...document.body.innerText.matchAll(/\$(\d{3,4})/g)].map((x) => +x[1]); return Math.max(0, ...all); });
 const SCEN = {
+  /* the Final Pack's product page row: only with a CREATED QR */
+  async qrnone(s) {
+    await open(s); await toLabels(s); await select(s, 0); await forwardTo(s, "checkout", 8);
+    await s.page.waitForTimeout(2500); await s.check("final pack without a QR");
+    const tot = await totalOf(s); if (tot !== 498) note(s, "wrong total", `without a QR the total is $${tot} (expected $498)`);
+    await s.click("Product Page", "click the product page row");
+    const tot2 = await totalOf(s); if (tot2 !== 498) note(s, "row still active", `after clicking it the total is $${tot2}`);
+  },
+  async qrcreate(s) {
+    await open(s); await toLabels(s); await select(s, 0); await forwardTo(s, "backdetails", 3);
+    await s.click("Create QR Code", "create QR chosen");
+    await forwardTo(s, "checkout", 8);
+    await s.page.waitForTimeout(2500); await s.check("final pack with a created QR");
+    const tot = await totalOf(s); if (tot !== 547) note(s, "wrong total", `with a created QR the total is $${tot} (expected $547)`);
+  },
   /* a visitor with real labels: reload on every page */
   async restore(s) {
     await s.page.goto((process.env.BASE || "https://8k.wine") + "/?page=options", { waitUntil: "load", timeout: 60000 });

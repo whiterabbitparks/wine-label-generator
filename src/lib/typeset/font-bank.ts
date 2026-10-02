@@ -25,7 +25,12 @@ import { execFileSync } from "node:child_process";
 
 export type FontCat = "serif" | "sans" | "display";
 export type Verdict = "full" | "title" | "reject";
-export interface BankFont { family: string; cat: FontCat; verdict: Verdict; weights: number[]; at: string }
+/* noCaps (owner, 2026-10-02: "a 'never all caps' button for specific
+   fonts"): the face is never set in capitals — a line the layout would set
+   in caps keeps its own case, and a label whose customer TYPED capitals
+   does not use the face (the wizard promises "capitals stay as you enter
+   them", so the customer's caps are never lowered) */
+export interface BankFont { family: string; cat: FontCat; verdict: Verdict; weights: number[]; at: string; noCaps?: boolean }
 interface Bank { fonts: Record<string, BankFont>; history: string[] }
 
 const DATA = path.join(process.cwd(), "data");
@@ -136,11 +141,23 @@ export async function decide(family: string, verdict: Verdict | "undo"): Promise
   if (!f) throw new Error(`not in Google's catalog: ${family}`);
   const prev = bank.fonts[family];
   const weights = verdict === "reject" ? [] : prev?.weights?.length ? prev.weights : await download(f);
-  const entry: BankFont = { family, cat: f.cat, verdict, weights, at: new Date().toISOString() };
+  const entry: BankFont = { family, cat: f.cat, verdict, weights, at: new Date().toISOString(), ...(prev?.noCaps ? { noCaps: true } : {}) };
   bank.fonts[family] = entry;
   bank.history = [...bank.history.filter((x) => x !== family), family].slice(-200);
   writeBank(bank);
   return entry;
+}
+
+export function setNoCaps(family: string, on: boolean): BankFont | null {
+  const bank = readBank();
+  const f = bank.fonts[family];
+  if (!f) return null;
+  if (on) f.noCaps = true; else delete f.noCaps;
+  writeBank(bank);
+  return f;
+}
+export function noCapsFamilies(): Set<string> {
+  return new Set(Object.values(readBank().fonts).filter((f) => f.noCaps).map((f) => f.family));
 }
 
 export function bankCounts() {

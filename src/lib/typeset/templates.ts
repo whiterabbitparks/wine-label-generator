@@ -1,5 +1,5 @@
 import { measure, vmetrics, inkExtent, mix, type Face } from "./fonts";
-import { readBank, roleWeights, type FontCat } from "./font-bank";
+import { readBank, roleWeights, noCapsFamilies, type FontCat } from "./font-bank";
 import type { LaidLine, Layout } from "./compose";
 
 /* THE OWNER'S LAYOUT TEMPLATES (2026-09-22).
@@ -175,20 +175,34 @@ export function layoutTypeOf(t: Template): LayoutType {
   const c = t.texts.filter((x) => (x as { align?: string }).align === "center").length;
   return c * 2 >= t.texts.length ? "centred" : "sides";
 }
+/* the customer typed a field in capitals (2+ letters, no lower case) */
+export const typedCaps = (vals: string[]) => vals.some((v) => /\p{L}.*\p{L}/u.test(v || "") && v === v.toUpperCase() && v !== v.toLowerCase());
+let skipNoCaps = false;   /* set by facesFor for the call it makes */
 function bankSets(cat: FontCat): FamilySet[] {
-  return Object.values(readBank().fonts).filter((f) => f.cat === cat && f.verdict === "full" && f.weights.length)
+  const nc = skipNoCaps ? noCapsFamilies() : null;
+  return Object.values(readBank().fonts).filter((f) => f.cat === cat && f.verdict === "full" && f.weights.length && !(nc && nc.has(f.family)))
     .sort((a, b) => a.family.localeCompare(b.family))
     .map((f) => ({ family: f.family, ...roleWeights(f.weights) }));
 }
 function bankTitles(cat: FontCat): Face[] {
-  return Object.values(readBank().fonts).filter((f) => f.cat === cat && f.verdict === "title" && f.weights.length)
+  const nc = skipNoCaps ? noCapsFamilies() : null;
+  return Object.values(readBank().fonts).filter((f) => f.cat === cat && f.verdict === "title" && f.weights.length && !(nc && nc.has(f.family)))
     .sort((a, b) => a.family.localeCompare(b.family))
     .map((f) => ({ family: f.family, weight: roleWeights(f.weights).bold }));
 }
 export function bankFamilies(): string[] {
   return ALL_CATS.flatMap((c) => bankSets(c)).map((s) => s.family).sort();
 }
-export function facesFor(band: Band, seed: number): { hero: Face; secondary: Face; small: Face } {
+export function facesFor(band: Band, seed: number, avoidNoCaps = false): { hero: Face; secondary: Face; small: Face } {
+  /* a label whose customer typed capitals leaves the never-all-caps faces
+     out (unless nothing else is approved) */
+  if (avoidNoCaps) {
+    skipNoCaps = true;
+    if (!ALL_CATS.some((c) => bankSets(c).length)) skipNoCaps = false;   /* nothing else approved: keep them */
+  }
+  try { return facesForInner(band, seed); } finally { skipNoCaps = false; }
+}
+function facesForInner(band: Band, seed: number): { hero: Face; secondary: Face; small: Face } {
   const own = ALL_CATS.flatMap((c) => bankSets(c));
   const cat = CAT_OF[band];
   const sets = own.length ? own : BAND_FACES[band].sets;
@@ -277,14 +291,16 @@ export interface TemplateLayout {
 
 export function layoutFromTemplate(inp: TemplateInput): TemplateLayout {
   const W = Math.round(inp.widthMm * PX_PER_MM), H = Math.round(inp.heightMm * PX_PER_MM);
-  const faces = facesFor(inp.template.band, inp.seed);
+  const faces = facesFor(inp.template.band, inp.seed, typedCaps(Object.values(inp.fields)));
   const warnings: string[] = [];
+  /* a never-all-caps face keeps a caps line in its own case (owner, 2026-10-02) */
+  const noCaps = noCapsFamilies();
 
   const textOf = (t: TplText) => {
     const parts = t.fields.map((f) => inp.fields[f]).filter(Boolean);
     if (!parts.length) return "";
     const s = parts.join(t.join || " / ");
-    return t.caps ? s.toUpperCase() : s;
+    return t.caps && !noCaps.has(faceOf(t).family) ? s.toUpperCase() : s;
   };
   /* ONE family, in HIS weights (owner, 2026-09-23: "one family, different
      weights, as on my artboards") — a line he set bold is bold, the rest
