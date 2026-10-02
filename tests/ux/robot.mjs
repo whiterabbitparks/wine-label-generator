@@ -24,7 +24,9 @@ export async function session(name, { viewport = { width: 1440, height: 900 }, l
       if (!sessionStorage.getItem("ux-init")) {
         sessionStorage.setItem("ux-init", "1");
         if (order) localStorage.setItem("nui-order", JSON.stringify(order));
-        if (fake) { localStorage.setItem("nui-live-gen", "0"); localStorage.setItem("nui-fake-pay", "1"); localStorage.setItem("nui-fill", "1"); }
+        /* fake = no real painting; details are filled and payment is fake either way */
+        if (fake) localStorage.setItem("nui-live-gen", "0");
+        localStorage.setItem("nui-fake-pay", "1"); localStorage.setItem("nui-fill", "1");
         localStorage.setItem("nui-lang", lang);
       }
     } catch { }

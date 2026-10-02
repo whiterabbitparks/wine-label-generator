@@ -13,6 +13,28 @@ const realOrder = () => ({ v: 1, at: Date.now(), vision: "Two old friends share 
 
 const totalOf = (s) => s.page.evaluate(() => { const m = document.body.innerText.match(/\$(\d{3,4})(?![\s\S]*Total)/); const all = [...document.body.innerText.matchAll(/\$(\d{3,4})/g)].map((x) => +x[1]); return Math.max(0, ...all); });
 const SCEN = {
+  /* REAL painting (3 labels): change only the year, come back — the labels
+     page must show its waiting columns, never the old loader page */
+  async yearchange(s) {
+    await open(s); await toLabels(s);
+    await s.waitPage("options", 30000);
+    for (let i = 0; i < 60; i++) { if ((await imgsOnPage(s)) >= 3) break; await s.page.waitForTimeout(5000); }
+    await s.check("real labels made");
+    await s.back("back to the details");
+    if (s.where() !== "vision") await s.waitPage("vision", 10000);
+    const idx = await s.page.evaluate(() => [...document.querySelectorAll("input")].findIndex((x) => /^\d{4}$/.test(x.value)));
+    if (idx >= 0) { const el = s.page.locator("input").nth(idx); await el.click({ clickCount: 3 }); await el.fill("1999"); }
+    else note(s, "missing control", "vintage field");
+    await s.check("year changed");
+    await s.next("next after the year");
+    if (await s.page.locator("button").filter({ hasText: /^(Create|შექმნა)$/ }).count()) await createIn(s, "confirm");
+    const seen = [];
+    for (let i = 0; i < 20; i++) { seen.push(s.where()); await s.page.waitForTimeout(1000); }
+    await s.check("after the re-set");
+    if (seen.includes("loader")) note(s, "old loader page", `pages seen: ${[...new Set(seen)].join(" → ")}`);
+    const yrShown = await s.page.evaluate(() => document.body.innerText.includes("1999"));
+    console.log("pages seen:", [...new Set(seen)].join(" → "), "| 1999 on the page:", yrShown);
+  },
   /* the Final Pack's product page row: only with a CREATED QR */
   async qrnone(s) {
     await open(s); await toLabels(s); await select(s, 0); await forwardTo(s, "checkout", 8);
@@ -160,7 +182,7 @@ const SCEN = {
 
 const want = process.argv.slice(2).length ? process.argv.slice(2) : Object.keys(SCEN);
 const results = await Promise.all(want.map(async (name) => {
-  const s = await session(name, name === "ipad" ? { viewport: { width: 1366, height: 1024 } } : name === "georgian" ? { lang: "ge" } : name === "restore" ? { order: realOrder() } : {});
+  const s = await session(name, name === "ipad" ? { viewport: { width: 1366, height: 1024 } } : name === "georgian" ? { lang: "ge" } : name === "restore" ? { order: realOrder() } : name === "yearchange" ? { fake: false } : {});
   try { await SCEN[name](s); } catch (e) { note(s, "robot stopped", e.message.split("\n")[0]); }
   return [name, report(await s.done())];
 }));
