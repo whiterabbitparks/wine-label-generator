@@ -36,7 +36,7 @@ export const COVERS: CoverProject[] = [
        an AMBER wine — its old text described a red */
     desc: "Deep amber from months on the skins in qvevri. Dried apricot, quince and walnut on the nose, a firm grip of tannin and a long, gently spiced finish.",
     labels: [T + "ts-label1.jpg", T + "ts-label2.jpg", T + "ts-label3.jpg"], artists: ["Mariam Kvashilava", "Levan Amashukeli", "Levan Amashukeli"], chosen: 1,
-    backLabel: T + "ts-back-label.png", shotFront: T + "ts-shot-front.png", shotBack: T + "ts-shot-back.png", life: [1, 2, 3, 4, 5].map((n) => T + "ts-life" + n + ".jpg"), landing: T + "ts-landing.jpg", qr: "https://8klabels.com/p/wqo2bp5f",
+    backLabel: T + "ts-back-label.png", shotFront: T + "ts-shot-front.png", shotBack: T + "ts-shot-back.png", life: [1, 2, 3, 4, 5].map((n) => T + "ts-life" + n + ".jpg"), landing: T + "ts-landing.jpg", qr: "https://8k.wine/p/wqo2bp5f",
     bottle: { type: "Burgundy", color: "Olive Green", closure: "Wax Seal", finish: "Matte" }, cap: [14, 175, 255],
     wheel: { x: 0.05365, y: 0.33754, rgb: [14, 175, 255] }, shade: 0.6,
   },
@@ -50,7 +50,7 @@ export const COVERS: CoverProject[] = [
     back: {"producerCompany": "\"Viñedos del Norte\" S.L.", "producerAddress": "Calle Mayor 22, 26200 Haro, Spain", "importer": "", "importerAddress": "", "bottlingDate": "09/12/2020", "lot": "L1952328", "web": "www.vinedosdelnorte.es"},
     desc: "Pale straw with aromas of green apple, citrus and white flowers. Crisp, clean and mineral, with a bright finish.",
     labels: ["/newui/covers/el-camino/l1.jpg", "/newui/covers/el-camino/l2.jpg", "/newui/covers/el-camino/l3.jpg"], artists: ["Rati Bakradze", "Gvantsa Mzareulishvili", "Rati Bakradze"], chosen: 2,
-    backLabel: "/newui/covers/el-camino/back-label.png", shotFront: "/newui/covers/el-camino/shot-front.png", shotBack: "/newui/covers/el-camino/shot-back.png", life: [1, 2, 3, 4, 5].map((n) => "/newui/covers/el-camino/life" + n + ".jpg"), landing: "/newui/covers/el-camino/landing.jpg", qr: "https://8klabels.com/p/eivxk22w",
+    backLabel: "/newui/covers/el-camino/back-label.png", shotFront: "/newui/covers/el-camino/shot-front.png", shotBack: "/newui/covers/el-camino/shot-back.png", life: [1, 2, 3, 4, 5].map((n) => "/newui/covers/el-camino/life" + n + ".jpg"), landing: "/newui/covers/el-camino/landing.jpg", qr: "https://8k.wine/p/eivxk22w",
     bottle: {"type": "Burgundy", "color": "Amber", "closure": "Wax Seal", "finish": "Matte"}, cap: [156, 92, 88],
   },
   {
@@ -63,7 +63,7 @@ export const COVERS: CoverProject[] = [
     back: {"producerCompany": "\"Domaine des Collines\" SARL", "producerAddress": "12 Rue des Vignes, 21200 Beaune, France", "importer": "\"Teller Wines\" LLC", "importerAddress": "148 W 68 St. 10023 NYC, USA", "bottlingDate": "", "lot": "L2462648", "web": ""},
     desc: "Ruby red with notes of wild berries and dried herbs; fresh acidity and soft tannins carry a smooth, lingering finish.",
     labels: ["/newui/covers/les-pierres/l1.jpg", "/newui/covers/les-pierres/l2.jpg", "/newui/covers/les-pierres/l3.jpg"], artists: ["Dachi Mindadze", "Levan Amashukeli", "Giorgi Akhuashvili"], chosen: 2,
-    backLabel: "/newui/covers/les-pierres/back-label.png", shotFront: "/newui/covers/les-pierres/shot-front.png", shotBack: "/newui/covers/les-pierres/shot-back.png", life: [1, 2, 3, 4, 5].map((n) => "/newui/covers/les-pierres/life" + n + ".jpg"), landing: "/newui/covers/les-pierres/landing.jpg", qr: "https://8klabels.com/p/9l95mslj",
+    backLabel: "/newui/covers/les-pierres/back-label.png", shotFront: "/newui/covers/les-pierres/shot-front.png", shotBack: "/newui/covers/les-pierres/shot-back.png", life: [1, 2, 3, 4, 5].map((n) => "/newui/covers/les-pierres/life" + n + ".jpg"), landing: "/newui/covers/les-pierres/landing.jpg", qr: "https://8k.wine/p/9l95mslj",
     bottle: {"type": "Burgundy", "color": "Amber", "closure": "Cork", "finish": "Matte"}, cap: [200, 194, 137],
   },
   {
@@ -76,7 +76,7 @@ export const COVERS: CoverProject[] = [
     back: {"producerCompany": "\"Castello di Poggio\" S.R.l.", "producerAddress": "Località Poggio 4, 53024 Montalcino, Italy", "importer": "", "importerAddress": "", "bottlingDate": "23/04/2021", "lot": "L2068778", "web": "www.castellodipoggio.it"},
     desc: "Ruby red with notes of wild berries and dried herbs; fresh acidity and soft tannins carry a smooth, lingering finish.",
     labels: ["/newui/covers/luce-di-sera/l1.jpg", "/newui/covers/luce-di-sera/l2.jpg", "/newui/covers/luce-di-sera/l3.jpg"], artists: ["Levan Amashukeli", "Mariam Kvashilava", "Giorgi Akhuashvili"], chosen: 0,
-    backLabel: "/newui/covers/luce-di-sera/back-label.png", shotFront: "/newui/covers/luce-di-sera/shot-front.png", shotBack: "/newui/covers/luce-di-sera/shot-back.png", life: [1, 2, 3, 4, 5].map((n) => "/newui/covers/luce-di-sera/life" + n + ".jpg"), landing: "/newui/covers/luce-di-sera/landing.jpg", qr: "https://8klabels.com/p/rtjuyy26",
+    backLabel: "/newui/covers/luce-di-sera/back-label.png", shotFront: "/newui/covers/luce-di-sera/shot-front.png", shotBack: "/newui/covers/luce-di-sera/shot-back.png", life: [1, 2, 3, 4, 5].map((n) => "/newui/covers/luce-di-sera/life" + n + ".jpg"), landing: "/newui/covers/luce-di-sera/landing.jpg", qr: "https://8k.wine/p/rtjuyy26",
     bottle: {"type": "Bordeaux", "color": "Olive Green", "closure": "Screw Cap", "finish": "Matte"}, cap: [213, 68, 48],
   },
   {
@@ -90,7 +90,7 @@ export const COVERS: CoverProject[] = [
     /* a ROSÉ — the pack's back label had described a red (owner, 2026-09-30) */
     desc: "Pale salmon pink with aromas of wild strawberry, red currant and rose petal. Fresh and dry, with a crisp, mineral finish.",
     labels: ["/newui/covers/mzeo/l1.jpg", "/newui/covers/mzeo/l2.jpg", "/newui/covers/mzeo/l3.jpg"], artists: ["Gvantsa Mzareulishvili", "Gvantsa Mzareulishvili", "Gvantsa Mzareulishvili"], chosen: 2,
-    backLabel: "/newui/covers/mzeo/back-label.png", shotFront: "/newui/covers/mzeo/shot-front.png", shotBack: "/newui/covers/mzeo/shot-back.png", life: [1, 2, 3, 4, 5].map((n) => "/newui/covers/mzeo/life" + n + ".jpg"), landing: "/newui/covers/mzeo/landing.jpg", qr: "https://8klabels.com/p/mzeocov01",
+    backLabel: "/newui/covers/mzeo/back-label.png", shotFront: "/newui/covers/mzeo/shot-front.png", shotBack: "/newui/covers/mzeo/shot-back.png", life: [1, 2, 3, 4, 5].map((n) => "/newui/covers/mzeo/life" + n + ".jpg"), landing: "/newui/covers/mzeo/landing.jpg", qr: "https://8k.wine/p/mzeocov01",
     bottle: {"type": "Burgundy", "color": "Transparent", "closure": "Wax Seal", "finish": "Matte"}, cap: [183, 175, 231],
   },
   {
@@ -103,7 +103,7 @@ export const COVERS: CoverProject[] = [
     back: {"producerCompany": "\"Bodega La Ermita\" S.L.", "producerAddress": "Calle Mayor 22, 26200 Haro, Spain", "importer": "", "importerAddress": "", "bottlingDate": "", "lot": "", "web": "www.bodegalaermita.es"},
     desc: "Ruby red with notes of wild berries and dried herbs; fresh acidity and soft tannins carry a smooth, lingering finish.",
     labels: ["/newui/covers/piedra-alta/l1.jpg", "/newui/covers/piedra-alta/l2.jpg", "/newui/covers/piedra-alta/l3.jpg"], artists: ["Dachi Mindadze", "Levan Amashukeli", "Giorgi Akhuashvili"], chosen: 0,
-    backLabel: "/newui/covers/piedra-alta/back-label.png", shotFront: "/newui/covers/piedra-alta/shot-front.png", shotBack: "/newui/covers/piedra-alta/shot-back.png", life: [1, 2, 3, 4, 5].map((n) => "/newui/covers/piedra-alta/life" + n + ".jpg"), landing: "/newui/covers/piedra-alta/landing.jpg", qr: "https://8klabels.com/p/s9zs09j1",
+    backLabel: "/newui/covers/piedra-alta/back-label.png", shotFront: "/newui/covers/piedra-alta/shot-front.png", shotBack: "/newui/covers/piedra-alta/shot-back.png", life: [1, 2, 3, 4, 5].map((n) => "/newui/covers/piedra-alta/life" + n + ".jpg"), landing: "/newui/covers/piedra-alta/landing.jpg", qr: "https://8k.wine/p/s9zs09j1",
     bottle: {"type": "Burgundy", "color": "Amber", "closure": "Wax Seal", "finish": "Matte"}, cap: [112, 28, 25],
   },
 ];

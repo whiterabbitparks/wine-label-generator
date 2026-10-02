@@ -2732,7 +2732,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         barcodeDigits: gtinValid ? gtinNorm : "",
         /* round 53 #4: QR data travels ONLY when the customer chose one */
         qrImage: qrMode === "upload" ? qrImg : "",
-        qrUrl: qrMode === "create" ? `https://8klabels.com/p/${productCode.current}` : "",
+        qrUrl: qrMode === "create" ? `https://8k.wine/p/${productCode.current}` : "",
       },
       markets, heightMM: Number(f.height) || 80, bgColor: bg,
     };
@@ -3453,7 +3453,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               line height and pushed the line down) */}
           <span style={{ ...px(1302.86 - 700, baseTop(183.62, 15), 700, 18), font: `15px ${HNW}`, lineHeight: "15px", color: INK, whiteSpace: "nowrap", textAlign: "right" }}>
             {t("Please")}{" "}
-            <a href="mailto:hello@8klabels.com" style={{ font: `700 15px/15px ${HNW}`, color: INK, textDecoration: "underline" }}>{t("contact")}</a>
+            <a href="mailto:hello@8k.wine" style={{ font: `700 15px/15px ${HNW}`, color: INK, textDecoration: "underline" }}>{t("contact")}</a>
             {t(", if you are an artist and want to participate.")}
           </span>
           {Array.from({ length: slots }, (_, i) => {
@@ -4857,7 +4857,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                 {ready && (<>
                   <div style={{ height: 13, background: "#E8E8E6", display: "flex", alignItems: "center", gap: 3, padding: "0 6px" }}>
                     {["#FF5F57", "#FEBC2E", "#28C840"].map((c) => <span key={c} style={{ width: 4.5, height: 4.5, borderRadius: 3, background: c }} />)}
-                    <span style={{ flex: 1, margin: "0 8px", height: 7, background: "#fff", borderRadius: 3, font: `5px ${HNW}`, color: "#999", paddingLeft: 4, lineHeight: "7px" }}>8klabels.com{productUrl}</span>
+                    <span style={{ flex: 1, margin: "0 8px", height: 7, background: "#fff", borderRadius: 3, font: `5px ${HNW}`, color: "#999", paddingLeft: 4, lineHeight: "7px" }}>8k.wine{productUrl}</span>
                   </div>
                   <iframe src={productView} title="product page" onLoad={() => setPpLoaded(true)} style={{ width: W, height: 823, transform: `scale(${BW / W})`, transformOrigin: "0 0", border: 0, pointerEvents: "none" }} />
                 </>)}
@@ -4871,7 +4871,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
               </div>
               {ready && ppLoaded && (<>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`/api/qr?u=${encodeURIComponent("https://8klabels.com" + productUrl)}`} alt="QR"
+                <img src={`/api/qr?u=${encodeURIComponent("https://8k.wine" + productUrl)}`} alt="QR"
                   style={{ ...px(925.5, 548.5, 34.3, 34.3) }} />
                 <span style={{ ...px(975, baseTop(582.5, 12), 300, 16), font: `italic 12px ${HNW}`, color: "#111", lineHeight: "12px", whiteSpace: "nowrap" }}>{t("Product landing page")}</span>
               </>)}
@@ -5095,7 +5095,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   <div style={{ position: "absolute", left: (CAR.w - 320) / 2, top: 0, width: 320, height: 320 / W * 823 + 13, background: "#fff", borderRadius: 5, boxShadow: "0 8px 22px rgba(0,0,0,0.2)", overflow: "hidden" }}>
                     <div style={{ height: 13, background: "#E8E8E6", display: "flex", alignItems: "center", gap: 3, padding: "0 6px" }}>
                       {["#FF5F57", "#FEBC2E", "#28C840"].map((c) => <span key={c} style={{ width: 4.5, height: 4.5, borderRadius: 3, background: c }} />)}
-                      <span style={{ flex: 1, margin: "0 8px", height: 7, background: "#fff", borderRadius: 3, font: `5px ${HNW}`, color: "#999", paddingLeft: 4, lineHeight: "7px" }}>8klabels.com{productUrl}</span>
+                      <span style={{ flex: 1, margin: "0 8px", height: 7, background: "#fff", borderRadius: 3, font: `5px ${HNW}`, color: "#999", paddingLeft: 4, lineHeight: "7px" }}>8k.wine{productUrl}</span>
                     </div>
                     <iframe src={productView} title="product page" style={{ width: W, height: 823, transform: `scale(${320 / W})`, transformOrigin: "0 0", border: 0, pointerEvents: "none" }} />
                   </div>
