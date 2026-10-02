@@ -5473,10 +5473,15 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                     <span style={{ position: "relative" }}>{t("Turn on guided mode and I'll give you tips at every step.")}</span>
                   </span>
                 )}
-                <span style={{ width: 22, height: 12, borderRadius: 7, border: `1px solid ${guideOn ? "#111" : "#bbb"}`, position: "relative", top: 6 - 13 * 0.72 / 2, transform: "translateY(0.45px)" /* measured, 2026-09-28: layout rounds `top`, a transform does not */, background: "#fff", boxSizing: "border-box", flex: "0 0 auto" }}>
-                  {/* the dot centred in the frame: 2.5 px from the outline on every side, on and off (owner, 2026-10-02: "not symmetric in its frame") */}
-                  <span style={{ position: "absolute", top: 2.5, left: guideOn ? 22 - 2.5 - 7 : 2.5, width: 7, height: 7, borderRadius: 3.5, background: guideOn ? BAR_RED : "#bbb", transition: "left 160ms, background 160ms" }} />
-                </span>
+                {/* 2026-10-02 (owner: "the dot isn't symmetric in its frame"): the
+                    frame and the dot are ONE small drawing — as HTML the page's
+                    0.8 scale rounded the outline and the dot to pixels each
+                    its own way; drawn together they move together, and the dot
+                    sits 1.5 units from the outline's inside on every side */}
+                <svg width="22" height="12" viewBox="0 0 22 12" aria-hidden="true" style={{ position: "relative", top: 6 - 13 * 0.72 / 2, transform: "translateY(0.45px)", overflow: "visible", flex: "none" }}>
+                  <rect x="0.5" y="0.5" width="21" height="11" rx="5.5" fill="none" stroke={guideOn ? "#111" : "#bbb"} strokeWidth="1" />
+                  <circle cx="6" cy="6" r="3.5" fill={guideOn ? BAR_RED : "#bbb"} style={{ transform: guideOn ? "translateX(10px)" : "none", transition: "transform 160ms, fill 160ms" }} />
+                </svg>
               </button>
             </div>
             {/* ENG / GEO left of the folder mark, where it always stood (its
