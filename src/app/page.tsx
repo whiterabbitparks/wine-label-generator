@@ -5474,7 +5474,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
                   </span>
                 )}
                 <span style={{ width: 22, height: 12, borderRadius: 7, border: `1px solid ${guideOn ? "#111" : "#bbb"}`, position: "relative", top: 6 - 13 * 0.72 / 2, transform: "translateY(0.45px)" /* measured, 2026-09-28: layout rounds `top`, a transform does not */, background: "#fff", boxSizing: "border-box", flex: "0 0 auto" }}>
-                  <span style={{ position: "absolute", top: 1.5, left: guideOn ? 11.5 : 1.5, width: 7, height: 7, borderRadius: 4, background: guideOn ? BAR_RED : "#bbb", transition: "left 160ms, background 160ms" }} />
+                  {/* the dot centred in the frame: 2.5 px from the outline on every side, on and off (owner, 2026-10-02: "not symmetric in its frame") */}
+                  <span style={{ position: "absolute", top: 2.5, left: guideOn ? 22 - 2.5 - 7 : 2.5, width: 7, height: 7, borderRadius: 3.5, background: guideOn ? BAR_RED : "#bbb", transition: "left 160ms, background 160ms" }} />
                 </span>
               </button>
             </div>
