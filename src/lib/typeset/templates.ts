@@ -175,8 +175,17 @@ export function layoutTypeOf(t: Template): LayoutType {
   const c = t.texts.filter((x) => (x as { align?: string }).align === "center").length;
   return c * 2 >= t.texts.length ? "centred" : "sides";
 }
-/* the customer typed a field in capitals (2+ letters, no lower case) */
-export const typedCaps = (vals: string[]) => vals.some((v) => /\p{L}.*\p{L}/u.test(v || "") && v === v.toUpperCase() && v !== v.toLowerCase());
+/* NEVER ALL CAPS (owner, 2026-10-02, the second word on it: "the fonts I
+   mark must NEVER show capitals, whatever happens — don't use the font, or
+   lower the letters except the first, even if they typed it all in
+   capitals"). A word in capitals is softened to Capitalised in such a
+   face; the wine trade's abbreviations (AOC, DOCG…) and Roman numerals
+   keep their capitals — "Aoc" would read as a typo (told to the owner). */
+const ACRONYMS = new Set(["AOC", "AOP", "DOC", "DOCG", "DOCA", "DO", "DOP", "DOQ", "IGT", "IGP", "PDO", "PGI", "AVA", "VDP", "QBA", "VQA", "GI", "WO", "VS", "VSOP", "XO", "USA", "UK", "EU", "II", "III", "IV", "VI", "VII", "VIII", "IX", "XI", "XII"]);
+const capsWord = (w: string) => w.length >= 2 && w === w.toUpperCase() && w !== w.toLowerCase() && !ACRONYMS.has(w.toUpperCase());
+export const softenCaps = (s: string) => s.replace(/\p{L}[\p{L}'’]*/gu, (w) => (capsWord(w) ? w[0] + w.slice(1).toLowerCase() : w));
+/* the customer typed a word in capitals somewhere → these faces are left out */
+export const typedCaps = (vals: string[]) => vals.some((v) => (String(v || "").match(/\p{L}[\p{L}'’]*/gu) || []).some(capsWord));
 let skipNoCaps = false;   /* set by facesFor for the call it makes */
 function bankSets(cat: FontCat): FamilySet[] {
   const nc = skipNoCaps ? noCapsFamilies() : null;
@@ -300,7 +309,10 @@ export function layoutFromTemplate(inp: TemplateInput): TemplateLayout {
     const parts = t.fields.map((f) => inp.fields[f]).filter(Boolean);
     if (!parts.length) return "";
     const s = parts.join(t.join || " / ");
-    return t.caps && !noCaps.has(faceOf(t).family) ? s.toUpperCase() : s;
+    /* a never-all-caps face: no layout capitals, and any word typed in
+       capitals is softened (whatever happens — owner, 2026-10-02) */
+    if (noCaps.has(faceOf(t).family)) return softenCaps(s);
+    return t.caps ? s.toUpperCase() : s;
   };
   /* ONE family, in HIS weights (owner, 2026-09-23: "one family, different
      weights, as on my artboards") — a line he set bold is bold, the rest
