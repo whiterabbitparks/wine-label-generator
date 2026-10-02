@@ -2584,7 +2584,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     /* only the details changed: the SAME paintings in the same templates,
        the type set again — seconds, no painter, no cost */
     if (!append && liveGenRef.current && dreams.length && paintSig && paintSig === sigPaint() && sets.flat().every((d) => d?.id)) {
-      go("loader"); setGenProgress(0.3);
+      /* 2026-10-02 (owner: "I changed the year and the OLD loader glass
+         appeared"): the re-set waits on the labels page, column by column,
+         like a new run — no full-page loader */
+      const shownSet = Math.min(setIdx, sets.length - 1);
+      setGen({ cols: ["wait", "wait", "wait"], append: false, t0: Date.now() });
+      go("options"); setGenProgress(0.3);
       const { data, aspectKey, width, height } = buildDreamPayload();
       const redo = async (d: Dream): Promise<Dream> => {
         const r = await fetch("/api/dream-label", {
@@ -2599,12 +2604,17 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
       };
       try {
         /* every set's labels take the new details (2026-09-27) */
-        const next = await Promise.all(sets.map((st) => Promise.all(st.map(redo))));
+        const next = await Promise.all(sets.map((st, si) => Promise.all(st.map(async (d, ci) => {
+          const got = await redo(d);
+          /* the set on show fills in as each label comes back */
+          if (si === shownSet) setGen((g) => g ? { ...g, cols: g.cols.map((c, k) => (k === ci ? got : c)) } : g);
+          return got;
+        }))));
         setGenProgress(1);
-        setSets(next); setFrontSig(sigFront()); setBackSig("");
-        go("options");
+        setSets(next); setSetIdx(shownSet); setFrontSig(sigFront()); setBackSig("");
+        setGen(null);
         return;
-      } catch { /* fall through to a fresh painting */ }
+      } catch { setGen(null); /* fall through to a fresh painting */ }
     }
     /* 2026-09-23: one token for the whole run — the server mixes which
        artist paints which column from it (a retried column keeps its seat) */
