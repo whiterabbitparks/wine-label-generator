@@ -781,6 +781,12 @@ export default function NewUI() {
     setConfirmModal(kind);
   };
   const closeConfirm = () => { setConfirmModal(""); if (pageNow.current === "blank") go(blankFrom.current, -1, false); };
+  /* 2026-10-02 (UX robot): the marketing window stayed open over the Final
+     Pack when the red button (or Back) left the page behind it — a window
+     belongs to its page and closes when the page is left */
+  useEffect(() => {
+    if ((confirmModal === "assets" && page !== "assets") || (confirmModal === "labels" && page !== "blank")) setConfirmModal("");
+  }, [page]);   // eslint-disable-line react-hooks/exhaustive-deps
   const [assetsTick, setAssetsTick] = useState(0);
   const pendingAssetsSig = useRef("");
   const confirmedAssetsSig = useRef("");

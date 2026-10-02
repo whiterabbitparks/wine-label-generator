@@ -1,0 +1,90 @@
+{
+ "name": "newtry",
+ "steps": [
+  {
+   "step": "1 open [welcome]",
+   "shot": "tests/ux/out/newtry/01-open.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "2 start [taste]",
+   "shot": "tests/ux/out/newtry/02-start.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "3 taste next [vision]",
+   "shot": "tests/ux/out/newtry/03-taste_next.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "4 vision next [vision]",
+   "shot": "tests/ux/out/newtry/04-vision_next.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "5 confirm create [options]",
+   "shot": "tests/ux/out/newtry/05-confirm_create.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "6 labels page [options]",
+   "shot": "tests/ux/out/newtry/06-labels_page.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "7 new try 1 [options]",
+   "shot": "tests/ux/out/newtry/07-new_try_1.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "8 new try 2 [options]",
+   "shot": "tests/ux/out/newtry/08-new_try_2.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "9 select label 2 [options]",
+   "shot": "tests/ux/out/newtry/09-select_label_2.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "10 new try 3 [options]",
+   "shot": "tests/ux/out/newtry/10-new_try_3.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "11 new try 4 [options]",
+   "shot": "tests/ux/out/newtry/11-new_try_4.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "12 labels after tries [options]",
+   "shot": "tests/ux/out/newtry/12-labels_after_tries.png",
+   "next": {
+    "disabled": false
+   }
+  }
+ ],
+ "issues": []
+}

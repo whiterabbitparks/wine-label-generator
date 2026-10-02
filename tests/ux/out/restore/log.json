@@ -1,0 +1,75 @@
+{
+ "name": "restore",
+ "steps": [
+  {
+   "step": "1 open with a saved order [options]",
+   "shot": "tests/ux/out/restore/01-open_with_a_saved_order.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "2 select label 2 [options]",
+   "shot": "tests/ux/out/restore/02-select_label_2.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "3 reload on options [options]",
+   "shot": "tests/ux/out/restore/03-reload_on_options.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "4 after reload on options [options]",
+   "shot": "tests/ux/out/restore/04-after_reload_on_options.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "5 next from options [backdetails]",
+   "shot": "tests/ux/out/restore/05-next_from_options.png",
+   "next": {
+    "disabled": true
+   }
+  },
+  {
+   "step": "6 reload on backdetails [backdetails]",
+   "shot": "tests/ux/out/restore/06-reload_on_backdetails.png",
+   "next": {
+    "disabled": true
+   }
+  },
+  {
+   "step": "7 after reload on backdetails [backdetails]",
+   "shot": "tests/ux/out/restore/07-after_reload_on_backdetails.png",
+   "next": {
+    "disabled": true
+   }
+  },
+  {
+   "step": "8 next from backdetails [backdetails]",
+   "shot": "tests/ux/out/restore/08-next_from_backdetails.png",
+   "next": {
+    "disabled": true
+   }
+  },
+  {
+   "step": "9 stays on backdetails [backdetails]",
+   "shot": "tests/ux/out/restore/09-stays_on_backdetails.png",
+   "next": {
+    "disabled": true
+   }
+  }
+ ],
+ "issues": [
+  {
+   "step": "7 after reload on backdetails [backdetails]",
+   "kind": "next not clickable",
+   "detail": "locator.click: Timeout 5000ms exceeded."
+  }
+ ]
+}

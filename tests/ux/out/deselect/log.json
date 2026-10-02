@@ -1,0 +1,69 @@
+{
+ "name": "deselect",
+ "steps": [
+  {
+   "step": "1 open [welcome]",
+   "shot": "tests/ux/out/deselect/01-open.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "2 start [taste]",
+   "shot": "tests/ux/out/deselect/02-start.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "3 taste next [vision]",
+   "shot": "tests/ux/out/deselect/03-taste_next.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "4 vision next [vision]",
+   "shot": "tests/ux/out/deselect/04-vision_next.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "5 confirm create [options]",
+   "shot": "tests/ux/out/deselect/05-confirm_create.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "6 labels page [options]",
+   "shot": "tests/ux/out/deselect/06-labels_page.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "7 select label 1 [options]",
+   "shot": "tests/ux/out/deselect/07-select_label_1.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "8 select label 1 [options]",
+   "shot": "tests/ux/out/deselect/08-select_label_1.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "9 next with nothing selected [options]",
+   "shot": "tests/ux/out/deselect/09-next_with_nothing_selected.png",
+   "next": {
+    "disabled": false
+   }
+  }
+ ],
+ "issues": []
+}

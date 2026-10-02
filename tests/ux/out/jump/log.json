@@ -1,0 +1,55 @@
+{
+ "name": "jump",
+ "steps": [
+  {
+   "step": "1 open [welcome]",
+   "shot": "tests/ux/out/jump/01-open.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "2 start [taste]",
+   "shot": "tests/ux/out/jump/02-start.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "3 taste next [vision]",
+   "shot": "tests/ux/out/jump/03-taste_next.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "4 progress jump: MARKETING ASSETS [vision]",
+   "shot": "tests/ux/out/jump/04-progress_jump_MARKETING_ASSETS.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "5 progress jump: BACK LABEL [vision]",
+   "shot": "tests/ux/out/jump/05-progress_jump_BACK_LABEL.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "6 progress jump: Bottle Details [vision]",
+   "shot": "tests/ux/out/jump/06-progress_jump_Bottle_Details.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "7 progress jump: FRONT LABEL [vision]",
+   "shot": "tests/ux/out/jump/07-progress_jump_FRONT_LABEL.png",
+   "next": {
+    "disabled": false
+   }
+  }
+ ],
+ "issues": []
+}

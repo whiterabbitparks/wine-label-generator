@@ -1,0 +1,139 @@
+{
+ "name": "backforward",
+ "steps": [
+  {
+   "step": "1 open [welcome]",
+   "shot": "tests/ux/out/backforward/01-open.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "2 start [taste]",
+   "shot": "tests/ux/out/backforward/02-start.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "3 taste next [vision]",
+   "shot": "tests/ux/out/backforward/03-taste_next.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "4 vision next [vision]",
+   "shot": "tests/ux/out/backforward/04-vision_next.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "5 confirm create [options]",
+   "shot": "tests/ux/out/backforward/05-confirm_create.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "6 labels page [options]",
+   "shot": "tests/ux/out/backforward/06-labels_page.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "7 select label 1 [options]",
+   "shot": "tests/ux/out/backforward/07-select_label_1.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "8 next from options [backdetails]",
+   "shot": "tests/ux/out/backforward/08-next_from_options.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "9 browser back from backdetails [options]",
+   "shot": "tests/ux/out/backforward/09-browser_back_from_backdetails.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "10 browser forward to backdetails [backdetails]",
+   "shot": "tests/ux/out/backforward/10-browser_forward_to_backdetails.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "11 next from backdetails [backdesign]",
+   "shot": "tests/ux/out/backforward/11-next_from_backdetails.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "12 browser back from backdesign [backdetails]",
+   "shot": "tests/ux/out/backforward/12-browser_back_from_backdesign.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "13 browser forward to backdesign [backdesign]",
+   "shot": "tests/ux/out/backforward/13-browser_forward_to_backdesign.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "14 next from backdesign [bottle]",
+   "shot": "tests/ux/out/backforward/14-next_from_backdesign.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "15 browser back from bottle [backdesign]",
+   "shot": "tests/ux/out/backforward/15-browser_back_from_bottle.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "16 browser forward to bottle [bottle]",
+   "shot": "tests/ux/out/backforward/16-browser_forward_to_bottle.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "17 next from bottle [assets]",
+   "shot": "tests/ux/out/backforward/17-next_from_bottle.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "18 browser back from assets [bottle]",
+   "shot": "tests/ux/out/backforward/18-browser_back_from_assets.png",
+   "next": {
+    "disabled": false
+   }
+  },
+  {
+   "step": "19 browser forward to assets [assets]",
+   "shot": "tests/ux/out/backforward/19-browser_forward_to_assets.png",
+   "next": {
+    "disabled": false
+   }
+  }
+ ],
+ "issues": []
+}
