@@ -2491,11 +2491,17 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     const p2 = d?.artist ? painters.find((a) => a.name === d.artist) : undefined;
     return p2 ? { id: p2.id, name: p2.name } : null;
   };
+  /* 2026-10-02 (owner: "I selected Rati Bakradze, pressed new try and it
+     painted other artists too"): with no try left the new try passes
+     through the page that sells tries, and the run that follows the
+     purchase forgot the selected artist — it is now kept here */
+  const pendingArtists = useRef<string[] | undefined>(undefined);
   async function newTry() {
+    const who = selectedArtist();
+    pendingArtists.current = who ? [who.id] : undefined;
     const st = await refreshVis();
     if (st && !st.admin && st.runsLeft <= 0) { go("more"); return; }
-    const who = selectedArtist();
-    nextFromFront(true, who ? [who.id] : undefined);
+    nextFromFront(true, pendingArtists.current);
   }
   /* 2026-09-30: PADDLE — Paddle.js is loaded on first use; a checkout opens
      as Paddle's overlay; when it completes, the server reads the payment
@@ -2540,13 +2546,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     /* the real payment (Paddle) — unless the TEMP fake switch or the admin */
     if (!fakePay && !vis?.admin) {
       const j = await paddlePay(["try" + morePack]);
-      if (j?.ok && j.runs) { await refreshVis(); nextFromFront(dreams.length > 0); return; }
+      if (j?.ok && j.runs) { await refreshVis(); nextFromFront(dreams.length > 0, dreams.length > 0 ? pendingArtists.current : undefined); return; }
       if (j === null && paddleCfg.current?.on) return;   /* closed without paying */
     }
     try {
       const r = await fetch("/api/visitor/pay", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pack: morePack, fake: fakePay }) });
       /* bought → straight on to the try they came for */
-      if (r.ok) { await refreshVis(); nextFromFront(dreams.length > 0); return; }
+      if (r.ok) { await refreshVis(); nextFromFront(dreams.length > 0, dreams.length > 0 ? pendingArtists.current : undefined); return; }
     } catch { /* said below */ }
     setWarn(t("Payments aren't connected yet — coming soon."));
     setTimeout(() => setWarn(""), 5000);
@@ -2594,6 +2600,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
     /* 2026-09-23: one token for the whole run — the server mixes which
        artist paints which column from it (a retried column keeps its seat) */
     const order = Math.random().toString(36).slice(2, 12);
+    pendingArtists.current = append ? onlyArtists : undefined;
     if (liveGenRef.current && !(await startRunOrAsk(order))) return;
     /* the labels already shown — a new version repeats none of their
        artist + layout pairs */
