@@ -430,12 +430,13 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
     panel: panel && floatOk,
     scene: sceneOn,
     blend: (model.artist as { blend?: "multiply" }).blend,
+    fadeEdges: !!kg,
     widthMm, heightMm, seed, wineColour: inp.data.wineColorName,
   });
   /* a multiply picture is KEPT with its paper made white (the PDF, the
      admin editor and every re-layout lay that file in multiply) */
   const blend = (model.artist as { blend?: "multiply" }).blend;
-  const kept = blend === "multiply" ? await whitenPaper(art, cleaned.ground) : art;
+  const kept = out.art || (blend === "multiply" ? await whitenPaper(art, cleaned.ground) : art);
   if (out.warnings.length) console.warn(`[template ${out.template}] ${out.warnings.join("; ")}`);
   rememberMade({ artist: model.artist.name, template: out.template, face: out.faces.match(/^(.*?) \d{3}\//)?.[1] || out.faces.split(" ")[0], ground: groundWord(out.layout.ground) });
   return { png: out.png, svg: out.svg, art: kept, faces: out.faces, ink: out.ink, ground: out.layout.ground, prompt: ap.prompt, layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", painter: model.id, artist: model.artist.name, repainted: painted.repainted, template: out.template, hasPaper: cleaned.cleaned, refSet: painted.refSet, panel: panel && floatOk, scene: sceneOn };
@@ -457,6 +458,12 @@ export function layoutTag(style: string, seed: number): string {
    arrangements"): `big` insists on the largest hero sizes; `flip` sets
    the type on the OTHER alignment (a centred style goes left, a left one
    goes centred) */
+/* the artist's own ground colour (Pirosmani's black), from the name a label records */
+const keepGroundOf = (name?: string): boolean => {
+  if (!name) return false;
+  const a = listArtists().find((x) => x.profile.name === name);
+  return !!(a?.profile as { keepGround?: string } | undefined)?.keepGround;
+};
 /* the artist's blend, from the name a label records */
 const blendOf = (name?: string): "multiply" | undefined => {
   const n = String(name || "");
@@ -514,8 +521,9 @@ export async function relayoutLabel(stored: { art: Buffer; meta: { style: string
       widthMm, heightMm, seed: keepSeed, wineColour: data.wineColorName, edge: !wasPanel && cl.cleaned && sides.length ? sides : undefined,
       panel: wasPanel && cl.cleaned,
       blend, labelGround: blend ? ground : undefined,
+      fadeEdges: keepGroundOf((stored.meta as { artist?: string }).artist),
     });
-    return { png: out.png, svg: out.svg, art: blend === "multiply" ? await whitenPaper(cl.art, cl.ground) : cl.art, faces: out.faces, ink: out.ink, ground: out.layout.ground || ground, prompt: "(the same painting, the details set again)", layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", template: out.template, panel: wasPanel && cl.cleaned };
+    return { png: out.png, svg: out.svg, art: out.art || (blend === "multiply" ? await whitenPaper(cl.art, cl.ground) : cl.art), faces: out.faces, ink: out.ink, ground: out.layout.ground || ground, prompt: "(the same painting, the details set again)", layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", template: out.template, panel: wasPanel && cl.cleaned };
   }
   const cleaned = await cleanPaper(raw);
   const art = cleaned.art;
@@ -536,9 +544,10 @@ export async function relayoutLabel(stored: { art: Buffer; meta: { style: string
     artwork: art, band: kband, template: pick.id, data, ink: cleaned.ink, paper: cleaned.ground,
     widthMm, heightMm, seed, wineColour: data.wineColorName,
     blend: blendV, labelGround: blendV ? ground : undefined,
+    fadeEdges: keepGroundOf((stored.meta as { artist?: string }).artist),
   });
   void recipe;
-  return { png: out.png, svg: out.svg, art: blendV === "multiply" ? await whitenPaper(art, cleaned.ground) : art, faces: out.faces, ink: out.ink, ground: out.layout.ground || ground, prompt: "(re-layout of an existing painting)", layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", template: out.template };
+  return { png: out.png, svg: out.svg, art: out.art || (blendV === "multiply" ? await whitenPaper(art, cleaned.ground) : art), faces: out.faces, ink: out.ink, ground: out.layout.ground || ground, prompt: "(re-layout of an existing painting)", layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", template: out.template };
 }
 
 /* the TTFs a label's SVG sets its type in — shipped beside the SVG so

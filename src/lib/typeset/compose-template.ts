@@ -38,6 +38,11 @@ export interface TemplateComposeInput {
   panel?: boolean;
   /* 2026-10-01 (owner): the picture over the ground in multiply — Grigol Tatishvili only (profile `blend`) */
   blend?: "multiply";
+  /* 2026-10-02 (owner: "Pirosmani's labels keep beige remains at the
+     edges — bring the black ground in a little"): the picture fades into
+     the label's ground over its last 4 mm before the trim (an artist whose
+     ground is his own colour — profile keepGround) */
+  fadeEdges?: boolean;
   /* the scene method (owner, 2026-10-01): the picture IS the whole label —
      laid over the trim and its 2 mm bleed, the type over its quiet parts */
   scene?: boolean;
@@ -136,7 +141,7 @@ export function readable(hex: string, on = IVORY, want = 4.5): string {
   return (onDark ? lighter || darker : darker || lighter) || (ratioOf("#111111", on) >= ratioOf("#FAFAF7", on) ? "#111111" : "#FAFAF7");
 }
 
-export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<ComposeOutput & { template: string; warnings: string[] }> {
+export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<ComposeOutput & { template: string; warnings: string[]; art?: string }> {
   const band: Band = inp.band || "classical";
   const tpl = inp.template
     ? (templatesNow().find((t) => t.id === inp.template) || pickTemplate(band, inp.seed))
@@ -378,7 +383,8 @@ export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<C
   if (inp.blend === "multiply") layout.blend = "multiply";
   /* under multiply the paper is made white first (whitenPaper), so no
      rectangle of it shows on the ground */
-  const href = inp.blend === "multiply" ? await whitenPaper(inp.artwork, paperG) : inp.artwork;
+  let href = inp.blend === "multiply" ? await whitenPaper(inp.artwork, paperG) : inp.artwork;
+  if (inp.fadeEdges) href = await fadeToGround(href, ground, pxPos, s, layout.W, layout.H, 4 * PX_PER_MM);
   const image = `<image xlink:href="${href}" x="${pxPos.x.toFixed(1)}" y="${pxPos.y.toFixed(1)}" width="${pw.toFixed(1)}" height="${ph.toFixed(1)}" preserveAspectRatio="none"${inp.blend === "multiply" ? ' style="mix-blend-mode:multiply"' : ""}/>`;
   /* a bleeding picture is cut to its window (the straight edge facing the type) */
   const picture = clip
@@ -391,7 +397,7 @@ export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<C
   const png = await rasterLabel(svg, layout.W, layout.H);
   return {
     svg, png: `data:image/png;base64,${png.toString("base64")}`,
-    faces, ink, layout, template: tpl.id, warnings,
+    faces, ink, layout, template: tpl.id, warnings, ...(inp.fadeEdges ? { art: href } : {}),
   };
 }
 
@@ -617,6 +623,30 @@ async function framed(artwork: string, ground: string): Promise<boolean> {
   }
   return straight >= 3;
 }
+/* the picture's pixels within `band` label px of the trim are blended
+   toward the ground — fully at the trim (and in the bleed beyond it),
+   not at all `band` inside; smooth in between */
+async function fadeToGround(dataUrl: string, ground: string, pos: { x: number; y: number }, s: number, W: number, H: number, band: number): Promise<string> {
+  const { data, info } = await sharp(Buffer.from(dataUrl.slice(dataUrl.indexOf(",") + 1), "base64")).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  const G = [1, 3, 5].map((k) => parseInt(ground.slice(k, k + 2), 16));
+  const C = info.channels;
+  for (let y = 0; y < info.height; y++) {
+    const ly = pos.y + (y + 0.5) * s;
+    const dy = Math.min(ly, H - ly);
+    for (let x = 0; x < info.width; x++) {
+      const lx = pos.x + (x + 0.5) * s;
+      const d = Math.min(dy, Math.min(lx, W - lx));
+      if (d >= band) continue;
+      const t = d <= 0 ? 1 : 1 - d / band;
+      const k = t * t * (3 - 2 * t);   /* smoothstep */
+      const i = (y * info.width + x) * C;
+      for (let c = 0; c < 3; c++) data[i + c] = Math.round(data[i + c] * (1 - k) + G[c] * k);
+    }
+  }
+  const png = await sharp(data, { raw: { width: info.width, height: info.height, channels: C } }).png().toBuffer();
+  return `data:image/png;base64,${png.toString("base64")}`;
+}
+
 export async function fitArt(
   artwork: string, ground: string, layout: { W: number; H: number; lines: { text: string; x: number; y: number; size: number; tracking: number; family: string; weight: number; italic: boolean; anchor: "start" | "middle" | "end"; rot?: number }[] },
   room: { x: number; y: number; w: number; h: number }, aw: number, ah: number,
