@@ -53,3 +53,4 @@ data/artists/*/*
 !data/artists/*/profile.json
 !data/artists/*/lora*.json
 ui-export/
+tests/ux/out/
