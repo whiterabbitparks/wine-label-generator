@@ -1397,7 +1397,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
             style: sel.style, seed,
           }),
         });
-        if (!r.ok || !r.body) throw new Error(`assets failed (${r.status})`);
+        if (!r.ok || !r.body) {
+          const j = await r.json().catch(() => ({})) as { code?: string };
+          throw new Error(j.code === "free-paused" || j.code === "marketing-full" ? `refused:${j.code}` : `assets failed (${r.status})`);
+        }
         const reader = r.body.getReader(); const dec = new TextDecoder();
         let buf = "";
         for (;;) {
@@ -1464,8 +1467,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
         /* round 68 #4: a failed run used to vanish silently and leave the
            page looking half-generated — say so, and let a revisit retry */
         console.error("[assets]", e);
-        setWarn(t("Generation failed — please try again"));
-        setTimeout(() => setWarn(""), 5000);
+        const why = e instanceof Error ? e.message : "";
+        setWarn(t(why === "refused:free-paused" ? "Today's marketing images are all used — come back tomorrow."
+          : why === "refused:marketing-full" ? "That's today's marketing runs — come back tomorrow."
+          : "Generation failed — please try again"));
+        setTimeout(() => setWarn(""), 7000);
       }
       setAssetsStage("");
       assetsRunning.current = false;

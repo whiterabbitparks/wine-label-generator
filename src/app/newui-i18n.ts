@@ -469,6 +469,8 @@ export const UI_GE: Record<string, string> = {
   "Make sure everything is correct — creating marketing assets costs credits.": "დარწმუნდი, რომ ყველა დეტალი სწორია — სამარკეტინგო მასალის შექმნა ხარჯავს კრედიტებს.",
   "You have": "შენ გაქვს",
   "Create": "შექმნა",
+  "Today's marketing images are all used — come back tomorrow.": "დღევანდელი მარკეტინგის სურათები ამოიწურა — დაბრუნდით ხვალ.",
+  "That's today's marketing runs — come back tomorrow.": "დღევანდელი მარკეტინგის ცდები ამოიწურა — დაბრუნდით ხვალ.",
   "Edit Details": "დეტალების რედაქტირება",
   "Prompt:": "იდეა:",
   "An abstraction in the artist's own style": "აბსტრაქცია არტისტის სტილში",

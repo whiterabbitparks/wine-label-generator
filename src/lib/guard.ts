@@ -1,3 +1,4 @@
+import { paddleEnv } from "./paddle";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -167,13 +168,18 @@ export async function startRun(req: Request, order: string): Promise<Verdict> {
      under the daily free budget and the IP limit — so a stranger who finds
      the switch costs no more than a free visitor */
   const free = (v.runsUsed || 0) < s.freeRuns + (v.emailRun || 0) + (v.fakeRuns || 0);
+  /* 2026-10-03 (owner: "switch the daily limit on — we are online now, just
+     in case"): while Paddle is the SANDBOX a "paid" try costs nobody
+     anything (a test card pays it), so every visitor's run is under the
+     daily budget until real payments are live */
+  const budgeted = free || paddleEnv() !== "live";
   if (!admin) {
     if (runsLeft(v, s) <= 0) return v.verifiedAt
       ? { ok: false, status: 402, code: "need-pay", message: "every free run is used" }
       : { ok: false, status: 402, code: "need-email", message: "confirm your e-mail for one more free run" };
+    if (budgeted && (await freeSpentToday()) >= s.dailyFreeUsd)
+      return { ok: false, status: 503, code: "free-paused", message: "today's free labels are all used — come back tomorrow, or buy new versions" };
     if (free) {
-      if ((await freeSpentToday()) >= s.dailyFreeUsd)
-        return { ok: false, status: 503, code: "free-paused", message: "today's free labels are all used — come back tomorrow, or buy new versions" };
       const hour = new Date().toISOString().slice(0, 13);
       const hit = (await db.collection("iphits").findOneAndUpdate({ _id: `${ipOf(req)}|${hour}` } as never, { $inc: { n: 1 }, $setOnInsert: { at: new Date() } } as never, { upsert: true, returnDocument: "after" })) as unknown as { n?: number } | null;
       if ((hit?.n || 0) > s.ipRunsPerHour)
@@ -185,7 +191,7 @@ export async function startRun(req: Request, order: string): Promise<Verdict> {
     { _id: v._id, [`orders.${order}`]: { $exists: false } } as never,
     { $inc: { runsUsed: 1 }, $set: { [`orders.${order}`]: 0, lastRunAt: new Date().toISOString() } } as never);
   /* the whole run's paint is costed at its start (three labels) */
-  if (claim.modifiedCount && free && !admin) await spendFree(3 * s.paintUsd, s);
+  if (claim.modifiedCount && budgeted && !admin) await spendFree(3 * s.paintUsd, s);
   return { ok: true, visitor: v, admin };
 }
 
@@ -235,6 +241,8 @@ export async function allowMarketing(req: Request): Promise<Verdict> {
   const day = today();
   const n = v.marketing?.day === day ? v.marketing.n : 0;
   if (n >= s.marketingPerDay) return { ok: false, status: 429, code: "marketing-full", message: "that's today's marketing runs — come back tomorrow" };
+  /* the daily budget stops marketing runs too (2026-10-03) */
+  if ((await freeSpentToday()) >= s.dailyFreeUsd) return { ok: false, status: 503, code: "free-paused", message: "today's marketing images are all used — come back tomorrow" };
   const db = await getDb();
   await db.collection("visitors").updateOne({ _id: v._id } as never, { $set: { marketing: { day, n: n + 1 } } } as never);
   await spendFree(s.marketingUsd, s);
