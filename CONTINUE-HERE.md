@@ -68,10 +68,20 @@ data/layout-edits/archive-old-engine-2026-10-04/ (kept, not deleted; the
 editor and tools read only data/layout-edits/*.json). The Layouts tab now
 shows only final-round labels and new feedback.
 
-**Decided 2026-10-04:** rows stay rows — when a left field and a right
-field on different rows are missing, the survivors keep their rows (owner:
-"keep rows and see how it looks, we can fix it later"). Revisit only if he
-asks.
+**Rows (owner, 2026-10-04, refined after his first 22 admin judgements):**
+a row keeps its line only while something stands on the other side; a
+side line left ALONE in its row moves toward its group's edge (down in a
+bottom group, up in a top group) until it meets a line horizontally, and
+shares the baseline of a line across it within 1 mm (place.ts close()).
+His edits also moved a lone CENTRED grape into an empty side slot on
+A18/A45/A59/A50 — asked him whether that is a rule (not built yet).
+Pirosmani only on his black tones, Tatishvili only on light ones, and a
+painting that comes back on another ground is painted again (paint.ts).
+**Fonts fixed for the whole site:** ~20 approved faces name themselves
+otherwise in their files ("Nanum Pen", "Poppins Medium", "NanumGothic",
+"Rounded Mplus 1c"…) and librsvg drew a fallback (52 % wider for Nanum Pen
+Script) — raster.ts withOwnNames() puts the file's own family first.
+His 22 judged labels (2026-10-03) and 14 edits: data/layout-edits on live.
 
 **Open:** site wiring
 (hybrid.ts + relayout keep) after he approves; marketing/back label untouched.
