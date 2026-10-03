@@ -28,7 +28,10 @@ for (const lay of LAYOUTS) {
     const parts = l.sample.split(" / ");
     l.fields.forEach((k, i) => { f[k] ??= i === l.fields.length - 1 ? parts.slice(i).join(" / ") : parts[i]; });
   }
-  const pl = place(lay, f, lay.refW, lay.refH, FACES);
+  /* his geometry first (without the margin lift), then the lift the margin asks for */
+  const pl = place(lay, f, lay.refW, lay.refH, FACES, { noLift: true });
+  const lifted = place(lay, f, lay.refW, lay.refH, FACES);
+  const liftNote = Object.entries(lifted.lift || {}).filter(([, v]) => v > 0.01).map(([k, v]) => `${k} +${v.toFixed(2)}`).join(" ");
   const file = path.join(DIR, `Artboard 2 copy ${lay.id.slice(1)}@3x.png`);
   const m = await sharp(file).metadata(); const pw = m.width!, ph = m.height!;
   const b = 2 * PX, W = lay.refW * PX + 2 * b, H = lay.refH * PX + 2 * b;
@@ -65,7 +68,7 @@ for (const lay of LAYOUTS) {
   const okButName = !ok && his2 < 1.5 && our2 < 1.5 && zoneIoU > 97;
   if (!ok && !okButName) bad++;
   if (!ok && !okButName) console.log(lay.id, "without the name:", his2.toFixed(2), our2.toFixed(2));
-  rows.push(`${lay.id.padEnd(4)} ${ok ? "ok     " : okButName ? "ok*    " : "DIFFERS"} his ink off >0.5mm ${his.toFixed(1).padStart(5)}%  ours off ${our.toFixed(1).padStart(5)}%  zone ${zoneIoU.toFixed(1)}%${pl.problems.length ? "  problems: " + pl.problems.join("; ") : ""}${Object.keys(pl.reduced).length ? "  reduced: " + JSON.stringify(pl.reduced) : ""}`);
+  rows.push(`${lay.id.padEnd(4)} ${ok ? "ok     " : okButName ? "ok*    " : "DIFFERS"} his ink off >0.5mm ${his.toFixed(1).padStart(5)}%  ours off ${our.toFixed(1).padStart(5)}%  zone ${zoneIoU.toFixed(1)}%${liftNote ? "  margin lift: " + liftNote : ""}${pl.problems.length ? "  problems: " + pl.problems.join("; ") : ""}${Object.keys(pl.reduced).length ? "  reduced: " + JSON.stringify(pl.reduced) : ""}`);
   /* overlay: his red, ours cyan, both black */
   const ov = Buffer.alloc(pw * ph * 3);
   for (let p = 0; p < pw * ph; p++) { const o = p * 3, a = mA[p], c = mB[p]; const v = a && c ? [20, 20, 20] : a ? [220, 30, 30] : c ? [0, 170, 200] : A.data[p * A.info.channels] < 245 ? [235, 235, 235] : [255, 255, 255]; ov[o] = v[0]; ov[o + 1] = v[1]; ov[o + 2] = v[2]; }

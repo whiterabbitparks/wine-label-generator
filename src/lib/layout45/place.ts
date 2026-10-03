@@ -42,12 +42,14 @@ export interface Placed {
   anchor: "start" | "middle" | "end"; rot: number /* degrees, SVG */;
   tracking: number;                   /* mm between letters */
   glyphs?: Glyph[];                   /* an arc, letter by letter */
+  sweep?: number;                     /* an arc: the degrees its word spans */
   box: { x0: number; y0: number; x1: number; y1: number };   /* ink box, mm */
 }
 export interface Placement {
   lay: Layout; W: number; H: number; lines: Placed[];
   zone: { kind: "rect" | "oval"; x: number; y: number; w: number; h: number } | null;
   reduced: Record<string, number>;    /* field key → scale < 1 */
+  lift?: { top: number; bottom: number; left: number; right: number; vTop: number; vBottom: number };   /* mm each group moved in to clear the margin */
   problems: string[];
 }
 
@@ -152,7 +154,9 @@ function zoneOn(lay: Layout, W: number, H: number, lines: Placed[], hisPl: Place
 }
 
 /* ---------- one pass at given scales ---------- */
-function pass(lay: Layout, fields: Partial<Record<FieldKey, string>>, W: number, H: number, faces: Faces, scale: Map<Line, number>): Placed[] {
+type Push = { top: number; bottom: number; left: number; right: number; vTop: number; vBottom: number };
+const NO_PUSH: Push = { top: 0, bottom: 0, left: 0, right: 0, vTop: 0, vBottom: 0 };
+function pass(lay: Layout, fields: Partial<Record<FieldKey, string>>, W: number, H: number, faces: Faces, scale: Map<Line, number>, push: Push = NO_PUSH): Placed[] {
   const sz = (l: Line) => Math.max(MIN_PT, l.size * (scale.get(l) ?? 1)) * PT;   /* mm */
   const txt = (l: Line) => textFor(l, fields, faceOf(l, faces));
   const out: Placed[] = [];
@@ -172,14 +176,15 @@ function pass(lay: Layout, fields: Partial<Record<FieldKey, string>>, W: number,
       const face = faceOf(l, faces), size = sz(l), tr = l.tracking * size;
       /* his baseline offset inside the row is kept (the vintage sits 0.2 mm off its row) */
       const own = (anchor === "top" ? l.fromTop! : l.fromBottom!) - r.d;
-      const base = d + own;
+      const base = d + own + push[anchor];
       const y = anchor === "top" ? base : H - base;
       if (l.arc) { out.push(arcLine(l, text, face, size, W, H, y - (anchor === "top" ? l.fromTop! : H - l.fromBottom!), lay)); continue; }
       const w = widthMm(text, face, size, l.tracking);
       let x: number, a: Placed["anchor"];
       if (l.align === "center") { x = W / 2; a = "middle"; }
-      else if (l.align === "right") { x = W - l.right!; a = "end"; }
-      else { x = l.left!; a = "start"; }
+      /* his side lines a hair inside the margin start ON it (the margin wins) */
+      else if (l.align === "right") { x = W - Math.max(MARGIN, l.right!); a = "end"; }
+      else { x = Math.max(MARGIN, l.left!); a = "start"; }
       const x0 = a === "start" ? x : a === "middle" ? x - w / 2 : x - w;
       const e = extent(text, face, size);
       out.push({ line: l, key: l.fields.join("+"), text, face, size, x, y, anchor: a, rot: 0, tracking: tr, box: { x0, x1: x0 + w, y0: y - e.up, y1: y + e.down } });
@@ -201,10 +206,10 @@ function pass(lay: Layout, fields: Partial<Record<FieldKey, string>>, W: number,
       const text = txt(l); if (!text) continue;
       const face = faceOf(l, faces), size = sz(l);
       const own = (side === "right" ? lay.refW - l.colX! : l.colX!) - c.d;
-      const x = side === "right" ? W - (d + own) : d + own;
+      const x = side === "right" ? W - (d + own + push.right) : d + own + push.left;
       const len = widthMm(text, face, size, l.tracking);
       /* along its length: from his lower end, or hanging from his upper end */
-      const yStart = l.anchor === "bottom" ? H - l.start! : l.end! + len;
+      const yStart = l.anchor === "bottom" ? H - l.start! - push.vBottom : l.end! + len + push.vTop;
       const e = extent(text, face, size);
       out.push({ line: l, key: l.fields.join("+"), text, face, size, x, y: yStart, anchor: "start", rot: -90, tracking: l.tracking * size, box: { x0: x - e.up, x1: x + e.down, y0: yStart - len, y1: yStart } });
     }
@@ -217,7 +222,7 @@ function arcLine(l: Line, text: string, face: LabelFace, size: number, W: number
   const a = l.arc!;
   const cx = l.align === "center" ? W / 2 : a.cx;
   const cy = (l.anchor === "top" ? a.cyFromTop : H - (lay.refH - a.cyFromTop)) + dy;
-  const r = a.r * (size / (l.size * PT));   /* a smaller word sits on a proportionally smaller circle */
+  const r = a.r;   /* his curve, whatever the word's size */
   /* his spacing between letters, read off his sample at his size */
   const sample = l.caps ? l.sample.toUpperCase() : l.sample;
   const hisSize = l.size * PT;
@@ -236,17 +241,19 @@ function arcLine(l: Line, text: string, face: LabelFace, size: number, W: number
     const reach = Math.max(ws[i], e.up);
     x0 = Math.min(x0, gx - reach); x1 = Math.max(x1, gx + reach); y0 = Math.min(y0, gy - e.up); y1 = Math.max(y1, gy + e.down);
   }
-  return { line: l, key: l.fields.join("+"), text, face, size, x: cx, y: a.up ? cy - r : cy + r, anchor: "middle", rot: 0, tracking: 0, glyphs, box: { x0, x1, y0, y1 } };
+  return { line: l, key: l.fields.join("+"), text, face, size, x: cx, y: a.up ? cy - r : cy + r, anchor: "middle", rot: 0, tracking: 0, glyphs, box: { x0, x1, y0, y1 }, sweep: (total / r) * 180 / Math.PI };
 }
 
 /* ---------- problems ---------- */
 const AIR = 1.5;   /* mm: the least air between two lines side by side on one row */
-function problemsOf(lines: Placed[], W: number, H: number, his: Map<string, number>): { text: string; line: Placed; other?: Placed }[] {
+function problemsOf(lines: Placed[], W: number, H: number, noMargin = false): { text: string; line: Placed; other?: Placed }[] {
   const out: { text: string; line: Placed; other?: Placed }[] = [];
   for (const p of lines) {
-    const tol = (his.get(p.key) ?? 0) + 0.15;
+    const tol = 0.05;
     const b = p.box;
-    if (b.x0 < MARGIN - tol || b.x1 > W - MARGIN + tol || b.y0 < MARGIN - tol || b.y1 > H - MARGIN + tol) out.push({ text: `${p.key} crosses the 5 mm margin`, line: p });
+    if (!noMargin && (b.x0 < MARGIN - tol || b.x1 > W - MARGIN + tol || b.y0 < MARGIN - tol || b.y1 > H - MARGIN + tol)) out.push({ text: `${p.key} crosses the 5 mm margin`, line: p });
+    /* an arced word may bend no further than half again his bend (or 100°) */
+    if (p.glyphs && p.sweep! > Math.max(100, p.line.arc!.sweep * 1.5)) out.push({ text: `${p.key} bends too far on its arc`, line: p });
   }
   for (let i = 0; i < lines.length; i++) for (let j = i + 1; j < lines.length; j++) {
     const a = lines[i].box, b = lines[j].box;
@@ -266,18 +273,33 @@ function hisLines(lay: Layout, faces: Faces): Placed[] {
   for (const l of lay.texts) if (l.fields.length > 1) { const parts = l.sample.split(" / "); if (parts.length > l.fields.length) f[l.fields[l.fields.length - 1]] = parts.slice(l.fields.length - 1).join(" / "); }
   return pass(lay, f, lay.refW, lay.refH, faces, new Map());
 }
-function crossings(lay: Layout, his: Placed[]): Map<string, number> {
-  const out = new Map<string, number>();
-  for (const p of his) { const b = p.box; out.set(p.key, Math.max(0, MARGIN - b.x0, b.x1 - (lay.refW - MARGIN), MARGIN - b.y0, b.y1 - (lay.refH - MARGIN))); }
-  return out;
-}
+
 
 /* ---------- the whole placement ---------- */
-export function place(lay: Layout, fields: Partial<Record<FieldKey, string>>, W: number, H: number, faces: Faces): Placement {
+export function place(lay: Layout, fields: Partial<Record<FieldKey, string>>, W: number, H: number, faces: Faces, opts: { noLift?: boolean } = {}): Placement {
   const scale = new Map<Line, number>();
-  const hisPl = hisLines(lay, faces), his = crossings(lay, hisPl);
-  let lines = pass(lay, fields, W, H, faces, scale);
-  let probs = problemsOf(lines, W, H, his);
+  const hisPl = hisLines(lay, faces);
+  /* his baselines sit ON the 5 mm line, so a descender (g, y, p) or a tall
+     capital crosses it by a little: the margin wins — the whole group
+     moves in by that much (rows together, nothing shrinks for it) */
+  const pushFor = (ls: Placed[]): Push => {
+    const pu = { ...NO_PUSH };
+    for (const p of ls) {
+      const b = p.box, l = p.line;
+      if (!l.rot && l.anchor === "top") pu.top = Math.max(pu.top, MARGIN - b.y0);
+      if (!l.rot && l.anchor === "bottom") pu.bottom = Math.max(pu.bottom, b.y1 - (H - MARGIN));
+      if (l.rot && l.side === "left") pu.left = Math.max(pu.left, MARGIN - b.x0);
+      if (l.rot && l.side === "right") pu.right = Math.max(pu.right, b.x1 - (W - MARGIN));
+      /* along their length the upward lines move together too */
+      if (l.rot && l.anchor === "top") pu.vTop = Math.max(pu.vTop, MARGIN - b.y0);
+      if (l.rot && l.anchor === "bottom") pu.vBottom = Math.max(pu.vBottom, b.y1 - (H - MARGIN));
+    }
+    return pu;
+  };
+  let lift: Push = NO_PUSH;
+  const run = () => { const a = pass(lay, fields, W, H, faces, scale); if (opts.noLift) return a; const pu = pushFor(a); lift = pu; return Object.values(pu).some((v) => v > 0) ? pass(lay, fields, W, H, faces, scale, pu) : a; };
+  let lines = run();
+  let probs = problemsOf(lines, W, H, opts.noLift);
   const stuck = new Set<string>();
   for (let step = 0; step < 300; step++) {
     const p = probs.find((x) => !stuck.has(x.text));
@@ -291,10 +313,10 @@ export function place(lay: Layout, fields: Partial<Record<FieldKey, string>>, W:
       if (o && (scale.get(o.line) ?? 1) > floor(o) + 1e-6) victim = o; else { stuck.add(p.text); continue; }
     }
     scale.set(victim.line, Math.max(floor(victim), (scale.get(victim.line) ?? 1) - 0.02));
-    lines = pass(lay, fields, W, H, faces, scale);
-    probs = problemsOf(lines, W, H, his);
+    lines = run();
+    probs = problemsOf(lines, W, H, opts.noLift);
   }
   const reduced: Record<string, number> = {};
-  for (const [l, s] of scale) if (s < 0.999) reduced[l.fields.join("+")] = +s.toFixed(2);
-  return { lay, W, H, lines, zone: zoneOn(lay, W, H, lines, hisPl), reduced, problems: probs.map((p) => p.text) };
+  for (const [l, s2] of scale) if (s2 < 0.999) reduced[l.fields.join("+")] = +s2.toFixed(2);
+  return { lay, W, H, lines, zone: zoneOn(lay, W, H, lines, hisPl), reduced, problems: probs.map((p) => p.text), lift };
 }
