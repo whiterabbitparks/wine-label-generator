@@ -20,10 +20,10 @@ import { ideaInEnglish } from "@/lib/label/translate";
 import { cleanPaper } from "@/lib/typeset/palette";
 import { facesFor, bankFamilies, typedCaps, templateFields, type Band } from "@/lib/typeset/templates";
 import { mix } from "@/lib/typeset/fonts";
-import { FAMILIES, familyOf, pickLayout, suits, kindOf, type LayoutKind } from "./engine";
+import { FAMILIES, familyOf, pickLayout, suits, kindOf, textFits, type LayoutKind, type Fields } from "./engine";
 import { noCapsFamilies } from "@/lib/typeset/font-bank";
 import { placeLayout, type Faces } from "./place";
-import { composeLayout2, type ComposeResult } from "./compose";
+import { composeLayout2, zoneAspectOf, shapeFits, type ComposeResult } from "./compose";
 import { paletteOf, chooseGround, chooseInks, type GroundShares, type GroundChoice, type InkChoice } from "./ground";
 import { artistGrounds } from "./artist-grounds";
 import type { Layout2 } from "./spec";
@@ -63,11 +63,13 @@ export function facesOf(seed: number, data: Record<string, string>, cats?: ("ser
 }
 
 /* a family that suits the size: the one wanted, else one not shown yet */
-export function familyFor(widthMm: number, heightMm: number, want?: string, avoid: string[] = [], seed = 1, kind?: LayoutKind): Layout2[] {
+export function familyFor(widthMm: number, heightMm: number, want?: string, avoid: string[] = [], seed = 1, kind?: LayoutKind, fields?: Fields, faces?: Faces): Layout2[] {
   if (want) { const f = familyOf(want); if (f) return f; }
-  const fits = FAMILIES.filter((f) => suits(f, widthMm, heightMm));
+  const sized = FAMILIES.filter((f) => suits(f, widthMm, heightMm));
+  /* …and whose type holds THESE words at this size without a problem */
+  const fits = fields && faces ? sized.filter((f) => textFits(f, fields, widthMm, heightMm, faces)) : sized;
   const ofKind = kind ? fits.filter((f) => kindOf(f[0]) === kind) : fits;
-  const ok = ofKind.length ? ofKind : fits;
+  const ok = ofKind.length ? ofKind : fits.length ? fits : sized;
   const fresh = ok.filter((f) => !avoid.includes(f[0].id));
   const pool = fresh.length ? fresh : ok.length ? ok : FAMILIES;
   return pool[mix(seed, 41) % pool.length];
@@ -80,11 +82,11 @@ export async function paintLayout2Label(inp: PaintInput): Promise<PaintResult> {
   if (!model) throw new Error(`no such artist: ${inp.artistId}`);
   const artist = model.artist as typeof model.artist & { keepGround?: string; paper?: string; fontCats?: ("serif" | "sans" | "display")[] };
 
-  const family = familyFor(widthMm, heightMm, inp.family, inp.avoidFamilies, seed, inp.kind);
-  const lay = pickLayout(family, widthMm, heightMm);
   const fields = templateFields(inp.data);
   const chosen = inp.faces ? { faces: inp.faces, name: `${inp.faces.hero.family} ${inp.faces.hero.weight} · ${inp.faces.text.family} ${inp.faces.text.weight}/${inp.faces.bold.weight}` } : facesOf(seed, inp.data, artist.fontCats);
   const { faces, name: facesName } = chosen;
+  const family = familyFor(widthMm, heightMm, inp.family, inp.avoidFamilies, seed, inp.kind, fields, faces);
+  const lay = pickLayout(family, widthMm, heightMm);
 
   /* the zone's proportion, with this type on this label */
   const probe = placeLayout(lay, fields, widthMm, heightMm, faces);
@@ -121,16 +123,32 @@ export async function paintLayout2Label(inp: PaintInput): Promise<PaintResult> {
     ? `IMPORTANT — THE LAST TRY FILLED THE WHOLE CANVAS: this time leave a wide empty margin of ${kg || pg ? around : "plain, flat paper"} on ALL FOUR sides, about a tenth of the canvas each side; the picture must not touch any edge of the canvas.`
     : `IMPORTANT — THE LAST TRY HAD THE WRONG SHAPE: it was ${refusal === "tall" ? "too tall and narrow" : "too wide and low"}. This time the painted panel must be ${zoneAspect >= 1 ? `${zoneAspect.toFixed(1)} times wider than tall — a long ${zoneAspect >= canvasAsp ? "low band running across the whole width of the canvas, with wide empty margin above and below it" : "panel"}` : `${(1 / zoneAspect).toFixed(1)} times taller than wide — an upright panel, with wide empty margin at its sides`}${zoneAspect >= 1 ? "; arrange the figures side by side within it, never stacked into a tall group" : ""}.`;
 
-  const painted = await generateArtwork(model, ap, { sketch: inp.sketch || null, refSet: inp.refSet, small: inp.small, accept: onPaper, retry });
-
-  /* the sheet and the palette */
-  let c = await cleanPaper(painted.art);
-  if (!c.cleaned) c = await cleanPaper(painted.art, undefined, undefined, { lenient: true });
-  if (!c.cleaned) {
-    /* the repaint buried the sheet under its grain: the sketch's box stands in */
-    const sk = await cleanPaper(painted.story);
-    if (sk.cleaned) c = { ...c, ink: sk.ink };
-    console.warn(`[layout2] ${model.id}: no plain sheet found on the repaint${sk.cleaned ? " — the sketch's box is used" : ""}`);
+  /* THE PANEL MUST HAVE THE ZONE'S SHAPE (owner, 2026-10-04). The sketch
+     is checked (onPaper), and the finished painting is checked AGAIN by
+     its ink box against the zone the type leaves on this label; a wrong
+     shape is painted again (three paintings at most); still wrong → the
+     label fails with a message. Nothing of the wrong shape is ever laid in. */
+  const zoneNow = zoneAspectOf(probe) ?? zoneAspect;
+  let painted!: Awaited<ReturnType<typeof generateArtwork>>;
+  let c!: Awaited<ReturnType<typeof cleanPaper>>;
+  let lastShape = "";
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const apTry = attempt ? { ...ap, prompt: `${ap.prompt} ${retry()}` } : ap;
+    painted = await generateArtwork(model, apTry, { sketch: inp.sketch || null, refSet: inp.refSet, small: inp.small, accept: onPaper, retry });
+    c = await cleanPaper(painted.art);
+    if (!c.cleaned) c = await cleanPaper(painted.art, undefined, undefined, { lenient: true });
+    if (!c.cleaned) {
+      /* the repaint buried the sheet under its grain: the sketch's box stands in */
+      const sk = await cleanPaper(painted.story);
+      if (sk.cleaned) c = { ...c, ink: sk.ink };
+      console.warn(`[layout2] ${model.id}: no plain sheet found on the repaint${sk.cleaned ? " — the sketch's box is used" : ""}`);
+    }
+    const panelAspect = (c.ink.w * canvasAsp) / Math.max(0.01, c.ink.h);
+    if (shapeFits(panelAspect, zoneNow)) break;
+    refusal = panelAspect < zoneNow ? "tall" : "wide";
+    lastShape = `the panel came ${panelAspect.toFixed(2)} wide for its height, the zone wants ${zoneNow.toFixed(2)}`;
+    console.warn(`[layout2] ${model.id}: ${lastShape} — painted again (${attempt + 1}/3)`);
+    if (attempt === 2) throw new Error(`SHAPE_MISMATCH: ${model.artist.name} could not paint a panel of ${lay.id}'s shape (${lastShape})`);
   }
   const pal = await paletteOf(c.art, c.ground);
   const originals = (await artistGrounds(artist.id)).grounds;

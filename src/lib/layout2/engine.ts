@@ -10,7 +10,7 @@
      under 7 pt; what still cannot fit is reported, never hidden.
    - every check is on INK (glyph outlines), not on font boxes. */
 import { LAYOUTS } from "./layouts.data";
-import { placeLayout, wrapText, inkBox, MARGIN, MIN_PT, PX_MM, type Faces, type Placed, type PlacedLayout } from "./place";
+import { placeLayout, inkBox, MARGIN, MIN_PT, PX_MM, type Faces, type Placed, type PlacedLayout } from "./place";
 import type { Layout2, LayoutText, FieldKey } from "./spec";
 
 export type Fields = Partial<Record<FieldKey, string>>;
@@ -162,8 +162,9 @@ const lengthOf = (l: Placed) => { const bs = boxes(l); const x0 = Math.min(...bs
    steps (its anchor edge kept, so a left line still hugs the left and a
    centred one stays centred); when two lines meet, the longer one comes
    down. The rest of the type is untouched. Hierarchy: no line ends up
-   larger than the wine's name. Never under 7 pt; what still cannot fit
-   is reported, never hidden. */
+   larger than the wine's name. Never under 7 pt, never broken in two;
+   what still cannot fit is reported (fit.problems, fit.needsNarrower),
+   never hidden. */
 export function layoutLabel(lay: Layout2, fields: Fields, widthMm: number, heightMm: number, faces: Faces): { placed: PlacedLayout; fit: FitReport } {
   const allowance = allowanceOf(lay, faces);
   const per = new Map<LayoutText, number>(), wrapped = new Set<LayoutText>();
@@ -183,7 +184,9 @@ export function layoutLabel(lay: Layout2, fields: Fields, widthMm: number, heigh
       /* at 7 pt already: the other of the pair; else, the extreme case, break the line in two; else give up */
       const other = pr.kind === "overlap" ? (victim === pr.a ? pr.b! : pr.a) : null;
       if (other && (per.get(other.src) ?? 1) > MIN_PT / other.src.size + 1e-6) per.set(other.src, Math.max(MIN_PT / other.src.size, (per.get(other.src) ?? 1) - 0.02));
-      else if (!wrapped.has(t) && !t.arc && wrapText(victim.text)) wrapped.add(t);
+      /* (breaking a line in two was tried and withdrawn 2026-10-04 — the
+         owner: a NARROWER FACE comes first; until that step exists a line
+         that cannot fit is a reported problem, never a broken line) */
       else { givenUp.add(pr.text); continue; }
     } else per.set(t, Math.max(floor, cur - 0.02));
     /* hierarchy: nothing larger than the wine's name */
@@ -196,6 +199,14 @@ export function layoutLabel(lay: Layout2, fields: Fields, widthMm: number, heigh
   /* a line reduced beyond 85 % or broken: a narrower face would serve the label better (owner: "try other fonts that fit first") */
   const needsNarrower = [...new Set([...reduced.filter(([, v]) => v < 0.85).map(([t]) => t.fields[0]), ...[...wrapped].map((t) => t.fields[0])])];
   return { placed, fit: { scale, sizePt: +Math.max(MIN_PT, (hero?.size || 0) * (hero ? per.get(hero) ?? 1 : 1)).toFixed(2), problems: problems.map((p) => p.text), reduced: reduced.map(([t, v]) => `${t.fields[0]} ${Math.round(v * 100)}%`), wrapped: [...wrapped].map((t) => t.fields[0]), needsNarrower } };
+}
+
+/* does this family's type fit these words at this size without a
+   problem? (a layout is never offered where its three columns cannot
+   hold the words — the gate of 2026-10-04 found L18/L20/L33 at 80 mm) */
+export function textFits(family: Layout2[], fields: Fields, widthMm: number, heightMm: number, faces: Faces): boolean {
+  const lay = pickLayout(family, widthMm, heightMm);
+  return layoutLabel(lay, fields, widthMm, heightMm, faces).fit.problems.length === 0;
 }
 
 /* the whole way: family → twin → fit */

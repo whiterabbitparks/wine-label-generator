@@ -77,10 +77,14 @@ for (const p of picks) {
       const file = `${p.artist.replace(/\s+/g, "-")}-${lay.id}-${cs.w}x${cs.h}.png`;
       fs.writeFileSync(path.join(OUT, file), png);
       const cw = 300, ch = Math.round(cw * cs.h / cs.w);
-      row.push({ img: await sharp(png).resize(cw, ch).png().toBuffer(), w: cw, h: ch, cap: `${lay.id} ${cs.w}×${cs.h} · ${g.source}${inks.allColoured ? " · all coloured" : ""} · ${r.picture?.by || "no picture"}${r.warnings.length ? " · " + r.warnings[0] : ""}${!suits(fam, cs.w, cs.h) ? " · not offered" : ""}`, bad: r.warnings.length > 0 });
-      console.log(`  ${lay.id} ${cs.w}×${cs.h}: ground ${g.ground} (${g.note}); inks ${inks.text}/${inks.accent}; picture ${r.picture?.by}${r.warnings.length ? "; " + r.warnings.join("; ") : ""}`);
+      row.push({ img: await sharp(png).resize(cw, ch).png().toBuffer(), w: cw, h: ch, cap: `${lay.id} ${cs.w}×${cs.h} · ${g.source}${inks.allColoured ? " · all coloured" : ""} · ${r.picture ? "placed" : "no picture"}${r.warnings.length ? " · " + r.warnings[0] : ""}${!suits(fam, cs.w, cs.h) ? " · not offered" : ""}`, bad: r.warnings.length > 0 });
+      console.log(`  ${lay.id} ${cs.w}×${cs.h}: ground ${g.ground} (${g.note}); inks ${inks.text}/${inks.accent}; picture ${r.picture ? "placed" : "no picture"}${r.warnings.length ? "; " + r.warnings.join("; ") : ""}`);
     } catch (e) {
-      console.log(`  ${lay.id} FAILED`, e instanceof Error ? e.message : e);
+      /* a refusal is the right answer for a painting of another shape */
+      const msg = e instanceof Error ? e.message : String(e);
+      console.log(`  ${lay.id} ${cs.w}×${cs.h}: ${msg.startsWith("SHAPE_MISMATCH") ? "REFUSED — " : "FAILED — "}${msg.slice(0, 120)}`);
+      const cw = 300, ch = Math.round(cw * cs.h / cs.w);
+      row.push({ img: await sharp({ create: { width: cw, height: ch, channels: 3, background: "#f6f6f6" } }).png().toBuffer(), w: cw, h: ch, cap: `${lay.id} ${cs.w}×${cs.h} · ${msg.startsWith("SHAPE_MISMATCH") ? "refused: wrong shape for this zone" : msg.slice(0, 60)}`, bad: !msg.startsWith("SHAPE_MISMATCH") });
     }
   }
   cells.push(row); used.push(p);

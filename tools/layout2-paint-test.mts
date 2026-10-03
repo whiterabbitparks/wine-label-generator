@@ -45,8 +45,8 @@ async function one(i: number) {
     fs.writeFileSync(path.join(OUT, "art", `${n}.png`), Buffer.from(r.art.slice(r.art.indexOf(",") + 1), "base64"));
     fs.writeFileSync(path.join(OUT, "art", `${n}.json`), JSON.stringify({ job: j, lay: r.lay.id, ground: r.ground, inks: r.inks, faces: r.facesName, fit: r.fit, picture: r.picture, warnings: r.warnings, sheet: r.sheet, main: r.mainColour, prompt: r.prompt }, null, 1));
     const cw = 420, ch = Math.round(cw * j.h / j.w);
-    cells[i] = { img: await sharp(png).resize(cw, ch).png().toBuffer(), w: cw, h: ch, cap: `${n} ${r.artist} · ${r.lay.id} ${j.w}×${j.h} · ground ${r.ground.source}${r.inks.allColoured ? " · all coloured" : ""} · ${r.picture?.by}${r.warnings.length ? " · " + r.warnings[0] : ""}` };
-    log(`${n} done — ${r.lay.id} ${r.artist} ground ${r.ground.ground} (${r.ground.note}) picture ${r.picture?.by} ${r.warnings.join("; ")}`);
+    cells[i] = { img: await sharp(png).resize(cw, ch).png().toBuffer(), w: cw, h: ch, cap: `${n} ${r.artist} · ${r.lay.id} ${j.w}×${j.h} · ground ${r.ground.source}${r.inks.allColoured ? " · all coloured" : ""} · ${r.picture ? "placed" : "no picture"}${r.warnings.length ? " · " + r.warnings[0] : ""}` };
+    log(`${n} done — ${r.lay.id} ${r.artist} ground ${r.ground.ground} (${r.ground.note}) picture ${r.picture ? "placed" : "no picture"} ${r.warnings.join("; ")}`);
   } catch (e) {
     log(`${n} FAILED`, e instanceof Error ? e.message : e);
   }

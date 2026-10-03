@@ -1,10 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
-import { paintHybridLabel } from "./hybrid";
 import { saveLabel } from "./store";
 import { listArtists } from "./artists";
 import { properCase, CASED_FIELDS } from "./casing";
-import { templatesNow } from "@/lib/typeset/overrides";
+import { FAMILIES, pickLayout, suits } from "@/lib/layout2/engine";
+import { paintWithLayout2 } from "@/lib/layout2/bridge";
+import { evalModel, artistModels } from "@/lib/eval/models";
 import { IDEAS } from "@/app/ideas";
 import { randomDetails } from "@/app/demo-fill";
 
@@ -12,8 +13,11 @@ import { randomDetails } from "@/app/demo-fill";
    once I fix one it should be gone; if I want to fix more I generate
    another"). The admin's layout editor works through a QUEUE: "Make 5"
    paints five new labels exactly as the wizard does (a real idea, a
-   coherent random wine, a real artist), walking the twelve templates in
-   turn at mixed sizes. A label leaves the queue when he saves a fix or
+   coherent random wine, a real artist), walking the layouts in turn at
+   mixed sizes. SINCE 2026-10-04 (the final round) the batch walks the
+   45 artboards' FAMILIES (src/lib/layout2) — one label per family, the
+   label's id is the layout's ("L07") — and the owner judges them in the
+   same editor, with the same notes, as before. A label leaves the queue when he saves a fix or
    says it looks right. Painting is real on purpose — he judges the
    pictures too; once they hold, the batch can switch to re-using
    paintings and only re-set the type. */
@@ -59,13 +63,15 @@ export function closeItem(id: string, outcome: "fixed" | "ok", pictureBad = fals
 }
 
 async function makeOne(k: number) {
-  const tpls = templatesNow();
-  const tpl = tpls[k % tpls.length];
-  /* the size and the artist step on each time the twelve come round, so
-     a template meets every shape and every artist; within a batch the
-     artists take turns */
-  const lap = Math.floor(k / tpls.length);
-  const [w, h] = SIZES[(k + lap) % SIZES.length];
+  const fams = FAMILIES;
+  const fam = fams[k % fams.length];
+  /* the size and the artist step on each time the families come round,
+     so a layout meets every shape and every artist; within a batch the
+     artists take turns. A size the family does not suit takes the
+     family's own reference size. */
+  const lap = Math.floor(k / fams.length);
+  let [w, h] = SIZES[(k + lap) % SIZES.length];
+  if (!suits(fam, w, h)) { const l = fam[0]; w = l.refW; h = Math.round(l.refH); }
   const artists = listArtists().filter((a) => a.lora).sort((x, y) => x.profile.id.localeCompare(y.profile.id));
   const artist = artists[(k + lap) % Math.max(1, artists.length)];
   const idea = IDEAS[Math.floor(Math.random() * IDEAS.length)];
@@ -82,19 +88,18 @@ async function makeOne(k: number) {
   };
   const data: Record<string, string> = {};
   for (const [key, v] of Object.entries(raw)) data[key] = CASED_FIELDS.has(key as never) ? properCase(v) : v;
-  const style = BAND_STYLE[tpl.band] || "traditional";
-  const out = await paintHybridLabel({ vision: idea, style, data, widthMm: w, heightMm: h, artistId: artist?.profile.id, template: tpl.id, panel: true, small: true,
-    /* the scene method (painting over the whole label) was tried in the
-       admin on 2026-10-01 and the owner turned it down ("it doesn't work,
-       put it back as it was") — OFF; ADMIN_SCENE=1 brings it back */
-    scene: process.env.ADMIN_SCENE === "1" });
+  const model = (artist && evalModel(`artist:${artist.profile.id}`)) || artistModels()[0];
+  if (!model) throw new Error("no artist with a LoRA is set up");
+  const out = await paintWithLayout2({ model, vision: idea, data, widthMm: w, heightMm: h, seed: (Math.random() * 0xffffffff) >>> 0, kind: "centred", avoidFamilies: [], family: fam[0].id, small: true });
+  const style = "traditional";
   const id = saveLabel({
     style, widthMm: w, heightMm: h, faces: out.faces, ground: out.ground, svg: out.svg, png: out.png, art: out.art,
-    prompt: out.prompt, layout: out.layout, fit: out.fit, template: out.template, hasPaper: out.hasPaper, artist: out.artist, refSet: out.refSet, panel: out.panel, scene: out.scene,
+    prompt: out.prompt, layout: out.layout, fit: out.fit, template: out.template, hasPaper: out.hasPaper, artist: out.artist, refSet: out.refSet, panel: out.panel, scene: out.scene, layout2: out.layout2,
   });
   const s = read();
-  s.items.push({ id, template: out.template, widthMm: w, heightMm: h, artist: out.artist || "", idea: idea.split(" — ")[0], status: "open", madeAt: new Date().toISOString() });
+  s.items.push({ id, template: out.template, widthMm: w, heightMm: h, artist: out.artist || "", idea: idea.split(" — ")[0], status: "open", madeAt: new Date().toISOString(), note: out.warnings.length ? `engine: ${out.warnings.join("; ")}` : undefined });
   write(s);
+  void pickLayout;
 }
 
 /* starts a batch in the background; false if one is already painting */

@@ -24,9 +24,8 @@ import { EvalPanel } from "./EvalPanel";
 import { LayoutEditor } from "./LayoutEditor";
 import { GuardCard } from "./GuardCard";
 import { FontsCard } from "./FontsCard";
-import { FinalRoundCard } from "./FinalRoundCard";
 
-const TABS = ["Final round", "Layouts", "Fonts", "Artists", "Marketing", "Evaluate", "System"] as const;
+const TABS = ["Layouts", "Fonts", "Artists", "Marketing", "Evaluate", "System"] as const;
 /* bookmarks made before the tidy still land */
 const OLD_TABS: Record<string, Tab> = { "Layout editor": "Layouts", "Artists & Rules": "Artists" };
 type Tab = (typeof TABS)[number];
@@ -282,11 +281,6 @@ export default function AdminPage() {
           </Section>
         )}
 
-        {tab === "Final round" && (
-          <Section title="Final round — the 45 layouts" note="The new layout engine on trial (not on the site yet). Paint a few labels and judge: layouts, grounds, type colours. Other layouts and other grounds of the same painting cost nothing.">
-            <FinalRoundCard />
-          </Section>
-        )}
         {tab === "System" && (<>
           <Section title="Protection" note="Who may paint how much — the daily free budget and the limits."><GuardCard /></Section>
           <Section title="Labels" note="What the site painted lately — template, size, artist, faces."><RecentLabelsCard /></Section>

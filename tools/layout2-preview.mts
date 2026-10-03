@@ -29,12 +29,21 @@ import { layoutSvg } from "../src/lib/layout2/render";
 import { FAMILIES, layoutFamily, splitSample, suits } from "../src/lib/layout2/engine";
 import type { Layout2 } from "../src/lib/layout2/spec";
 
-const ART_DIR = "/Users/giorgipopiashvili/Documents/PROJECTS/WAIN/NEW UI/Comments/New";
+
+/* his artboards and .ai have moved between folders (New → Achive on
+   2026-10-04): the folder that holds "Artboard 2 copy 14@3x.png" wins */
+const COMMENTS = "/Users/giorgipopiashvili/Documents/PROJECTS/WAIN/NEW UI/Comments";
+function artDir(): string {
+  for (const d of ["New", "Achive", "Archive", "."]) { const p = path.join(COMMENTS, d); if (fs.existsSync(path.join(p, "Artboard 2 copy 14@3x.png"))) return p; }
+  throw new Error("the 45 artboard PNGs (Artboard 2 copy N@3x.png) were not found under " + COMMENTS);
+}
+const ART_DIR = artDir();
 const OUT = "tests/layout2/out";
 fs.mkdirSync(OUT, { recursive: true });
 
 /* his artboard PNGs in numeric order are his pages in order (checked by size) */
-const pngs = fs.readdirSync(ART_DIR).filter((f) => /^Artboard 2 copy \d+@3x\.png$/.test(f)).sort((a, b) => +a.match(/(\d+)@/)![1] - +b.match(/(\d+)@/)![1]);
+const pngs = fs.readdirSync(ART_DIR).filter((f) => /^Artboard 2 copy \d+@3x\.png$/.test(f)).filter((f) => { const n = +f.match(/(\d+)@/)![1]; return n >= 14 && n <= 62; }).sort((a, b) => +a.match(/(\d+)@/)![1] - +b.match(/(\d+)@/)![1]);
+if (pngs.length !== 45) throw new Error(`${pngs.length} artboard PNGs found in ${ART_DIR}, expected 45 (14…62)`);
 const pngOf = (lay: Layout2) => path.join(ART_DIR, pngs[LAYOUTS.indexOf(lay)]);
 
 const FIELDS: Record<string, string> = {

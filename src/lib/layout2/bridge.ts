@@ -9,8 +9,10 @@
    judges the new layouts in the admin first — 2026-10-04); LAYOUT2=1 in
    the environment switches the site over. */
 import { LAYOUTS } from "./layouts.data";
-import { FAMILIES, familyOf, pickLayout, suits, kindOf, type LayoutKind } from "./engine";
-import { composeLayout2, type ComposeResult } from "./compose";
+import { FAMILIES, familyOf, pickLayout, suits, kindOf, textFits, type LayoutKind } from "./engine";
+import { composeLayout2, zoneAspectOf, shapeFits, type ComposeResult } from "./compose";
+import { placeLayout } from "./place";
+import { cleanPaper } from "@/lib/typeset/palette";
 import { paintLayout2Label, facesOf } from "./paint";
 import type { Faces, PlacedLayout } from "./place";
 import type { Layout2 } from "./spec";
@@ -49,7 +51,7 @@ export type Bridged = HybridOutput & { tag: string; painter: string; artist: str
    size and was not shown by this artist this session is taken. The
    run's three versions take three different hero faces (the token deals
    them, as before). */
-export async function paintWithLayout2(a: { model: EvalModel; vision: string; data: Record<string, string>; widthMm: number; heightMm: number; seed: number; kind: LayoutKind; avoidFamilies: string[]; sketch?: string | null; refSet?: number; small?: boolean; runKey?: number; col?: number }): Promise<Bridged> {
+export async function paintWithLayout2(a: { model: EvalModel; vision: string; data: Record<string, string>; widthMm: number; heightMm: number; seed: number; kind: LayoutKind; avoidFamilies: string[]; family?: string; sketch?: string | null; refSet?: number; small?: boolean; runKey?: number; col?: number }): Promise<Bridged> {
   const artist = a.model.artist as typeof a.model.artist & { fontCats?: ("serif" | "sans" | "display")[] };
   /* the face: of the run's families, the one dealt to this column */
   let seed = a.seed;
@@ -58,7 +60,7 @@ export async function paintWithLayout2(a: { model: EvalModel; vision: string; da
     const want = fams[(Math.floor(a.runKey / 6) + (a.col || 0)) % fams.length];
     for (let k = 0; k < 4000; k++) { const sd = (Math.random() * 0xffffffff) >>> 0; if (facesOf(sd, a.data, artist.fontCats).faces.hero.family === want) { seed = sd; break; } }
   }
-  const r = await paintLayout2Label({ vision: a.vision, data: a.data, widthMm: a.widthMm, heightMm: a.heightMm, artistId: artist.id, seed, kind: a.kind, avoidFamilies: a.avoidFamilies, sketch: a.sketch, refSet: a.refSet, small: a.small });
+  const r = await paintLayout2Label({ vision: a.vision, data: a.data, widthMm: a.widthMm, heightMm: a.heightMm, artistId: artist.id, seed, kind: a.kind, family: a.family, avoidFamilies: a.avoidFamilies, sketch: a.sketch, refSet: a.refSet, small: a.small });
   const aw = r.picture ? Math.round(r.picture.w) : 1, ah = r.picture ? Math.round(r.picture.h) : 1;
   const meta = await (await import("sharp")).default(Buffer.from(r.art.slice(r.art.indexOf(",") + 1), "base64")).metadata();
   const layout = toLayout(r.placed, r.picture, r.ground.ground, r.inks, meta.width || aw, meta.height || ah);
@@ -80,14 +82,24 @@ export async function relayoutWithLayout2(stored: { art: Buffer; meta: { widthMm
   const { widthMm, heightMm } = m;
   const was = LAYOUTS.find((l) => l.id === m.template) || LAYOUTS[0];
   let lay = pickLayout(familyOf(was.id) || [was], widthMm, heightMm);
-  if (!keep) {
-    const kind = kindOf(was), used = new Set(avoid.map((t) => t.split("|")[0]));
-    const pool = FAMILIES.filter((f) => kindOf(f[0]) === kind && suits(f, widthMm, heightMm) && f[0].id !== (familyOf(was.id) || [was])[0].id && !used.has(f[0].id));
-    if (pool.length) lay = pickLayout(pool[mix(avoid.length + 1, 43) % pool.length], widthMm, heightMm);
-  }
   const faces: Faces = m2.faces;
   const art = `data:image/png;base64,${stored.art.toString("base64")}`;
   const fields = templateFields(data);
+  if (!keep) {
+    /* ONLY A LAYOUT OF THE PAINTING'S SHAPE (owner, 2026-10-04): the
+       panel's ink box is measured and a family is offered only when its
+       zone on this label has that proportion (within 1.4×) */
+    const sheet = await cleanPaper(art);
+    const sm = await (await import("sharp")).default(stored.art).metadata();
+    const panelAspect = (sheet.ink.w * (sm.width || 1)) / Math.max(1, sheet.ink.h * (sm.height || 1));
+    const kind = kindOf(was), used = new Set(avoid.map((t) => t.split("|")[0]));
+    const fitsShape = (f: Layout2[]) => { const l = pickLayout(f, widthMm, heightMm); const za = zoneAspectOf(placeLayout(l, fields, widthMm, heightMm, faces)); return za !== null && shapeFits(panelAspect, za); };
+    const okFor = (f: Layout2[]) => suits(f, widthMm, heightMm) && f[0].id !== (familyOf(was.id) || [was])[0].id && !used.has(f[0].id) && fitsShape(f) && textFits(f, fields, widthMm, heightMm, faces);
+    const pool = FAMILIES.filter((f) => kindOf(f[0]) === kind && okFor(f));
+    const any = pool.length ? pool : FAMILIES.filter(okFor);
+    if (any.length) lay = pickLayout(any[mix(avoid.length + 1, 43) % any.length], widthMm, heightMm);
+    else throw new Error("NO_OTHER_LAYOUT: no other layout has a zone of this painting's shape at this size");
+  }
   const r = await composeLayout2({ lay, fields, widthMm, heightMm, faces, artwork: art, ground: m2.ground.ground, inks: { text: m2.inks.text, accent: m2.inks.accent }, sheetDone: true });
   const meta = await (await import("sharp")).default(stored.art).metadata();
   const layout = toLayout(r.placed, r.picture, m2.ground.ground, m2.inks, meta.width || 1, meta.height || 1);
