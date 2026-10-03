@@ -20,10 +20,12 @@ import { ideaInEnglish } from "@/lib/label/translate";
 import { cleanPaper } from "@/lib/typeset/palette";
 import { facesFor, bankFamilies, typedCaps, templateFields, type Band } from "@/lib/typeset/templates";
 import { mix } from "@/lib/typeset/fonts";
-import { FAMILIES, familyOf, pickLayout, suits } from "./engine";
+import { FAMILIES, familyOf, pickLayout, suits, kindOf, type LayoutKind } from "./engine";
+import { noCapsFamilies } from "@/lib/typeset/font-bank";
 import { placeLayout, type Faces } from "./place";
 import { composeLayout2, type ComposeResult } from "./compose";
 import { paletteOf, chooseGround, chooseInks, type GroundShares, type GroundChoice, type InkChoice } from "./ground";
+import { artistGrounds } from "./artist-grounds";
 import type { Layout2 } from "./spec";
 
 export interface PaintInput {
@@ -33,6 +35,8 @@ export interface PaintInput {
   heightMm: number;
   artistId: string;
   family?: string;                   /* a layout id of the family wanted; else one that suits the size */
+  kind?: LayoutKind;                 /* …of this kind (the wizard's columns: centred / sides / vertical) */
+  faces?: Faces;                     /* the faces decided already (re-layouts) */
   seed?: number;
   sketch?: string | null;
   refSet?: number;
@@ -52,14 +56,18 @@ export interface PaintResult extends ComposeResult {
 export function facesOf(seed: number, data: Record<string, string>, cats?: ("serif" | "sans" | "display")[] | null): { faces: Faces; name: string } {
   const band: Band = "classical";
   const f = facesFor(band, seed, typedCaps(Object.values(templateFields(data))), cats);
-  const faces: Faces = { hero: f.hero, bold: { family: f.small.family, weight: Math.max(f.secondary.weight, f.small.weight) }, title: f.small, text: f.small };
+  const nc = noCapsFamilies();
+  const mark = (x: { family: string; weight: number; italic?: boolean }) => (nc.has(x.family) ? { ...x, noCaps: true } : { ...x });
+  const faces: Faces = { hero: mark(f.hero), bold: mark({ family: f.small.family, weight: Math.max(f.secondary.weight, f.small.weight) }), title: mark(f.small), text: mark(f.small) };
   return { faces, name: `${f.hero.family} ${f.hero.weight} · ${f.small.family} ${f.small.weight}/${faces.bold.weight}` };
 }
 
 /* a family that suits the size: the one wanted, else one not shown yet */
-export function familyFor(widthMm: number, heightMm: number, want?: string, avoid: string[] = [], seed = 1): Layout2[] {
+export function familyFor(widthMm: number, heightMm: number, want?: string, avoid: string[] = [], seed = 1, kind?: LayoutKind): Layout2[] {
   if (want) { const f = familyOf(want); if (f) return f; }
-  const ok = FAMILIES.filter((f) => suits(f, widthMm, heightMm));
+  const fits = FAMILIES.filter((f) => suits(f, widthMm, heightMm));
+  const ofKind = kind ? fits.filter((f) => kindOf(f[0]) === kind) : fits;
+  const ok = ofKind.length ? ofKind : fits;
   const fresh = ok.filter((f) => !avoid.includes(f[0].id));
   const pool = fresh.length ? fresh : ok.length ? ok : FAMILIES;
   return pool[mix(seed, 41) % pool.length];
@@ -72,10 +80,11 @@ export async function paintLayout2Label(inp: PaintInput): Promise<PaintResult> {
   if (!model) throw new Error(`no such artist: ${inp.artistId}`);
   const artist = model.artist as typeof model.artist & { keepGround?: string; paper?: string; fontCats?: ("serif" | "sans" | "display")[] };
 
-  const family = familyFor(widthMm, heightMm, inp.family, inp.avoidFamilies, seed);
+  const family = familyFor(widthMm, heightMm, inp.family, inp.avoidFamilies, seed, inp.kind);
   const lay = pickLayout(family, widthMm, heightMm);
   const fields = templateFields(inp.data);
-  const { faces, name: facesName } = facesOf(seed, inp.data, artist.fontCats);
+  const chosen = inp.faces ? { faces: inp.faces, name: `${inp.faces.hero.family} ${inp.faces.hero.weight} · ${inp.faces.text.family} ${inp.faces.text.weight}/${inp.faces.bold.weight}` } : facesOf(seed, inp.data, artist.fontCats);
+  const { faces, name: facesName } = chosen;
 
   /* the zone's proportion, with this type on this label */
   const probe = placeLayout(lay, fields, widthMm, heightMm, faces);
@@ -124,7 +133,8 @@ export async function paintLayout2Label(inp: PaintInput): Promise<PaintResult> {
     console.warn(`[layout2] ${model.id}: no plain sheet found on the repaint${sk.cleaned ? " — the sketch's box is used" : ""}`);
   }
   const pal = await paletteOf(c.art, c.ground);
-  const ground = chooseGround(pal, seed, { shares: inp.shares, keepGround: kg, paper: pg, wineColour: inp.data.wineColorName });
+  const originals = (await artistGrounds(artist.id)).grounds;
+  const ground = chooseGround(pal, seed, { shares: inp.shares, keepGround: kg, paper: pg, wineColour: inp.data.wineColorName, originals });
   const inks = chooseInks(pal, ground.ground, seed, inp.data.wineColorName);
 
   const out = await composeLayout2({ lay, fields, widthMm, heightMm, faces, artwork: c.art, ground: ground.ground, inks: { text: inks.text, accent: inks.accent }, sheetDone: !c.cleaned });

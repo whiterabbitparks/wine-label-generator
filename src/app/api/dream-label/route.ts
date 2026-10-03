@@ -101,7 +101,7 @@ export async function POST(req: Request) {
           ? await relayoutLabel(base, data, [], {}, !!body.keep)
           : await paintHybridLabel({ vision, style, data, widthMm, heightMm, sketch, artistId: artist || undefined, order: order || undefined, avoidPairs, pool });
         const m = base ? base.meta : { style, widthMm, heightMm, fit: out.fit };
-        const id = saveLabel({ style: m.style, widthMm: m.widthMm, heightMm: m.heightMm, faces: out.faces, ground: out.ground, svg: out.svg, png: out.png, art: out.art, prompt: out.prompt, layout: out.layout, fit: m.fit, template: (out as { template?: string }).template, hasPaper: (out as { hasPaper?: boolean }).hasPaper, artist: base ? (base.meta as { artist?: string }).artist : (out as { artist?: string }).artist, refSet: (out as { refSet?: string }).refSet, panel: (out as { panel?: boolean }).panel });
+        const id = saveLabel({ style: m.style, widthMm: m.widthMm, heightMm: m.heightMm, faces: out.faces, ground: out.ground, svg: out.svg, png: out.png, art: out.art, prompt: out.prompt, layout: out.layout, fit: m.fit, template: (out as { template?: string }).template, hasPaper: (out as { hasPaper?: boolean }).hasPaper, artist: base ? (base.meta as { artist?: string }).artist : (out as { artist?: string }).artist, refSet: (out as { refSet?: string }).refSet, panel: (out as { panel?: boolean }).panel, layout2: (out as { layout2?: import("@/lib/label/store").Layout2Meta }).layout2 });
         /* medium-res JPEG for the page's views — the PNG stays the print source */
         let preview: string | null = null;
         try {
@@ -113,13 +113,13 @@ export async function POST(req: Request) {
         const variants: { dream: string; preview: string | null; id: string }[] = [];
         const want = Math.min(3, Math.max(1, Number(body.variants) || 1));
         if (!base && want > 1) {
-          const stored = { art: Buffer.from(out.art.slice(out.art.indexOf(",") + 1), "base64"), meta: { style, widthMm, heightMm, ground: out.ground, fit: out.fit } };
+          const stored = { art: Buffer.from(out.art.slice(out.art.indexOf(",") + 1), "base64"), meta: { style, widthMm, heightMm, ground: out.ground, fit: out.fit, template: (out as { template?: string }).template, layout2: (out as { layout2?: import("@/lib/label/store").Layout2Meta }).layout2, artist: (out as { artist?: string }).artist } };
           const avoid = [out.tag];
           for (let i = 1; i < want; i++) {
             try {
               const v = await relayoutLabel(stored, data, avoid, i === 1 ? { big: true } : { flip: true });
               avoid.push(v.tag);
-              const vid = saveLabel({ style, widthMm, heightMm, faces: v.faces, ground: v.ground, svg: v.svg, png: v.png, art: v.art, prompt: v.prompt, layout: v.layout, fit: out.fit });
+              const vid = saveLabel({ style, widthMm, heightMm, faces: v.faces, ground: v.ground, svg: v.svg, png: v.png, art: v.art, prompt: v.prompt, layout: v.layout, fit: out.fit, template: v.template, artist: (out as { artist?: string }).artist, layout2: (v as { layout2?: import("@/lib/label/store").Layout2Meta }).layout2 });
               let vprev: string | null = null;
               try { vprev = "data:image/jpeg;base64," + (await sharp(Buffer.from(v.png.slice(v.png.indexOf(",") + 1), "base64")).resize(1024).jpeg({ quality: 82 }).toBuffer()).toString("base64"); } catch {}
               variants.push({ dream: v.png, preview: vprev, id: vid });

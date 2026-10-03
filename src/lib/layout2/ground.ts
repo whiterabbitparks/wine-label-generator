@@ -21,8 +21,11 @@
 import sharp from "sharp";
 import { readable } from "../typeset/compose-template";
 
-export interface GroundShares { painting: number; white: number; warm: number }
-export const DEFAULT_SHARES: GroundShares = { painting: 50, white: 25, warm: 25 };
+/* the shares of the four sources (owner, 2026-10-04: the artist's
+   ORIGINALS first — "look at the artist's original paintings and take the
+   ground logic from there") */
+export interface GroundShares { originals: number; painting: number; white: number; warm: number }
+export const DEFAULT_SHARES: GroundShares = { originals: 70, painting: 15, white: 7.5, warm: 7.5 };
 export const WHITE = "#FFFFFF";
 export const WARM_LIGHT = "#F3ECDF";
 export const BLACK_95 = "#0D0D0D";
@@ -61,11 +64,14 @@ export async function paletteOf(dataUrl: string, paper: string): Promise<Palette
 /* a deterministic draw from a seed: 0 ≤ u < 1 */
 const unit = (seed: number, salt: number) => { let h = (seed ^ (salt * 0x9e3779b9)) >>> 0; h = Math.imul(h ^ (h >>> 16), 0x45d9f3b) >>> 0; h = Math.imul(h ^ (h >>> 16), 0x45d9f3b) >>> 0; return ((h ^ (h >>> 16)) >>> 0) / 0x100000000; };
 
-export type GroundSource = "painting" | "white" | "warm" | "artist";
+export type GroundSource = "originals" | "painting" | "white" | "warm" | "artist";
 export interface GroundChoice { ground: string; source: GroundSource; note: string }
 
-/* the ground for one label */
-export function chooseGround(pal: Palette, seed: number, opts: { shares?: GroundShares; keepGround?: string; paper?: string; wineColour?: string } = {}): GroundChoice {
+/* the ground for one label. `originals`: the tones read off the artist's
+   own works (artist-grounds.ts), each with the number of works carrying
+   it — the label takes one of them by those weights, so an artist who
+   paints on cream gets cream, one who paints on black gets black. */
+export function chooseGround(pal: Palette, seed: number, opts: { shares?: GroundShares; keepGround?: string; paper?: string; wineColour?: string; originals?: { hex: string; works: number }[] } = {}): GroundChoice {
   /* an artist whose ground is his own (profile keepGround is a WORD, "black"):
      the label takes the sheet exactly as he painted it */
   if (opts.keepGround) return { ground: pal.paper, source: "artist", note: `the artist's own ${opts.keepGround} (${pal.paper})` };
@@ -73,16 +79,25 @@ export function chooseGround(pal: Palette, seed: number, opts: { shares?: Ground
     /* light paper only: white or the warm tone */
     return unit(seed, 3) < 0.5 ? { ground: WHITE, source: "white", note: "white (light-paper artist)" } : { ground: WARM_LIGHT, source: "warm", note: "warm light (light-paper artist)" };
   }
-  const sh = opts.shares || DEFAULT_SHARES, tot = Math.max(1, sh.painting + sh.white + sh.warm);
+  const sh = { ...DEFAULT_SHARES, ...(opts.shares || {}) };
+  const orig = (opts.originals || []).filter((o) => o.works > 0);
+  const shOrig = orig.length ? sh.originals : 0;
+  const tot = Math.max(1, shOrig + sh.painting + sh.white + sh.warm);
   const u = unit(seed, 3) * tot;
-  if (u < sh.painting && pal.main) {
+  if (u < shOrig) {
+    const total = orig.reduce((s, o) => s + o.works, 0);
+    let v = unit(seed, 11) * total;
+    for (const o of orig) { v -= o.works; if (v <= 0) return { ground: o.hex, source: "originals", note: `a ground of the artist's originals (${o.works} of ${total} works)` }; }
+    return { ground: orig[0].hex, source: "originals", note: "the artist's commonest ground" };
+  }
+  if (u < shOrig + sh.painting && pal.main) {
     const c = rgb(pal.main), v = unit(seed, 5);
     /* as it is / lighter / darker — the painting's own colour either way */
     if (v < 0.4) return { ground: pal.main, source: "painting", note: "the painting's main colour" };
     if (v < 0.75) return { ground: hex(...(c.map((x) => x + (255 - x) * 0.55) as [number, number, number])), source: "painting", note: "a lighter relative of the painting's main colour" };
     return { ground: hex(...(c.map((x) => x * 0.55) as [number, number, number])), source: "painting", note: "a darker relative of the painting's main colour" };
   }
-  if (u < sh.painting + sh.white || !pal.main && u < sh.painting + sh.white) return { ground: WHITE, source: "white", note: "white" };
+  if (u < shOrig + sh.painting + sh.white) return { ground: WHITE, source: "white", note: "white" };
   return { ground: WARM_LIGHT, source: "warm", note: "warm light" };
 }
 

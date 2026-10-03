@@ -48,6 +48,15 @@ export function suits(family: Layout2[], widthMm: number, heightMm: number): boo
   return r >= lo * 0.72 && r <= hi * 1.4;
 }
 
+/* the three kinds the wizard's columns are dealt (one each per run):
+   vertical type, type set to the sides, centred type */
+export type LayoutKind = "centred" | "sides" | "vertical";
+export function kindOf(lay: Layout2): LayoutKind {
+  if (lay.texts.some((t) => t.rot)) return "vertical";
+  const c = lay.texts.filter((t) => t.align === "center").length;
+  return c * 2 >= lay.texts.length ? "centred" : "sides";
+}
+
 /* the twin whose proportion is nearer this label's */
 export function pickLayout(family: Layout2[], widthMm: number, heightMm: number): Layout2 {
   const r = heightMm / widthMm;

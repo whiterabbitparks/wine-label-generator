@@ -12,9 +12,15 @@ import type { Layout } from "@/lib/typeset/compose";
 export const LABEL_DIR = path.join(process.cwd(), "data", "labels");
 const safe = (s: string) => path.basename(String(s)).replace(/[^a-zA-Z0-9_-]/g, "");
 
-export interface StoredLabel { id: string; style: string; widthMm: number; heightMm: number; faces: string; ground: string; createdAt: string; fit?: "yield" | "crop" | "top" | "vignette"; template?: string; hasPaper?: boolean; artist?: string; refSet?: string; panel?: boolean; scene?: boolean }
+export interface StoredLabel { id: string; style: string; widthMm: number; heightMm: number; faces: string; ground: string; createdAt: string; fit?: "yield" | "crop" | "top" | "vignette"; template?: string; hasPaper?: boolean; artist?: string; refSet?: string; panel?: boolean; scene?: boolean;
+  /* the final-round engine (src/lib/layout2): what a re-layout of the
+     same painting needs — its layout id is `template` ("L07"); here its
+     ground's source, its inks and its faces */
+  layout2?: Layout2Meta }
+export interface Layout2Meta { ground: { ground: string; source: string }; inks: { text: string; accent: string; allColoured: boolean }; faces: { hero: FaceMeta; bold: FaceMeta; title: FaceMeta; text: FaceMeta } }
+export interface FaceMeta { family: string; weight: number; italic?: boolean; noCaps?: boolean }
 
-export function saveLabel(l: { style: string; widthMm: number; heightMm: number; faces: string; ground: string; svg: string; png: string; art: string; prompt: string; layout: Layout; fit?: "yield" | "crop" | "top" | "vignette"; template?: string; hasPaper?: boolean; artist?: string; refSet?: string; panel?: boolean; scene?: boolean }): string {
+export function saveLabel(l: { style: string; widthMm: number; heightMm: number; faces: string; ground: string; svg: string; png: string; art: string; prompt: string; layout: Layout; fit?: "yield" | "crop" | "top" | "vignette"; template?: string; hasPaper?: boolean; artist?: string; refSet?: string; panel?: boolean; scene?: boolean; layout2?: Layout2Meta }): string {
   const id = `${new Date().toISOString().slice(0, 10)}-${crypto.randomBytes(6).toString("hex")}`;
   const dir = path.join(LABEL_DIR, id);
   fs.mkdirSync(dir, { recursive: true });
@@ -24,7 +30,7 @@ export function saveLabel(l: { style: string; widthMm: number; heightMm: number;
   fs.writeFileSync(path.join(dir, "art.png"), b64(l.art));
   fs.writeFileSync(path.join(dir, "prompt.txt"), l.prompt);
   fs.writeFileSync(path.join(dir, "layout.json"), JSON.stringify(l.layout));
-  const meta: StoredLabel = { id, style: l.style, widthMm: l.widthMm, heightMm: l.heightMm, faces: l.faces, ground: l.ground, createdAt: new Date().toISOString(), fit: l.fit || "yield", template: l.template, hasPaper: l.hasPaper, artist: l.artist, refSet: l.refSet, panel: l.panel || undefined, scene: l.scene || undefined };
+  const meta: StoredLabel = { id, style: l.style, widthMm: l.widthMm, heightMm: l.heightMm, faces: l.faces, ground: l.ground, createdAt: new Date().toISOString(), fit: l.fit || "yield", template: l.template, hasPaper: l.hasPaper, artist: l.artist, refSet: l.refSet, panel: l.panel || undefined, scene: l.scene || undefined, ...(l.layout2 ? { layout2: l.layout2 } : {}) };
   fs.writeFileSync(path.join(dir, "meta.json"), JSON.stringify(meta, null, 2));
   return id;
 }

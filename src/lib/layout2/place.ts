@@ -15,6 +15,7 @@
 import { measure, inkExtent, type Face } from "../typeset/fonts";
 import type { Layout2, LayoutText, FieldKey } from "./spec";
 import { LAYOUTS } from "./layouts.data";
+import { softenCaps } from "../typeset/templates";
 
 export const PX_MM = 12;
 const PT_MM = 25.4 / 72;
@@ -23,7 +24,10 @@ export const MIN_PT = 7;
 
 /* the label's faces: the wine's name (may be a title-only face), the
    title family's bold and regular, the body family's regular */
-export interface Faces { hero: Face; bold: Face; title: Face; text: Face }
+/* a face the owner marked NEVER ALL CAPS (font bank): his capitals are
+   not set in it — the words are Capitalised instead (softenCaps) */
+export type LabelFace = Face & { noCaps?: boolean };
+export interface Faces { hero: LabelFace; bold: LabelFace; title: LabelFace; text: LabelFace }
 export interface Placed {
   key: FieldKey; text: string;
   x: number; y: number;          /* label px: anchor point and baseline */
@@ -40,11 +44,13 @@ export interface PlacedLayout { W: number; H: number; lines: Placed[]; scale: nu
 const ptPx = (pt: number) => pt * PT_MM * PX_MM;
 const mmPx = (mm: number) => mm * PX_MM;
 
-/* the lines of type for these fields — fields that are empty are left out */
-function textOf(t: LayoutText, fields: Record<string, string>): string {
+/* the lines of type for these fields — fields that are empty are left
+   out; his capitals, unless the face must never show them */
+function textOf(t: LayoutText, fields: Record<string, string>, face?: LabelFace): string {
   const parts = t.fields.map((f) => (fields[f] || "").trim()).filter(Boolean);
   if (!parts.length) return "";
   const s = parts.join(t.join || " / ");
+  if (face?.noCaps) return softenCaps(s);
   return t.caps ? s.toUpperCase() : s;
 }
 
@@ -80,14 +86,14 @@ export function placeLayout(lay: Layout2, fields: Record<string, string>, widthM
   const W = Math.round(widthMm * PX_MM), H = Math.round(heightMm * PX_MM);
   const sizePt = (t: LayoutText) => Math.max(MIN_PT, t.size * scale * (perLine?.get(t) ?? 1));
   const lineH = (t: LayoutText) => sizePt(t) * PT_MM * LINE_H;   /* mm */
-  const faceOf = (t: LayoutText): Face => {
+  const faceOf = (t: LayoutText): LabelFace => {
     const f = t.fields[0] === "wineName" ? faces.hero : t.role === "body" ? faces.text : t.bold ? faces.bold : faces.title;
     return t.italic ? { ...f, italic: true } : f;
   };
   const lines: Placed[] = [];
 
   /* 1. which lines live (horizontal and vertical apart) */
-  const live = lay.texts.filter((t) => textOf(t, fields));
+  const live = lay.texts.filter((t) => textOf(t, fields, faceOf(t)));
   const horiz = live.filter((t) => !t.rot && !t.arc), arcs = live.filter((t) => t.arc), verts = live.filter((t) => t.rot);
 
   /* 2. rows close their gaps toward the anchored edge: a missing row
@@ -111,14 +117,14 @@ export function placeLayout(lay: Layout2, fields: Record<string, string>, widthM
     const live: LayoutText[] = [];
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
-      if (!r.items.some((t) => textOf(t, fields))) { const next = rows[i + 1]; if (next) shift += next.d - r.d; continue; }
-      for (const t of r.items) { dist.set(t, (r.d - shift) * scale + (scale < 1 ? MARGIN * (1 - scale) : 0)); if (textOf(t, fields)) live.push(t); }
+      if (!r.items.some((t) => textOf(t, fields, faceOf(t)))) { const next = rows[i + 1]; if (next) shift += next.d - r.d; continue; }
+      for (const t of r.items) { dist.set(t, (r.d - shift) * scale + (scale < 1 ? MARGIN * (1 - scale) : 0)); if (textOf(t, fields, faceOf(t))) live.push(t); }
       /* a wrapped line in this row: the rows beyond move away by its second line */
-      const wr = r.items.filter((t) => wrapped?.has(t) && textOf(t, fields));
+      const wr = r.items.filter((t) => wrapped?.has(t) && textOf(t, fields, faceOf(t)));
       if (wr.length) shift -= Math.max(...wr.map(lineH));
     }
     if (!live.length) continue;
-    const edgeNow = Math.min(...live.map((t) => dist.get(t)! - inkToward(t, textOf(t, fields), anchor)));
+    const edgeNow = Math.min(...live.map((t) => dist.get(t)! - inkToward(t, textOf(t, fields, faceOf(t)), anchor)));
     const want = edge0 * scale + (scale < 1 ? MARGIN * (1 - scale) : 0);
     if (edgeNow < want - 0.05) for (const t of dist.keys()) if (lay.texts.find((x) => x === t)!.anchor === anchor && !t.rot) dist.set(t, dist.get(t)! + (want - edgeNow));
   }
@@ -126,7 +132,7 @@ export function placeLayout(lay: Layout2, fields: Record<string, string>, widthM
       shrinks about its anchored margin — spacing scales with the type) */
 
   const put = (t: LayoutText): Placed[] => {
-    const text = textOf(t, fields);
+    const text = textOf(t, fields, faceOf(t));
     const face = faceOf(t);
     const size = ptPx(sizePt(t));
     const tracking = t.tracking * size;
@@ -151,7 +157,7 @@ export function placeLayout(lay: Layout2, fields: Record<string, string>, widthM
         between the letters; the real word takes the same spacing, so its
         sweep follows its length */
   for (const t of arcs) {
-    const a = t.arc!, text = textOf(t, fields), face = faceOf(t);
+    const a = t.arc!, text = textOf(t, fields, faceOf(t)), face = faceOf(t);
     const size = ptPx(sizePt(t)), r = mmPx(a.r) * scale;
     const cx = t.align === "center" ? W / 2 : mmPx(a.cx);
     const d = (t.anchor === "top" ? a.cyFromTop : lay.refH - a.cyFromTop) * scale;
@@ -180,7 +186,7 @@ export function placeLayout(lay: Layout2, fields: Record<string, string>, widthM
         line reading upward), its length held by the edge its start is
         nearer */
   for (const t of verts) {
-    const text = textOf(t, fields), face = faceOf(t);
+    const text = textOf(t, fields, faceOf(t)), face = faceOf(t);
     const size = ptPx(sizePt(t));
     const nearLeft = t.left < lay.refW / 2;
     const x = nearLeft ? mmPx(t.left) : W - mmPx(lay.refW - t.left);

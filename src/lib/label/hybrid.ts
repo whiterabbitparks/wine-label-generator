@@ -11,6 +11,7 @@ import { faceFile, pickRoles, mix } from "@/lib/typeset/fonts";
 import type { Layout } from "@/lib/typeset/compose";
 import { painterFor, castPainter } from "./painters";
 import { usage, pickFresh, rememberMade, groundWord, restingGround } from "./variety";
+import { layout2On, isLayout2Id, paintWithLayout2, relayoutWithLayout2 } from "@/lib/layout2/bridge";
 
 /* the wizard's three columns are the owner's three bands (2026-09-22:
    "first option can be classical… second contemporary… third more free,
@@ -133,6 +134,16 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
   const TYPES: LayoutType[] = ["centred", "sides", "vertical"];
   const perms = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]];
   const wantType = TYPES[perms[runKey % 6][col % 3]];
+  /* THE FINAL ROUND (2026-10-04): his 45 artboards set by the layout2
+     engine — the column's kind is dealt the same way, the rest is the
+     bridge's. LAYOUT2=0 brings the templates back. */
+  if (layout2On() && !forced) {
+    const avoidFamilies = avoid.filter((a) => a.startsWith(`${model.artist.name}|`)).map((a) => a.split("|")[1]).filter(isLayout2Id);
+    const b = await paintWithLayout2({ model, vision: brief.vision, data: inp.data, widthMm, heightMm, seed, kind: wantType, avoidFamilies, sketch: inp.sketch, refSet: inp.refSet, small: inp.small, runKey: inp.order ? runKey : undefined, col });
+    if (b.warnings.length) console.warn(`[layout2 ${b.template}] ${b.warnings.join("; ")}`);
+    rememberMade({ artist: model.artist.name, template: b.template, face: b.faces.split(" ")[0], ground: groundWord(b.ground) });
+    return b;
+  }
   const ofType = templatesNow().filter((t) => layoutTypeOf(t) === wantType);
   const freshOfType = ofType.filter((t) => !avoid.includes(`${model.artist.name}|${t.id}`));
   const tplPool = freshOfType.length ? freshOfType : ofType.length ? ofType : templatesNow();
@@ -480,6 +491,9 @@ const blendOf = (name?: string): "multiply" | undefined => {
   return (a?.profile as { blend?: "multiply" } | undefined)?.blend;
 };
 export async function relayoutLabel(stored: { art: Buffer; meta: { style: string; widthMm: number; heightMm: number; ground: string; fit?: "yield" | "crop" | "top" | "vignette" } }, data: Record<string, string>, avoid: string[] = [], recipe: { big?: boolean; flip?: boolean } = {}, keep = false): Promise<HybridOutput & { tag: string; template: string; panel?: boolean }> {
+  /* a final-round label is set again by its own engine */
+  const m2 = stored.meta as { template?: string; layout2?: import("./store").Layout2Meta; artist?: string };
+  if (isLayout2Id(m2.template) && m2.layout2) return relayoutWithLayout2({ art: stored.art, meta: { ...stored.meta, template: m2.template, layout2: m2.layout2, artist: m2.artist } }, data, keep, avoid);
   const { style, widthMm, heightMm, ground } = stored.meta;
   const raw = `data:image/png;base64,${stored.art.toString("base64")}`;
   /* a picture stored before the clean-paper pass still has its wrinkles;
