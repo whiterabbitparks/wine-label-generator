@@ -96,12 +96,57 @@ ground from three sources in admin-set proportions (proposed 50/25/25):
 a colour the painting dictates / white / warm light; recolour the sheet
 with edge unmixing — no multiply, no fringe, no fade.
 
-**Next (in order):** show him the sheets and get answers to 2–4 → picture
-pipeline for layout2 (canvas nearest the zone's proportion, organic single
-shape, ink-extent placement, slight bleed overrun, keep the oval/spot
-quality by porting fitSpot) → ground method → colour rule 60/40 → wire
-into the site (families replace templates; admin approvals per layout) →
-robot tests → deploy → update this file and memory.
+**2026-10-04 (early morning) — built on top of the above, committed and
+DEPLOYED to the live server (the SITE still paints with the old engine;
+only the admin got a new tab):**
+- Owner's answers: vertical twins paired by hand (L23↔L24, L27↔L36,
+  L25↔L26, L37↔L38; L29/L32/L33 single); a 70 mm label vs three columns
+  and a long grape list → first a NARROWER face, then — extreme cases
+  only — the line broken in two (engine `wrapText`, `fit.needsNarrower`);
+  "always leave air between the name and the year" → 2.5 mm on a row,
+  his own smaller air kept where his artboard has less.
+- `src/lib/layout2/compose.ts` — type + panel by ink (fitArt for
+  bleeding rect zones, fitSpot for ovals/inset) + the SHEET RECOLOURED to
+  the ground (cleanPaper(art, ground): paper grown from the edge, the
+  drawing untouched — no multiply, no fade, no mask). `ground.ts` —
+  sources with admin-able shares: **originals 70 / painting 15 / white
+  7.5 / warm 7.5** (owner 2026-10-04: "look at the artist's original
+  paintings and take the ground logic from there — Dachi is bad on white,
+  Oskar on white and on dark"); `artist-grounds.ts` MEASURES each work in
+  data/artists/<id>/works (border ring if even, else the dominant FLAT
+  colour; never shown to a model) → data/artists/<id>/grounds.json;
+  Pirosmani keeps his painted sheet (keepGround), Tatishvili white/warm
+  (paper). Inks: 60 % name coloured + rest #0D0D0D, 40 % all in the
+  colour; colour = painting's main pulled toward the wine's hue (more for
+  low saturation); readable() on the ground.
+- `paint.ts` — the panel method ask sized to the zone (canvas nearest its
+  proportion, sketch checked for sheet + shape), `bridge.ts` — hybrid API
+  shape (Layout for the PDF, StoredLabel.layout2 meta), hybrid.ts
+  branches when **LAYOUT2=1** (default OFF — owner: "launch nothing on the
+  site yet; first I'll look in the admin"); relayout (details-only, other
+  layout) handled for L-ids. End-to-end tested (paint → store → details
+  re-set → other layout → PDF): ~/Desktop/8K-final-round/e2e/.
+- **ADMIN → "Final round" tab** (FinalRoundCard, /api/admin/layout2,
+  src/lib/layout2/trials.ts, data/layout2-trials/ runtime): pick artists
+  (swatches = grounds read off their originals), idea, details preset,
+  size, count, optional family → paints small; per label: layout, ground
+  source, inks, faces, reductions; **Other layout / Other ground** (and a
+  "ground from…" picker: originals / painting / white / warm) re-set the
+  same painting for nothing. Browser-smoke-tested locally
+  (tests/layout2/admin-smoke.mjs) and deployed to https://8k.wine/admin.
+- Sheets for him on the Desktop: 8K-final-round/ (sheet-all, sheet-stress,
+  painted/sheet.png = 8 real labels, compose/, artist-grounds.png).
+- Real-painting test (8 labels, small): grounds work (Pirosmani black, no
+  beige, no fade), pictures sit in their zones, 60/40 inks. He then said
+  the grounds need the ORIGINALS logic (done above) — he has not yet seen
+  the originals-based grounds on real labels: that is his next look, in
+  the admin.
+
+**Next:** he judges in the admin → his corrections → when he says so,
+LAYOUT2=1 in the server's .env.local (append, never overwrite) + restart;
+then robot tests on live, remove the templates' admin tools or keep as
+legacy, update memory. Open: admin controls for the ground shares; the
+old "Layouts" tab (templates t01–t12) is legacy in this branch.
 
 ---
 
