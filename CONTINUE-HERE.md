@@ -7,7 +7,105 @@ single-file era), **this file wins**.
 
 ---
 
-## ▶ TOMORROW START HERE (end of day 2026-09-23)
+## ▶ TOMORROW START HERE (2026-10-03 night — FINAL ROUND, branch POPIKA_FINAL_ROUND)
+
+**Where we are.** Live (https://8k.wine) still runs POPIKA_Artists. The
+owner asked for the layouts to be fixed "once and for all" from a clean
+sheet: branch **POPIKA_FINAL_ROUND** (state before it tagged
+`state-before-final-round-2026-10-03`). Old templates t01–t12 and the old
+admin layout corrections are IGNORED in this branch. Source of truth: his
+45 artboards — `NEW UI/Comments/New/Artboard 2 copy N@3x.png` (N=14…62) and
+`NEW UI/Layout_Options_New.ai` (45 pages, 104×84 / 104×170 mm = 100×80 /
+100×166 labels + 2 mm bleed). All 45 are distinct and all are kept.
+
+**Built tonight (committed, not yet wired into the site):**
+- `tools/extract-layouts.mjs` → `src/lib/layout2/layouts.data.ts`
+  (GENERATED — never hand-edit): 45 layouts L01–L45 in page order, each
+  with its twin (landscape ↔ tall), grey zone (rect/oval, which sides
+  bleed), every text line (fields, align left/centre/right, anchor
+  top/bottom, mm from each edge, pt size, bold, title/body role, italic,
+  caps, tracking, arcs as circles, vertical lines). Re-run after any change
+  to his .ai: `node tools/extract-layouts.mjs`.
+- `src/lib/layout2/place.ts` — his type on any label size: sizes and
+  spacing in points exactly as his; centred lines centred, left lines on
+  the left margin, right lines on the right; top group holds its distance
+  from the top, bottom group from the bottom; the ZONE absorbs the
+  proportion (rect: his insets/bleeds kept; oval: scaled UNIFORMLY to the
+  free box, never distorted). Missing fields: rows close toward the
+  anchored edge, whole rows move together, and the group's INK keeps his
+  distance from the edge. Arcs: his circle, his letter-spacing read off his
+  sample, sweep follows the word's length. Vertical columns held by the
+  nearer side.
+- `src/lib/layout2/engine.ts` — FAMILIES (landscape + tall twin = one
+  design; the label takes the twin whose proportion is nearer; singles
+  only offered near their own proportion, `suits()`); FIT: when a line
+  physically cannot fit between the 5 mm margins, or two lines meet, ONLY
+  that line (or the longer of the pair) is reduced in 2 % steps, never
+  under 7 pt; nothing may end larger than the wine's name; what still
+  cannot fit is REPORTED in `fit.problems` (never hidden). Descenders that
+  already cross the margin on his own artboard (his baselines sit 5 mm
+  from the trim) are allowed by that much.
+- `src/lib/layout2/render.ts` — the typographic layer as SVG (zone as grey
+  guide optional).
+- `tools/layout2-preview.mts` (→ `tests/layout2/out/`, git-ignored):
+  (1) all 45 at their own size vs his PNGs, ink within 0.5 mm; (2) twin
+  test; (3) stress sheet (100×120, 130×80, 70×100, missing fields, long
+  names). **Result tonight: 28/45 within 0.5 mm; the other 17 differ ONLY
+  because on his artboards "CHÂTEAU MARGAUX" sits 0.66 mm left of centre
+  and the tracked "GRAND VIN" 0.35–0.5 mm right of it (Illustrator centres
+  the text box, trailing tracking included) — the engine centres the ink
+  exactly.** Vertical and arc layouts match 0.0–0.1 %. Owner has NOT yet
+  seen the sheets (`sheet-all.png`, `sheet-stress.png`, per-layout
+  `L07.png` = his | ours | overlay red/cyan).
+
+**Findings to tell the owner / open questions (not yet answered):**
+1. His tall twins are individually designed (L07→L08 oval 2.2× uniform and
+   bleeding at the sides; L17→L18 a different oval; L15→L16 becomes a
+   rect) — so the engine uses the NEARER TWIN, and stretches only in
+   between. Twin test of "L07 stretched to 166" ≠ L08 by design.
+2. A 70 mm wide label cannot hold his three-column rows at 7 pt
+   (L17/L19/L33 70×100): reported as a problem — the site should offer
+   another family. Rule needed from him.
+3. A long grape list ("Cabernet Sauvignon, Cabernet Franc, Merlot, Petit
+   Verdot") between two side columns cannot fit at 7 pt → problem. Drop
+   the field, wrap, or another layout? Ask.
+4. Singles (L23–L27, L29, L32, L33, L36–L38) are offered only within
+   ×0.72…×1.4 of their own proportion (a tall vertical design is not a
+   landscape label).
+
+**Rules he gave for this round (verbatim essence):** every layout is a
+strict visual spec; PNGs authoritative; artboard = trimmed label, 2 mm
+bleed outside, 5 mm text margin inside; no text under 7 pt; images may
+cross the margin; grey zones are APPROXIMATE guides, never masks, never
+hard cut edges — organic edges, the artist's decision; proportion changes
+go into the image area first, typography exact unless it physically cannot
+fit, then very small steps with spacing scaled; hierarchy preserved; never
+overlap text; backgrounds through the bleed; missing text closes toward
+the anchored edge, pairs kept, rows move whole; **no fades anywhere, soft
+transitions only, never cut the ovals**; fonts keep the admin font bank
+(categories, title-only, never-all-caps); widths differ per font — keep
+size and spacing, let width vary, align by margins/centre. TEXT COLOUR:
+60 % of labels coloured wine name + black (95 %) rest, 40 % all text in
+the name's colour; colour from the painting with the wine's colour
+steering it (red → reds/dark reds, white → warm/dark greens, amber → clay
+tones; rosé unspecified — proposed dusty rose); Tatishvili white/beige
+grounds, Pirosmani always black (inside the label, NO fade — replaces the
+2026-10-02 4 mm fade). GROUND METHOD (accepted "let's try and look"):
+paint on a plain neutral sheet; read the palette; per label choose the
+ground from three sources in admin-set proportions (proposed 50/25/25):
+a colour the painting dictates / white / warm light; recolour the sheet
+with edge unmixing — no multiply, no fringe, no fade.
+
+**Next (in order):** show him the sheets and get answers to 2–4 → picture
+pipeline for layout2 (canvas nearest the zone's proportion, organic single
+shape, ink-extent placement, slight bleed overrun, keep the oval/spot
+quality by porting fitSpot) → ground method → colour rule 60/40 → wire
+into the site (families replace templates; admin approvals per layout) →
+robot tests → deploy → update this file and memory.
+
+---
+
+## Previous start-here (end of day 2026-09-23)
 
 **Live:** http://2.28.48.43 now runs branch **POPIKA_Artists** (deployed
 2026-09-23 evening, commit on origin). Previous live (POPIKA_Back_To_Vector)
