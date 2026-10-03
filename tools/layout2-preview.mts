@@ -169,9 +169,9 @@ const CASES: { name: string; w: number; h: number; fields: Record<string, string
       const pw = cw, ph = Math.round(cw * (c.h + 2 * bleed) / (c.w + 2 * bleed));
       const img = await sharp(Buffer.from(svg), { density: 12 * 25.4 }).resize(pw, ph, { fit: "fill" }).png().toBuffer();
       const ok = suits(fam, c.w, c.h);
-      const cap = `${fam[0].id}${fam.length > 1 ? "/" + fam[1].id : ""} ${c.name} → ${lay.id}${ok ? "" : " · NOT OFFERED at this proportion"}${fit.reduced.length ? ` · ${fit.reduced.join(", ")}` : ""}${fit.problems.length ? " · " + fit.problems[0] : ""}`;
+      const cap = `${fam[0].id}${fam.length > 1 ? "/" + fam[1].id : ""} ${c.name} → ${lay.id}${ok ? "" : " · NOT OFFERED at this proportion"}${fit.reduced.length ? ` · ${fit.reduced.join(", ")}` : ""}${fit.wrapped.length ? ` · wrapped: ${fit.wrapped.join(", ")}` : ""}${fit.problems.length ? " · " + fit.problems[0] : ""}`;
       row.push({ img, h: ph, cap, bad: fit.problems.length > 0 && ok });
-      if (ok && (fit.reduced.length || fit.problems.length)) console.log(`${fam[0].id} ${c.name}: ${lay.id} reduced ${fit.reduced.join(", ") || "—"}  ${fit.problems.join("; ")}`);
+      if (ok && (fit.reduced.length || fit.problems.length)) console.log(`${fam[0].id} ${c.name}: ${lay.id} reduced ${fit.reduced.join(", ") || "—"}${fit.wrapped.length ? `  WRAPPED ${fit.wrapped.join(", ")}` : ""}${fit.needsNarrower.length ? `  narrower face for ${fit.needsNarrower.join(", ")}` : ""}  ${fit.problems.join("; ")}`);
     }
     rowsImgs.push(row);
   }

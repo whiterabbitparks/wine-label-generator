@@ -5071,7 +5071,7 @@ export const LAYOUTS: Layout2[] = [
  {
   "id": "L23",
   "page": 23,
-  "twin": null,
+  "twin": "L24",
   "refW": 100,
   "refH": 80,
   "zone": {
@@ -5259,7 +5259,7 @@ export const LAYOUTS: Layout2[] = [
  {
   "id": "L24",
   "page": 24,
-  "twin": null,
+  "twin": "L23",
   "refW": 100,
   "refH": 165.982,
   "zone": {
@@ -5469,7 +5469,7 @@ export const LAYOUTS: Layout2[] = [
  {
   "id": "L25",
   "page": 25,
-  "twin": null,
+  "twin": "L26",
   "refW": 100,
   "refH": 80,
   "zone": {
@@ -5657,7 +5657,7 @@ export const LAYOUTS: Layout2[] = [
  {
   "id": "L26",
   "page": 26,
-  "twin": null,
+  "twin": "L25",
   "refW": 100,
   "refH": 165.982,
   "zone": {
@@ -5867,7 +5867,7 @@ export const LAYOUTS: Layout2[] = [
  {
   "id": "L27",
   "page": 27,
-  "twin": null,
+  "twin": "L36",
   "refW": 100,
   "refH": 80,
   "zone": {
@@ -7897,7 +7897,7 @@ export const LAYOUTS: Layout2[] = [
  {
   "id": "L36",
   "page": 36,
-  "twin": null,
+  "twin": "L27",
   "refW": 100,
   "refH": 165.982,
   "zone": {
@@ -8107,7 +8107,7 @@ export const LAYOUTS: Layout2[] = [
  {
   "id": "L37",
   "page": 37,
-  "twin": null,
+  "twin": "L38",
   "refW": 100,
   "refH": 80,
   "zone": {
@@ -8295,7 +8295,7 @@ export const LAYOUTS: Layout2[] = [
  {
   "id": "L38",
   "page": 38,
-  "twin": null,
+  "twin": "L37",
   "refW": 100,
   "refH": 165.982,
   "zone": {

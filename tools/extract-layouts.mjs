@@ -143,6 +143,13 @@ for (const l of landscape) {
   const m = tall.find((t) => !twinOf.has(t.i) && sig(t.p) === sig(l.p));
   if (m) { twinOf.set(l.i, m.i); twinOf.set(m.i, l.i); }
 }
+/* the vertical designs regroup in their tall version (owner, 2026-10-03:
+   "when there is a lot of space I moved some elements to the top and so
+   narrowed the text block") — the signature cannot see that, so these
+   pairs are set by hand (page numbers): bleeding zone left L23↔L24,
+   inset zone left L27↔L36, bleeding zone right L25↔L26, inset zone right
+   L37↔L38. L29, L32, L33 stay single. */
+for (const [a, b] of [[23, 24], [27, 36], [25, 26], [37, 38]]) { twinOf.set(a - 1, b - 1); twinOf.set(b - 1, a - 1); }
 
 /* ---- the layouts ---------------------------------------------------- */
 const out = [];

@@ -62,9 +62,23 @@ function rowsOf(ts: LayoutText[]): Row[] {
 /* `scale` reduces the whole block (sizes and spacing alike); `perLine`
    reduces single lines that cannot fit on their own (engine.ts), their
    anchor edge kept — nothing ever under 7 pt */
-export function placeLayout(lay: Layout2, fields: Record<string, string>, widthMm: number, heightMm: number, faces: Faces, scale = 1, perLine?: Map<LayoutText, number>): PlacedLayout {
+/* a line that cannot fit even at 7 pt is broken in two (owner: "only in
+   the most extreme cases") — at its best natural break nearest the middle */
+export function wrapText(text: string): [string, string] | null {
+  const cands: number[] = [];
+  for (const sep of [" / ", ", ", " "]) { let i = -1; while ((i = text.indexOf(sep, i + 1)) >= 0) cands.push(i + (sep === " " ? 0 : sep.length - 1)); }
+  if (!cands.length) return null;
+  const mid = text.length / 2;
+  const at = cands.reduce((a, b) => (Math.abs(b - mid) < Math.abs(a - mid) ? b : a));
+  const first = text.slice(0, at + 1).replace(/[\s/]+$/, "").replace(/,$/, ","), second = text.slice(at + 1).replace(/^[\s/]+/, "");
+  return first && second ? [first, second] : null;
+}
+const LINE_H = 1.2;   /* the second line of a wrapped one sits 1.2 em further from the edge */
+
+export function placeLayout(lay: Layout2, fields: Record<string, string>, widthMm: number, heightMm: number, faces: Faces, scale = 1, perLine?: Map<LayoutText, number>, wrapped?: Set<LayoutText>): PlacedLayout {
   const W = Math.round(widthMm * PX_MM), H = Math.round(heightMm * PX_MM);
   const sizePt = (t: LayoutText) => Math.max(MIN_PT, t.size * scale * (perLine?.get(t) ?? 1));
+  const lineH = (t: LayoutText) => sizePt(t) * PT_MM * LINE_H;   /* mm */
   const faceOf = (t: LayoutText): Face => {
     const f = t.fields[0] === "wineName" ? faces.hero : t.role === "body" ? faces.text : t.bold ? faces.bold : faces.title;
     return t.italic ? { ...f, italic: true } : f;
@@ -98,6 +112,9 @@ export function placeLayout(lay: Layout2, fields: Record<string, string>, widthM
       const r = rows[i];
       if (!r.items.some((t) => textOf(t, fields))) { const next = rows[i + 1]; if (next) shift += next.d - r.d; continue; }
       for (const t of r.items) { dist.set(t, (r.d - shift) * scale + (scale < 1 ? MARGIN * (1 - scale) : 0)); if (textOf(t, fields)) live.push(t); }
+      /* a wrapped line in this row: the rows beyond move away by its second line */
+      const wr = r.items.filter((t) => wrapped?.has(t) && textOf(t, fields));
+      if (wr.length) shift -= Math.max(...wr.map(lineH));
     }
     if (!live.length) continue;
     const edgeNow = Math.min(...live.map((t) => dist.get(t)! - inkToward(t, textOf(t, fields), anchor)));
@@ -107,7 +124,7 @@ export function placeLayout(lay: Layout2, fields: Record<string, string>, widthM
   /* (rows are scaled toward the edge: at scale < 1 the whole block
       shrinks about its anchored margin — spacing scales with the type) */
 
-  const put = (t: LayoutText) => {
+  const put = (t: LayoutText): Placed[] => {
     const text = textOf(t, fields);
     const face = faceOf(t);
     const size = ptPx(sizePt(t));
@@ -118,9 +135,14 @@ export function placeLayout(lay: Layout2, fields: Record<string, string>, widthM
     if (t.align === "center") { x = W / 2; anchor = "middle"; }
     else if (t.align === "right") { x = W - mmPx(Math.max(MARGIN, t.right)); anchor = "end"; }
     else { x = mmPx(Math.max(MARGIN, t.left)); anchor = "start"; }
-    return { key: t.fields[0], text, x, y, size, tracking, face, anchor, accent: t.accent, caps: t.caps, src: t };
+    const one = (txt: string, yy: number): Placed => ({ key: t.fields[0], text: txt, x, y: yy, size, tracking, face, anchor, accent: t.accent, caps: t.caps, src: t });
+    const parts = wrapped?.has(t) ? wrapText(text) : null;
+    if (!parts) return [one(text, y)];
+    /* the line nearer the edge keeps his baseline; the other sits a line further in */
+    const lh = mmPx(lineH(t));
+    return t.anchor === "top" ? [one(parts[0], y), one(parts[1], y + lh)] : [one(parts[0], y - lh), one(parts[1], y)];
   };
-  for (const t of horiz) lines.push(put(t));
+  for (const t of horiz) lines.push(...put(t));
 
   /* 3. arced words: his circle, moved with its anchor. His letter-spacing
         is read off his sample (the extractor sees each letter as its own
@@ -162,8 +184,14 @@ export function placeLayout(lay: Layout2, fields: Record<string, string>, widthM
     const nearLeft = t.left < lay.refW / 2;
     const x = nearLeft ? mmPx(t.left) : W - mmPx(lay.refW - t.left);
     /* rot 90 reads upward — its origin is its lower end */
-    const y = t.anchor === "bottom" ? H - mmPx((t.vStart ?? t.fromBottom) * scale) : mmPx((t.vEndFromTop ?? t.fromTop) * scale) + measure(text, face, size, t.tracking);
-    lines.push({ key: t.fields[0], text, x, y, size, tracking: t.tracking * size, face, anchor: "start", rot: t.rot === 90 ? -90 : 90, accent: t.accent, caps: t.caps, src: t });
+    const parts = wrapped?.has(t) ? wrapText(text) : null;
+    const texts = parts ?? [text];
+    texts.forEach((txt, k) => {
+      /* a second column stands a line further toward the inside of the label */
+      const xx = x + (nearLeft ? 1 : -1) * k * mmPx(lineH(t));
+      const y = t.anchor === "bottom" ? H - mmPx((t.vStart ?? t.fromBottom) * scale) : mmPx((t.vEndFromTop ?? t.fromTop) * scale) + measure(txt, face, size, t.tracking);
+      lines.push({ key: t.fields[0], text: txt, x: xx, y, size, tracking: t.tracking * size, face, anchor: "start", rot: t.rot === 90 ? -90 : 90, accent: t.accent, caps: t.caps, src: t });
+    });
   }
 
   const z = lay.zone;
