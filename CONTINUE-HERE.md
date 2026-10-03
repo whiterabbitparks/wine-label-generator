@@ -61,8 +61,12 @@ stays, sides hug margins, centre centred. Tatishvili white, Pirosmani black.
 - Verified on real paintings (small): Dachi tan, Levan black, Oskar
   mustard, Pirosmani black, Tatishvili white — organic, nothing cut out.
 
-**Open:** left/right imbalance when diagonal fields are missing (rule
-"redistribute comparable elements" not yet implemented); site wiring
+**Decided 2026-10-04:** rows stay rows — when a left field and a right
+field on different rows are missing, the survivors keep their rows (owner:
+"keep rows and see how it looks, we can fix it later"). Revisit only if he
+asks.
+
+**Open:** site wiring
 (hybrid.ts + relayout keep) after he approves; marketing/back label untouched.
 
 ---
