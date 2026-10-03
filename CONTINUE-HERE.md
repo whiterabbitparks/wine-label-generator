@@ -142,6 +142,41 @@ only the admin got a new tab):**
   the originals-based grounds on real labels: that is his next look, in
   the admin.
 
+**2026-10-04 (day) — THE INCIDENT AND THE SIX RULES.** The owner painted
+in the admin's trial panel (Dachi, 9 labels) and sent two screenshots
+(NEW UI/Comments/New/Screenshot…): a small horizontal picture crammed in
+L23's tall zone, a square picture slid to the right in L05's band. Causes,
+verified from the run log: both were "Other layout" RE-SETS of paintings
+made for another zone's shape (my button ignored his 2026-09-22 rule — a
+picture is never offered a layout it must be dragged into); the placer
+(fitArt) traded position for size; and line-breaking fired on a normal
+label instead of the narrower-font step. He also found the trial panel
+unusable ("the Layout editor is where I give feedback"). Done, on his
+"do it":
+1. `compose.ts`: the panel's ink box is measured against the zone; a ratio
+   outside 1/1.4…1.4 is REFUSED (`ShapeMismatch`), never laid in.
+2. `paint.ts`: the finished painting is checked against the zone on the
+   real label; wrong shape → painted again (3 at most) → else the label
+   FAILS with a message. `bridge.ts` re-layouts offer only families whose
+   zone has the painting's shape AND whose type holds the words
+   (`textFits`, also in `familyFor`: L18/L20/L33 at 80 mm never offered).
+3. `fitInZone` replaces fitArt/fitSpot for layout2: the panel is CENTRED
+   in the zone, sized to it; a one-sided bleed pulls it to that edge; both
+   sides bleeding → ≤ 6 % run-off each; 2 mm from type by shrinking about
+   its centre only.
+4. Line-breaking withdrawn (engine.ts); `fit.needsNarrower` reported.
+5. **GATE: `npm run gate:layout2`** (tools/layout2-gate.mts) — type vs
+   his 45 PNGs (28 exact + the 17 off-centre-name cases ≤ 5 %), stored
+   paintings × sizes × families: inside the zone, centred, no broken
+   line, no text problem, wrong shapes refused. PASS before any deploy.
+6. The trial panel, its route and trials.ts REMOVED. The admin's
+   **Layouts tab batch ("Make 5") now paints the 45 artboards' families**
+   (layout-batch.ts, one label per family, id = "L07"…), judged in the
+   SAME editor with the same notes/edits as before (layout-edits keyed by
+   the L-id; the engine's own warnings go into the item's note).
+Artboards moved by him: Comments/New → Comments/Achive (the preview tool
+finds either; the .ai also at NEW UI/Layout_Options_New.ai).
+
 **Next:** he judges in the admin → his corrections → when he says so,
 LAYOUT2=1 in the server's .env.local (append, never overwrite) + restart;
 then robot tests on live, remove the templates' admin tools or keep as
