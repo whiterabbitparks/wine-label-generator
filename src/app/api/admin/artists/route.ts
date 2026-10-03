@@ -38,7 +38,7 @@ export async function GET(req: Request) {
     const works = fs.existsSync(wd) ? fs.readdirSync(wd).filter((f) => /\.jpe?g$|\.png$/i.test(f)).sort() : [];
     return {
       id: p.id, name: p.name, active: isActive(p), page: !!p.page, consent: p.consent || "", status: p.status || "",
-      note: p.note || "", works, refSets: p.refSets || [], abstractSet: (p as { abstractSet?: number }).abstractSet, lora: a!.lora ? { trigger: a!.lora.trigger, trainedAt: a!.lora.trainedAt, works: a!.lora.works } : null,
+      note: p.note || "", works, refSets: p.refSets || [], fontCats: (p as { fontCats?: string[] }).fontCats || [], abstractSet: (p as { abstractSet?: number }).abstractSet, lora: a!.lora ? { trigger: a!.lora.trigger, trainedAt: a!.lora.trainedAt, works: a!.lora.works } : null,
       painted: painted.get(p.name) || 0,
     };
   }).sort((x, y) => Number(y.active) - Number(x.active) || x.name.localeCompare(y.name)) : [];
@@ -49,11 +49,20 @@ export async function GET(req: Request) {
    eight sets of one to four works, every work one of the artist's own */
 export async function PUT(req: Request) {
   if (!(await requestIsAuthenticated())) return NextResponse.json({ error: "not authenticated" }, { status: 401 });
-  let body: { id?: string; refSets?: unknown };
+  let body: { id?: string; refSets?: unknown; fontCats?: unknown };
   try { body = await req.json(); } catch { return NextResponse.json({ error: "invalid JSON" }, { status: 400 }); }
   const id = safe(body.id || "");
   const file = path.join(ARTISTS_DIR, id, "profile.json");
   if (!id || !fs.existsSync(file)) return NextResponse.json({ error: "no such artist" }, { status: 404 });
+  /* the artist's font categories (owner, 2026-10-02): serif / sans / display
+     ("artistic"), several allowed; none = every approved font */
+  if (Array.isArray(body.fontCats)) {
+    const cats = [...new Set((body.fontCats as unknown[]).map(String).filter((c) => ["serif", "sans", "display"].includes(c)))];
+    const prof = JSON.parse(fs.readFileSync(file, "utf8"));
+    if (cats.length) prof.fontCats = cats; else delete prof.fontCats;
+    fs.writeFileSync(file, JSON.stringify(prof, null, 2) + "\n");
+    return NextResponse.json({ ok: true, fontCats: cats });
+  }
   const works = new Set(fs.readdirSync(path.join(ARTISTS_DIR, id, "works")));
   if (!Array.isArray(body.refSets)) return NextResponse.json({ error: "refSets must be a list" }, { status: 400 });
   const sets = (body.refSets as unknown[]).filter(Array.isArray).map((st) => [...new Set((st as unknown[]).map((f) => safe(String(f))).filter((f) => works.has(f)))].slice(0, 4)).filter((st) => st.length).slice(0, 8);

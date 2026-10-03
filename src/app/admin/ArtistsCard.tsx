@@ -14,7 +14,7 @@ import { useEffect, useState } from "react";
 import { AdminStyles as S } from "../legacy/LegacyAdmin";
 
 type A = {
-  id: string; name: string; active: boolean; page: boolean; consent: string; status: string; note: string;
+  id: string; name: string; active: boolean; page: boolean; consent: string; status: string; note: string; fontCats?: string[];
   works: string[]; refSets: string[][]; abstractSet?: number; lora: { trigger: string; trainedAt: string; works: number } | null; painted: number;
 };
 
@@ -78,6 +78,31 @@ function SetsEditor({ a, thumb }: { a: A; thumb: (f: string) => string }) {
   );
 }
 
+/* the artist's font categories (owner, 2026-10-02: "Grigol Tatishvili only
+   serifs, or serif and artistic") — saved at once; none = every approved font */
+const FONT_CATS: [string, string][] = [["serif", "Serif"], ["sans", "Sans-serif"], ["display", "Artistic"]];
+function FontCatsRow({ a }: { a: A }) {
+  const [cats, setCats] = useState<string[]>(a.fontCats || []);
+  const [msg, setMsg] = useState("");
+  const flip = async (c: string) => {
+    const next = cats.includes(c) ? cats.filter((x) => x !== c) : [...cats, c];
+    setCats(next); setMsg("saving…");
+    const r = await fetch("/api/admin/artists", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: a.id, fontCats: next }) }).catch(() => null);
+    setMsg(r && r.ok ? "saved" : "could not save");
+    setTimeout(() => setMsg(""), 1500);
+  };
+  return (
+    <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8, fontSize: 12 }}>
+      <span style={{ fontWeight: 700 }}>Fonts:</span>
+      {FONT_CATS.map(([c, label]) => (
+        <button key={c} onClick={() => flip(c)} style={{ border: "1px solid #111", padding: "2px 10px", cursor: "pointer", font: "inherit", background: cats.includes(c) ? "#111" : "#fff", color: cats.includes(c) ? "#fff" : "#111" }}>
+          {cats.includes(c) ? "✓ " : ""}{label}</button>
+      ))}
+      <span style={{ color: "#8a887e" }}>{msg || (cats.length ? "" : "none ticked = all approved fonts")}</span>
+    </div>
+  );
+}
+
 export function ArtistsCard() {
   const [list, setList] = useState<A[] | null>(null);
   useEffect(() => { fetch("/api/admin/artists").then((r) => r.json()).then((b) => setList(b.artists || [])); }, []);
@@ -101,6 +126,7 @@ export function ArtistsCard() {
               Model: {a.lora ? `trained ${a.lora.trainedAt.slice(0, 10)} on ${a.lora.works} works (trigger ${a.lora.trigger})` : "not trained yet"}
             </div>
             {a.note && <div style={{ ...small, marginTop: 4 }}>Your note on the hand: “{a.note}”</div>}
+            <FontCatsRow a={a} />
             <SetsEditor a={a} thumb={thumb} />
           </div>
         );

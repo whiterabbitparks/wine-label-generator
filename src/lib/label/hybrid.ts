@@ -142,15 +142,17 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
      and once the font bank holds approved faces, the run's three versions
      take three DIFFERENT ones (the token deals them like the layouts) */
   const tc = typedCaps(Object.values(templateFields(inp.data)));
+  /* the painter's font categories (owner, 2026-10-02) */
+  const cats = (model.artist as { fontCats?: ("serif" | "sans" | "display")[] }).fontCats;
   if (inp.seed === undefined) {
-    const fams = bankFamilies();
+    const fams = bankFamilies(cats);
     if (inp.order && fams.length >= 2) {
       const want = fams[(Math.floor(runKey / 6) + col) % fams.length];
-      for (let k = 0; k < 4000; k++) { const sd = (Math.random() * 0xffffffff) >>> 0; if (facesFor(band, sd, tc).small.family === want) { seed = sd; break; } }
+      for (let k = 0; k < 4000; k++) { const sd = (Math.random() * 0xffffffff) >>> 0; if (facesFor(band, sd, tc, cats).small.family === want) { seed = sd; break; } }
     } else {
       const faceUse = usage("face");
       const seeds = Array.from({ length: 12 }, () => (Math.random() * 0xffffffff) >>> 0);
-      seed = pickFresh(seeds, (sd) => facesFor(band, sd, tc).hero.family, faceUse);
+      seed = pickFresh(seeds, (sd) => facesFor(band, sd, tc, cats).hero.family, faceUse);
     }
   }
   const zone = tpl.art || { w: tpl.refW, h: tpl.refH };
@@ -431,6 +433,7 @@ export async function paintHybridLabel(inp: HybridInput): Promise<HybridOutput &
     scene: sceneOn,
     blend: (model.artist as { blend?: "multiply" }).blend,
     fadeEdges: !!kg,
+    fontCats: cats,
     widthMm, heightMm, seed, wineColour: inp.data.wineColorName,
   });
   /* a multiply picture is KEPT with its paper made white (the PDF, the
@@ -464,6 +467,12 @@ const keepGroundOf = (name?: string): boolean => {
   const a = listArtists().find((x) => x.profile.name === name);
   return !!(a?.profile as { keepGround?: string } | undefined)?.keepGround;
 };
+/* the artist's font categories, from the name a label records */
+const fontCatsOf = (name?: string): ("serif" | "sans" | "display")[] | undefined => {
+  if (!name) return undefined;
+  const a = listArtists().find((x) => x.profile.name === name);
+  return (a?.profile as { fontCats?: ("serif" | "sans" | "display")[] } | undefined)?.fontCats;
+};
 /* the artist's blend, from the name a label records */
 const blendOf = (name?: string): "multiply" | undefined => {
   const n = String(name || "");
@@ -493,10 +502,11 @@ export async function relayoutLabel(stored: { art: Buffer; meta: { style: string
   if (keep && storedTpl && (stored.meta as { scene?: boolean }).scene) {
     const fam = String((stored.meta as { faces?: string }).faces || "").match(/^(.*?) \d{3}\//)?.[1];
     let keepSeed = 1;
-    if (fam) for (let k = 1; k < 2000; k++) if (facesFor(kband, k, typedCaps(Object.values(templateFields(data)))).hero.family === fam) { keepSeed = k; break; }
+    if (fam) for (let k = 1; k < 2000; k++) if (facesFor(kband, k, typedCaps(Object.values(templateFields(data))), fontCatsOf((stored.meta as { artist?: string }).artist)).hero.family === fam) { keepSeed = k; break; }
     const out = await composeTemplateLabel({
       artwork: raw, band: kband, template: storedTpl.id, data, paper: await meanColour(raw),
       widthMm, heightMm, seed: keepSeed, wineColour: data.wineColorName, scene: true,
+      fontCats: fontCatsOf((stored.meta as { artist?: string }).artist),
     });
     return { png: out.png, svg: out.svg, art: raw, faces: out.faces, ink: out.ink, ground: out.layout.ground || ground, prompt: "(the same painting, the details set again)", layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", template: out.template };
   }
@@ -512,7 +522,7 @@ export async function relayoutLabel(stored: { art: Buffer; meta: { style: string
        a seed that draws that family again is found */
     const fam = String((stored.meta as { faces?: string }).faces || "").match(/^(.*?) \d{3}\//)?.[1];
     let keepSeed = 1;
-    if (fam) for (let k = 1; k < 2000; k++) if (facesFor(kband, k, typedCaps(Object.values(templateFields(data)))).hero.family === fam) { keepSeed = k; break; }
+    if (fam) for (let k = 1; k < 2000; k++) if (facesFor(kband, k, typedCaps(Object.values(templateFields(data))), fontCatsOf((stored.meta as { artist?: string }).artist)).hero.family === fam) { keepSeed = k; break; }
     /* a multiply picture is stored with its paper white: the label keeps
        the ground it was laid on */
     const blend = blendOf((stored.meta as { artist?: string }).artist);
@@ -522,6 +532,7 @@ export async function relayoutLabel(stored: { art: Buffer; meta: { style: string
       panel: wasPanel && cl.cleaned,
       blend, labelGround: blend ? ground : undefined,
       fadeEdges: keepGroundOf((stored.meta as { artist?: string }).artist),
+      fontCats: fontCatsOf((stored.meta as { artist?: string }).artist),
     });
     return { png: out.png, svg: out.svg, art: out.art || (blend === "multiply" ? await whitenPaper(cl.art, cl.ground) : cl.art), faces: out.faces, ink: out.ink, ground: out.layout.ground || ground, prompt: "(the same painting, the details set again)", layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", template: out.template, panel: wasPanel && cl.cleaned };
   }
@@ -545,6 +556,7 @@ export async function relayoutLabel(stored: { art: Buffer; meta: { style: string
     widthMm, heightMm, seed, wineColour: data.wineColorName,
     blend: blendV, labelGround: blendV ? ground : undefined,
     fadeEdges: keepGroundOf((stored.meta as { artist?: string }).artist),
+      fontCats: fontCatsOf((stored.meta as { artist?: string }).artist),
   });
   void recipe;
   return { png: out.png, svg: out.svg, art: out.art || (blendV === "multiply" ? await whitenPaper(art, cleaned.ground) : art), faces: out.faces, ink: out.ink, ground: out.layout.ground || ground, prompt: "(re-layout of an existing painting)", layout: out.layout, tag: `${out.template}|${out.faces.split(" ")[0]}`, fit: "vignette", template: out.template };

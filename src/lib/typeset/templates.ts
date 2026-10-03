@@ -187,29 +187,42 @@ export const softenCaps = (s: string) => s.replace(/\p{L}[\p{L}'’]*/gu, (w) =>
 /* the customer typed a word in capitals somewhere → these faces are left out */
 export const typedCaps = (vals: string[]) => vals.some((v) => (String(v || "").match(/\p{L}[\p{L}'’]*/gu) || []).some(capsWord));
 let skipNoCaps = false;   /* set by facesFor for the call it makes */
+/* THE ARTIST'S FONT CATEGORIES (owner, 2026-10-02: "assign font
+   categories to artists, sometimes several — Grigol Tatishvili only
+   serifs, or serif and artistic"): profile `fontCats`; set by facesFor
+   for the call it makes; none set (or nothing approved in them) = all */
+let catsAllowed: FontCat[] | null = null;
 function bankSets(cat: FontCat): FamilySet[] {
+  if (catsAllowed && !catsAllowed.includes(cat)) return [];
   const nc = skipNoCaps ? noCapsFamilies() : null;
   return Object.values(readBank().fonts).filter((f) => f.cat === cat && f.verdict === "full" && f.weights.length && !(nc && nc.has(f.family)))
     .sort((a, b) => a.family.localeCompare(b.family))
     .map((f) => ({ family: f.family, ...roleWeights(f.weights) }));
 }
 function bankTitles(cat: FontCat): Face[] {
+  if (catsAllowed && !catsAllowed.includes(cat)) return [];
   const nc = skipNoCaps ? noCapsFamilies() : null;
   return Object.values(readBank().fonts).filter((f) => f.cat === cat && f.verdict === "title" && f.weights.length && !(nc && nc.has(f.family)))
     .sort((a, b) => a.family.localeCompare(b.family))
     .map((f) => ({ family: f.family, weight: roleWeights(f.weights).bold }));
 }
-export function bankFamilies(): string[] {
-  return ALL_CATS.flatMap((c) => bankSets(c)).map((s) => s.family).sort();
+const useCats = (cats?: FontCat[] | null) => {
+  catsAllowed = cats && cats.length ? cats : null;
+  if (catsAllowed && !ALL_CATS.some((c) => bankSets(c).length)) catsAllowed = null;   /* nothing approved there: all */
+};
+export function bankFamilies(cats?: FontCat[] | null): string[] {
+  useCats(cats);
+  try { return ALL_CATS.flatMap((c) => bankSets(c)).map((s) => s.family).sort(); } finally { catsAllowed = null; }
 }
-export function facesFor(band: Band, seed: number, avoidNoCaps = false): { hero: Face; secondary: Face; small: Face } {
+export function facesFor(band: Band, seed: number, avoidNoCaps = false, cats?: FontCat[] | null): { hero: Face; secondary: Face; small: Face } {
+  useCats(cats);
   /* a label whose customer typed capitals leaves the never-all-caps faces
      out (unless nothing else is approved) */
   if (avoidNoCaps) {
     skipNoCaps = true;
     if (!ALL_CATS.some((c) => bankSets(c).length)) skipNoCaps = false;   /* nothing else approved: keep them */
   }
-  try { return facesForInner(band, seed); } finally { skipNoCaps = false; }
+  try { return facesForInner(band, seed); } finally { skipNoCaps = false; catsAllowed = null; }
 }
 function facesForInner(band: Band, seed: number): { hero: Face; secondary: Face; small: Face } {
   const own = ALL_CATS.flatMap((c) => bankSets(c));
@@ -224,6 +237,8 @@ function facesForInner(band: Band, seed: number): { hero: Face; secondary: Face;
     /* the companion is PLAIN: an approved serif or sans with real weights
        (not a one-weight display face like Bebas Neue) */
     const textFaces = [...bankSets("sans"), ...bankSets("serif")];
+    /* an artist allowed only artistic faces: the plainest of those */
+    if (!textFaces.length) textFaces.push(...bankSets("display"));
     const multi = textFaces.filter((x) => x.text !== x.bold);
     const plain = multi.length ? multi : textFaces.length ? textFaces : sets;
     const c = plain.length ? plain[mix(seed, 37) % plain.length] : BAND_FACES[band === "free" ? "contemporary" : band].sets[0];
@@ -290,6 +305,8 @@ export interface TemplateInput {
   ground: string;
   ink: string;
   accent: string;
+  /* the painter's font categories (profile fontCats) */
+  fontCats?: FontCat[] | null;
 }
 export interface TemplateLayout {
   layout: Layout;
@@ -300,7 +317,7 @@ export interface TemplateLayout {
 
 export function layoutFromTemplate(inp: TemplateInput): TemplateLayout {
   const W = Math.round(inp.widthMm * PX_PER_MM), H = Math.round(inp.heightMm * PX_PER_MM);
-  const faces = facesFor(inp.template.band, inp.seed, typedCaps(Object.values(inp.fields)));
+  const faces = facesFor(inp.template.band, inp.seed, typedCaps(Object.values(inp.fields)), inp.fontCats);
   const warnings: string[] = [];
   /* a never-all-caps face keeps a caps line in its own case (owner, 2026-10-02) */
   const noCaps = noCapsFamilies();

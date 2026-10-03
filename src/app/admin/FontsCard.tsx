@@ -17,7 +17,7 @@ type Counts = Record<Cat, { full: number; title: number; reject: number }>;
 const CATS: { id: Cat; name: string }[] = [
   { id: "serif", name: "Serif" },
   { id: "sans", name: "Sans-serif" },
-  { id: "display", name: "Handwritten / decorative" },
+  { id: "display", name: "Artistic" },
 ];
 
 const btn: React.CSSProperties = { border: "2px solid #111", background: "#fff", padding: "10px 22px", cursor: "pointer", font: "inherit", fontSize: 15, minWidth: 150 };

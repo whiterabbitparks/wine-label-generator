@@ -43,6 +43,8 @@ export interface TemplateComposeInput {
      the label's ground over its last 4 mm before the trim (an artist whose
      ground is his own colour — profile keepGround) */
   fadeEdges?: boolean;
+  /* the painter's font categories (profile fontCats — owner, 2026-10-02) */
+  fontCats?: ("serif" | "sans" | "display")[] | null;
   /* the scene method (owner, 2026-10-01): the picture IS the whole label —
      laid over the trim and its 2 mm bleed, the type over its quiet parts */
   scene?: boolean;
@@ -162,7 +164,7 @@ export async function composeTemplateLabel(inp: TemplateComposeInput): Promise<C
     template: tpl,
     fields: templateFields(inp.data),
     widthMm: inp.widthMm, heightMm: inp.heightMm,
-    seed: inp.seed, ground, ink, accent,
+    seed: inp.seed, ground, ink, accent, fontCats: inp.fontCats,
   });
 
   /* THE PICTURE IS THE LABEL'S GROUND (owner, 2026-09-22, with his
