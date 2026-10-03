@@ -61,6 +61,13 @@ stays, sides hug margins, centre centred. Tatishvili white, Pirosmani black.
 - Verified on real paintings (small): Dachi tan, Levan black, Oskar
   mustard, Pirosmani black, Tatishvili white — organic, nothing cut out.
 
+**Admin queue reset 2026-10-04 (owner: "don't mix the feedbacks"):** the
+87 old-engine batch items and his 63 old layout corrections were moved on
+the server to data/archive-old-engine-2026-10-04/layout-batch.json and
+data/layout-edits/archive-old-engine-2026-10-04/ (kept, not deleted; the
+editor and tools read only data/layout-edits/*.json). The Layouts tab now
+shows only final-round labels and new feedback.
+
 **Decided 2026-10-04:** rows stay rows — when a left field and a right
 field on different rows are missing, the survivors keep their rows (owner:
 "keep rows and see how it looks, we can fix it later"). Revisit only if he
