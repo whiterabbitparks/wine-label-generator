@@ -70,9 +70,16 @@ export async function paintLabel(inp: PaintInput): Promise<Painted> {
   const { model, widthMm: W, heightMm: H, seed } = inp;
   const artist = model.artist as typeof model.artist & { fontCats?: FontCat[]; keepGround?: string; paper?: string };
   const fields = templateFields(inp.data);
-  const faces = facesFromBank(seed, inp.data, artist.fontCats);
-  const fam = (inp.family && familyOf(inp.family)) || chooseFamily(fields, W, H, faces, artist.fontCats, seed, inp.kind, inp.avoid);
-  if (!fam) throw new Error(`NO_LAYOUT: none of the 45 layouts holds these words at ${W}×${H} mm`);
+  /* the face first; a face so wide that none of the layouts can hold these
+     words at this size gives way to the bank's next one */
+  let faces = facesFromBank(seed, inp.data, artist.fontCats);
+  let fam = (inp.family && familyOf(inp.family)) || null;
+  for (let k = 0; !fam && k < 12; k++) {
+    if (k) faces = facesFromBank((seed + k * 2654435761) >>> 0, inp.data, artist.fontCats);
+    fam = chooseFamily(fields, W, H, faces, artist.fontCats, seed, inp.kind, inp.avoid);
+    if (!fam) warnings.push(`${faces.hero.family}/${faces.body.family}: no layout holds these words at ${W}×${H} — another face`);
+  }
+  if (!fam) throw new Error(`NO_LAYOUT: none of the 45 layouts holds these words at ${W}×${H} mm in any approved face`);
   const lay = pickRef(fam, W, H);
   const placement = layoutLabel(fam, fields, W, H, faces, artist.fontCats);
   const v = visibleZone(placement);
