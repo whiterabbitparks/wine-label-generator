@@ -93,13 +93,24 @@ function colsOf(lay: Layout): Col[] {
 /* the new distance of every row's (column's) baseline from its edge.
    `near`/`far`: a row's ink toward / away from its edge, in mm, at his
    size (orig) and at its size now (now). */
-function close<T extends { d: number }>(rows: T[], live: (r: T) => boolean, near: (r: T, now: boolean) => number, far: (r: T, now: boolean) => number, scale: (r: T) => number): Map<T, number> {
+function close<T extends { d: number }>(rows: T[], live: (r: T) => boolean, near: (r: T, now: boolean) => number, far: (r: T, now: boolean) => number, scale: (r: T) => number,
+  side?: { single: (r: T) => boolean; xr: (r: T) => [number, number] }): Map<T, number> {
   const out = new Map<T, number>();
   const sorted = [...rows].sort((a, b) => a.d - b.d);
-  let prev: { r: T; d: number } | null = null;
+  const placed: { r: T; d: number }[] = [];
+  const reach = (p: { r: T; d: number }) => p.d + far(p.r, true);
   for (let i = 0; i < sorted.length; i++) {
     const r = sorted[i];
     if (!live(r)) continue;
+    /* the row it now stands against: the furthest placed row — or, for a
+       row left with a line on ONE side only (owner, 2026-10-04: "if there
+       is nothing on the other side, that line moves toward the edge"),
+       the furthest placed row it meets horizontally */
+    const lone = side?.single(r);
+    const against = lone
+      ? placed.filter((p) => { const [a0, a1] = side!.xr(r), [b0, b1] = side!.xr(p.r); return a0 < b1 + 1.5 && b0 < a1 + 1.5; })
+      : placed;
+    const prev = against.length ? against.reduce((a, b) => (reach(b) > reach(a) ? b : a)) : null;
     let d: number;
     if (!prev) {
       /* the first surviving row: its ink stands where the group's first ink stood */
@@ -111,7 +122,14 @@ function close<T extends { d: number }>(rows: T[], live: (r: T) => boolean, near
       const air = (r.d - near(r, false)) - (inner.d + far(inner, false));
       d = prev.d + far(prev.r, true) + air * Math.min(1, scale(r)) + near(r, true);
     }
-    out.set(r, d); prev = { r, d };
+    /* a lone line that lands within 1 mm of a line on the other side shares its baseline (they read as one row) */
+    if (lone) {
+      const mate = placed.find((p) => Math.abs(p.d - d) < 1 && !against.includes(p));
+      if (mate) d = mate.d;
+    } else {
+      for (const p of placed) if (side?.single(p.r) && Math.abs(p.d - d) < 1) { const [a0, a1] = side.xr(r), [b0, b1] = side.xr(p.r); if (!(a0 < b1 + 1.5 && b0 < a1 + 1.5)) { out.set(p.r, d); p.d = d; } }
+    }
+    out.set(r, d); placed.push({ r, d });
   }
   return out;
 }
@@ -170,7 +188,19 @@ function pass(lay: Layout, fields: Partial<Record<FieldKey, string>>, W: number,
     const near = (r: Row, now: boolean) => rowSz(r, now) * (anchor === "top" ? ASC : DESC);
     const far = (r: Row, now: boolean) => rowSz(r, now) * (anchor === "top" ? DESC : ASC);
     const sc = (r: Row) => Math.min(...r.items.map((l) => scale.get(l) ?? 1));
-    const ds = close(rs, (r) => r.items.some((l) => txt(l)), near, far, sc);
+    /* a row whose surviving lines all stand on ONE side (left or right) */
+    const liveItems = (r: Row) => r.items.filter((l) => txt(l) && !l.arc);
+    const single = (r: Row) => { const s2 = new Set(liveItems(r).map((l) => l.align)); return s2.size === 1 && !s2.has("center") && r.items.length > liveItems(r).length; };
+    const xr = (r: Row): [number, number] => {
+      let a = Infinity, b = -Infinity;
+      for (const l of liveItems(r)) {
+        const w = widthMm(txt(l), faceOf(l, faces), sz(l), l.tracking);
+        const x0 = l.align === "center" ? W / 2 - w / 2 : l.align === "right" ? W - Math.max(MARGIN, l.right!) - w : Math.max(MARGIN, l.left!);
+        a = Math.min(a, x0); b = Math.max(b, x0 + w);
+      }
+      return a < b ? [a, b] : [0, W];
+    };
+    const ds = close(rs, (r) => r.items.some((l) => txt(l)), near, far, sc, { single, xr });
     for (const [r, d] of ds) for (const l of r.items) {
       const text = txt(l); if (!text) continue;
       const face = faceOf(l, faces), size = sz(l), tr = l.tracking * size;

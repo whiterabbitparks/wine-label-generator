@@ -27,7 +27,7 @@ import { templateFields } from "@/lib/typeset/templates";
 import type { FontCat } from "@/lib/typeset/font-bank";
 import { FAMILIES, familyOf, pickRef, kindOf, suits, layoutLabel, facesFromBank, type Kind } from "./engine";
 import { composeLabel, visibleZone, shapeFits, type Composed } from "./compose";
-import { artistGrounds, dE } from "./grounds";
+import { artistGrounds, dE, lab } from "./grounds";
 import { nameOf, mainColourOf, inksFor, type Inks } from "./colour";
 import type { Faces } from "./place";
 import type { Layout } from "./spec";
@@ -54,10 +54,19 @@ export function chooseFamily(fields: ReturnType<typeof templateFields>, W: numbe
 }
 
 /* the ground, from the works the painter will be shown */
-export async function groundFor(artistId: string, files: string[] | undefined, seed: number): Promise<string> {
+/* the fixed exceptions (owner): Pirosmani ALWAYS on black (profile
+   keepGround "black" — one of his works has a blue field, and a label came
+   out blue); Grigol Tatishvili only on white or a light warm tone (profile
+   paper). Their grounds are taken only from their own tones of that kind. */
+const LIGHT = (h: string) => lab([1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)))[0];
+export async function groundFor(artistId: string, files: string[] | undefined, seed: number, rule?: { keepGround?: string; paper?: string }): Promise<string> {
   const g = await artistGrounds(artistId);
-  const own = files?.length ? g.tones.filter((t) => t.works.some((w) => files.includes(w))) : [];
-  const pool = own.length ? own : g.tones;
+  let tones = g.tones;
+  if (rule?.keepGround === "black") { tones = tones.filter((t) => LIGHT(t.hex) < 15); if (!tones.length) return "#121110"; }
+  else if (rule?.keepGround) { tones = tones.filter((t) => dE(t.hex, rule.keepGround!) < 25); if (!tones.length) return rule.keepGround; }
+  if (rule?.paper) { tones = tones.filter((t) => LIGHT(t.hex) > 85); if (!tones.length) return "#FFFFFF"; }
+  const own = files?.length ? tones.filter((t) => t.works.some((w) => files.includes(w))) : [];
+  const pool = own.length ? own : tones;
   if (!pool.length) return "#F4EFE3";
   const total = pool.reduce((s, t) => s + t.works.length, 0);
   let v = unit(seed, 13) * total;
@@ -89,7 +98,7 @@ export async function paintLabel(inp: PaintInput): Promise<Painted> {
   /* the reference set first, then the ground from its works */
   const k = inp.refSet ?? Math.floor(unit(seed, 17) * 8);
   const set = nextRefSet(artist.id, k);
-  const groundHex = await groundFor(artist.id, set.files, seed);
+  const groundHex = await groundFor(artist.id, set.files, seed, { keepGround: artist.keepGround, paper: artist.paper });
   const groundName = nameOf(groundHex);
 
   /* the ask */
@@ -130,6 +139,11 @@ export async function paintLabel(inp: PaintInput): Promise<Painted> {
     c = await cleanPaper(painted.art);
     if (!c.cleaned) c = await cleanPaper(painted.art, undefined, undefined, { lenient: true });
     if (!c.cleaned) { refusal = "paper"; warnings.push(`attempt ${attempt + 1}: no plain sheet round the painting`); continue; }
+    /* the fixed exceptions hold on what came BACK too: Pirosmani's sheet must be black, Tatishvili's light */
+    if ((artist.keepGround === "black" && LIGHT(c.ground) > 20) || (artist.paper && LIGHT(c.ground) < 80)) {
+      warnings.push(`attempt ${attempt + 1}: came back on ${c.ground}, the artist's ground is ${artist.keepGround || "white/light"} — painted again`);
+      refusal = "paper"; c = undefined as never; continue;
+    }
     const m = await (await import("sharp")).default(Buffer.from(c.art.slice(c.art.indexOf(",") + 1), "base64")).metadata();
     aw = m.width || 1024; ah = m.height || 1024;
     panelAspect = (c.ink.w * aw) / Math.max(1, c.ink.h * ah);
