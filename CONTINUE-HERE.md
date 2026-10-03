@@ -7,7 +7,67 @@ single-file era), **this file wins**.
 
 ---
 
-## ▶ TOMORROW START HERE (end of day 2026-09-23)
+## ▶ TOMORROW START HERE (2026-10-04 — FINAL ROUND, branch POPIKA_FINAL_ROUND)
+
+**History.** A first final-round attempt (Fable 5.1, 2026-10-03/04) was
+judged terrible by the owner and ERASED (code, live, data); only a hidden
+tag `archive/fable-attempt-2026-10-04` and /opt/fable-cleanup-2026-10-04 on
+the server remain — never build on them. Restarted from bf40d92.
+
+**The brief** (owner, re-pasted 2026-10-04): clean-sheet layouts from his
+45 artboards (NEW UI/Comments/New: Artboard 2 copy 14…62@3x.png +
+Layout_Options_New.ai); his old templates t01–t12 and old admin
+corrections are ignored in this branch. Typography exact (size + spacing
+fixed, widths vary by font; left lines on the left margin, right on the
+right, centred centred); the image zone absorbs any size change; grey
+zones are guides never masks, organic painter's edges, a slight overrun
+where a zone bleeds; 5 mm margin, ≥ 7 pt, never overlap; missing fields
+close toward their edge, whole rows; fonts from the admin bank. Grounds:
+"give the colour before it paints, from the artist's originals, as many
+options as possible, the artwork and ground must go together" (Dachi and
+Oskar look cut out on white). Text: wine name coloured from the painting
+(steered by the wine), rest 95 % black — 40 % of labels all in the name's
+colour; on dark grounds the "black" is 95 % white. Wider label: text
+stays, sides hug margins, centre centred. Tatishvili white, Pirosmani black.
+
+**Built (src/lib/layout45, tools/l45):**
+- `tools/l45/extract.mjs` → `layouts.data.ts`: 45 layouts, id = his PNG
+  number (A14…A62), twins (vertical ones paired by hand: A36↔A37,
+  A38↔A39, A44↔A53, A54↔A55), anchors, zones with bleed sides.
+- `place.ts`: his rules (see its header). Rows close keeping their ink-to-
+  ink air; groups LIFT off the 5 mm margin (his baselines sit on it —
+  descenders cross by ≤ 0.7 mm; vertical up to 1.2 mm) instead of
+  shrinking; side lines start on the margin; arcs keep his circle and
+  letter-spacing; zone edges keep his real-ink gap to the type.
+  `tools/l45/check.mts` → **45/45 match his PNGs** (type + zone; ok* = his
+  wine name sits 0.66 mm off centre in Illustrator, engine centres it).
+- `engine.ts`: families, nearer twin, bank faces (hero + one companion),
+  a narrower companion of the same category before anything shrinks
+  < 85 %, a family offered only if its type fits; no line breaking.
+  `tools/l45/stress.mts` sheets at 7 sizes × all/few/long × 3 fonts.
+- `grounds.ts`: every artist's works MEASURED (sheet ring, or large calm
+  fields) → tones with the works carrying them (data/artists/<id>/grounds.json).
+- `paint.ts`: ref set chosen first → ground from THAT set's works →
+  named in sketch + repaint ("painted directly on … paper (#hex)"); panel
+  of the zone's shape, sketch checked + painting re-checked (≤ 3 paints)
+  else fails; the label's ground = the sheet it came back on (cleanPaper);
+  a face too wide for every layout gives way to the next bank face.
+- `compose.ts`: picture by ink, centred in the zone, filling an axis that
+  bleeds on both sides (+3 % overrun), walls elsewhere; shape refused
+  beyond 1.3×. `colour.ts`: inks.
+- Admin → Layouts → "Make" (layout-batch.ts) now paints the 45 families
+  (LAYOUT_BATCH=templates brings the old twelve back); he judges in the
+  same editor. The SITE still paints with the old engine.
+- Verified on real paintings (small): Dachi tan, Levan black, Oskar
+  mustard, Pirosmani black, Tatishvili white — organic, nothing cut out.
+
+**Open:** left/right imbalance when diagonal fields are missing (rule
+"redistribute comparable elements" not yet implemented); site wiring
+(hybrid.ts + relayout keep) after he approves; marketing/back label untouched.
+
+---
+
+## Previous start-here (end of day 2026-09-23)
 
 **Live:** http://2.28.48.43 now runs branch **POPIKA_Artists** (deployed
 2026-09-23 evening, commit on origin). Previous live (POPIKA_Back_To_Vector)
