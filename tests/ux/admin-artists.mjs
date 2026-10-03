@@ -1,0 +1,11 @@
+import { chromium } from "playwright";
+setTimeout(() => process.exit(3), 120000);
+const b = await chromium.launch(); const p = await (await b.newContext({ viewport: { width: 1300, height: 900 } })).newPage();
+await p.goto("https://8k.wine/admin", { waitUntil: "load" });
+await p.locator("input").first().fill("John"); await p.locator("input[type=password]").fill("Doe"); await p.keyboard.press("Enter"); await p.waitForTimeout(3000);
+await p.goto("https://8k.wine/admin?tab=Artists", { waitUntil: "load" }); await p.waitForTimeout(5000);
+console.log("Fonts rows:", await p.getByText("Fonts:", { exact: true }).count(), "| Artistic buttons:", await p.getByRole("button", { name: /Artistic/ }).count());
+const row = p.getByText("Fonts:", { exact: true }).first();
+await row.scrollIntoViewIfNeeded(); const r = await row.boundingBox();
+await p.screenshot({ path: process.env.SP + "/admin-artists.png", clip: { x: 0, y: Math.max(0, r.y - 160), width: 1300, height: 260 } });
+await b.close(); process.exit(0);
