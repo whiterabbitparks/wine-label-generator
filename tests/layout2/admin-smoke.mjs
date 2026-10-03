@@ -1,11 +1,12 @@
 import { chromium } from "playwright";
+const BASE = process.env.BASE || "http://localhost:3200";
 const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1500, height: 1100 } });
-const issues = []; p.on("pageerror", (e) => issues.push("script error: " + e.message)); p.on("response", (r) => { if (r.status() >= 400 && r.url().includes("/api/")) issues.push(`${r.status()} ${r.url().replace("http://localhost:3200", "")}`); });
-await p.goto("http://localhost:3200/admin?tab=Final%20round", { waitUntil: "load" });
+const issues = []; p.on("pageerror", (e) => issues.push("script error: " + e.message)); p.on("response", (r) => { if (r.status() >= 400 && r.url().includes("/api/")) issues.push(`${r.status()} ${r.url().replace(BASE, "")}`); });
+await p.goto(BASE + "/admin?tab=Final%20round", { waitUntil: "load" });
 await p.locator("input").first().fill("John"); await p.locator("input[type=password]").fill("Doe"); await p.keyboard.press("Enter"); await p.waitForTimeout(4000);
 const me = await p.evaluate(() => fetch("/api/admin/me").then((r) => r.status));
 console.log("session:", me, "| login form still shown:", await p.locator("input[type=password]").count());
-await p.goto("http://localhost:3200/admin?tab=Final%20round", { waitUntil: "load" }); await p.waitForTimeout(4000);
+await p.goto(BASE + "/admin?tab=Final%20round", { waitUntil: "load" }); await p.waitForTimeout(4000);
 const artists = await p.locator("label").filter({ hasText: /Pirosmani/ }).count();
 console.log("artists listed:", await p.locator("label input[type=checkbox]").count(), "| Pirosmani:", artists);
 await p.screenshot({ path: "tests/layout2/out/admin-1-panel.png" });
