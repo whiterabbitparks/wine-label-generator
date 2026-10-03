@@ -14,6 +14,7 @@
      whole rows move, paired items on one line keep their pairing. */
 import { measure, inkExtent, type Face } from "../typeset/fonts";
 import type { Layout2, LayoutText, FieldKey } from "./spec";
+import { LAYOUTS } from "./layouts.data";
 
 export const PX_MM = 12;
 const PT_MM = 25.4 / 72;
@@ -203,9 +204,13 @@ export function placeLayout(lay: Layout2, fields: Record<string, string>, widthM
    distances — the sides that bleed bleed, the inset sides keep their
    inset, the sides facing type keep his gap to the type — so it absorbs
    the whole change of proportion (his L01→L02). An OVAL is never
-   distorted: it grows or shrinks UNIFORMLY (his L07→L08 is the same oval
-   2.2× larger) to fit the room between the type groups, centred there,
-   and stays whole inside the trim unless his own oval already bled. */
+   distorted: between the two twins its size and place are INTERPOLATED
+   from his two drawings (L07's 67×36 oval becomes L08's 149×80 one by
+   degrees, bleeding at the sides as his does when it outgrows the
+   width); beyond them, or without a twin, it grows or shrinks uniformly
+   to the free box, centred there (owner, 2026-10-04: "in places the
+   image sits badly on the stress sheet" — the uniform fit left a small
+   oval in a big free space). */
 export function zoneFor(lay: Layout2, W: number, H: number) {
   const z = lay.zone!;
   const refW = lay.refW, refH = lay.refH;
@@ -214,6 +219,26 @@ export function zoneFor(lay: Layout2, W: number, H: number) {
   const y0 = z.bleeds.top ? -2 * PX_MM : mmPx(z.y);
   const y1 = z.bleeds.bottom ? H + 2 * PX_MM : H - mmPx(refH - (z.y + z.h));
   if (z.kind === "rect") return { kind: z.kind, x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+  /* the oval between his twins */
+  const tw = lay.twin ? LAYOUTS.find((l) => l.id === lay.twin) : null;
+  if (tw && tw.zone && tw.zone.kind === "oval") {
+    const a0 = refH / refW, a1 = tw.refH / tw.refW, a = (H / PX_MM) / (W / PX_MM);
+    const t = (a - a0) / (a1 - a0);
+    if (t > 0 && t < 1) {
+      const zt = tw.zone;
+      /* centre and size as fractions of the label — both by degrees */
+      const cx = ((z.x + z.w / 2) / refW) * (1 - t) + ((zt.x + zt.w / 2) / tw.refW) * t;
+      const cy = ((z.y + z.h / 2) / refH) * (1 - t) + ((zt.y + zt.h / 2) / tw.refH) * t;
+      let w = ((z.w / refW) * (1 - t) + (zt.w / tw.refW) * t) * W, h = ((z.h / refH) * (1 - t) + (zt.h / tw.refH) * t) * H;
+      /* …but never into the type: it keeps his gap to the groups above
+         and below (scaled down uniformly if it must), its centre kept
+         inside the free box */
+      const boxY0 = y0, boxY1 = y1, boxH = boxY1 - boxY0;
+      if (h > boxH) { const k = boxH / h; w *= k; h *= k; }
+      const cyPx = Math.min(boxY1 - h / 2, Math.max(boxY0 + h / 2, cy * H));
+      return { kind: z.kind, x: cx * W - w / 2, y: cyPx - h / 2, w, h };
+    }
+  }
   /* the oval: his aspect, as large as the free box allows */
   const boxW = x1 - x0, boxH = y1 - y0;
   const k = Math.min(boxW / mmPx(z.w), boxH / mmPx(z.h));
